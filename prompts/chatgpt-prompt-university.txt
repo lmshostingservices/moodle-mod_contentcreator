@@ -1,0 +1,107 @@
+AI Content Creator — ChatGPT Prompt for University Content
+==========================================================
+
+Use this prompt with ChatGPT (GPT-4o or later) to generate JSON content for the
+AI Content Creator Moodle plugin (mod_contentcreator v10.44+).
+
+HOW TO USE:
+1. Copy the full prompt below into ChatGPT.
+2. Fill in YOUR CONTEXT and YOUR SUB TOPICS at the bottom.
+3. ChatGPT will return a JSON object for each sub topic.
+4. Paste the JSON output into the plugin's "Reference Material" field.
+5. Click "Generate" — the plugin uses your content to build the final slides.
+
+---BEGIN PROMPT---
+
+You are generating university-level academic learning content.
+
+OUTPUT: For each sub topic, return a JSON object with a "cards" property containing an array of exactly 6 cards. Separate each sub topic block with a line:
+=== [LETTER]: [Sub Topic Title] ===
+Then output the JSON block immediately after. No markdown, no code fences. Pure JSON only.
+
+OBJECTIVE: Develop analytical understanding through conceptual depth and theoretical framing. No workplace safety language.
+
+ANTI-DUPLICATION: Each card must introduce new cognitive value. Do not restate the same concept across cards using different words.
+
+VOICE: Clear academic mentor. Sentences under 25 words. Use "you" not "the student". Direct words: "shows" not "demonstrates", "use" not "utilise". Technical terms are fine but explain each one. Never use vague Bloom's verbs: learn, understand, know, be aware of, appreciate, explore, think about, consider, ponder — use observable action verbs instead.
+
+REFERENCE MATERIAL USAGE: Use the context and sub topics below as the PRIMARY source for facts, examples, case studies, theoretical frameworks, researcher names, and academic context. Extract and reformat that content — do NOT replace specific details with generic equivalents.
+
+BANNED WORDS — do not use any of these:
+crucial, delve, dive, unpack, holistic, robust, synergy, paradigm, multifaceted, nuanced, pivotal,
+empower, leverage, realm, journey, landscape, endeavour, pertaining, henceforth, whereby, thereof,
+therein, notwithstanding, explore, navigate, utilise, utilize, foster, streamline, effectively,
+efficiently, best practice, ensuring, critical, paramount, comprehensive, subsequently, furthermore,
+facilitate, it is important to, in order to ensure, various, range of, significantly, overall, appropriate
+
+CARD 1 – cardType "concept-anchor"
+- conceptDefinition (at least 30 words, precise definition of the core concept)
+- significance (at least 30 words, why this concept matters in the discipline and what it connects to)
+- keyTerms (3 objects: {"term":"...","definition":"..."}, discipline-specific terms)
+
+CARD 2 – cardType "theoretical-framework"
+- frameworks (array of 2-3 objects, each with: name (named model or theory), originator (researcher or school of thought), principle (at least 20 words, core idea and how it applies), limitation (at least 15 words, where this framework falls short))
+
+CARD 3 – cardType "analytical-lens"
+- heading (descriptive heading about the analytical approach)
+- cognitiveConsiderations (5 items, at least 15 words each, describing biases, variables, or factors that affect analysis of this topic, each with a concrete example)
+
+CARD 4 – cardType "ethics-considerations"
+- heading (descriptive heading about ethical/professional considerations)
+- considerations (5 items, each an object with: dimension (e.g. "Privacy", "Consent", "Professional Duty"), description (at least 20 words, specific ethical concern with real-world implication))
+
+CARD 5 – cardType "case-study-1"
+- title (Title Case, descriptive case name)
+- context (at least 70 words, 2nd person, complex environment with competing priorities, ambiguous data, and stakeholder tensions. Include specific details: names, dates, measurements, or institutional contexts.)
+- analysisPrompts (array of 3 strings, each at least 20 words, probing analytical questions the learner must address)
+- keyInsight (at least 20 words, the central takeaway from this case)
+
+CARD 6 – cardType "case-study-2"
+- title (Title Case, descriptive case name — must be a DIFFERENT context from Case Study 1)
+- context (at least 70 words, 2nd person, ambiguous scenario with incomplete information, ethical tension, or methodological challenge. Different setting from Case Study 1.)
+- analysisPrompts (array of 3 strings, each at least 20 words, different analytical questions from Case Study 1)
+- criticalReflection (at least 30 words, what this case reveals about the limits of theory or standard approaches)
+
+COGNITIVE DEPTH — every sub topic block must include:
+1. A genuine intellectual tension or contested area in the field
+2. A common misunderstanding students make about this concept
+3. A specific named theorist, study, or case that grounds the content
+4. What sophisticated engagement with this topic looks like
+5. Clear analytical escalation between Case Study 1 and Case Study 2
+6. A critical question in Case Study 2 that challenges student assumptions
+7. Practical guidance on how students can engage with this material in their own work
+
+TASK INSTRUCTIONS:
+- Generate ALL sub topics in a SINGLE, uninterrupted response.
+- Do NOT stop partway through. Do NOT ask "Shall I continue?"
+- Generate a complete 6-card JSON block for EACH sub topic.
+- Do NOT combine multiple sub topics into one block.
+- Do NOT add commentary between blocks.
+- Every card must be written in full — do NOT truncate.
+
+NUMBERING FORMAT:
+- Label each sub topic using just the letter: A, B, C, D, E, etc.
+- Format: A — [Title], B — [Title], etc.
+
+====================================================================
+YOUR CONTEXT — USE THIS TO TAILOR ALL CONTENT
+====================================================================
+
+[Paste your context here: University, Faculty/School, Course Name, Target Audience,
+Country, Topics and Learning Outcomes]
+
+IMPORTANT: Use the faculty, course, and audience above to make ALL examples,
+case studies, and theoretical content specific to this context.
+Do NOT use generic examples.
+
+====================================================================
+
+====================================================================
+YOUR SUB TOPICS TO COVER
+====================================================================
+
+[Paste your selected sub topics here, labelled A, B, C, etc.]
+
+====================================================================
+
+---END PROMPT---

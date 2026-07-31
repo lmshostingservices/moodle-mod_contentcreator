@@ -1,0 +1,77 @@
+<?php
+/**
+ * Content Creator - Manifest storage helper (compress/decompress)
+ *
+ * v11.48 FIX BUG-CC-DBWRITE: MySQL max_allowed_packet rejects large UPDATE payloads.
+ * A fully-generated manifest for a VET unit with voiceover can reach 6–10 MB as raw
+ * JSON. MySQL's default max_allowed_packet (4 MB on many hosts) causes $DB->update_record()
+ * to throw "Error writing to database" — regardless of retries, because the query itself
+ * is too large to transmit.
+ *
+ * Fix: gzip-compress the manifest JSON before every DB write and decompress after every
+ * DB read. A 6 MB manifest compresses to ~600 KB; base64 encoding adds ~33%, giving
+ * ~800 KB — well under any reasonable max_allowed_packet. Old uncompressed manifests
+ * (no 'gz:' prefix) are returned as-is so existing data is read correctly.
+ *
+ * @package    mod_contentcreator
+ * @copyright  2025 AI Grader
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace mod_contentcreator;
+
+defined('MOODLE_INTERNAL') || die();
+
+class manifest_storage {
+
+    /** Manifests smaller than this are stored raw (no compression overhead needed). */
+    const COMPRESS_THRESHOLD = 512 * 1024; // 512 KB
+
+    /**
+     * Compress manifest JSON for storage.
+     * Returns the original string unchanged if compression is unnecessary or fails.
+     *
+     * @param string $json Raw manifest JSON string.
+     * @return string Compressed 'gz:<base64>' string, or original JSON if below threshold.
+     */
+    public static function compress(string $json): string {
+        if (strlen($json) < self::COMPRESS_THRESHOLD) {
+            return $json;
+        }
+        $gz = gzencode($json, 6);
+        if ($gz === false) {
+            error_log('[CC_MANIFEST] gzencode() failed — storing raw JSON (' . strlen($json) . ' bytes)');
+            return $json;
+        }
+        $stored = 'gz:' . base64_encode($gz);
+        error_log('[CC_MANIFEST] Compressed ' . round(strlen($json) / 1024) . ' KB → ' .
+                  round(strlen($stored) / 1024) . ' KB (' .
+                  round((1 - strlen($stored) / strlen($json)) * 100) . '% reduction)');
+        return $stored;
+    }
+
+    /**
+     * Decompress manifest from storage.
+     * Returns the original string unchanged if it is not in compressed format
+     * (backward-compatible with manifests stored before v11.48).
+     *
+     * @param string $stored Value read from the manifestjson DB column.
+     * @return string Raw manifest JSON string.
+     */
+    public static function decompress(string $stored): string {
+        if (substr($stored, 0, 3) !== 'gz:') {
+            return $stored;
+        }
+        $decoded = base64_decode(substr($stored, 3), true);
+        if ($decoded === false) {
+            error_log('[CC_MANIFEST] base64_decode() failed — returning stored value as-is');
+            return $stored;
+        }
+        $json = gzdecode($decoded);
+        if ($json === false) {
+            error_log('[CC_MANIFEST] gzdecode() failed — returning stored value as-is');
+            return $stored;
+        }
+        return $json;
+    }
+}

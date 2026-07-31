@@ -1,0 +1,88 @@
+<?php
+/**
+ * Content Creator v6.5.0 - Save attempt external function
+ * [SPEC] SCORM 1.2 completion tracking only - NO scores
+ *
+ * @package    mod_contentcreator
+ * @copyright  2025 AI Grader
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+namespace mod_contentcreator\external;
+
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->libdir . '/externallib.php');
+
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use context_module;
+
+class save_attempt extends external_api {
+
+    public static function execute_parameters(): external_function_parameters {
+        return new external_function_parameters([
+            'cmid' => new external_value(PARAM_INT, 'Course module ID'),
+            'completed' => new external_value(PARAM_INT, 'Completion status (1 = complete)', VALUE_DEFAULT, 0),
+            'responses' => new external_value(PARAM_RAW, 'JSON slide responses', VALUE_DEFAULT, '{}')
+        ]);
+    }
+
+    public static function execute(int $cmid, int $completed = 0, string $responses = '{}'): array {
+        global $DB, $USER;
+
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'cmid' => $cmid,
+            'completed' => $completed,
+            'responses' => $responses
+        ]);
+
+        $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
+
+        require_capability('mod/contentcreator:view', $context);
+
+        $existing = $DB->get_record('contentcreator_attempts', [
+            'contentcreatorid' => $cm->instance,
+            'userid' => $USER->id
+        ]);
+
+        $record = new \stdClass();
+        $record->contentcreatorid = $cm->instance;
+        $record->userid = $USER->id;
+        $record->completed = $params['completed'];
+        $record->responses = $params['responses'];
+        $record->timemodified = time();
+
+        if ($existing) {
+            $record->id = $existing->id;
+            $DB->update_record('contentcreator_attempts', $record);
+        } else {
+            $record->timecreated = time();
+            $DB->insert_record('contentcreator_attempts', $record);
+        }
+
+        if ($params['completed']) {
+            $completion = new \completion_info(get_course($cm->course));
+            if ($completion->is_enabled($cm)) {
+                $completion->update_state($cm, COMPLETION_COMPLETE, $USER->id);
+            }
+        }
+
+        return [
+            'success' => true,
+            'message' => $params['completed'] ? 'Module completed' : 'Progress saved'
+        ];
+    }
+
+    public static function execute_returns(): external_single_structure {
+        return new external_single_structure([
+            'success' => new external_value(PARAM_BOOL, 'Success status'),
+            'message' => new external_value(PARAM_TEXT, 'Response message')
+        ]);
+    }
+}

@@ -1,0 +1,105 @@
+AI Content Creator — ChatGPT Prompt for Workplace Learning
+==========================================================
+
+Use this prompt with ChatGPT (GPT-4o or later) to generate JSON content for the
+AI Content Creator Moodle plugin (mod_contentcreator v10.44+).
+
+HOW TO USE:
+1. Copy the full prompt below into ChatGPT.
+2. Fill in YOUR CONTEXT and YOUR SUB TOPICS at the bottom.
+3. ChatGPT will return a JSON object for each sub topic.
+4. Paste the JSON output into the plugin's "Reference Material" field.
+5. Click "Generate" — the plugin uses your content to build the final slides.
+
+---BEGIN PROMPT---
+
+You are generating structured workplace learning aligned to policy, SOP, or performance expectations.
+
+OUTPUT: For each sub topic, return a JSON object with a "cards" property containing an array of exactly 7 cards. Separate each sub topic block with a line:
+=== [LETTER]: [Sub Topic Title] ===
+Then output the JSON block immediately after. No markdown, no code fences. Pure JSON only.
+
+OBJECTIVE: Drive consistent compliant behaviour through behavioural clarity and accountability. Focus on business impact: productivity, customer satisfaction, rework costs, team coordination. No RTO audit language.
+
+ANTI-DUPLICATION: Each card must introduce new cognitive value. Do not restate the same concept across cards.
+
+VOICE: Team leader coaching a colleague. Year 8-9 reading level. Sentences under 20 words. Use "you" not "the worker". Everyday words: "check" not "evaluate", "make sure" not "ensure". Every point includes a real consequence.
+
+REFERENCE MATERIAL USAGE: Use the context and sub topics below as the PRIMARY source for facts, examples, scenarios, workplace details, specific equipment, job titles, system names, and policy context. Do NOT replace specific details with generic equivalents.
+
+ICON VOCABULARY — only use these values for "icon" fields:
+map-pin, users, alert-circle, clock, alert-triangle, eye, lightbulb, shield-check, layers, book-open, check-circle, star, help-circle, award, anchor, zap, hard-hat, file-text, calendar, dollar-sign, tag
+
+BANNED WORDS — do not use any of these:
+crucial, delve, dive, unpack, holistic, robust, synergy, paradigm, multifaceted, nuanced, pivotal,
+empower, leverage, realm, journey, landscape, endeavour, pertaining, henceforth, whereby, thereof,
+therein, notwithstanding, explore, navigate, utilise, utilize, foster, streamline, effectively,
+efficiently, best practice, ensuring, critical, paramount, comprehensive, subsequently, furthermore,
+facilitate, it is important to, in order to ensure, various, range of, significantly, overall, appropriate
+
+CARD 1 – cardType "hook-scenario"
+- title (Title Case, workplace scene title — where the policy/skill matters)
+- sceneParts (array of exactly 4 objects, each with: title (short label e.g. "The Workplace", "Who's Involved", "What Went Wrong", "The Pressure"), icon (one from ICON VOCABULARY), text (2-3 sentences, 2nd person, specific workplace detail))
+- highlightText (optional: one short pull-quote showing the business stakes, max 20 words)
+
+CARD 2 – cardType "concept-explainer"
+- title (Title Case, names the policy, SOP, or business rule)
+- conceptInsights (array of exactly 3 objects, each with: title (short label e.g. "The Policy", "The Business Impact", "What You Must Do"), icon (one from ICON VOCABULARY), text (2-3 sentences of clear explanation in plain language))
+
+CARD 3 – cardType "mental-model"
+- title (Title Case, names the step-by-step process or response framework)
+- steps (array of 4-5 objects, each with: step (verb-led action title), icon (one from ICON VOCABULARY), detail (2-3 sentences on how to do this, naming specific tools, systems, or forms))
+
+CARD 4 – cardType "applied-scenario"
+- title (Title Case, a follow-up workplace moment — different from Card 1)
+- sceneParts (array of exactly 4 objects — same schema as Card 1, set AFTER the learner knows the policy, e.g. "Back at Work", "The New Situation", "Your Decision Point", "The Right Response")
+- highlightText (optional: one short pull-quote showing the compliant response)
+
+CARD 5 – cardType "mistakes"
+- title (Title Case, e.g. "Common Compliance Mistakes")
+- items (array of 5 objects, each with: mistake (starting with a verb or "Not…"), consequence (at least 15 words, naming the specific business, safety, or regulatory impact))
+
+CARD 6 – cardType "competency-summary"
+- title (Title Case, e.g. "You Are Ready When You Can…")
+- goodItems (array of 5 strings — what compliant performance looks like, verb-first, at least 10 words)
+- badItems (array of 5 strings — what to avoid, starting with a verb or "Not…", at least 10 words)
+
+CARD 7 – cardType "decision-point"
+- title (Title Case, names the compliance decision scenario)
+- question (the decision question, at least 15 words, 2nd person, concrete workplace situation with compliance stakes)
+- options (array of exactly 4 objects, each with: text (option), feedback (at least 15 words, naming the business or compliance consequence), correct (boolean — exactly one true))
+
+TASK INSTRUCTIONS:
+- Generate ALL sub topics in a SINGLE, uninterrupted response.
+- Do NOT stop partway through. Do NOT ask "Shall I continue?"
+- Generate a complete 7-card JSON block for EACH sub topic.
+- Do NOT combine multiple sub topics into one block.
+- Do NOT add commentary between blocks.
+- Every card must be written in full — do NOT truncate.
+
+NUMBERING FORMAT:
+- Label each sub topic using just the letter: A, B, C, D, E, etc.
+- Format: A — [Title], B — [Title], etc.
+
+====================================================================
+YOUR CONTEXT — USE THIS TO TAILOR ALL CONTENT
+====================================================================
+
+[Paste your context here: Company, Department, Training Type, Target Audience,
+Country, State/Region, Industry, Job Level, Training Document (if uploaded)]
+
+IMPORTANT: Use the company, industry, training type, and audience above to make ALL
+examples, scenarios, and workplace situations specific to this context.
+Do NOT use generic examples.
+
+====================================================================
+
+====================================================================
+YOUR SUB TOPICS TO COVER
+====================================================================
+
+[Paste your selected sub topics here, labelled A, B, C, etc.]
+
+====================================================================
+
+---END PROMPT---

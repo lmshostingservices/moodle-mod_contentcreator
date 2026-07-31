@@ -1,0 +1,478 @@
+{
+  "_meta": {
+    "version": "6.7.67",
+    "unit": "RIIWHS204E",
+    "unitTitle": "Work safely at heights",
+    "element": "1",
+    "elementTitle": "Plan and prepare for work at heights",
+    "generatedAt": "2025-01-10T17:30:00Z",
+    "features": [
+      "v6.7.67: Auto-Suggestion Engine (intersection-based task/equipment selection)",
+      "v6.7.66: Mental Model Library (15 proven models)",
+      "v6.7.66: Reflection Loop prompts",
+      "v6.7.64: Prediction prompts, Incident references, Key takeaways"
+    ]
+  },
+  "context": {
+    "industry": "Building & Construction",
+    "industrySector": "Commercial Construction",
+    "jobRoles": ["Scaffold Worker", "EWP Operator", "Maintenance Worker"],
+    "jobLevel": "Worker/Operator",
+    "country": "AU",
+    "state": "NSW",
+    "autoSuggestions": {
+      "triggeredBy": "3 job roles selected + unit keyword 'height'",
+      "unitRiskDomains": ["fall_risk", "access_equipment", "edge_protection", "rescue"],
+      "suggestedTasks": [
+        {
+          "id": "heights",
+          "title": "Work at Heights",
+          "examples": ["Maintain edge protection", "Use fall-arrest systems", "Transition anchor points"],
+          "matchedRoles": 3,
+          "reason": "Shared across all 3 roles, matches unit risk domain 'fall_risk'"
+        },
+        {
+          "id": "inspect",
+          "title": "Inspect & Tag",
+          "examples": ["Conduct pre-use inspections", "Check compliance tags", "Identify damage or defects"],
+          "matchedRoles": 2,
+          "reason": "Shared by Scaffold Worker + EWP Operator"
+        },
+        {
+          "id": "safety",
+          "title": "Safety & Controls",
+          "examples": ["Install toe boards", "Establish exclusion zones", "Manage dropped-object risks"],
+          "matchedRoles": 3,
+          "reason": "Shared across all roles, matches 'edge_protection' domain"
+        }
+      ],
+      "suggestedEquipment": [
+        {
+          "id": "height_safety",
+          "title": "Height Safety Equipment",
+          "examples": ["Full-body harness", "Lanyards (shock-absorbing)", "Inertia reels", "Certified anchor points"],
+          "reason": "Matches 'fall_risk' + 'rescue' domains"
+        },
+        {
+          "id": "ewp_types",
+          "title": "EWP Types",
+          "examples": ["Scissor lifts", "Boom lifts (articulating)", "Vertical mast lifts"],
+          "reason": "Matches 'access_equipment' domain, used by EWP Operator + Maintenance Worker"
+        },
+        {
+          "id": "scaffold_systems",
+          "title": "Scaffold Systems",
+          "examples": ["Tube and coupler", "Modular scaffold (ringlock)", "Mobile scaffolds"],
+          "reason": "Matches 'access_equipment' domain, used by Scaffold Worker"
+        }
+      ]
+    }
+  },
+  "element1": {
+    "title": "Plan and prepare for work at heights",
+    "performanceCriteria": [
+      "1.1 Access, interpret and apply work at heights documentation and ensure work activity is compliant with the requirements",
+      "1.2 Identify hazards, assess risks and determine control measures for work at heights",
+      "1.3 Select personal protective equipment (PPE) for work at heights",
+      "1.4 Select and inspect work at heights equipment"
+    ],
+    "learningSlides": [
+      {
+        "slideId": "1.1-learning",
+        "type": "learning",
+        "pc": "1.1",
+        "title": "Accessing Heights Documentation",
+        "layer1_knowledge": {
+          "description": "Before any work at heights begins, workers must access and interpret the correct documentation. This includes Safe Work Method Statements (SWMS), height safety plans, manufacturer specifications, and site-specific procedures.",
+          "keyPoints": [
+            "Locate the current SWMS for the height work task before starting",
+            "Verify the height safety plan is signed off by the site supervisor",
+            "Cross-check manufacturer load ratings against the planned work",
+            "Confirm the rescue plan is attached and rescue equipment is on site"
+          ],
+          "contrastPair": {
+            "type": "compliant-noncompliant",
+            "positive": [
+              "Read the SWMS and confirm your task is covered before ascending",
+              "Check the height safety plan was reviewed within the last 12 months",
+              "Verify equipment inspection tags match the SWMS requirements"
+            ],
+            "negative": [
+              "Assume yesterday's SWMS covers today's different height task",
+              "Start work while the supervisor is still reviewing the safety plan",
+              "Use equipment not listed in the approved SWMS"
+            ]
+          }
+        },
+        "layer2_scenario": {
+          "mentalModel": {
+            "name": "The Three-Check Rule",
+            "principle": "Documentation → Equipment → Environment - all three must be verified before ascending.",
+            "category": "Verification",
+            "libraryId": "MM-VER-01"
+          },
+          "predictionPrompt": "You're about to climb a scaffold on a new site. The foreman hands you a SWMS from last week's job. What could go wrong if you don't check it properly?",
+          "role": "You are a Scaffold Worker arriving at a commercial construction site for your first shift.",
+          "context": "The site supervisor hands you a tablet with the height safety documentation and says 'It's all there, just sign and get started.' You notice the SWMS date is from 3 months ago.",
+          "decisionPoint": "The supervisor is busy and other workers are already ascending. What do you do?",
+          "responses": [
+            {
+              "text": "Sign the SWMS and start work - the supervisor said it's fine",
+              "isCorrect": false,
+              "feedback": "This is how workers end up in incident investigations. An outdated SWMS may not cover current site hazards, changed equipment, or new exclusion zones. You become personally liable for working outside approved procedures."
+            },
+            {
+              "text": "Ask the supervisor to confirm the SWMS covers today's specific scaffold location and task",
+              "isCorrect": true,
+              "feedback": "Correct. A 3-month-old SWMS may not reflect current site conditions. Spending 2 minutes to verify saves potential injury, prosecution, and work stoppage. The supervisor should welcome this - it protects everyone."
+            },
+            {
+              "text": "Refuse to work until a new SWMS is written",
+              "isCorrect": false,
+              "feedback": "While safety is paramount, outright refusal without discussion is confrontational. The SWMS may still be valid if conditions haven't changed. Ask first - refuse only if the supervisor cannot confirm its currency."
+            }
+          ],
+          "incidentReference": {
+            "source": "SafeWork NSW",
+            "finding": "Investigation into scaffold collapse (2023) found workers were operating under a SWMS written for a different scaffold configuration. No pre-start review was conducted.",
+            "consequence": "Two workers hospitalised. Principal contractor fined $450,000."
+          },
+          "keyTakeaway": "If the date doesn't match the task, the SWMS doesn't match the risk.",
+          "reflectionPrompt": "Think of a time you were pressured to skip paperwork. What stopped you - or what should have?"
+        },
+        "layer3_consequences": {
+          "positiveOutcomes": {
+            "worker": "Protected from prosecution; clear audit trail if incident occurs",
+            "team": "Consistent safety standard; reduced confusion about procedures",
+            "organisation": "Regulatory compliance; reduced insurance premiums"
+          },
+          "negativeOutcomes": {
+            "worker": "Personal liability for injuries; potential criminal charges under WHS Act",
+            "team": "Work stoppage while investigation occurs; loss of trust",
+            "organisation": "SafeWork prosecution; potential $3M+ fines for Category 1 breach"
+          }
+        }
+      },
+      {
+        "slideId": "1.2-learning",
+        "type": "learning",
+        "pc": "1.2",
+        "title": "Hazard Identification for Heights Work",
+        "layer1_knowledge": {
+          "description": "Height work hazards extend beyond the obvious fall risk. Effective hazard identification requires systematic assessment of the work environment, weather conditions, equipment condition, and interactions with other trades.",
+          "keyPoints": [
+            "Walk the work area at ground level before ascending to identify overhead hazards",
+            "Check wind speed using the anemometer - most EWPs have a 12.5m/s limit",
+            "Identify all anchor points and verify their load ratings for the planned work",
+            "Map exclusion zones below the work area for dropped object protection"
+          ],
+          "contrastPair": {
+            "type": "safe-unsafe",
+            "positive": [
+              "Complete a Take 5 at the base of the scaffold before ascending",
+              "Radio other trades to confirm no conflicting overhead work",
+              "Tether all tools before climbing - nothing loose in pockets"
+            ],
+            "negative": [
+              "Assume the area was checked by the previous shift",
+              "Carry loose tools in your pocket 'just this once'",
+              "Ignore the wind picking up because you're nearly finished"
+            ]
+          }
+        },
+        "layer2_scenario": {
+          "mentalModel": {
+            "name": "Ground-Up Scan",
+            "principle": "Hazards at height are identified from the ground. If you can't see it from below, you won't expect it from above.",
+            "category": "Risk Assessment",
+            "libraryId": "MM-RISK-02"
+          },
+          "predictionPrompt": "You're about to operate a boom lift near overhead powerlines. The spotter says 'We've done this before, no worries.' What could you be missing?",
+          "role": "You are an EWP Operator positioning a boom lift for facade maintenance work.",
+          "context": "The area has been marked out, but you notice the exclusion zone tape ends about 2 metres short of where you need to position the basket. There are workers walking through the area below.",
+          "decisionPoint": "The job is running behind schedule. What do you do about the exclusion zone?",
+          "responses": [
+            {
+              "text": "Extend the exclusion zone yourself using spare tape from the EWP",
+              "isCorrect": true,
+              "feedback": "Correct. Taking initiative to extend inadequate controls shows safety leadership. A falling spanner from 10 metres can be fatal - the 2 minutes to extend tape could save a life."
+            },
+            {
+              "text": "Position a spotter to warn people away while you work",
+              "isCorrect": false,
+              "feedback": "A human spotter cannot guarantee 100% coverage and creates reliance on a single person. Physical barriers (tape, barricades) provide consistent protection. Use both where possible, but barriers first."
+            },
+            {
+              "text": "Proceed carefully and watch for people below while operating",
+              "isCorrect": false,
+              "feedback": "Split attention is a recipe for incidents. You cannot safely operate the EWP while watching the ground. Control the hazard at the source - extend the exclusion zone before ascending."
+            }
+          ],
+          "incidentReference": {
+            "source": "WorkSafe Victoria",
+            "finding": "Fatality investigation (2022) found inadequate exclusion zone allowed pedestrian access beneath elevated work. Dropped tool struck worker below.",
+            "consequence": "One fatality. PCBU prosecuted under industrial manslaughter provisions."
+          },
+          "keyTakeaway": "The exclusion zone protects everyone - including people who don't know they need protecting.",
+          "reflectionPrompt": "Where else have you seen 'nearly good enough' controls that actually weren't?"
+        },
+        "layer3_consequences": {
+          "positiveOutcomes": {
+            "worker": "Protected from dropped object injuries; clear conscience",
+            "team": "Safe passage below work area; uninterrupted workflow",
+            "organisation": "Demonstrated duty of care; positive regulator relationships"
+          },
+          "negativeOutcomes": {
+            "worker": "Potential for fatal injury from dropped objects",
+            "team": "Trauma from witnessing serious incident; work stoppage",
+            "organisation": "Industrial manslaughter charges now possible in most states"
+          }
+        }
+      },
+      {
+        "slideId": "1.3-learning",
+        "type": "learning",
+        "pc": "1.3",
+        "title": "Selecting Height Safety PPE",
+        "layer1_knowledge": {
+          "description": "Personal Protective Equipment for height work is the last line of defence. Selection must match the specific hazards, anchor points available, and the work to be performed. Generic 'one size fits all' approaches fail.",
+          "keyPoints": [
+            "Match harness type to the work - full body for fall arrest, sit harness only for rope access",
+            "Select lanyard length based on available fall clearance below the work platform",
+            "Verify the anchor point rating matches the number of workers to be connected",
+            "Check harness fit before ascending - leg straps snug, chest strap at sternum"
+          ],
+          "contrastPair": {
+            "type": "professional-unprofessional",
+            "positive": [
+              "Adjust harness straps until you can only fit a flat hand between strap and body",
+              "Use a shock-absorbing lanyard when fall distance could exceed 600mm",
+              "Inspect all stitching and webbing for UV damage before each use"
+            ],
+            "negative": [
+              "Wear a harness loose because it's more comfortable",
+              "Use someone else's harness without adjusting it to your body",
+              "Assume the harness is fine because it passed inspection last month"
+            ]
+          }
+        },
+        "layer2_scenario": {
+          "mentalModel": {
+            "name": "Last Line Reality",
+            "principle": "PPE doesn't prevent falls - it prevents fatalities. The harness assumes everything else failed.",
+            "category": "PPE",
+            "libraryId": "MM-PPE-01"
+          },
+          "predictionPrompt": "Your harness feels uncomfortable so you loosen the leg straps. You're only going up for 10 minutes. What's the worst that could happen?",
+          "role": "You are a Maintenance Worker about to access a roof via a fixed ladder with a static line system.",
+          "context": "You grab a harness from the gang box. It's the right size but the leg straps are already loosened from the previous user. The static line at the ladder is rated for one person at a time.",
+          "decisionPoint": "Another worker is waiting to ascend after you. Do you take time to properly adjust the harness?",
+          "responses": [
+            {
+              "text": "Adjust all straps properly - it only takes 2 minutes",
+              "isCorrect": true,
+              "feedback": "Correct. A poorly fitted harness can cause suspension trauma in minutes, or allow you to slip through during a fall. The 2 minutes you 'save' could cost your life. The other worker can wait."
+            },
+            {
+              "text": "Tighten just the chest strap - it's a short climb",
+              "isCorrect": false,
+              "feedback": "The leg straps are critical. In a fall, loose leg straps can ride up and cause serious injury, or allow you to fall through the harness entirely. All straps must be properly adjusted, every time."
+            },
+            {
+              "text": "Swap harnesses with the waiting worker if theirs fits better",
+              "isCorrect": false,
+              "feedback": "Each harness should be assigned to an individual worker and adjusted for them. Swapping harnesses without proper adjustment creates the same problem. Take time to adjust your own harness correctly."
+            }
+          ],
+          "incidentReference": {
+            "source": "SafeWork SA",
+            "finding": "Near-miss investigation found worker slipped partially through loose harness during arrested fall. Leg straps had not been tightened from previous user.",
+            "consequence": "Worker suspended inverted for 8 minutes before rescue. Required medical treatment for suspension trauma."
+          },
+          "keyTakeaway": "A loose harness is a trap, not protection. Fit it like your life depends on it - because it does.",
+          "reflectionPrompt": "Have you ever rushed PPE selection because you felt time pressure? What would you do differently now?"
+        },
+        "layer3_consequences": {
+          "positiveOutcomes": {
+            "worker": "Survives arrested fall with minimal injury",
+            "team": "Confidence in rescue procedures; no trauma from witnessing injury",
+            "organisation": "Validates investment in quality PPE and training"
+          },
+          "negativeOutcomes": {
+            "worker": "Suspension trauma within 15-20 minutes of hanging in harness",
+            "team": "Panic during rescue attempt; potential for secondary injuries",
+            "organisation": "Workers' compensation claim; potential prosecution for inadequate training"
+          }
+        }
+      },
+      {
+        "slideId": "1.4-learning",
+        "type": "learning",
+        "pc": "1.4",
+        "title": "Equipment Inspection Before Use",
+        "layer1_knowledge": {
+          "description": "Every piece of height safety equipment requires inspection before each use. This is not optional or 'when you have time' - it is a legal requirement and the difference between equipment that protects and equipment that fails.",
+          "keyPoints": [
+            "Check harness webbing for cuts, abrasion, chemical damage, or UV degradation",
+            "Verify scaffold tags show current inspection within required timeframe",
+            "Test EWP emergency descent function at ground level before elevating",
+            "Inspect lanyards for any twist, kink, or damage to the shock absorber indicator"
+          ],
+          "contrastPair": {
+            "type": "compliant-noncompliant",
+            "positive": [
+              "Run your hands along every metre of lanyard webbing feeling for damage",
+              "Test all EWP functions at ground level including emergency stop",
+              "Report any damaged equipment immediately - don't 'save it for later'"
+            ],
+            "negative": [
+              "Visual check only - 'it looks fine from here'",
+              "Use equipment with a missing or faded inspection tag",
+              "Put damaged equipment back in the gang box without tagging it out"
+            ]
+          }
+        },
+        "layer2_scenario": {
+          "mentalModel": {
+            "name": "Touch Test Truth",
+            "principle": "Your hands find what your eyes miss. Run every strap through your fingers.",
+            "category": "Inspection",
+            "libraryId": "MM-INSP-01"
+          },
+          "predictionPrompt": "The harness looks fine. The tag says it was inspected last month. You're running late. What could a 30-second touch test reveal that you'd miss by just looking?",
+          "role": "You are a Scaffold Worker about to use a harness from the shared equipment store.",
+          "context": "The harness has a valid inspection tag from 2 weeks ago. You do a quick visual check and it looks fine. But when you pick it up, one of the D-rings feels slightly rough.",
+          "decisionPoint": "The rough D-ring might be nothing - or it might be the start of a crack. What do you do?",
+          "responses": [
+            {
+              "text": "Tag out the harness and select a different one",
+              "isCorrect": true,
+              "feedback": "Correct. 'Might be nothing' is not acceptable for life-critical equipment. A cracked D-ring can fail catastrophically under load. Tag it out, report it, and let a competent person make the call."
+            },
+            {
+              "text": "Use it but connect to the other D-ring instead",
+              "isCorrect": false,
+              "feedback": "If one component is suspect, the entire harness is suspect. The same conditions that caused one D-ring to deteriorate may have affected others. Never work around a potential defect."
+            },
+            {
+              "text": "Ask a more experienced worker for their opinion",
+              "isCorrect": false,
+              "feedback": "While consulting others is good, it shouldn't delay action. Tag out first, then consult. If the experienced worker clears it, they can remove the tag. If you use it and it fails, 'someone else said it was fine' won't save you."
+            }
+          ],
+          "incidentReference": {
+            "source": "WorkSafe Queensland",
+            "finding": "Equipment failure investigation found harness D-ring had developed stress fracture not visible to the naked eye. Failed during fall arrest.",
+            "consequence": "Worker fell 4 metres to concrete. Multiple fractures. D-ring had passed visual inspection 3 days prior."
+          },
+          "keyTakeaway": "When in doubt, tag it out. Equipment is replaceable. You are not.",
+          "reflectionPrompt": "What's the smallest equipment defect you've ever found that could have caused a serious incident?"
+        },
+        "layer3_consequences": {
+          "positiveOutcomes": {
+            "worker": "Confidence in equipment reliability; no hesitation during work",
+            "team": "Culture of thorough inspection normalised",
+            "organisation": "Reduced equipment failure incidents; demonstrates due diligence"
+          },
+          "negativeOutcomes": {
+            "worker": "Equipment failure during use; serious injury or death",
+            "team": "Loss of trust in shared equipment; every harness now suspect",
+            "organisation": "Prosecution for failing to maintain equipment; $500K+ fines typical"
+          }
+        }
+      }
+    ],
+    "activitySlide": {
+      "slideId": "1-activity",
+      "type": "activity",
+      "activityType": "scenario-branching",
+      "title": "Plan and Prepare Assessment",
+      "description": "Apply what you've learned about planning and preparing for work at heights.",
+      "scenario": {
+        "setup": "You arrive at a new construction site for your first day as a Scaffold Worker. The site supervisor hands you PPE and points to a partially erected scaffold, saying 'The other guys left yesterday - just finish it off.' There's no one else from your company on site.",
+        "decisions": [
+          {
+            "number": 1,
+            "situation": "You look at the scaffold and can see it's about 80% complete. The supervisor seems impatient.",
+            "question": "What's your first action?",
+            "options": [
+              {
+                "text": "Ask to see the SWMS and height safety plan for this scaffold",
+                "isCorrect": true,
+                "consequence": "The supervisor sighs but finds the documentation. You notice the SWMS is for a different scaffold location.",
+                "feedback": "Good start. Documentation first - always. You've identified a critical discrepancy."
+              },
+              {
+                "text": "Inspect the existing scaffold work to see if it's been done correctly",
+                "isCorrect": false,
+                "consequence": "You climb the scaffold to inspect. Halfway up, you realise you're not wearing a harness and there's no static line.",
+                "feedback": "Inspecting is important, but you skipped documentation and PPE. You're now at height without protection."
+              },
+              {
+                "text": "Call your own supervisor to ask what to do",
+                "isCorrect": false,
+                "consequence": "Your supervisor tells you to 'use your training' and hangs up. You still don't have documentation.",
+                "feedback": "Escalation is appropriate for complex issues, but this is a basic compliance check you should do yourself first."
+              }
+            ]
+          },
+          {
+            "number": 2,
+            "situation": "You've identified the SWMS doesn't match this scaffold. The site supervisor says 'The scaffold company will send new paperwork tomorrow - just do what you can today.'",
+            "question": "How do you respond?",
+            "options": [
+              {
+                "text": "Explain you cannot work on this scaffold until the correct SWMS is in place",
+                "isCorrect": true,
+                "consequence": "The supervisor is frustrated but understands. They call the scaffold company who emails an updated SWMS within an hour.",
+                "feedback": "Professional and correct. You've protected yourself and the site. The delay is minor compared to the risk."
+              },
+              {
+                "text": "Agree to do ground-level preparation work only until the paperwork arrives",
+                "isCorrect": false,
+                "consequence": "You start sorting materials. The supervisor comes back and says 'While you're here, just do this one small thing up top...'",
+                "feedback": "Scope creep is how incidents happen. Once you agree to start, the pressure to 'just do a bit more' is hard to resist."
+              },
+              {
+                "text": "Refuse to work and leave the site immediately",
+                "isCorrect": false,
+                "consequence": "The site supervisor reports you to your employer for 'refusing to work'. You now have a disciplinary issue.",
+                "feedback": "Leaving without attempting resolution is extreme. Refusing unsafe work is protected, but walking off site without discussion isn't."
+              }
+            ]
+          },
+          {
+            "number": 3,
+            "situation": "The updated SWMS has arrived. You're about to select your harness when you notice the only one available has a tag that's hard to read.",
+            "question": "What do you do about the harness?",
+            "options": [
+              {
+                "text": "Inspect the harness thoroughly and check if the tag date is still valid",
+                "isCorrect": true,
+                "consequence": "You use your phone torch to read the tag - it's current. Your touch inspection finds the harness is in good condition. You adjust it to fit and proceed safely.",
+                "feedback": "Perfect. You didn't assume, you verified. Tag check plus touch inspection is the gold standard."
+              },
+              {
+                "text": "Ask the supervisor for a different harness with a clearer tag",
+                "isCorrect": false,
+                "consequence": "There are no other harnesses on site. You've created a delay without first checking if this one is actually valid.",
+                "feedback": "Requesting alternatives is fine, but check the available equipment first. The tag might be readable with closer inspection."
+              },
+              {
+                "text": "Use the harness - it's probably fine if it's in the equipment store",
+                "isCorrect": false,
+                "consequence": "You use the harness. Later, an inspector finds the tag was actually 6 months expired. You receive a formal warning.",
+                "feedback": "Assumption is the enemy of safety. 'Probably fine' has preceded many serious incidents. Always verify."
+              }
+            ]
+          }
+        ],
+        "finalOutcome": {
+          "allCorrect": "You've demonstrated exactly the approach expected of a competent height worker. Documentation → PPE → Inspection. You protected yourself, the site, and your employer. This is the standard.",
+          "someCorrect": "You showed good instincts in some areas but took shortcuts in others. Each decision in height work is a link in the chain - one weak link compromises everything.",
+          "noneCorrect": "This scenario resulted in multiple compliance failures and potential injury. Height work requires systematic, non-negotiable safety steps. Review the documentation, PPE, and inspection requirements."
+        }
+      }
+    }
+  }
+}

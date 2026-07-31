@@ -1,0 +1,135 @@
+{
+  "meta": {
+    "country": "United States",
+    "country_code": "US",
+    "region": null,
+    "version": "1.0.0",
+    "last_updated": "2026-01-01",
+    "maintained_by": "AI Grader"
+  },
+  "scope": {
+    "applies_to": ["learning_content", "assessments", "simulated_workplace_tasks", "workplace_procedures"],
+    "excluded_from": ["legal_advice", "employment_contract_advice"]
+  },
+  "legislation_groups": [
+    {
+      "group_id": "OSHA_US",
+      "group_name": "Occupational Safety and Health (OSHA)",
+      "abbreviation": "OSHA",
+      "priority": "high",
+      "summary_for_ai": "Training content must promote safe work practices consistent with OSHA expectations.",
+      "content_rules": [
+        "Always promote safe work practices",
+        "Never reward or normalise unsafe behaviour",
+        "Include hazard awareness where relevant",
+        "Model appropriate use of safety equipment"
+      ],
+      "scenario_rules": [
+        "Workplace scenarios must include realistic hazards",
+        "Unsafe decisions must result in corrective outcomes",
+        "Incident reporting must follow reasonable workplace expectations"
+      ],
+      "assessment_rules": [
+        "Correct answers must align with safe work practices",
+        "Incorrect answers must explain safety risks",
+        "Assessment tasks must not encourage unsafe actions"
+      ],
+      "tone_and_language": {
+        "must_use": ["clear", "practical", "workplace-focused"],
+        "must_avoid": ["legal citations", "regulatory clause references"]
+      },
+      "common_mistakes_to_avoid": [
+        "Normalising unsafe shortcuts",
+        "Ignoring hazard controls in scenarios"
+      ]
+    },
+    {
+      "group_id": "PRIVACY_US",
+      "group_name": "Privacy and Learner Data Protection",
+      "abbreviation": "Privacy",
+      "priority": "high",
+      "summary_for_ai": "Learner and employee information must be handled responsibly and confidentially.",
+      "content_rules": [
+        "Use fictional or anonymised personal information",
+        "Avoid unnecessary collection of personal data",
+        "Model secure handling of digital and paper records"
+      ],
+      "scenario_rules": [
+        "Scenarios involving records must demonstrate confidentiality",
+        "Personal data must not be shared casually or publicly"
+      ],
+      "assessment_rules": [
+        "Do not require learners to provide real personal information",
+        "Privacy-respecting behaviour must be reinforced in feedback"
+      ],
+      "tone_and_language": {
+        "must_use": ["respectful", "privacy-aware"],
+        "must_avoid": ["real names", "real contact details", "identifiable personal data"]
+      },
+      "common_mistakes_to_avoid": [
+        "Using real personal data in examples",
+        "Normalising informal data sharing"
+      ]
+    },
+    {
+      "group_id": "EEO_US",
+      "group_name": "Equal Employment Opportunity (EEO)",
+      "abbreviation": "EEO",
+      "priority": "high",
+      "summary_for_ai": "Training must be inclusive and free from discrimination or harassment.",
+      "content_rules": [
+        "Use inclusive and neutral language",
+        "Avoid stereotypes or biased assumptions",
+        "Represent diverse roles and workplaces"
+      ],
+      "scenario_rules": [
+        "Discrimination or harassment must never be rewarded",
+        "Inappropriate behaviour must be corrected through feedback"
+      ],
+      "assessment_rules": [
+        "Correct answers must support fair treatment",
+        "Feedback must discourage discriminatory behaviour"
+      ],
+      "tone_and_language": {
+        "must_use": ["inclusive", "neutral", "professional"],
+        "must_avoid": ["gender stereotypes", "racial or cultural assumptions", "age bias"]
+      },
+      "common_mistakes_to_avoid": [
+        "Gendered job roles",
+        "Normalising workplace harassment"
+      ]
+    },
+    {
+      "group_id": "TRAINING_US",
+      "group_name": "Workforce Training and Assessment Expectations",
+      "abbreviation": "Training",
+      "priority": "medium",
+      "summary_for_ai": "Training content should be clear, fair, and appropriate for workforce learning contexts.",
+      "content_rules": [
+        "Learning materials must be clear and achievable",
+        "Instructions must be unambiguous",
+        "Content must match stated learning outcomes"
+      ],
+      "scenario_rules": [
+        "Simulated workplaces must be realistic",
+        "Tasks must be solvable using provided information"
+      ],
+      "assessment_rules": [
+        "Assessment must be fair and reasonable",
+        "Do not trick learners with irrelevant complexity"
+      ],
+      "tone_and_language": {
+        "must_use": ["instructional", "supportive"],
+        "must_avoid": ["punitive language", "overly academic tone"]
+      },
+      "common_mistakes_to_avoid": [
+        "Over-assessing beyond stated scope",
+        "Ambiguous assessment questions"
+      ]
+    }
+  ],
+  "prompt_injection_block": {
+    "system_instruction": "All generated content must comply with U.S. OSHA safety expectations, privacy principles, equal employment opportunity requirements, and fair workforce training practices. Safety, inclusivity, and learner fairness must be prioritised at all times. Use American English spelling.",
+    "enforcement_level": "strict"
+  }
+}

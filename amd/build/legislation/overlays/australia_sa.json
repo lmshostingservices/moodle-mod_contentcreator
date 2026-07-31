@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "country_code": "AU",
+    "region": "South Australia",
+    "region_code": "SA",
+    "overlay_type": "state",
+    "version": "1.0.0",
+    "last_updated": "2026-01-01"
+  },
+  "overlay_rules": [
+    {
+      "applies_to_group_id": "WHS_AU",
+      "additional_content_rules": [
+        "Include SafeWork SA reporting expectations"
+      ],
+      "additional_scenario_rules": [],
+      "additional_assessment_rules": [],
+      "override_tone_and_language": null,
+      "notes_for_ai": "South Australia follows harmonised WHS with SafeWork SA as regulator."
+    }
+  ],
+  "overlay_prompt_block": {
+    "system_instruction_append": "Apply South Australia workplace safety expectations.",
+    "enforcement_level": "strict"
+  }
+}

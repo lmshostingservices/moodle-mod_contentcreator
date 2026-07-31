@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "country_code": "AU",
+    "region": "Western Australia",
+    "region_code": "WA",
+    "overlay_type": "state",
+    "version": "1.0.0",
+    "last_updated": "2026-01-01"
+  },
+  "overlay_rules": [
+    {
+      "applies_to_group_id": "WHS_AU",
+      "additional_content_rules": [
+        "Address mining and resources industry safety where relevant",
+        "Include fly-in fly-out (FIFO) work considerations"
+      ],
+      "additional_scenario_rules": [
+        "Consider remote site and mining workplace contexts"
+      ],
+      "additional_assessment_rules": [],
+      "override_tone_and_language": null,
+      "notes_for_ai": "Western Australia has significant mining, resources, and FIFO work contexts."
+    }
+  ],
+  "overlay_prompt_block": {
+    "system_instruction_append": "Apply Western Australia-specific workplace safety expectations including mining and FIFO considerations.",
+    "enforcement_level": "strict"
+  }
+}

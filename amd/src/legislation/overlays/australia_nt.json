@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "country_code": "AU",
+    "region": "Northern Territory",
+    "region_code": "NT",
+    "overlay_type": "state",
+    "version": "1.0.0",
+    "last_updated": "2026-01-01"
+  },
+  "overlay_rules": [
+    {
+      "applies_to_group_id": "WHS_AU",
+      "additional_content_rules": [
+        "Address remote and isolated work safety",
+        "Include heat stress and tropical hazards awareness"
+      ],
+      "additional_scenario_rules": [
+        "Consider remote community and mining contexts"
+      ],
+      "additional_assessment_rules": [],
+      "override_tone_and_language": null,
+      "notes_for_ai": "Northern Territory has significant remote, mining, and tropical work contexts."
+    }
+  ],
+  "overlay_prompt_block": {
+    "system_instruction_append": "Apply Northern Territory workplace safety expectations including remote and tropical considerations.",
+    "enforcement_level": "strict"
+  }
+}

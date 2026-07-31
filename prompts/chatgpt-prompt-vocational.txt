@@ -1,0 +1,255 @@
+AI Content Creator — ChatGPT Prompt for VET / Vocational Content
+================================================================
+
+Use this prompt with ChatGPT (GPT-4o or later) to generate JSON content for the
+AI Content Creator Moodle plugin (mod_contentcreator v10.54+).
+
+HOW TO USE:
+1. Copy the full prompt below into ChatGPT.
+2. Fill in YOUR CONTEXT and YOUR PERFORMANCE CRITERIA at the bottom.
+3. ChatGPT will return a JSON object for each Performance Criterion.
+4. Paste the JSON output into the plugin's "Reference Material" field.
+5. Click "Generate" — the plugin uses your content to build the final slides.
+
+---BEGIN PROMPT---
+
+You are generating competency-based vocational learning content for an Australian unit of competency.
+
+OUTPUT FORMAT:
+For each Performance Criterion, output a JSON object with a "cards" property containing an array of exactly 7 cards.
+Separate each PC block with a line: === PC [N.X] ===
+Then output the JSON block immediately after.
+No markdown. No code fences. Pure JSON only.
+DO NOT use text labels like [CARD 1], TITLE:, CONTENT:, STEP 1:, or any other non-JSON format.
+DO NOT wrap output in ```json or any code block. Raw JSON only.
+
+OBJECTIVE: Teach observable workplace performance aligned to each Performance Criterion. Content must be ASQA audit-defensible.
+
+====================================================================
+REFERENCE MATERIAL USAGE
+====================================================================
+
+Use the Performance Criteria text and context as the PRIMARY source for facts, scenarios, workplace details, job titles, equipment, and vocabulary. Do NOT replace specific details with generic equivalents.
+
+PC TEXT COVERAGE — NON-NEGOTIABLE:
+- Read the full PC text carefully before writing any card.
+- Every key term, method, document type, or concept named in the PC must appear in the content.
+- If the PC names two or more things (e.g. "methods AND requirements", "documents AND records") — cover each one separately. Do not merge or imply the others.
+- If the PC says "industry practices" — include references to recognised industry standards and reporting expectations beyond just your own workplace.
+- If the PC names a specific standard, regulation, or framework — reference it by name (e.g. Work Health and Safety Act, National Quality Framework, relevant Australian Standards).
+- If the PC says "identify" — the content must NAME the things being identified, not just show someone doing a check.
+- If the PC says "explain" — the content must describe WHY the concept matters and HOW it works, not just list steps.
+- If the PC says "processed" — include WHERE documents go after completion, WHO receives them, and HOW they are stored or filed.
+
+====================================================================
+LEGAL & REGULATORY INTEGRATION — MANDATORY
+====================================================================
+
+Reference relevant legislation, regulations, codes of practice, and industry standards naturally in the story and explanations.
+
+Rules:
+- Use the unit code, industry, and context to determine which laws, regulations, codes, and guidelines apply.
+- Name specific Acts, Standards, Codes of Practice, or Guidance documents where they directly relate to the PC content (e.g. Heavy Vehicle National Law, Chain of Responsibility, WHS Act 2011, relevant Australian Standards).
+- Weave legal references into decisions, actions, and consequences — do NOT dump legislation as a separate list or wall of text.
+- Legal references must feel natural — embedded in scenarios (Card 1, Card 4), explanations (Card 2), steps (Card 3), mistakes (Card 5), and decision feedback (Card 7).
+- If the PC involves compliance, safety, or regulated activities, the content MUST name the specific law or code that applies and show how it affects the worker's actions.
+- If no specific legislation applies to a PC, do not force legal references — but always check before assuming none apply.
+
+====================================================================
+UNIT-FIRST DOMAIN LOGIC
+====================================================================
+
+Only include domain-specific content that genuinely applies to the skill being taught.
+Do NOT add generic WHS language unless the PC specifically covers WHS.
+
+Use the unit code and context to determine which domain applies. Common examples:
+- HLTAID units: DRSABCD, primary survey, scene safety, triage, CPR ratios.
+- WHS/OHS units: hazard identification, risk control hierarchy, SWMS, hierarchy of controls.
+- Technical trades: tools, measurements, equipment, calibration, tolerances.
+- Administration/business: documents, systems, filing, version control, communication.
+- Hospitality/food: temperature controls, allergens, hygiene, HACCP.
+- Community services: client rights, duty of care, reporting obligations, support plans.
+- Retail/customer service: product knowledge, complaints, POS systems, returns policies.
+- Construction: permits, site inductions, PPE, working at heights, isolation procedures.
+
+If the unit does not match any of these examples, derive the domain content directly from the PC text and the context you have been given. Never apply domain logic from a different industry.
+
+====================================================================
+WRITING STYLE
+====================================================================
+
+Voice: Supervisor coaching on the job. Year 8-9 reading level.
+- Sentences under 20 words.
+- Use "you" not "the worker".
+- Use everyday words: "check" not "evaluate", "make sure" not "ensure", "use" not "utilise".
+- Every list item includes a concrete noun and a specific consequence.
+- Depth: every scenario, step, and example must be specific to the industry and job role in YOUR CONTEXT.
+
+BANNED WORDS — never use any of these:
+crucial, delve, dive, unpack, holistic, robust, synergy, paradigm, multifaceted, nuanced, pivotal,
+empower, leverage, realm, journey, landscape, endeavour, pertaining, henceforth, whereby, thereof,
+therein, notwithstanding, explore, navigate, utilise, utilize, foster, streamline, effectively,
+efficiently, best practice, ensuring, critical, paramount, comprehensive, subsequently, furthermore,
+facilitate, it is important to, in order to ensure, for safety purposes, various, range of,
+significantly, overall, appropriate
+
+ICON VOCABULARY — only use these exact values for all "icon" fields:
+map-pin, users, alert-circle, clock, alert-triangle, eye, lightbulb, shield-check, layers,
+book-open, check-circle, star, help-circle, award, anchor, zap, hard-hat, file-text,
+calendar, dollar-sign, tag
+
+====================================================================
+STORY CONTINUITY — MANDATORY
+====================================================================
+
+Cards 1, 4, and 7 form ONE continuous story. They MUST share:
+- The same named characters throughout (e.g. Mick, Jayden, Sarah).
+- The same workplace location and same day or shift.
+- The same core situation, escalating from problem to knowledge to decision.
+
+Card 1 shows the problem.
+Card 4 continues the same day — AFTER the learner has the knowledge — showing the correct action.
+Card 7 places the learner directly inside the same situation and asks what they would do.
+
+Rules:
+- Do NOT introduce new primary characters in Card 4 or Card 7.
+- Card 4 MUST reference the characters and outcome from Card 1.
+- The Card 7 question MUST directly reference the specific situation from Cards 1 and 4.
+- Card 7 options must be plausible choices a real worker might make in that exact situation.
+
+====================================================================
+CARD SPECIFICATIONS
+====================================================================
+
+CARD 1 — cardType "hook-scenario"
+Fields:
+- title: Title Case. A short workplace scene title (not a question).
+- sceneParts: array of EXACTLY 4 objects. Each object has:
+    - title: short scene panel label (e.g. "The Setting", "The Details", "What Happened", "The Pressure")
+    - icon: one value from ICON VOCABULARY
+    - text: 2–3 sentences. 2nd person. Sensory and specific. No generic language.
+- highlightText: REQUIRED. One pull-quote — the sharpest, most tension-filled sentence from the scene. Max 20 words.
+
+CARD 2 — cardType "concept-explainer"
+Fields:
+- title: Title Case. Names the core concept, rule, or framework being taught.
+- conceptInsights: array of EXACTLY 3 objects. Each object has:
+    - title: short label (e.g. "The Core Rule", "Why It Matters", "On the Job")
+    - icon: one value from ICON VOCABULARY
+    - text: 2–3 sentences. Practical and plain-language. No jargon.
+RULE: The text of the FIRST conceptInsight MUST begin with "What you just saw..." or "In that situation..."
+RULE: All three insights must directly address the PC text — not just the scenario.
+
+CARD 3 — cardType "mental-model"
+Fields:
+- title: Title Case. Names the step-by-step process workers follow.
+- steps: array of EXACTLY 4 objects. Each object has:
+    - step: verb-led action title (e.g. "Check the document before starting", "Confirm the requirement with your supervisor")
+    - icon: one value from ICON VOCABULARY
+    - detail: 2–3 sentences explaining HOW to do the step and WHY it matters. Include concrete nouns.
+RULE: Steps must cover the full scope of the PC — not just the most obvious step.
+RULE: Step titles must be specific actions, not generic labels like "Step 1" or "Do the check".
+
+CARD 4 — cardType "applied-scenario"
+Fields:
+- title: Title Case. Shows the learner returning to the same workplace, same day, with the knowledge.
+- sceneParts: array of EXACTLY 4 objects. Same schema as Card 1. Use panel labels like:
+    "Back on the Job", "The New Challenge", "The Decision Moment", "The Right Move"
+- highlightText: REQUIRED. One pull-quote showing the competent response. Max 20 words.
+RULE: Card 4 MUST be equal in depth and specificity to Card 1. Four panels, each 2–3 sentences.
+RULE: The same named characters from Card 1 must appear in Card 4.
+RULE: Card 4 must show the CORRECT approach being applied — not just described.
+
+CARD 5 — cardType "mistakes"
+Fields:
+- title: Title Case (e.g. "Common Traps to Avoid")
+- items: array of EXACTLY 5 objects. Each object has:
+    - mistake: starts with a verb or "Not…". Names the specific wrong action.
+    - consequence: at least 15 words. Names the specific operational, safety, or compliance impact.
+RULE: Each mistake must be a distinct error — not variations of the same idea.
+RULE: Consequences must be concrete and specific to the industry, not generic ("this is dangerous").
+
+CARD 6 — cardType "competency-summary"
+Fields:
+- title: Title Case (e.g. "You Are Ready When You Can…")
+- goodItems: array of EXACTLY 5 strings. What competent performance looks like.
+    Each string starts with a verb. Minimum 10 words each.
+- badItems: array of EXACTLY 5 strings. What to avoid.
+    Each string starts with a verb or "Not…". Minimum 10 words each.
+RULE: Good and bad items must directly map to the PC text — not just general workplace behaviour.
+
+CARD 7 — cardType "decision-point"
+Fields:
+- title: Title Case. Names the specific decision the learner faces.
+- question: at least 15 words. 2nd person. Concrete workplace situation.
+    MUST place the learner in the exact situation from Cards 1 and 4 — same location, same pressure.
+- options: array of EXACTLY 4 objects. Each object has:
+    - text: concise action statement (what the learner would do)
+    - feedback: at least 20 words explaining why this is correct or incorrect. Name the real consequence.
+    - correct: boolean — exactly ONE option must be true
+RULE: The question must not be generic. It must reference the specific scenario from Card 1.
+RULE: All four options must be plausible real actions — not obviously wrong choices.
+RULE: Feedback for incorrect options must explain the real harm or risk, not just say "this is wrong".
+
+====================================================================
+GENERATION RULES — NON-NEGOTIABLE
+====================================================================
+
+- Generate ALL Performance Criteria in a SINGLE, uninterrupted response.
+- Do NOT stop between PCs.
+- Do NOT say "Shall I continue?", "Let me know if you want more", or offer to pause.
+- Do NOT add commentary, explanations, or text between JSON blocks.
+- Generate a complete 7-card JSON block for EACH Performance Criterion.
+- Do NOT combine multiple PCs into one block.
+- Every card must be written in full — do NOT truncate, abbreviate, skip fields, or summarise.
+- Each block opens with === PC [N.X] === on its own line, then immediately the JSON. Nothing else.
+
+====================================================================
+MANDATORY FINAL CHECK — run this before outputting
+====================================================================
+
+For EVERY PC block, confirm:
+
+[ ] Exactly 7 cards in the "cards" array
+[ ] Card 1 (hook-scenario): sceneParts has exactly 4 objects. highlightText present.
+[ ] Card 2 (concept-explainer): conceptInsights has exactly 3 objects. First insight text opens with "What you just saw..." or "In that situation..."
+[ ] Card 3 (mental-model): steps has exactly 4 objects. Each step is a specific verb-led action.
+[ ] Card 4 (applied-scenario): sceneParts has exactly 4 objects. highlightText present. Same characters as Card 1.
+[ ] Card 5 (mistakes): items has exactly 5 objects. Each consequence is at least 15 words.
+[ ] Card 6 (competency-summary): goodItems has exactly 5 strings. badItems has exactly 5 strings.
+[ ] Card 7 (decision-point): question references the Card 1 scenario. Exactly 4 options. Exactly 1 correct. Each feedback is at least 20 words.
+[ ] All key terms from the PC text appear in the content.
+[ ] Relevant legislation, regulations, codes of practice, or industry standards referenced where applicable.
+[ ] No banned words used.
+[ ] Output is pure JSON — no text labels, no code fences, no commentary.
+[ ] If a scenario feels generic, it has been rewritten to reflect a real, specific job site situation.
+
+If any check fails — fix it before outputting. Do not output incomplete content.
+
+REALISM RULE:
+If any scenario, example, or workplace situation feels generic — rewrite it to reflect a real, specific job site situation with named roles, real equipment, and actual workplace pressures.
+
+ASSESSMENT ALIGNMENT:
+Content must support real workplace performance and assessment readiness. Every card should contribute to preparing the learner for on-the-job competency demonstration.
+
+====================================================================
+YOUR CONTEXT — USE THIS TO TAILOR ALL CONTENT
+====================================================================
+
+[Paste your context here: Country, State/Region, Industry, Industry Sector, Job Level(s)]
+
+IMPORTANT: Use the industry, sector, and job level above to make ALL examples, scenarios,
+equipment references, and workplace situations specific to this context.
+Do NOT use generic examples. Specific job roles, specific tools, specific locations.
+
+====================================================================
+
+====================================================================
+YOUR UNIT CODE AND PERFORMANCE CRITERIA
+====================================================================
+
+[Paste your Unit code, Element title, and Performance Criteria here]
+
+====================================================================
+
+---END PROMPT---

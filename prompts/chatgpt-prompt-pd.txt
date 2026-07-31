@@ -1,0 +1,114 @@
+AI Content Creator — ChatGPT Prompt for Professional Development Content
+=======================================================================
+
+Use this prompt with ChatGPT (GPT-4o or later) to generate JSON content for the
+AI Content Creator Moodle plugin (mod_contentcreator v10.44+).
+
+HOW TO USE:
+1. Copy the full prompt below into ChatGPT.
+2. Fill in YOUR CONTEXT and YOUR SUB TOPICS at the bottom.
+3. ChatGPT will return a JSON object for each sub topic.
+4. Paste the JSON output into the plugin's "Reference Material" field.
+5. Click "Generate" — the plugin uses your content to build the final slides.
+
+---BEGIN PROMPT---
+
+You are generating professional development learning content for working professionals building transferable skills.
+
+OUTPUT: For each sub topic, return a JSON object with a "cards" property containing an array of exactly 7 cards. Separate each sub topic block with a line:
+=== [LETTER]: [Sub Topic Title] ===
+Then output the JSON block immediately after. No markdown, no code fences. Pure JSON only.
+
+OBJECTIVE: Build transferable, behavioural, and leadership skills. Focus on professional judgment, self-awareness, and communication effectiveness. No trade-specific or VET language.
+
+ANTI-DUPLICATION: Each card must introduce new cognitive value. Do not restate the same concept across cards.
+
+VOICE: Experienced colleague coaching a peer. Year 10 reading level. Sentences under 25 words. Conversational but professional. Use "you" and "your team". Every point prompts reflection or action.
+
+REFERENCE MATERIAL USAGE: Use the context and sub topics below as the PRIMARY source for facts, examples, scenarios, professional insights, and context. Do NOT replace specific details with generic equivalents.
+
+ICON VOCABULARY — only use these values for "icon" fields:
+map-pin, users, alert-circle, clock, alert-triangle, eye, lightbulb, shield-check, layers, book-open, check-circle, star, help-circle, award, anchor, zap, hard-hat, file-text, calendar, dollar-sign, tag
+
+BANNED WORDS — do not use any of these:
+crucial, delve, dive, unpack, holistic, robust, synergy, paradigm, multifaceted, nuanced, pivotal,
+empower, leverage, realm, journey, landscape, endeavour, pertaining, henceforth, whereby, thereof,
+therein, notwithstanding, explore, navigate, utilise, utilize, foster, streamline, effectively,
+efficiently, best practice, ensuring, critical, paramount, comprehensive, subsequently, furthermore,
+facilitate, it is important to, in order to ensure, various, range of, significantly, overall, appropriate
+
+CARD 1 – cardType "hook-scenario"
+- title (Title Case, professional situation title)
+- sceneParts (array of exactly 4 objects, each with: title (short label e.g. "The Context", "Who's Involved", "The Tension", "The Moment of Truth"), icon (one from ICON VOCABULARY), text (2-3 sentences, 2nd person, specific professional detail))
+- highlightText (optional: one short pull-quote showing the professional stakes, max 20 words)
+
+CARD 2 – cardType "concept-explainer"
+- title (Title Case, names the core skill, concept, or model)
+- conceptInsights (array of exactly 3 objects, each with: title (short label e.g. "Why It Matters", "What It Looks Like", "When to Use It"), icon (one from ICON VOCABULARY), text (2-3 sentences of practical professional explanation))
+
+CARD 3 – cardType "mental-model"
+- title (Title Case, names the framework, process, or approach)
+- steps (array of 4-5 objects, each with: step (verb-led step title), icon (one from ICON VOCABULARY), detail (2-3 sentences, practitioner-level guidance on applying this step in a professional context))
+
+CARD 4 – cardType "applied-scenario"
+- title (Title Case, a follow-up professional moment — different from Card 1)
+- sceneParts (array of exactly 4 objects — same schema as Card 1, set AFTER the learner has the framework, e.g. "Back in the Room", "A Different Challenge", "The Decision", "Using the Skill")
+- highlightText (optional: one short pull-quote showing skilled professional response)
+
+CARD 5 – cardType "mistakes"
+- title (Title Case, e.g. "Professional Traps to Avoid")
+- items (array of 5 objects, each with: mistake (starting with a verb or "Assuming…"), consequence (at least 15 words, naming the professional, relational, or organisational impact))
+
+CARD 6 – cardType "competency-summary"
+- title (Title Case, e.g. "You Have This Skill When You Can…")
+- goodItems (array of 5 strings — what skilled professional practice looks like, verb-first, at least 10 words)
+- badItems (array of 5 strings — what to avoid, starting with a verb or "Assuming…", at least 10 words)
+
+CARD 7 – cardType "decision-point"
+- title (Title Case, names the professional judgment scenario)
+- question (the decision question, at least 15 words, 2nd person, concrete professional situation requiring judgment)
+- options (array of exactly 4 objects, each with: text (option), feedback (at least 15 words, naming the professional or relational consequence), correct (boolean — exactly one true))
+
+COGNITIVE DEPTH — every sub topic block must include:
+1. One genuine professional tension that experienced practitioners would recognise
+2. One specific named common mistake that sounds reasonable but creates risk
+3. A realistic chain of events showing how that mistake unfolds
+4. What skilled professional practice looks like in reality, not just theory
+5. Clear escalation from Card 1 (tension/problem) to Card 4 (skill applied)
+6. A judgment call in Card 7 where the right response requires applying the framework
+7. A practical reflection habit embedded in the competency summary
+
+TASK INSTRUCTIONS:
+- Generate ALL sub topics in a SINGLE, uninterrupted response.
+- Do NOT stop partway through. Do NOT ask "Shall I continue?"
+- Generate a complete 7-card JSON block for EACH sub topic.
+- Do NOT combine multiple sub topics into one block.
+- Do NOT add commentary between blocks.
+- Every card must be written in full — do NOT truncate.
+
+NUMBERING FORMAT:
+- Label each sub topic using just the letter: A, B, C, D, E, etc.
+- Format: A — [Title], B — [Title], etc.
+
+====================================================================
+YOUR CONTEXT — USE THIS TO TAILOR ALL CONTENT
+====================================================================
+
+[Paste your context here: Organisation, Department, Target Audience,
+Country, Skill Focus Area (e.g. "Leadership", "Communication", "Change Management")]
+
+IMPORTANT: Use the organisation, audience, and skill focus above to make ALL
+examples, scenarios, and professional situations specific to this context.
+Do NOT use generic examples.
+
+====================================================================
+
+====================================================================
+YOUR SUB TOPICS TO COVER
+====================================================================
+
+[Paste your selected sub topics here, labelled A, B, C, etc.]
+
+====================================================================
+
+---END PROMPT---
