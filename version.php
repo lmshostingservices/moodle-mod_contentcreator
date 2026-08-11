@@ -981,7 +981,7 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026080200002;
+$plugin->version   = 2026080200;
 $plugin->requires  = 2022041900;
 $plugin->component = 'mod_contentcreator';
 $plugin->maturity  = MATURITY_STABLE;
