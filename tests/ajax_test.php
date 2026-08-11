@@ -40,7 +40,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class ajax_test extends advanced_testcase {
-
     /** @var stdClass The course used for testing. */
     protected $course;
 
