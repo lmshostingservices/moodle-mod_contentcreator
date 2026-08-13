@@ -9400,17 +9400,6 @@ define('mod_contentcreator/player5', [
                         window.speechSynthesis.cancel();
                         setTimeout(function() {
                             var utter = new window.SpeechSynthesisUtterance(feedbackText);
-                            // FIX-CC-QUIZ-VOICE-ACCENT: match the chosen narration language/accent (e.g. en-AU)
-                            // instead of the browser default voice (usually en-US / American).
-                            var _qlang = self.activeLang || self.voiceLanguage || 'en-AU';
-                            utter.lang = _qlang;
-                            try {
-                                var _qv = window.speechSynthesis.getVoices() || [];
-                                var _qlc = _qlang.toLowerCase().replace('_', '-');
-                                var _qpick = _qv.filter(function (v) { return v.lang && v.lang.toLowerCase().replace('_', '-') === _qlc; })[0]
-                                          || _qv.filter(function (v) { return v.lang && v.lang.toLowerCase().replace('_', '-').indexOf(_qlc.split('-')[0] + '-') === 0; })[0];
-                                if (_qpick) { utter.voice = _qpick; }
-                            } catch (e) { /* getVoices unsupported — utter.lang alone still steers the accent */ }
                             window.speechSynthesis.speak(utter);
                         }, 150);
                     }

@@ -39,6 +39,7 @@ class provider implements
     \core_privacy\local\metadata\provider,
     \core_privacy\local\request\plugin\provider,
     \core_privacy\local\request\core_userlist_provider {
+
     public static function get_metadata(collection $collection): collection {
         $collection->add_database_table('contentcreator_attempts', [
             'userid' => 'privacy:metadata:contentcreator_attempts:userid',

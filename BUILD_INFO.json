@@ -1,11 +1,9 @@
 {
   "component": "mod_contentcreator",
-  "version": "13.63",
-  "numeric_version": "2026080200",
-  "build_id": "3b516829f278522b",
-  "build_timestamp": "2026-08-11T00:00:00.000Z",
+  "version": "13.61",
+  "numeric_version": "2026072800232",
+  "build_id": "13c4c4060e004afb",
+  "build_timestamp": "2026-07-29T08:30:00.000Z",
   "folder": "mod_contentcreator",
-  "verification": "10digit-migration-13.63",
-  "release": "13.63",
-  "note": "Marketplace compliance: GPL headers + docblocks on all PHP, LICENSE, README.md, thirdpartylibs.xml, function-spacing/blank-line style. Voice-accent fix retained from 13.62."
+  "verification": "bd41a78376b6df2c"
 }

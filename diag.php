@@ -1,28 +1,4 @@
 <?php
-
-// This file is part of Moodle - http://moodle.org/
-//
-// Moodle is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Moodle is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
-/**
- * mod_contentcreator file.
- *
- * @package    mod_contentcreator
- * @copyright  2026 LMS-Labs
- * @license    http://www.gnu.org/licenses/gpl-3.0.html GNU GPL v3 or later
- */
-
 // AI Content Creator — Diagnostic Tool v12.95
 // Access: /mod/contentcreator/diag.php?cmid=<cmid>
 //         /mod/contentcreator/diag.php          (config-only check, no activity required)
@@ -3378,7 +3354,7 @@ if ($cmid <= 0) {
             $rows_s18 .= cc_diag_info(
                 '18B Additional languages found',
                 count($s18_ml_arr) . ' additional language(s) in manifest.multiLanguage[]: '
-                . implode(', ', array_map(function ($e) {
+                . implode(', ', array_map(function($e) {
                     return htmlspecialchars(($e['code'] ?? '?') . ' (' . ($e['label'] ?? '?') . ')');
                 }, $s18_ml_arr))
             );
