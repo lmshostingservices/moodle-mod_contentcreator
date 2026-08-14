@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "country_code": "AU",
+    "region": "Queensland",
+    "region_code": "QLD",
+    "overlay_type": "state",
+    "version": "1.0.0",
+    "last_updated": "2026-01-01"
+  },
+  "overlay_rules": [
+    {
+      "applies_to_group_id": "WHS_AU",
+      "additional_content_rules": [
+        "Include heat stress and sun safety awareness where relevant",
+        "Address remote and isolated work considerations"
+      ],
+      "additional_scenario_rules": [
+        "Consider tropical and outdoor workplace hazards"
+      ],
+      "additional_assessment_rules": [],
+      "override_tone_and_language": null,
+      "notes_for_ai": "Queensland has specific considerations for heat, sun, and remote work."
+    }
+  ],
+  "overlay_prompt_block": {
+    "system_instruction_append": "Apply Queensland-specific workplace safety expectations including heat and remote work considerations.",
+    "enforcement_level": "strict"
+  }
+}

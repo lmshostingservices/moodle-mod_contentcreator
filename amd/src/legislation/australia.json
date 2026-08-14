@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "country": "Australia",
+    "country_code": "AU",
+    "region": null,
+    "version": "1.0.0",
+    "last_updated": "2026-01-01",
+    "maintained_by": "AI Grader"
+  },
+  "scope": {
+    "applies_to": ["learning_content", "assessments", "simulated_workplace_tasks", "workplace_procedures"],
+    "excluded_from": ["legal_advice", "industrial_relations_advice"]
+  },
+  "legislation_groups": [
+    {
+      "group_id": "WHS_AU",
+      "group_name": "Work Health and Safety (WHS)",
+      "abbreviation": "WHS",
+      "priority": "high",
+      "summary_for_ai": "All training content must promote safe work practices and model correct hazard management behaviour.",
+      "content_rules": [
+        "Always promote safe work practices",
+        "Never present unsafe behaviour as correct",
+        "Include hazard identification where relevant",
+        "Include risk controls using practical workplace examples",
+        "Model correct PPE usage when applicable",
+        "Demonstrate correct incident reporting procedures"
+      ],
+      "scenario_rules": [
+        "Scenarios must reflect realistic workplace hazards",
+        "Unsafe actions must result in corrective feedback",
+        "Emergency and incident reporting procedures must be correct",
+        "Include supervisor consultation where safety decisions are made"
+      ],
+      "assessment_rules": [
+        "Correct answers must align with safe work practices",
+        "Incorrect answers should explain safety consequences",
+        "Assessment tasks must not encourage unsafe actions"
+      ],
+      "tone_and_language": {
+        "must_use": ["clear", "practical", "non-technical", "workplace-focused"],
+        "must_avoid": ["legal citations", "complex regulatory language", "section numbers"]
+      },
+      "common_mistakes_to_avoid": [
+        "Normalising unsafe shortcuts",
+        "Ignoring hazard controls in scenarios",
+        "Omitting PPE requirements"
+      ]
+    },
+    {
+      "group_id": "PRIVACY_AU",
+      "group_name": "Privacy and Data Protection",
+      "abbreviation": "APPs",
+      "priority": "high",
+      "summary_for_ai": "Learner information and workplace data must be handled responsibly and respectfully in accordance with Australian Privacy Principles.",
+      "content_rules": [
+        "Avoid unnecessary personal data collection",
+        "Use fictional or anonymised personal information in examples",
+        "Model respectful handling of digital and paper records",
+        "Demonstrate secure storage and disposal of records"
+      ],
+      "scenario_rules": [
+        "Scenarios involving records must demonstrate confidentiality",
+        "Digital systems must be shown as password-protected where relevant",
+        "Personal information must only be shared on a need-to-know basis"
+      ],
+      "assessment_rules": [
+        "Questions must reinforce confidentiality principles",
+        "Do not require learners to disclose real personal information"
+      ],
+      "tone_and_language": {
+        "must_use": ["respectful", "privacy-aware", "confidential"],
+        "must_avoid": ["real names", "real contact details", "identifiable data"]
+      },
+      "common_mistakes_to_avoid": [
+        "Using real personal data in examples",
+        "Normalising casual data sharing",
+        "Showing unlocked screens with sensitive data"
+      ]
+    },
+    {
+      "group_id": "EEO_AU",
+      "group_name": "Equal Opportunity and Anti-Discrimination",
+      "abbreviation": "EO",
+      "priority": "high",
+      "summary_for_ai": "Training content must be inclusive, fair, and free from discrimination. Represent diversity in workplace roles.",
+      "content_rules": [
+        "Use inclusive and respectful language",
+        "Avoid stereotypes or biased assumptions",
+        "Include diverse workplace roles and contexts",
+        "Use gender-neutral job titles where possible",
+        "Represent people of different ages, abilities, and backgrounds"
+      ],
+      "scenario_rules": [
+        "Scenarios must not normalise bullying or harassment",
+        "Discriminatory behaviour must be corrected, not rewarded",
+        "Show respectful communication between colleagues"
+      ],
+      "assessment_rules": [
+        "Correct answers must support fair treatment",
+        "Feedback must discourage discriminatory behaviour"
+      ],
+      "tone_and_language": {
+        "must_use": ["inclusive", "neutral", "respectful"],
+        "must_avoid": ["gender stereotypes", "cultural assumptions", "ageist language", "ableist language"]
+      },
+      "common_mistakes_to_avoid": [
+        "Gendered job roles (e.g., 'foreman' instead of 'supervisor')",
+        "Normalising harassment in examples",
+        "Single demographic representation"
+      ]
+    },
+    {
+      "group_id": "HR_AU",
+      "group_name": "Workplace Rights and Responsibilities",
+      "abbreviation": "Fair Work",
+      "priority": "medium",
+      "summary_for_ai": "Learners should understand basic workplace expectations, professional behaviour, and employment rights.",
+      "content_rules": [
+        "Promote respectful communication",
+        "Model professional workplace conduct",
+        "Encourage appropriate supervision and feedback",
+        "Show workers understanding their rights"
+      ],
+      "scenario_rules": [
+        "Supervisory roles must act responsibly and fairly",
+        "Conflicts should be resolved professionally",
+        "Workers should be shown raising concerns appropriately"
+      ],
+      "assessment_rules": [
+        "Correct answers must align with reasonable workplace behaviour"
+      ],
+      "tone_and_language": {
+        "must_use": ["professional", "supportive", "constructive"],
+        "must_avoid": ["punitive language", "threatening tone"]
+      },
+      "common_mistakes_to_avoid": [
+        "Overly legal HR language",
+        "Punishment-focused scenarios",
+        "Ignoring worker consultation"
+      ]
+    },
+    {
+      "group_id": "VET_AU",
+      "group_name": "Training and Assessment Compliance (RTO)",
+      "abbreviation": "RTO Standards",
+      "priority": "high",
+      "summary_for_ai": "All content must meet Australian VET training and assessment standards for RTOs. Content must be valid, reliable, flexible, and fair.",
+      "content_rules": [
+        "Content must align to unit requirements and performance criteria",
+        "Learning materials must be clear and learner-friendly",
+        "Reasonable adjustment must be supported",
+        "Content must be current and industry-relevant"
+      ],
+      "scenario_rules": [
+        "Simulated workplaces must be realistic and achievable",
+        "Tasks must be solvable using provided information",
+        "Contexts should reflect actual industry practice"
+      ],
+      "assessment_rules": [
+        "Assessment must be fair, valid, reliable, and flexible",
+        "Do not trick learners with irrelevant complexity",
+        "Provide clear instructions and marking criteria",
+        "Allow for reasonable adjustment"
+      ],
+      "tone_and_language": {
+        "must_use": ["clear", "instructional", "supportive", "vocational"],
+        "must_avoid": ["trick questions", "ambiguous wording", "academic jargon"]
+      },
+      "common_mistakes_to_avoid": [
+        "Over-assessing beyond unit scope",
+        "Ambiguous assessment instructions",
+        "Content not mapped to performance criteria"
+      ]
+    }
+  ],
+  "prompt_injection_block": {
+    "system_instruction": "All generated content must comply with Australian WHS, privacy (APPs), equal opportunity, and VET training requirements. Safety, inclusivity, and learner fairness must be prioritised at all times. Use Australian English spelling (behaviour, organisation, colour, centre).",
+    "enforcement_level": "strict"
+  }
+}

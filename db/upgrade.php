@@ -2100,8 +2100,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // (1) FIX-AMD-NAMED-DEFINE (21 files): The named AMD define fix (applied to build/
         //     files to prevent the Moodle combo-loader from overwriting AMD slots and
         //     collapsing page nav) was never synced back to the corresponding amd/src/ files.
-        //     This left src/ with anonymous define([], function() {}) while build/ had the
-        //     correct define('mod_contentcreator/MODULE', [], function() {}). Any future
+        //     This left src/ with anonymous define([], function () {}) while build/ had the
+        //     correct define('mod_contentcreator/MODULE', [], function () {}). Any future
         //     AMD rebuild from src/ would have re-shipped anonymous defines, triggering the
         //     AMD slot collision bug. Fixed: named define applied to all 21 src/ files.
         //

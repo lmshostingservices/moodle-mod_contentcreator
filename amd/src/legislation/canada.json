@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "country": "Canada",
+    "country_code": "CA",
+    "region": null,
+    "version": "1.0.0",
+    "last_updated": "2026-01-01",
+    "maintained_by": "AI Grader"
+  },
+  "scope": {
+    "applies_to": ["learning_content", "assessments", "simulated_workplace_tasks"],
+    "excluded_from": ["legal_advice"]
+  },
+  "legislation_groups": [
+    {
+      "group_id": "OHSA_CA",
+      "group_name": "Occupational Health and Safety",
+      "abbreviation": "OHS",
+      "priority": "high",
+      "summary_for_ai": "Training must promote safe work practices appropriate to Canadian workplaces.",
+      "content_rules": [
+        "Always promote safe behaviour",
+        "Identify hazards where relevant",
+        "Emphasise worker rights including right to refuse unsafe work"
+      ],
+      "scenario_rules": [
+        "Unsafe actions must be corrected",
+        "Demonstrate supervisor responsibility"
+      ],
+      "assessment_rules": [
+        "Correct answers must reinforce safety obligations"
+      ],
+      "tone_and_language": {
+        "must_use": ["clear", "practical"],
+        "must_avoid": ["unsafe normalisation"]
+      },
+      "common_mistakes_to_avoid": [
+        "Overlooking worker rights"
+      ]
+    },
+    {
+      "group_id": "PIPEDA_CA",
+      "group_name": "Privacy and Personal Information",
+      "abbreviation": "PIPEDA",
+      "priority": "high",
+      "summary_for_ai": "Personal information must be handled responsibly and confidentially.",
+      "content_rules": [
+        "Use fictional data",
+        "Demonstrate secure handling of information"
+      ],
+      "scenario_rules": [
+        "Confidentiality must be maintained"
+      ],
+      "assessment_rules": [
+        "Do not request real personal data"
+      ],
+      "tone_and_language": {
+        "must_use": ["privacy-aware"],
+        "must_avoid": ["real personal details"]
+      },
+      "common_mistakes_to_avoid": [
+        "Using identifiable data in examples"
+      ]
+    },
+    {
+      "group_id": "HRC_CA",
+      "group_name": "Human Rights and Employment Equity",
+      "abbreviation": "HRC",
+      "priority": "high",
+      "summary_for_ai": "Training must be inclusive and free from discrimination.",
+      "content_rules": [
+        "Use inclusive language",
+        "Represent diverse roles"
+      ],
+      "scenario_rules": [
+        "Discrimination must be addressed, not normalised"
+      ],
+      "assessment_rules": [
+        "Correct answers support fair treatment"
+      ],
+      "tone_and_language": {
+        "must_use": ["inclusive", "respectful"],
+        "must_avoid": ["stereotypes"]
+      },
+      "common_mistakes_to_avoid": [
+        "Biased assumptions"
+      ]
+    }
+  ],
+  "prompt_injection_block": {
+    "system_instruction": "All content must comply with Canadian OHS, PIPEDA privacy, and human rights requirements. Use Canadian English spelling.",
+    "enforcement_level": "strict"
+  }
+}
