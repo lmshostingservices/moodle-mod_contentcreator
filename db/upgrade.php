@@ -36,17 +36,17 @@ function xmldb_contentcreator_upgrade($oldversion) {
     $dbman = $DB->get_manager();
 
     // v7.8.4: Change manifestjson from TEXT to LONGTEXT.
-    if ($oldversion < 2026011678) {
+    if ($oldversion < 2026011600) {
         $table = new xmldb_table('contentcreator');
         $field = new xmldb_field('manifestjson', XMLDB_TYPE_TEXT, 'big', null, null, null, null, 'intro');
         if ($dbman->field_exists($table, $field)) {
             $dbman->change_field_precision($table, $field);
         }
-        upgrade_mod_savepoint(true, 2026011678, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026011600, 'contentcreator');
     }
 
     // v9.78: Create contentcreator_checklist table.
-    if ($oldversion < 2026031700978) {
+    if ($oldversion < 2026031700) {
         $table = new xmldb_table('contentcreator_checklist');
         if (!$dbman->table_exists($table)) {
             $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -61,34 +61,34 @@ function xmldb_contentcreator_upgrade($oldversion) {
             $table->add_index('cmid_userid_topicid', XMLDB_INDEX_UNIQUE, ['cmid', 'userid', 'topicid']);
             $dbman->create_table($table);
         }
-        upgrade_mod_savepoint(true, 2026031700978, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026031700, 'contentcreator');
     }
 
     // v9.78–v11.01: Consolidated JS/CSS/prompt fixes (no DB schema changes).
-    if ($oldversion < 2026032101101) {
-        upgrade_mod_savepoint(true, 2026032101101, 'contentcreator');
+    if ($oldversion < 2026032100) {
+        upgrade_mod_savepoint(true, 2026032100, 'contentcreator');
     }
 
     // v11.02: Shared voiceover module, field-order fix, title dedup, em dash fix.
     // No DB schema change.
-    if ($oldversion < 2026032101102) {
-        upgrade_mod_savepoint(true, 2026032101102, 'contentcreator');
+    if ($oldversion < 2026032101) {
+        upgrade_mod_savepoint(true, 2026032101, 'contentcreator');
     }
 
     // v11.03: AI images toggle defaults to on. No DB schema change.
-    if ($oldversion < 2026032101103) {
-        upgrade_mod_savepoint(true, 2026032101103, 'contentcreator');
+    if ($oldversion < 2026032102) {
+        upgrade_mod_savepoint(true, 2026032102, 'contentcreator');
     }
 
     // v11.04: image2 grammar whitelist fix + edit modal add/remove handlers. No DB schema change.
-    if ($oldversion < 2026032101104) {
-        upgrade_mod_savepoint(true, 2026032101104, 'contentcreator');
+    if ($oldversion < 2026032103) {
+        upgrade_mod_savepoint(true, 2026032103, 'contentcreator');
     }
 
     // v11.05: Make contentcreator_attempts (contentcreatorid, userid) index UNIQUE.
     // Deduplicate any existing rows first (keep the newest per user+activity),
     // then drop the old non-unique index and create a unique one.
-    if ($oldversion < 2026032101105) {
+    if ($oldversion < 2026032104) {
         $table = new xmldb_table('contentcreator_attempts');
 
         // Step 1: Remove duplicate rows — keep the one with the highest id per pair.
@@ -116,167 +116,167 @@ function xmldb_contentcreator_upgrade($oldversion) {
             $dbman->add_index($table, $newindex);
         }
 
-        upgrade_mod_savepoint(true, 2026032101105, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032104, 'contentcreator');
     }
 
     // v11.06: IMAGE2-RETRY-FIX — JS-only changes (no DB schema changes).
-    if ($oldversion < 2026032101106) {
-        upgrade_mod_savepoint(true, 2026032101106, 'contentcreator');
+    if ($oldversion < 2026032105) {
+        upgrade_mod_savepoint(true, 2026032105, 'contentcreator');
     }
 
     // v11.07: SERVER-CARDTYPE-MISMATCH-FIX — server-side fix, no DB schema changes.
-    if ($oldversion < 2026032101107) {
-        upgrade_mod_savepoint(true, 2026032101107, 'contentcreator');
+    if ($oldversion < 2026032106) {
+        upgrade_mod_savepoint(true, 2026032106, 'contentcreator');
     }
 
     // v11.08: EXPORT-UNIFIED-CARDS-FIX — client-side JS fix, no DB schema changes.
-    if ($oldversion < 2026032101108) {
-        upgrade_mod_savepoint(true, 2026032101108, 'contentcreator');
+    if ($oldversion < 2026032107) {
+        upgrade_mod_savepoint(true, 2026032107, 'contentcreator');
     }
 
     // v11.09: BUILD-DEPLOY-FIX — deployment fix, no DB schema changes.
-    if ($oldversion < 2026032101109) {
-        upgrade_mod_savepoint(true, 2026032101109, 'contentcreator');
+    if ($oldversion < 2026032108) {
+        upgrade_mod_savepoint(true, 2026032108, 'contentcreator');
     }
 
     // v11.10: COMPLETION-ALL-ACTIVITIES — add completionallactivities column.
-    if ($oldversion < 2026032101110) {
+    if ($oldversion < 2026032109) {
         $table = new xmldb_table('contentcreator');
         $field = new xmldb_field('completionallactivities', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'completionviewallslides');
         if (!$dbman->field_exists($table, $field)) {
             $dbman->add_field($table, $field);
         }
-        upgrade_mod_savepoint(true, 2026032101110, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032109, 'contentcreator');
     }
 
     // v11.11: ACTIVITIES-TOGGLE — JS/manifest-only (no DB changes).
-    if ($oldversion < 2026032101111) {
-        upgrade_mod_savepoint(true, 2026032101111, 'contentcreator');
+    if ($oldversion < 2026032110) {
+        upgrade_mod_savepoint(true, 2026032110, 'contentcreator');
     }
 
     // v11.12: BUILD-DEPLOY — clean release.
-    if ($oldversion < 2026032101112) {
-        upgrade_mod_savepoint(true, 2026032101112, 'contentcreator');
+    if ($oldversion < 2026032111) {
+        upgrade_mod_savepoint(true, 2026032111, 'contentcreator');
     }
 
     // v11.13: CANEDIT-FIX + VET-PROMPT-LEGAL — view.php fix, prompt update. No DB changes.
-    if ($oldversion < 2026032201113) {
-        upgrade_mod_savepoint(true, 2026032201113, 'contentcreator');
+    if ($oldversion < 2026032200) {
+        upgrade_mod_savepoint(true, 2026032200, 'contentcreator');
     }
 
     // v11.14: CHUNK-SIZE-FIX — builder.js chunk size 2MB→900KB. No DB changes.
-    if ($oldversion < 2026032201114) {
-        upgrade_mod_savepoint(true, 2026032201114, 'contentcreator');
+    if ($oldversion < 2026032201) {
+        upgrade_mod_savepoint(true, 2026032201, 'contentcreator');
     }
 
     // v11.15: CHALLENGE-POLISH — Decision Challenge UX improvements. No DB changes.
-    if ($oldversion < 2026032201115) {
-        upgrade_mod_savepoint(true, 2026032201115, 'contentcreator');
+    if ($oldversion < 2026032202) {
+        upgrade_mod_savepoint(true, 2026032202, 'contentcreator');
     }
 
     // v11.16: IMAGE2-REMOVAL — Removed broken image2 feature. No DB changes.
-    if ($oldversion < 2026032201116) {
-        upgrade_mod_savepoint(true, 2026032201116, 'contentcreator');
+    if ($oldversion < 2026032203) {
+        upgrade_mod_savepoint(true, 2026032203, 'contentcreator');
     }
 
     // v11.17: Release build with all v11.15–v11.16 changes. No DB changes.
-    if ($oldversion < 2026032201117) {
-        upgrade_mod_savepoint(true, 2026032201117, 'contentcreator');
+    if ($oldversion < 2026032204) {
+        upgrade_mod_savepoint(true, 2026032204, 'contentcreator');
     }
 
     // v11.18: VOICEOVER-TITLE-FIX — section titles with "1.1." format caused double-reading. No DB changes.
-    if ($oldversion < 2026032201118) {
-        upgrade_mod_savepoint(true, 2026032201118, 'contentcreator');
+    if ($oldversion < 2026032205) {
+        upgrade_mod_savepoint(true, 2026032205, 'contentcreator');
     }
 
     // v11.19: ICON-VOCABULARY — expanded prompt icon vocabulary + resolveScenePartIcon fallback. No DB changes.
-    if ($oldversion < 2026032201119) {
-        upgrade_mod_savepoint(true, 2026032201119, 'contentcreator');
+    if ($oldversion < 2026032206) {
+        upgrade_mod_savepoint(true, 2026032206, 'contentcreator');
     }
 
     // v11.20: ICON-BUGFIX — position fallback array 5th entry, edit modal icon preservation. No DB changes.
-    if ($oldversion < 2026032201120) {
-        upgrade_mod_savepoint(true, 2026032201120, 'contentcreator');
+    if ($oldversion < 2026032207) {
+        upgrade_mod_savepoint(true, 2026032207, 'contentcreator');
     }
 
     // v11.21: BOOST-HOVER-FIX — Category Sort button hover colour override. No DB changes.
-    if ($oldversion < 2026032201121) {
-        upgrade_mod_savepoint(true, 2026032201121, 'contentcreator');
+    if ($oldversion < 2026032208) {
+        upgrade_mod_savepoint(true, 2026032208, 'contentcreator');
     }
 
     // v11.22: PROMPT-CARD-ORDER — ChatGPT prompt templates card order fix. No DB changes.
-    if ($oldversion < 2026032201122) {
-        upgrade_mod_savepoint(true, 2026032201122, 'contentcreator');
+    if ($oldversion < 2026032209) {
+        upgrade_mod_savepoint(true, 2026032209, 'contentcreator');
     }
 
     // v11.23: READING-TIME-EXTEND — Reading time per slide dropdown extended to 10 minutes. No DB changes.
-    if ($oldversion < 2026032201123) {
-        upgrade_mod_savepoint(true, 2026032201123, 'contentcreator');
+    if ($oldversion < 2026032210) {
+        upgrade_mod_savepoint(true, 2026032210, 'contentcreator');
     }
 
     // v11.24: COMMUNITY-GALLERY-FIX — CORS fix, auto-contribute, topic/unitCode search. No Moodle DB changes.
-    if ($oldversion < 2026032201124) {
-        upgrade_mod_savepoint(true, 2026032201124, 'contentcreator');
+    if ($oldversion < 2026032211) {
+        upgrade_mod_savepoint(true, 2026032211, 'contentcreator');
     }
 
     // v11.25: ICON-RELEVANCE — Content-matched icons on mistake/scene/flip cards. No DB changes.
-    if ($oldversion < 2026032201125) {
-        upgrade_mod_savepoint(true, 2026032201125, 'contentcreator');
+    if ($oldversion < 2026032212) {
+        upgrade_mod_savepoint(true, 2026032212, 'contentcreator');
     }
 
     // v11.26: TIMED-READING-FIX — Timer reset guard, player settings duration cap fix, focus detection typo. No DB changes.
-    if ($oldversion < 2026032201126) {
-        upgrade_mod_savepoint(true, 2026032201126, 'contentcreator');
+    if ($oldversion < 2026032213) {
+        upgrade_mod_savepoint(true, 2026032213, 'contentcreator');
     }
 
     // v11.27: ETA BANNERS — Estimated Time to Complete banners in topics grid. No DB changes.
-    if ($oldversion < 2026032201127) {
-        upgrade_mod_savepoint(true, 2026032201127, 'contentcreator');
+    if ($oldversion < 2026032214) {
+        upgrade_mod_savepoint(true, 2026032214, 'contentcreator');
     }
 
     // v11.28: VERSION BUMP — Maintenance release. JS version constant sync. No DB changes.
-    if ($oldversion < 2026032201128) {
-        upgrade_mod_savepoint(true, 2026032201128, 'contentcreator');
+    if ($oldversion < 2026032215) {
+        upgrade_mod_savepoint(true, 2026032215, 'contentcreator');
     }
 
     // v11.29: ETA recalibration, flip card CSS grid fix, badge positioning, tap-to-reveal icon.
-    if ($oldversion < 2026032201129) {
-        upgrade_mod_savepoint(true, 2026032201129, 'contentcreator');
+    if ($oldversion < 2026032216) {
+        upgrade_mod_savepoint(true, 2026032216, 'contentcreator');
     }
 
     // v11.30: Community Gallery added to Add Image modal. Flip card back-face scrollbar fix (CSS grid).
-    if ($oldversion < 2026032201130) {
-        upgrade_mod_savepoint(true, 2026032201130, 'contentcreator');
+    if ($oldversion < 2026032217) {
+        upgrade_mod_savepoint(true, 2026032217, 'contentcreator');
     }
 
     // v11.31: Completion fixes — contentcreator_view(), contentcreator_get_coursemodule_info(), course_module_viewed event class.
-    if ($oldversion < 2026032301131) {
-        upgrade_mod_savepoint(true, 2026032301131, 'contentcreator');
+    if ($oldversion < 2026032300) {
+        upgrade_mod_savepoint(true, 2026032300, 'contentcreator');
     }
 
     // v11.32: Course info time estimation update — 30 min per slide.
-    if ($oldversion < 2026032301132) {
-        upgrade_mod_savepoint(true, 2026032301132, 'contentcreator');
+    if ($oldversion < 2026032301) {
+        upgrade_mod_savepoint(true, 2026032301, 'contentcreator');
     }
 
     // v11.33: Single-topic hero layout — two-column panel with ETA stats and action button.
-    if ($oldversion < 2026032301133) {
-        upgrade_mod_savepoint(true, 2026032301133, 'contentcreator');
+    if ($oldversion < 2026032302) {
+        upgrade_mod_savepoint(true, 2026032302, 'contentcreator');
     }
 
     // v11.34: Version bump — CC_VERSION sync, maintenance release.
-    if ($oldversion < 2026032301134) {
-        upgrade_mod_savepoint(true, 2026032301134, 'contentcreator');
+    if ($oldversion < 2026032303) {
+        upgrade_mod_savepoint(true, 2026032303, 'contentcreator');
     }
 
     // v11.35: ETA 20 min per slide; fixed 'Start Learning' label.
-    if ($oldversion < 2026032301135) {
-        upgrade_mod_savepoint(true, 2026032301135, 'contentcreator');
+    if ($oldversion < 2026032304) {
+        upgrade_mod_savepoint(true, 2026032304, 'contentcreator');
     }
 
     // v11.36: FIX (4 tester bugs) — VoiceOver prefix, flip card heights, skip link, Return to Course button.
-    if ($oldversion < 2026032301136) {
-        upgrade_mod_savepoint(true, 2026032301136, 'contentcreator');
+    if ($oldversion < 2026032305) {
+        upgrade_mod_savepoint(true, 2026032305, 'contentcreator');
     }
 
     // v11.37: BUG FIXES — (1) VoiceOver schema bumped to force teacher-side TTS regeneration
@@ -285,15 +285,15 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         (3) Skip-to-main-content: CSS hides Moodle Boost skip link on CC pages.
     //         (4) Next Activity: $OUTPUT->activity_navigation() added to view.php.
     //         No DB schema changes — JS, CSS, and PHP-only fixes.
-    if ($oldversion < 2026032401137) {
-        upgrade_mod_savepoint(true, 2026032401137, 'contentcreator');
+    if ($oldversion < 2026032400) {
+        upgrade_mod_savepoint(true, 2026032400, 'contentcreator');
     }
 
     // v11.38: IMAGE-DOWNLOAD — Added download button to generated images (picker modal,
     //         gallery, community gallery). Uses fetch-as-blob for cross-origin CDN images;
     //         falls back to opening in a new tab. No DB schema changes.
-    if ($oldversion < 2026032401138) {
-        upgrade_mod_savepoint(true, 2026032401138, 'contentcreator');
+    if ($oldversion < 2026032401) {
+        upgrade_mod_savepoint(true, 2026032401, 'contentcreator');
     }
 
     // v11.39: FIX-SAVE-PERMISSION — Fixed "Failed to save generated content" error for
@@ -302,8 +302,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         capability check (mod/contentcreator:manage → moodle/course:manageactivities).
     //         \Throwable catch added to both. CC_VERSION bumped to '11.39' in cc-state.js
     //         and generator.js; build files synced. No DB schema changes.
-    if ($oldversion < 2026032401139) {
-        upgrade_mod_savepoint(true, 2026032401139, 'contentcreator');
+    if ($oldversion < 2026032402) {
+        upgrade_mod_savepoint(true, 2026032402, 'contentcreator');
     }
 
     // v11.40: BUG-CC-SSLIDE-PERM + BUG-CC-SSLIDE-NOTRY + BUG-CC-SSLIDE-SESSION —
@@ -324,8 +324,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         added after capability check, before DB operations.
     //
     //         No DB schema changes.
-    if ($oldversion < 2026032401140) {
-        upgrade_mod_savepoint(true, 2026032401140, 'contentcreator');
+    if ($oldversion < 2026032403) {
+        upgrade_mod_savepoint(true, 2026032403, 'contentcreator');
     }
 
     // v11.41: BUG-CC-GEN-TOKENS — Persistent AI content generation failures on VET courses.
@@ -339,8 +339,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         Fix 2 (generator.js): Added "generation failed"/"invalid structure"/"empty
     //         response" to isTransient patterns for defence-in-depth retry coverage.
     //         No DB schema changes.
-    if ($oldversion < 2026032401141) {
-        upgrade_mod_savepoint(true, 2026032401141, 'contentcreator');
+    if ($oldversion < 2026032404) {
+        upgrade_mod_savepoint(true, 2026032404, 'contentcreator');
     }
 
     // v11.42: BUG-CC-TOKEN-GUARD + BUG-CC-ROUTE-MISSING.
@@ -353,15 +353,15 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         Server always defaulted route='vet' (7 cards). For 6-card routes this
     //         triggered unnecessary PASS 2 expansion. Fixed: route added as 5th param
     //         to callAI(); ajax.php reads optional_param('route'). No DB schema changes.
-    if ($oldversion < 2026032401142) {
-        upgrade_mod_savepoint(true, 2026032401142, 'contentcreator');
+    if ($oldversion < 2026032405) {
+        upgrade_mod_savepoint(true, 2026032405, 'contentcreator');
     }
 
     // v11.43: VERSION BUMP — clean release following master release process.
     //         No code changes beyond v11.42. CC_VERSION → 11.43.
     //         BUILD_INFO.json updated. Stale v11.41 ZIP removed. No DB schema changes.
-    if ($oldversion < 2026032401143) {
-        upgrade_mod_savepoint(true, 2026032401143, 'contentcreator');
+    if ($oldversion < 2026032406) {
+        upgrade_mod_savepoint(true, 2026032406, 'contentcreator');
     }
 
     // v11.44: TIMEOUT FIX — BUG-CC-PROMPT-SILENT-FAIL:
@@ -371,8 +371,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         Timeout catch now returns HTTP 504 with user-readable message.
     //         ajax.php: set_time_limit(0) + error_log diagnostics added around cURL call.
     //         CC_VERSION → 11.44. No DB schema changes.
-    if ($oldversion < 2026032401144) {
-        upgrade_mod_savepoint(true, 2026032401144, 'contentcreator');
+    if ($oldversion < 2026032407) {
+        upgrade_mod_savepoint(true, 2026032407, 'contentcreator');
     }
 
     // v11.45: ASYNC GENERATION — Eliminated Replit proxy 120s timeout failures.
@@ -381,14 +381,14 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         GET /api/jobs/:jobId. When status=done, result processed identically to
     //         the former sync response. Internal loopback bypasses proxy hard limit.
     //         12s client-side abort guard. CC_VERSION → 11.45. No DB schema changes.
-    if ($oldversion < 2026032401145) {
-        upgrade_mod_savepoint(true, 2026032401145, 'contentcreator');
+    if ($oldversion < 2026032408) {
+        upgrade_mod_savepoint(true, 2026032408, 'contentcreator');
     }
 
     // v11.46: VERSION BUMP — Clean release following master release process.
     //         No code changes beyond v11.45. CC_VERSION → 11.46. No DB schema changes.
-    if ($oldversion < 2026032401146) {
-        upgrade_mod_savepoint(true, 2026032401146, 'contentcreator');
+    if ($oldversion < 2026032409) {
+        upgrade_mod_savepoint(true, 2026032409, 'contentcreator');
     }
 
     // v11.47: BUG-CC-MSGCHAN — saveManifest() now retries up to 3 times with
@@ -396,8 +396,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         paths. Fixes "Failed to save generated content" caused by Moodle 4.4+
     //         service-worker message channel closing between the last voiceover
     //         Ajax call and the manifest save Ajax call. No DB schema changes.
-    if ($oldversion < 2026032401147) {
-        upgrade_mod_savepoint(true, 2026032401147, 'contentcreator');
+    if ($oldversion < 2026032410) {
+        upgrade_mod_savepoint(true, 2026032410, 'contentcreator');
     }
 
     // v11.48: BUG-CC-DBWRITE — MySQL max_allowed_packet rejects large UPDATE payloads.
@@ -414,8 +414,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         Read sites patched:  get_manifest.php, save_slide_edit.php, view.php,
     //                              custom_completion.php, ajax.php.
     //         No DB schema changes.
-    if ($oldversion < 2026032401148) {
-        upgrade_mod_savepoint(true, 2026032401148, 'contentcreator');
+    if ($oldversion < 2026032411) {
+        upgrade_mod_savepoint(true, 2026032411, 'contentcreator');
     }
 
     // v11.49: BUG-CC-DBWRITE (ROOT CAUSE) — Inline base64 voiceover audio was stored
@@ -428,18 +428,18 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //         now serialise to ~100-300 KB — well within any max_allowed_packet.
     //         No DB schema changes.  The PHP-side gzip compression from v11.48 is kept
     //         as an extra safety net for any remaining large manifests.
-    if ($oldversion < 2026032401149) {
-        upgrade_mod_savepoint(true, 2026032401149, 'contentcreator');
+    if ($oldversion < 2026032412) {
+        upgrade_mod_savepoint(true, 2026032412, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500150) {
+    if ($oldversion < 2026032500) {
         // v11.50: VERSION BUMP — routine release packaging following v11.49 bug fixes.
         // CC_VERSION bumped to 11.50 in cc-state.js and generator.js so console logs
         // correctly identify the installed version. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500150, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032500, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500151) {
+    if ($oldversion < 2026032501) {
         // v11.51: FIX BUG-VO-RACE + FIX BUG-CC-DBWRITE (root cause improvements)
         //
         // FIX BUG-VO-RACE (player5.js):
@@ -467,94 +467,94 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //   bypassed because the throw triggered Moodle's fault path → .fail() only).
         //
         // No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500151, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032501, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500152) {
+    if ($oldversion < 2026032502) {
         // v11.52: Version bump. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500152, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032502, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500153) {
+    if ($oldversion < 2026032503) {
         // v11.53: VERSION BUMP — Routine release packaging. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500153, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032503, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500154) {
+    if ($oldversion < 2026032504) {
         // v11.54: TWO FIXES — Image-regen bug + image gen always saves to gallery. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500154, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032504, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500155) {
+    if ($oldversion < 2026032505) {
         // v11.55: IMAGE-DISPLAY FIX — generateImage() returns HTTPS URL not data:image. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500155, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032505, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500156) {
+    if ($oldversion < 2026032506) {
         // v11.56: VERSION BUMP — CC_VERSION stale fix (11.53→11.56). No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500156, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032506, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500157) {
+    if ($oldversion < 2026032507) {
         // v11.57: ZIP-VALIDATION FIX — amd/build/legislation/ empty in v11.56 ZIP. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500157, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032507, 'contentcreator');
     }
 
-    if ($oldversion < 2026032500158) {
+    if ($oldversion < 2026032508) {
         // v11.58: TWO BUG FIXES — Image-generation fallback + image picker data:URL bug. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032500158, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032508, 'contentcreator');
     }
 
-    if ($oldversion < 2026032600159) {
+    if ($oldversion < 2026032600) {
         // v11.59: THREE BUG FIXES — Image picker, gallery save, voiceover. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032600159, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032600, 'contentcreator');
     }
 
-    if ($oldversion < 2026032600160) {
+    if ($oldversion < 2026032601) {
         // v11.60: TWO BUG FIXES — applySelectedImage silent save failure + overflow-visible CSS. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032600160, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032601, 'contentcreator');
     }
 
-    if ($oldversion < 2026032601161) {
+    if ($oldversion < 2026032602) {
         // v11.61: FIVE FIXES — Persistent image storage, upload data:URL, gallery count, broken thumbnails, stale count. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032601161, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032602, 'contentcreator');
     }
 
-    if ($oldversion < 2026032701162) {
+    if ($oldversion < 2026032700) {
         // v11.62: BUG FIX (x3) — Workplace Training button, generate topics state, TGA foundation overcount. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032701162, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032700, 'contentcreator');
     }
 
-    if ($oldversion < 2026032701163) {
+    if ($oldversion < 2026032701) {
         // v11.63: VERSION BUMP — Clean release increment. No code or DB schema changes.
-        upgrade_mod_savepoint(true, 2026032701163, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032701, 'contentcreator');
     }
 
-    if ($oldversion < 2026032701165) {
+    if ($oldversion < 2026032702) {
         // v11.65: VERSION BUMP — Video pipeline reverted. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032701165, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032702, 'contentcreator');
     }
 
-    if ($oldversion < 2026032701166) {
+    if ($oldversion < 2026032703) {
         // v11.66: VERSION BUMP — Routine release increment. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026032701166, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026032703, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001167) {
+    if ($oldversion < 2026033000) {
         // v11.67: BUG FIX — Quality gate hard gate: BEST_EFFORT content below 140/180
         // (or below 40/80 audit) now returns failed sequence to force auto-redo.
         // generator.js updated. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001167, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033000, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001168) {
+    if ($oldversion < 2026033001) {
         // v11.68: PERFORMANCE UPGRADE — Fast-First + Smart QA architecture.
         // MAX_ATTEMPTS 3→2, thresholds lowered, single repair path, Story QA gated,
         // system prompt cached. generator.js updated. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001168, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033001, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001169) {
+    if ($oldversion < 2026033002) {
         // v11.69: BULLETPROOF FIXES (ChatGPT approved — 3 edge-case hardening fixes).
         // (1) JSON salvage pass: after all repair attempts fail, extract embedded array/object
         //     from prose text before giving up. Prevents discarding almost-valid AI responses.
@@ -562,10 +562,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // (3) System prompt cache keyed by mode+country+language (context._promptCache[key])
         //     instead of flat context._cachedSystemPrompt — prevents cross-topic contamination
         //     in batch runs. generator.js updated. AMD build/min synced (9398fc43). No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001169, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033002, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001170) {
+    if ($oldversion < 2026033003) {
         // v11.70: VOICEOVER FIX — Instant student playback via Moodle file store.
         // Previously, voiceover audio (base64 data: URLs) was stripped to the string
         // 'pregenerated' by saveManifestSilent() on every save, so no audio URL was
@@ -576,10 +576,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // this URL in section.voiceoverUrl — stripAudio() only strips data: URLs so the
         // HTTPS URL survives all saves. Students play from the file store instantly.
         // New mod_contentcreator_pluginfile() added to lib.php. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001170, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033003, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001171) {
+    if ($oldversion < 2026033004) {
         // v11.71: VOICEOVER DEDUP + VALIDATION (ChatGPT-approved hardening pass).
         // Three targeted improvements on top of the v11.70 file-store architecture:
         // (1) Dedup upload guard: persistVoiceoverToFileStore() is now only called when
@@ -593,10 +593,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //     save_voiceover_file — rejects tiny/corrupt audio payloads that would pass the
         //     old threshold but are not valid audio files.
         // Also bumps CC_VERSION in cc-state.js from 11.70 → 11.71. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001171, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033004, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001172) {
+    if ($oldversion < 2026033005) {
         // v11.72: VOICEOVER GUARD UPGRADE (ChatGPT-approved micro-tweak on v11.71 dedup guards).
         // Replaces `section.voiceoverUrl === 'pregenerated'` with `!section.voiceoverUrl.startsWith('http')`
         // at all three persistVoiceoverToFileStore() call-sites (preloadVoiceovers,
@@ -606,10 +606,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // ensuring upload only runs when a valid pluginfile.php URL is absent.
         // CC_VERSION bumped to 11.72 in cc-state.js.
         // AMD triple-match: player5.js 702002e2 / cc-state.js 0acee077. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001172, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033005, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001173) {
+    if ($oldversion < 2026033006) {
         // v11.73: QUALITY GATE REPLACEMENT (ChatGPT-approved).
         // Removes the dual scoring system (scoreQualityGate + scoreAuditDefensibility +
         // EnterpriseQA) that caused 150s poll timeouts and hard failures by retrying
@@ -621,10 +621,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // COMBINED_MAX, PUBLISH_THRESHOLD, AUDIT_MIN_THRESHOLD, bestCards, bestScore,
         // bestInstructionalScore, bestAuditScore, lastAuditResult). CC_VERSION → 11.73.
         // AMD triple-match: generator.js + cc-state.js synced. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001173, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033006, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001174) {
+    if ($oldversion < 2026033007) {
         // v11.74: VOICEOVER CRASH FIX + SPEED OPTIMISATION (ChatGPT-approved).
         // (1) BUG-VO-STARTSWITH: player5.js crashed with "Cannot read properties of undefined
         //     (reading 'startsWith')" when voiceoverUrl was undefined (normal state for
@@ -637,10 +637,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //     Do NOT rewrite existing content." directive — prevents full rewrites on attempt 2,
         //     cutting token usage and eliminating new-error risk.
         // player5.js + prompts.js updated. AMD build/min synced. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001174, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033007, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001175) {
+    if ($oldversion < 2026033008) {
         // v11.75: PROMPT COMPRESSION + CHATGPT 5-FIX HARDENING (ChatGPT-approved production upgrade).
         // (1) GENERATION SYSTEM PROMPTS COMPRESSED ~50-70%: All 4 system prompts (VET, University,
         //     Workplace, PD) rewritten as lean, pattern-based specs. Removed: OBJECTIVE block,
@@ -661,13 +661,13 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //       content." Prevents silent failures and UI playback issues.
         // prompts.js updated. AMD triple-match: prompts.js (3d267446d510267b366c2bb7003e9606).
         // player5.js (618572b7) + cc-state.js (bcf72a8a) unchanged. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001175, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033008, 'contentcreator');
     }
 
     // v11.76: VERSION BUMP — Routine release increment. No code or AMD changes.
     // No DB schema changes. version.php → 2026033001176.
-    if ($oldversion < 2026033001176) {
-        upgrade_mod_savepoint(true, 2026033001176, 'contentcreator');
+    if ($oldversion < 2026033009) {
+        upgrade_mod_savepoint(true, 2026033009, 'contentcreator');
     }
 
     // v11.77: TWO FIXES.
@@ -689,8 +689,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     // AMD: player5.js (1fe61a4b) × 3, builder.js (3fd2fd0c) × 3.
     // prompts.js (3d267446) + cc-state.js (bcf72a8a) unchanged.
     // No DB schema changes. version.php → 2026033001177.
-    if ($oldversion < 2026033001177) {
-        upgrade_mod_savepoint(true, 2026033001177, 'contentcreator');
+    if ($oldversion < 2026033010) {
+        upgrade_mod_savepoint(true, 2026033010, 'contentcreator');
     }
 
     // v11.78: ELEMENT NUMBERING BUG FIX — selecting Element 2 showed "Element 1"/
@@ -706,8 +706,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   elementNumber, id, title, subtopic pcNumber/id/title, and coverageSummary.
     //   AMD: builder.js updated, cc-state.js CC_VERSION → '11.78'. No DB schema changes.
     //   version.php → 2026033001178.
-    if ($oldversion < 2026033001178) {
-        upgrade_mod_savepoint(true, 2026033001178, 'contentcreator');
+    if ($oldversion < 2026033011) {
+        upgrade_mod_savepoint(true, 2026033011, 'contentcreator');
     }
 
     // v11.79: CRITICAL FIX — validateCards() voiceover field name wrong since v11.73.
@@ -723,8 +723,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   only genuinely broken content triggers the repair path. CC_VERSION → '11.79'.
     //   AMD: generator.js updated, cc-state.js CC_VERSION bumped. No DB schema changes.
     //   version.php → 2026033001179.
-    if ($oldversion < 2026033001179) {
-        upgrade_mod_savepoint(true, 2026033001179, 'contentcreator');
+    if ($oldversion < 2026033012) {
+        upgrade_mod_savepoint(true, 2026033012, 'contentcreator');
     }
 
     // v11.80: ICON SYSTEM OVERHAUL — Deterministic semantic icon matching.
@@ -737,33 +737,33 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   rewritten: semantic → card-type pool → AI icon → position. (3) cc-card-slots.js —
     //   all scenePart render calls now pass cardType. No DB schema changes.
     //   version.php → 2026033001180.
-    if ($oldversion < 2026033001180) {
-        upgrade_mod_savepoint(true, 2026033001180, 'contentcreator');
+    if ($oldversion < 2026033013) {
+        upgrade_mod_savepoint(true, 2026033013, 'contentcreator');
     }
 
     //   version.php → 2026033001181.
-    if ($oldversion < 2026033001181) {
-        upgrade_mod_savepoint(true, 2026033001181, 'contentcreator');
+    if ($oldversion < 2026033014) {
+        upgrade_mod_savepoint(true, 2026033014, 'contentcreator');
     }
 
     //   version.php → 2026033001182.
-    if ($oldversion < 2026033001182) {
-        upgrade_mod_savepoint(true, 2026033001182, 'contentcreator');
+    if ($oldversion < 2026033015) {
+        upgrade_mod_savepoint(true, 2026033015, 'contentcreator');
     }
 
     //   version.php → 2026033001183.
-    if ($oldversion < 2026033001183) {
-        upgrade_mod_savepoint(true, 2026033001183, 'contentcreator');
+    if ($oldversion < 2026033016) {
+        upgrade_mod_savepoint(true, 2026033016, 'contentcreator');
     }
 
     //   version.php → 2026033001184.
-    if ($oldversion < 2026033001184) {
-        upgrade_mod_savepoint(true, 2026033001184, 'contentcreator');
+    if ($oldversion < 2026033017) {
+        upgrade_mod_savepoint(true, 2026033017, 'contentcreator');
     }
 
     //   version.php → 2026033001185.
-    if ($oldversion < 2026033001185) {
-        upgrade_mod_savepoint(true, 2026033001185, 'contentcreator');
+    if ($oldversion < 2026033018) {
+        upgrade_mod_savepoint(true, 2026033018, 'contentcreator');
     }
 
     //   version.php → 2026033001186.
@@ -771,8 +771,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   manifest.voiceoversComplete global flag, force retry for non-complete teacher
     //   sections, completion-only final save, student hard-block with button disable.
     //   No DB schema changes.
-    if ($oldversion < 2026033001186) {
-        upgrade_mod_savepoint(true, 2026033001186, 'contentcreator');
+    if ($oldversion < 2026033019) {
+        upgrade_mod_savepoint(true, 2026033019, 'contentcreator');
     }
 
     //   version.php → 2026033001187.
@@ -788,8 +788,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   load. For the dedup-guard path (URL already persisted), status is set 'complete'
     //   immediately inline (safe — no new write needed). player5.js updated.
     //   AMD triple-match: player5.js (1b58bd51), cc-state.js (d93ed18b). No DB schema changes.
-    if ($oldversion < 2026033001187) {
-        upgrade_mod_savepoint(true, 2026033001187, 'contentcreator');
+    if ($oldversion < 2026033020) {
+        upgrade_mod_savepoint(true, 2026033020, 'contentcreator');
     }
 
     // v11.88: TTS timeout raised from 25s to 60s in player5.js (both preload AbortController
@@ -798,21 +798,21 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   attempt, exhaust all 3 retries, and leave manifest.voiceoversComplete=false.
     //   Also: Structure Validation Results badge changed from "Repaired" to "Valid" (builder.js).
     //   AMD triple-match: player5.js and builder.js synced. No DB schema changes.
-    if ($oldversion < 2026033001188) {
-        upgrade_mod_savepoint(true, 2026033001188, 'contentcreator');
+    if ($oldversion < 2026033021) {
+        upgrade_mod_savepoint(true, 2026033021, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001189) {
+    if ($oldversion < 2026033022) {
         // v11.89: Voiceover playback regression fix (pre-v11.86 content).
         // Two JS changes in player5.js and cc-state.js — no DB schema changes.
         // (1) preloadOne HAS_URL skip now sets voiceoverStatus='complete' so
         //     allVoiceoversComplete() counts sections with valid HTTPS URLs correctly.
         // (2) checkComplete sets manifest.voiceoversComplete in-memory for ALL users,
         //     not just teachers — students can play immediately; teachers persist it.
-        upgrade_mod_savepoint(true, 2026033001189, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033022, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001190) {
+    if ($oldversion < 2026033023) {
         // v11.90: VOICEOVER LIFECYCLE FIX — Two-part fix in player5.js init().
         // BUG 1: `if (hasExistingContent && !cachedState)` guard skipped preloadVoiceovers()
         //   for ALL returning students (cachedState is almost always present), so
@@ -824,10 +824,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //   without a full re-render. CC_VERSION bumped to 11.90 in cc-state.js.
         // AMD triple-match: player5.js MD5 89c131bbecbd15d02b1b10ab7d405f32.
         // No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001190, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033023, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001191) {
+    if ($oldversion < 2026033024) {
         // v11.91: ICON PICKER — Visual icon selection in Edit Slide modal.
         // All 8 icon text inputs (across conceptItems, sceneParts, conceptInsights,
         // mental-model steps) replaced with renderIconPickerInput() which renders:
@@ -835,10 +835,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // ~115-icon grid. Selecting an icon fills the field and closes the picker.
         // CSS added to player5.css. AMD triple-match: player5.js MD5 — icon picker
         // visual grid. CC_VERSION → 11.91. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001191, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033024, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001920) {
+    if ($oldversion < 2026033025) {
         // v11.92: VOICEOVER TIMEOUT FIX — Two-part fix for voiceover consistently
         // failing with TIMEOUT 60s on every attempt.
         // FIX 1 (PHP): ajax.php generate_voice now calls @set_time_limit(0) before
@@ -851,10 +851,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //   legitimately take 60-90s — 60s was always too short.
         // AMD triple-match: player5.js MD5 4faff7cdae5e9515f07d5fa7b21c3aae,
         //   cc-state.js MD5 9e14e858ee55a3ff52cdb68a9e9c61ba. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026033001920, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033025, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001930) {
+    if ($oldversion < 2026033026) {
         // v11.93: TTS TEXT LIMIT — Reduced voiceover character cap from 12000 to 4000.
         // At 12000 chars, Google Chirp 3 HD required 3–5 sequential TTS chunks + WAV
         // concat + OGG encode, taking 60–90s total — consistently exceeding the 60s
@@ -864,19 +864,19 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // ceiling. Sentence boundary detection updated (min boundary lowered 4000→1500
         // to match the new limit). PHP-only change — no JS or DB schema changes.
         // ajax.php only. No AMD changes. version.php → 2026033001930.
-        upgrade_mod_savepoint(true, 2026033001930, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033026, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001940) {
+    if ($oldversion < 2026033027) {
         // v11.94: CHALLENGE MODE TOP PADDING — Added 16px top padding to the
         // .cc5-decision-challenge card wrapper (was padding: 0 24px 24px, now
         // 16px 24px 24px). The "CHALLENGE MODE" badge was flush against the
         // orange top border with no breathing room. CSS-only change — player5.css
         // only. No PHP, JS, AMD, or DB schema changes. version.php → 2026033001940.
-        upgrade_mod_savepoint(true, 2026033001940, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033027, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001950) {
+    if ($oldversion < 2026033028) {
         // v11.95: FLIP CARD GROW FIX — Flip cards (insight/consequence/outcome
         // categories) were showing vertical scrollbars when text exceeded the
         // v11.37 fixed 220px height. Three CSS-only changes in player5.css:
@@ -888,17 +888,17 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // is treated as height:auto during intrinsic sizing — no circular dependency).
         // (4) .cc5-flip-front / .cc5-flip-back: removed overflow-y:auto — changed to
         // overflow:visible so content is never clipped. version.php → 2026033001950.
-        upgrade_mod_savepoint(true, 2026033001950, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033028, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001960) {
+    if ($oldversion < 2026033029) {
         // v11.96: VERSION BUMP — Maintenance release. All 6 sync locations updated
         // to 11.96 / 2026033001960. No code, CSS, JS, AMD, or DB schema changes.
         // version.php → 2026033001960.
-        upgrade_mod_savepoint(true, 2026033001960, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033029, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001970) {
+    if ($oldversion < 2026033030) {
         // v11.97: ICON PICKER SVG VISIBILITY FIX — CSS-only change to styles/player5.css.
         // The icon picker overlay (.cc5-icon-picker-item grid) was showing icon names but
         // no visible SVG icons. Root cause: all icon SVGs use stroke="currentColor"; Moodle
@@ -912,10 +912,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //   body[data-bs-theme="dark"] / body.dark variants — light grey (#e5e7eb) for dark mode.
         // CSS-only. No PHP, JS, AMD, or DB schema changes.
         // version.php → 2026033001970.
-        upgrade_mod_savepoint(true, 2026033001970, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033030, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001980) {
+    if ($oldversion < 2026033031) {
         // v11.98: ICON SAVE BUG FIX — Three bugs where icon changes in the Edit Slide modal
         // were silently discarded on save.
         // (1) Single-section mental-model steps: icon picker not rendered, icon stripped on save.
@@ -926,10 +926,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //     manifest update carries new icon through to self.render().
         // player5.js only. No PHP or DB schema changes.
         // version.php → 2026033001980.
-        upgrade_mod_savepoint(true, 2026033001980, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033031, 'contentcreator');
     }
 
-    if ($oldversion < 2026033001990) {
+    if ($oldversion < 2026033032) {
         // v11.99: AMD TRIPLE-MATCH SYNC — v11.98 shipped with amd/src/player5.js and
         // amd/build/ out of sync. The v11.98 icon-save bug fixes were applied only to
         // amd/src/player5.js; amd/build/player5.js and amd/build/player5.min.js were
@@ -938,10 +938,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // Fix: amd/src/player5.js copied verbatim to amd/build/player5.js and
         // amd/build/player5.min.js. AMD triple-match MD5: b2d40b94c2e850cdaed2b6f3f60b8722.
         // No PHP, CSS, or DB schema changes. version.php → 2026033001990.
-        upgrade_mod_savepoint(true, 2026033001990, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033032, 'contentcreator');
     }
 
-    if ($oldversion < 2026033002000) {
+    if ($oldversion < 2026033033) {
         // v12.00: ARROW DOT-POINTS (CARD 2 ONLY) — Concept-explainer (card 2) uses a
         // long paragraph text editor in Edit Slide so its insight icons are not
         // individually choosable. These now show a chevron-right arrow instead of
@@ -951,20 +951,20 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // animation + stroke-width:2.5 for .cc5-ci-icon svg and .cc5-insight-icon svg.
         // cc-card-slots.js (2 icon sites) + player5.css. AMD triple-match MD5:
         // c9fbd22a703d6072d94759b0e4be9336. No PHP or DB changes. version.php → 2026033002000.
-        upgrade_mod_savepoint(true, 2026033002000, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033033, 'contentcreator');
     }
 
-    if ($oldversion < 2026033002001) {
+    if ($oldversion < 2026033034) {
         // v12.01: SAVEPOINT ORDER HOTFIX — v12.00 shipped with savepoint block
         // 2026033002000 placed before 2026033001990 in db/upgrade.php. Moodle
         // processes blocks top-to-bottom; hitting a lower numeric after a higher
         // one throws "cannotdowngrade". Fix: reordered to strict ascending sequence
         // ...1980 → 1990 → 2000 → 2026033002001. No JS, CSS, or DB schema changes.
         // version.php → 2026033002001.
-        upgrade_mod_savepoint(true, 2026033002001, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033034, 'contentcreator');
     }
 
-    if ($oldversion < 2026033002002) {
+    if ($oldversion < 2026033035) {
         // v12.02: MISTAKES CARD ICON PICKER — Edit Slide modal for the mistakes card
         // (card 5 "Watch Out For") now includes an icon picker on each mistake item row.
         // Previously the icon was silently carried over from the original manifest via
@@ -973,10 +973,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // and the dynamic "Add Mistake" row in player5.js. saveSlideEdit now reads
         // .cc5-edit-mistake-icon value directly in both save paths. AMD triple-match MD5:
         // e5e3e0685590acabf773aa8b1ce6aabc. No PHP or DB changes. version.php → 2026033002002.
-        upgrade_mod_savepoint(true, 2026033002002, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033035, 'contentcreator');
     }
 
-    if ($oldversion < 2026033002003) {
+    if ($oldversion < 2026033036) {
         // v12.03: SCENARIO CARDS ICON SAVE FIX — hook-scenario (card 1) and applied-scenario
         // (card 4) icons were not saveable in the Edit Slide modal. Root cause: the
         // single-section edit modal always showed the legacy flat beats editor regardless
@@ -989,10 +989,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // {icon, title, text} into cardData.sceneParts; otherwise falls back to flat beats
         // join into cardData.content. player5.js only. AMD triple-match MD5:
         // bc9c72dbb99b0e05234ee711152ee5f4. No PHP or DB changes. version.php → 2026033002003.
-        upgrade_mod_savepoint(true, 2026033002003, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033036, 'contentcreator');
     }
 
-    if ($oldversion < 2026033002004) {
+    if ($oldversion < 2026033037) {
         // v12.04: SCENE-PART ICON HONOUR FIX — teacher-set icons on hook-scenario (card 1)
         // and applied-scenario (card 4) were visually ignored on every render even though
         // v12.03 correctly saved them to the DB. Root cause: resolveScenePartIcon() in
@@ -1005,10 +1005,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // provide fallbacks for cards with no stored icon. cc-icons.js only. AMD triple-
         // match MD5: 1bd0a0690e26c44e7db6ceb9dd82c14d. No PHP or DB changes.
         // version.php → 2026033002004.
-        upgrade_mod_savepoint(true, 2026033002004, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033037, 'contentcreator');
     }
 
-    if ($oldversion < 2026033002005) {
+    if ($oldversion < 2026033038) {
         // v12.05: SCENARIO CARD DEFAULT ICON FIX — CARD_ICON_STRATEGY fallback pools in
         // cc-icons.js used nonsensical defaults for hook-scenario and applied-scenario.
         // hook-scenario parts "What Happened" and "The Pressure" defaulted to zap
@@ -1023,10 +1023,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // always honoured first. cc-icons.js only. AMD triple-match MD5:
         // 42285302c80ad3be326a085b85d4ff22. No PHP or DB changes.
         // version.php → 2026033002005.
-        upgrade_mod_savepoint(true, 2026033002005, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033038, 'contentcreator');
     }
 
-    if ($oldversion < 2026033002006) {
+    if ($oldversion < 2026033039) {
         // v12.06: SCENARIO CARD ICON — STRICT POSITIONAL DEFAULT — removed semantic
         // content analysis from the fallback path for cards with a defined icon pool.
         // resolveScenePartIcon() previously ran a regex keyword scan (step 1) before
@@ -1040,10 +1040,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // shows briefcase / target / brain / check-circle unless teacher overrides.
         // cc-icons.js only. AMD triple-match MD5: 4e4779c29175a5f8715a0cf90a9f50ed.
         // No PHP or DB changes. version.php → 2026033002006.
-        upgrade_mod_savepoint(true, 2026033002006, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033039, 'contentcreator');
     }
 
-    if ($oldversion < 2026033002007) {
+    if ($oldversion < 2026033040) {
         // v12.07: EDIT MODAL ICON PRE-POPULATION FIX — icon pickers in the Edit Slide
         // modal previously showed an empty field for any part with no explicitly stored
         // icon (item.icon === ''). The rendered card showed the pool-default icon (step 1
@@ -1059,10 +1059,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // explicitly, so step 0 honours it on all future renders. player5.js only.
         // AMD triple-match MD5: b9f0897bf75e35fd6d03e5ecb8a01470.
         // No PHP or DB changes. version.php → 2026033002007.
-        upgrade_mod_savepoint(true, 2026033002007, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033040, 'contentcreator');
     }
 
-    if ($oldversion < 2026033100001) {
+    if ($oldversion < 2026033100) {
         // v12.08: FOCUS RETURN VOICEOVER RESUME FIX — when a student navigated away from the
         // browser tab, the focus-lost handler was nullifying currentAudio (losing the playback
         // position), resetting voiceoverPlayed=false and slideTimeRemaining=slideDuration, then
@@ -1073,10 +1073,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // to pausedAudioTime, resumes playback, and restarts the countdown timer from the saved
         // remaining time. Modal title changed to "Slide Paused", message updated accordingly.
         // player5.min.js only. No PHP or DB changes. version.php → 2026033100001.
-        upgrade_mod_savepoint(true, 2026033100001, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033100, 'contentcreator');
     }
 
-    if ($oldversion < 2026033100900) {
+    if ($oldversion < 2026033101) {
         // v12.09: TWO FIXES — (1) PANEL TITLE: "Who's Here" renamed to "The Details" across
         //   all rendering and generation paths. "Who's Here" was ambiguous and confusing; "The
         //   Details" clearly describes the panel's purpose (the people and context of the scene).
@@ -1096,7 +1096,7 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //   generator.js and generator.min.js. AMD player5 MD5: 1fa4ee4fe612c50386710d6d7ece17ba.
         //   AMD generator MD5: f63bb62dadc690482a85ef45abf21bed. No PHP or DB changes.
         //   version.php → 2026033100900.
-        upgrade_mod_savepoint(true, 2026033100900, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026033101, 'contentcreator');
     }
 
     // v12.10: UI — Removed the contextual icon and its rounded background shape from the slide
@@ -1108,14 +1108,14 @@ function xmldb_contentcreator_upgrade($oldversion) {
     // v12.11: VERSION BUMP — Completes the v12.10 release. The v12.10 patch shipped without an
     //   upgrade.php savepoint (Location 2 of the 6-location sync rule was missed). No code
     //   changes from v12.10. No PHP or DB changes. version.php → 2026033101100.
-    if ($oldversion < 2026033101100) {
-        upgrade_mod_savepoint(true, 2026033101100, 'contentcreator');
+    if ($oldversion < 2026033102) {
+        upgrade_mod_savepoint(true, 2026033102, 'contentcreator');
     }
 
     // v12.12: VERSION BUMP — Routine release following 6-location sync process. No code changes.
     //   No PHP or DB schema changes. version.php → 2026033101200.
-    if ($oldversion < 2026033101200) {
-        upgrade_mod_savepoint(true, 2026033101200, 'contentcreator');
+    if ($oldversion < 2026033103) {
+        upgrade_mod_savepoint(true, 2026033103, 'contentcreator');
     }
 
     // v12.13: VOICEOVER BUG FIX — WAITING loop extended from 30s to 90s timeout.
@@ -1127,14 +1127,14 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   so audio plays the moment a URL is available even if sectionId key mismatches cache key.
     //   JS-only change — all 3 AMD files updated (src, build/player5.js, build/player5.min.js).
     //   No PHP or DB schema changes. version.php → 2026033101300.
-    if ($oldversion < 2026033101300) {
-        upgrade_mod_savepoint(true, 2026033101300, 'contentcreator');
+    if ($oldversion < 2026033104) {
+        upgrade_mod_savepoint(true, 2026033104, 'contentcreator');
     }
 
     // v12.14: VERSION BUMP — Routine release following all 6-location sync rules.
     //   No code changes. No PHP or DB schema changes. version.php → 2026033101400.
-    if ($oldversion < 2026033101400) {
-        upgrade_mod_savepoint(true, 2026033101400, 'contentcreator');
+    if ($oldversion < 2026033105) {
+        upgrade_mod_savepoint(true, 2026033105, 'contentcreator');
     }
 
     // v12.15: FIX "Launch Learning Module" redirect loop — builder.js click handler
@@ -1142,8 +1142,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   PHP view.php to always re-serve the builder. Fixed to navigate to ?id=<cmid>
     //   (no edit param) so PHP serves the player when content is locked.
     //   builder.js + amd/build/builder.min.js updated. version.php → 2026033101500.
-    if ($oldversion < 2026033101500) {
-        upgrade_mod_savepoint(true, 2026033101500, 'contentcreator');
+    if ($oldversion < 2026033106) {
+        upgrade_mod_savepoint(true, 2026033106, 'contentcreator');
     }
 
     // v12.16: FIX voiceover blocked for teachers when Moodle edit mode is OFF.
@@ -1155,8 +1155,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   preloadVoiceovers sentinel skip, preload API-call gate, playVoiceover global
     //   completion gate, and playVoiceover on-demand generation gate.
     //   view.php + amd/src/player5.js + amd/build files updated. version.php → 2026033101600.
-    if ($oldversion < 2026033101600) {
-        upgrade_mod_savepoint(true, 2026033101600, 'contentcreator');
+    if ($oldversion < 2026033107) {
+        upgrade_mod_savepoint(true, 2026033107, 'contentcreator');
     }
 
     // v12.17: Z-INDEX STACKING FIX — "Slide Paused" and all other player modal
@@ -1167,8 +1167,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   #contentcreator-app to document.body, removing them from any ancestor stacking
     //   context. Companion fix in format_aicourse v1.7.30 lowers hero z-index 100→1.
     //   player5.js only — no PHP or DB schema changes. version.php → 2026033101700.
-    if ($oldversion < 2026033101700) {
-        upgrade_mod_savepoint(true, 2026033101700, 'contentcreator');
+    if ($oldversion < 2026033108) {
+        upgrade_mod_savepoint(true, 2026033108, 'contentcreator');
     }
 
     // v12.18: VERSION BUMP — Routine release following all 6-location sync rules.
@@ -1177,8 +1177,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   and corrects BUILD_INFO.json field layout (amd_src_md5 now in its own field,
     //   verification is a snake_case tag). No code, JS, CSS, or DB schema changes.
     //   version.php → 2026033101800.
-    if ($oldversion < 2026033101800) {
-        upgrade_mod_savepoint(true, 2026033101800, 'contentcreator');
+    if ($oldversion < 2026033109) {
+        upgrade_mod_savepoint(true, 2026033109, 'contentcreator');
     }
 
     // v12.19: VOICEOVER CRITICAL FIX — Two bugs corrected in player5.js:
@@ -1208,8 +1208,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   the credentials needed to generate voiceovers. No DB schema changes.
     //   player5.js AMD triple-match MD5: ebaf330b68abb1a0995dcfdfb53491c6.
     //   version.php → 2026033101900.
-    if ($oldversion < 2026033101900) {
-        upgrade_mod_savepoint(true, 2026033101900, 'contentcreator');
+    if ($oldversion < 2026033110) {
+        upgrade_mod_savepoint(true, 2026033110, 'contentcreator');
     }
 
     // v12.20: VERSION BUMP — Routine release following all 6-location sync rules.
@@ -1217,8 +1217,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   bugs fixed: isTeacher constructor wire, _preloadFallbackUrl delay, and
     //   credential gate). No code, JS, CSS, or DB schema changes in this release.
     //   version.php → 2026033102000.
-    if ($oldversion < 2026033102000) {
-        upgrade_mod_savepoint(true, 2026033102000, 'contentcreator');
+    if ($oldversion < 2026033111) {
+        upgrade_mod_savepoint(true, 2026033111, 'contentcreator');
     }
 
     // v12.21: BUG FIX (x1) + LOG FIX (x2) + VERSION STRING FIX (x1):
@@ -1239,8 +1239,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   player5.js AMD triple-match MD5: c2471a5ce1fad80aef54a885b032a34a.
     //   cc-state.js AMD triple-match MD5: 7a31d7508f5ce6d197398dbf6de57be7.
     //   No PHP or DB schema changes. version.php → 2026033102100.
-    if ($oldversion < 2026033102100) {
-        upgrade_mod_savepoint(true, 2026033102100, 'contentcreator');
+    if ($oldversion < 2026033112) {
+        upgrade_mod_savepoint(true, 2026033112, 'contentcreator');
     }
 
     // v12.22: VOICEOVER COMPETENCY-SUMMARY FALLBACK FIX + DECISION-POINT WORD-FLOOR EXCLUSION.
@@ -1264,8 +1264,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   cc-state.js AMD triple-match MD5: e472b3e3b74f3eeadc1e43417e3ca584.
     //   player5.js AMD triple-match MD5: 4595ef7323dd7e055576c7abb858e89c.
     //   No PHP or DB schema changes. version.php → 2026033102200.
-    if ($oldversion < 2026033102200) {
-        upgrade_mod_savepoint(true, 2026033102200, 'contentcreator');
+    if ($oldversion < 2026033113) {
+        upgrade_mod_savepoint(true, 2026033113, 'contentcreator');
     }
 
     // v12.23: UPGRADE FIX — Corrected upgrade.php savepoint ordering. v12.20 block
@@ -1275,11 +1275,11 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   a "Cannot downgrade" error at upgrade line 1268. Fixed by moving the v12.20 block
     //   to its correct position (after v12.19, before v12.21). No code, JS, CSS, or DB
     //   schema changes. version.php → 2026040100200.
-    if ($oldversion < 2026040100200) {
-        upgrade_mod_savepoint(true, 2026040100200, 'contentcreator');
+    if ($oldversion < 2026040100) {
+        upgrade_mod_savepoint(true, 2026040100, 'contentcreator');
     }
 
-    if ($oldversion < 2026040100201) {
+    if ($oldversion < 2026040101) {
         // v12.24: VERSION BUMP — Fixed two stale AMD CC_VERSION constants:
         //   (1) cc-state.js: CC_VERSION '12.22' → '12.24' (authoritative source for
         //       builder.js and player5.js which pull via CcState.CC_VERSION).
@@ -1292,11 +1292,11 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //   generator.js MD5 19d0acb7839c8928a513617f66c5469e,
         //   builder.js MD5 dcc658489471cf9ff65b9c2a3027f252.
         //   No PHP or DB schema changes. version.php → 2026040100201.
-        upgrade_mod_savepoint(true, 2026040100201, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026040101, 'contentcreator');
     }
 
 
-    if ($oldversion < 2026040100225) {
+    if ($oldversion < 2026040102) {
         // v12.25: THREE FIXES.
         // (1) CARD VOICEOVER PRIORITY: buildVoiceoverText in cc-state.js ignored
         //     card.voiceoverText for 7-card sections when structural fields (sceneParts,
@@ -1318,11 +1318,11 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //     on success, "Slide saved but voiceover regeneration failed" on error/catch.
         //   AMD trios: cc-state.js and player5.js both triple-matched (src/build/min).
         //   No PHP or DB schema changes. version.php → 2026040100225.
-        upgrade_mod_savepoint(true, 2026040100225, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026040102, 'contentcreator');
     }
 
 
-    if ($oldversion < 2026040100226) {
+    if ($oldversion < 2026040103) {
         // v12.26: FIX (BUG-CC-NOREGEN) — Voiceover auto-regeneration skipped for
         //   sections that lacked a stored voiceoverTextHash (any section generated before
         //   v9.98 when hash tracking was introduced). The saveSlideEdit hash check in
@@ -1335,16 +1335,16 @@ function xmldb_contentcreator_upgrade($oldversion) {
         //   hash is stored, ensuring audio always reflects the latest edited content.
         //   AMD trios: player5.js and cc-state.js triple-matched (src/build/min).
         //   No PHP or DB schema changes. version.php → 2026040100226.
-        upgrade_mod_savepoint(true, 2026040100226, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026040103, 'contentcreator');
     }
 
-    if ($oldversion < 2026040100227) {
+    if ($oldversion < 2026040104) {
         // v12.27: VERSION BUMP — Corrected stale CC_VERSION constant in generator.js
         //   (was '12.24', three versions behind cc-state.js). Updated to '12.27' so
         //   generator-module console logs display the correct version prefix. No PHP
         //   or DB schema changes. AMD trios: cc-state.js and generator.js triple-matched
         //   (src/build/min). version.php → 2026040100227.
-        upgrade_mod_savepoint(true, 2026040100227, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026040104, 'contentcreator');
     }
 
     // v12.28 FIX-CC-VO-HEADINGS: 7-card VET content stores per-card teacher headings in
@@ -1352,16 +1352,16 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   a heading produced no voiced heading text — voiceover read only the default label.
     //   Fix: use card.heading || card.title throughout heading normalisation.
     //   No DB schema changes. AMD: cc-state.js updated. version.php → 2026040200228.
-    if ($oldversion < 2026040200228) {
-        upgrade_mod_savepoint(true, 2026040200228, 'contentcreator');
+    if ($oldversion < 2026040200) {
+        upgrade_mod_savepoint(true, 2026040200, 'contentcreator');
     }
 
     // v12.29 FIX (BUG-VO-TRUNCATION): Raised ajax.php TTS char limit 4000→8000.
     //   Bumped VOICEOVER_SCHEMA_VERSION '11.37'→'12.29' in cc-state.js to force
     //   re-generation of all truncated stored voiceovers. PHP-only change; no DB schema
     //   changes. AMD: cc-state.js triple-matched. version.php → 2026040200229.
-    if ($oldversion < 2026040200229) {
-        upgrade_mod_savepoint(true, 2026040200229, 'contentcreator');
+    if ($oldversion < 2026040201) {
+        upgrade_mod_savepoint(true, 2026040201, 'contentcreator');
     }
 
     // v12.30 FIX (BUG-VO-COMPETENCY-HEADING): Fixed two voiceover sub-heading bugs on
@@ -1375,16 +1375,16 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   (4) VOICEOVER_SCHEMA_VERSION bumped '12.29'→'12.30'. (5) generator.js CC_VERSION
     //   corrected '12.28'→'12.30'. No PHP or DB schema changes.
     //   AMD: cc-state.js, player5.js, generator.js triple-matched. version.php → 2026040200230.
-    if ($oldversion < 2026040200230) {
-        upgrade_mod_savepoint(true, 2026040200230, 'contentcreator');
+    if ($oldversion < 2026040202) {
+        upgrade_mod_savepoint(true, 2026040202, 'contentcreator');
     }
 
     // v12.31: BUG-VO-PD-TRUNCATION — ajax.php char limit raised 8000→12000 so PD course
     //   voiceovers (7 cards of 200–300-word prose ≈ 9600+ chars) are no longer truncated
     //   at card 4/5. PHP change only (ajax.php). No DB schema changes.
     //   version.php → 2026040400231.
-    if ($oldversion < 2026040400231) {
-        upgrade_mod_savepoint(true, 2026040400231, 'contentcreator');
+    if ($oldversion < 2026040400) {
+        upgrade_mod_savepoint(true, 2026040400, 'contentcreator');
     }
 
     // v12.32: BUG-VO-VET-TRUNCATION — Two-part fix for VET/Workplace/University voiceover
@@ -1396,8 +1396,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   at schema='12.30' was never detected as stale). AMD: cc-state.js triple-matched,
     //   MD5 7c7eff2aeea24ac17b7f73d0011d62a7. No DB schema changes.
     //   version.php → 2026040600232.
-    if ($oldversion < 2026040600232) {
-        upgrade_mod_savepoint(true, 2026040600232, 'contentcreator');
+    if ($oldversion < 2026040600) {
+        upgrade_mod_savepoint(true, 2026040600, 'contentcreator');
     }
 
     // v12.33: FIX-DP-SHUFFLE — cc-card-slots.js now shuffles the decision-point
@@ -1406,8 +1406,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   and renderDecisionChallenge. Shallow copy used — manifest data never mutated.
     //   AMD: cc-card-slots.js triple-matched, MD5 654daec7ca0f4d476a9f9afdea888614.
     //   No PHP or DB schema changes. version.php → 2026040700233.
-    if ($oldversion < 2026040700233) {
-        upgrade_mod_savepoint(true, 2026040700233, 'contentcreator');
+    if ($oldversion < 2026040700) {
+        upgrade_mod_savepoint(true, 2026040700, 'contentcreator');
     }
 
     // v12.34: IMG-QUALITY-UPGRADE — Three server-side image generation improvements.
@@ -1420,8 +1420,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   OpenAI gpt-image-1 quality 'medium'→'high'; optimizeImageBuffer max-width
     //   1200→1536 and JPEG quality 85→92. Server-side only. No AMD, PHP, or DB changes.
     //   version.php → 2026040700234.
-    if ($oldversion < 2026040700234) {
-        upgrade_mod_savepoint(true, 2026040700234, 'contentcreator');
+    if ($oldversion < 2026040701) {
+        upgrade_mod_savepoint(true, 2026040701, 'contentcreator');
     }
 
     // v12.35: RELEASE SYNC — Version bump to 2026041500235. Stale ZIPs removed from
@@ -1429,8 +1429,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   and from public/downloads/ (local_rtocompliance v4.0.47/v4.0.48, format_aicourse
     //   v1.7.31, mod_courseinfo v1.0.38). No code, AMD, PHP, or DB schema changes.
     //   version.php → 2026041500235.
-    if ($oldversion < 2026041500235) {
-        upgrade_mod_savepoint(true, 2026041500235, 'contentcreator');
+    if ($oldversion < 2026041500) {
+        upgrade_mod_savepoint(true, 2026041500, 'contentcreator');
     }
 
     // v12.36 — Three voiceover-waiting-screen bug fixes + bypass buttons:
@@ -1453,8 +1453,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //       failed sections without a page reload. CSS added to player5.css.
     //   No DB schema changes. AMD: player5.js, cc-state.js (CC_VERSION 12.32→12.36),
     //   build files updated. version.php → 2026041500236.
-    if ($oldversion < 2026041500236) {
-        upgrade_mod_savepoint(true, 2026041500236, 'contentcreator');
+    if ($oldversion < 2026041501) {
+        upgrade_mod_savepoint(true, 2026041501, 'contentcreator');
     }
 
     // v12.37 — UX-CC-BYPASS-HOVER: "Continue without audio" hover style fix.
@@ -1462,8 +1462,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   instead of darkening plain text with no background (hard to read).
     //   CSS-only change (player5.css). No AMD, PHP, or DB schema changes.
     //   version.php → 2026041500237.
-    if ($oldversion < 2026041500237) {
-        upgrade_mod_savepoint(true, 2026041500237, 'contentcreator');
+    if ($oldversion < 2026041502) {
+        upgrade_mod_savepoint(true, 2026041502, 'contentcreator');
     }
 
     // v12.38 — BUG-CC-RETRY-NARROW: "Reset & retry audio" button did nothing when the
@@ -1478,8 +1478,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   Fix: handler now clears ALL sections without complete audio, deleting voiceoverStatus,
     //   voiceoverUrl, _preloadRetryCount, and voiceoverLoading[id]. AMD-only (player5.js).
     //   No CSS, PHP, or DB schema changes. version.php → 2026041500238.
-    if ($oldversion < 2026041500238) {
-        upgrade_mod_savepoint(true, 2026041500238, 'contentcreator');
+    if ($oldversion < 2026041503) {
+        upgrade_mod_savepoint(true, 2026041503, 'contentcreator');
     }
 
     // v12.39 — BUILD-SYNC: AMD build files were not updated when v12.36→v12.38 source
@@ -1489,15 +1489,15 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   re-syncs player5.js, player5.min.js, cc-state.js, cc-state.min.js build files
     //   and bumps CC_VERSION '12.36'→'12.38' in cc-state. No new functional changes
     //   beyond v12.38. No PHP or DB schema changes. version.php → 2026041500239.
-    if ($oldversion < 2026041500239) {
-        upgrade_mod_savepoint(true, 2026041500239, 'contentcreator');
+    if ($oldversion < 2026041504) {
+        upgrade_mod_savepoint(true, 2026041504, 'contentcreator');
     }
 
     // v12.40 — VERSION-BUMP: Forced increment to ensure Moodle detects upgrade
     //   over any cached v12.39 install. No code changes beyond v12.39.
     //   version.php → 2026041500240.
-    if ($oldversion < 2026041500240) {
-        upgrade_mod_savepoint(true, 2026041500240, 'contentcreator');
+    if ($oldversion < 2026041505) {
+        upgrade_mod_savepoint(true, 2026041505, 'contentcreator');
     }
 
     // v12.41 — BUG-CC-SOFT-FAIL: Audio generation API sometimes responds with
@@ -1511,8 +1511,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   Added visual feedback ("Retrying audio…") and double-click guard on button.
     //   AMD-only: player5.js, cc-state.js. No CSS, PHP, or DB schema changes.
     //   version.php → 2026041500241.
-    if ($oldversion < 2026041500241) {
-        upgrade_mod_savepoint(true, 2026041500241, 'contentcreator');
+    if ($oldversion < 2026041506) {
+        upgrade_mod_savepoint(true, 2026041506, 'contentcreator');
     }
 
     // v12.42 — BUG FIX: Retry button appeared to do nothing when TTS fetch was still
@@ -1528,16 +1528,16 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   debounce (_lastRetryClickTime). CC_VERSION 12.41→12.42.
     //   AMD-only: player5.js, cc-state.js. No CSS, PHP, or DB schema changes.
     //   version.php → 2026041500242.
-    if ($oldversion < 2026041500242) {
-        upgrade_mod_savepoint(true, 2026041500242, 'contentcreator');
+    if ($oldversion < 2026041507) {
+        upgrade_mod_savepoint(true, 2026041507, 'contentcreator');
     }
 
     // v12.43 — BUG FIX (BUG-CC-TIMEOUT-RACE): AbortController timeout 120s→200s;
     //   delete voiceoverLoading[id] moved to after _preloadAbortedByUser check.
     //   AMD-only: player5.js, cc-state.js. No DB changes.
     //   version.php → 2026041500243.
-    if ($oldversion < 2026041500243) {
-        upgrade_mod_savepoint(true, 2026041500243, 'contentcreator');
+    if ($oldversion < 2026041508) {
+        upgrade_mod_savepoint(true, 2026041508, 'contentcreator');
     }
 
     // v12.44 — UX FIX (UX-CC-SWEEP-FEEDBACK): POST-PRELOAD SWEEP now updates the
@@ -1546,8 +1546,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   bar. After the 10-second delay the message changes to "Generating audio…"
     //   to confirm the retry is actively in progress. No PHP or DB changes.
     //   AMD-only: player5.js. version.php → 2026041500244.
-    if ($oldversion < 2026041500244) {
-        upgrade_mod_savepoint(true, 2026041500244, 'contentcreator');
+    if ($oldversion < 2026041509) {
+        upgrade_mod_savepoint(true, 2026041509, 'contentcreator');
     }
 
     // v12.45 — BUG FIX (BUG-CC-FAILED-PERSIST): voiceoverStatus='failed' was being persisted
@@ -1557,8 +1557,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   section looks brand-new (no URL, no status), isVoiceoverGenerationPending() returns true,
     //   the wait screen shows, and the teacher sees visible progress. AMD-only: player5.js.
     //   version.php → 2026041500245.
-    if ($oldversion < 2026041500245) {
-        upgrade_mod_savepoint(true, 2026041500245, 'contentcreator');
+    if ($oldversion < 2026041510) {
+        upgrade_mod_savepoint(true, 2026041510, 'contentcreator');
     }
 
     // v12.46 — STRUCTURE FIX: upgrade.php blocks for v12.43–v12.45 were incorrectly appended
@@ -1567,8 +1567,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   a 'cannotdowngrade' error on every install attempt. Blocks moved inside the function.
     //   No functional code changes beyond v12.45. AMD-only: player5.js, cc-state.js.
     //   version.php → 2026041500246.
-    if ($oldversion < 2026041500246) {
-        upgrade_mod_savepoint(true, 2026041500246, 'contentcreator');
+    if ($oldversion < 2026041511) {
+        upgrade_mod_savepoint(true, 2026041511, 'contentcreator');
     }
 
     // v12.47: BUG-CC-RETRY-CONCURRENT — "Reset & retry audio" button caused HTTP 500 on
@@ -1582,8 +1582,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   preloadVoiceovers() call skips sections that are still in-flight (voiceoverLoading set),
     //   preventing concurrent TTS requests entirely. AMD-only: player5.js + cc-state.js.
     //   CC_VERSION 12.46 → 12.47. No CSS, PHP schema, or DB changes. version.php → 2026041500247.
-    if ($oldversion < 2026041500247) {
-        upgrade_mod_savepoint(true, 2026041500247, 'contentcreator');
+    if ($oldversion < 2026041512) {
+        upgrade_mod_savepoint(true, 2026041512, 'contentcreator');
     }
 
     // v12.48: BUG-CC-TTS-CONCURRENT — Voiceover failed to play after "Regenerate voiceover".
@@ -1596,8 +1596,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //       {pending:true} instead of making a concurrent TTS call. JS retries in 10s.
     //   JS changes: player5.js + cc-state.js. PHP changes: ajax.php.
     //   CC_VERSION 12.47 → 12.48. No DB schema changes. version.php → 2026041500248.
-    if ($oldversion < 2026041500248) {
-        upgrade_mod_savepoint(true, 2026041500248, 'contentcreator');
+    if ($oldversion < 2026041513) {
+        upgrade_mod_savepoint(true, 2026041513, 'contentcreator');
     }
 
     // v12.49: BUG-CC-ZOMBIE-CHAIN — Clicking "Reset & retry audio" spun forever.
@@ -1610,8 +1610,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   in preloadOne(), .catch(), and retry setTimeout callbacks when generation
     //   has advanced. 30s follow-up sweep for slow in-flight PHP fetches. AMD-only.
     //   CC_VERSION 12.48 → 12.49. No DB schema changes. version.php → 2026041500249.
-    if ($oldversion < 2026041500249) {
-        upgrade_mod_savepoint(true, 2026041500249, 'contentcreator');
+    if ($oldversion < 2026041514) {
+        upgrade_mod_savepoint(true, 2026041514, 'contentcreator');
     }
 
     // v12.50: Three AMD-only bug fixes in player5.js. No DB schema changes.
@@ -1625,8 +1625,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //       but fell through to the failure else-branch, showing an error toast. Fix: detect
     //       data.pending before data.success; show info notice; let user retry manually.
     //   CC_VERSION 12.49 → 12.50. version.php → 2026041500250.
-    if ($oldversion < 2026041500250) {
-        upgrade_mod_savepoint(true, 2026041500250, 'contentcreator');
+    if ($oldversion < 2026041515) {
+        upgrade_mod_savepoint(true, 2026041515, 'contentcreator');
     }
 
     // v12.51: Two AMD-only bug fixes in player5.js. No DB schema changes.
@@ -1641,15 +1641,15 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //       voiceoverCache[section.id] and section.voiceoverUrl before calling
     //       preloadOne(); if audio already cached, exits cleanly.
     //   CC_VERSION 12.50 → 12.51. version.php → 2026041500251.
-    if ($oldversion < 2026041500251) {
-        upgrade_mod_savepoint(true, 2026041500251, 'contentcreator');
+    if ($oldversion < 2026041516) {
+        upgrade_mod_savepoint(true, 2026041516, 'contentcreator');
     }
 
     // v12.52: VOICEOVER TIMEOUT FIX (server + PHP). Multi-chunk TTS switched from
     // LINEAR16/WAV (~45MB) to MP3 (~2MB), reducing server response time from 150s to
     // under 30s. generate_voiceover.php CURLOPT_TIMEOUT raised 120s → 300s. No DB changes.
-    if ($oldversion < 2026041500252) {
-        upgrade_mod_savepoint(true, 2026041500252, 'contentcreator');
+    if ($oldversion < 2026041517) {
+        upgrade_mod_savepoint(true, 2026041517, 'contentcreator');
     }
 
     // v12.53: Three bug fixes (1 PHP + 2 AMD). No DB schema changes.
@@ -1664,8 +1664,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   (3) BUG-CC-LOG-STALE — on-demand AbortController catch label "TIMEOUT 120s"
     //       was stale; abort raised to 200s in v12.43. Fixed to "TIMEOUT 200s".
     //   CC_VERSION 12.51 → 12.53. version.php → 2026041500253.
-    if ($oldversion < 2026041500253) {
-        upgrade_mod_savepoint(true, 2026041500253, 'contentcreator');
+    if ($oldversion < 2026041518) {
+        upgrade_mod_savepoint(true, 2026041518, 'contentcreator');
     }
 
     //   CC_VERSION 12.53 → 12.54. version.php → 2026041500254.
@@ -1674,8 +1674,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   the lock was held and gave up. When the old fetch aborted at t=200s the freed section
     //   was never picked up again. Fix: old chain now schedules self.preloadVoiceovers() after
     //   clearing voiceoverLoading (guarded with _supersededRetryCount < 3 to prevent loops).
-    if ($oldversion < 2026041500254) {
-        upgrade_mod_savepoint(true, 2026041500254, 'contentcreator');
+    if ($oldversion < 2026041519) {
+        upgrade_mod_savepoint(true, 2026041519, 'contentcreator');
     }
 
     // v12.55: FEAT — Multi-language content generation.
@@ -1687,15 +1687,15 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   UI + setActiveLang(), click handler), styles/builder.css, styles/player5.css.
     //   All AMD files triple-matched (src/build/min). No DB schema changes.
     //   CC_VERSION 12.54 → 12.55. version.php → 2026041600255.
-    if ($oldversion < 2026041600255) {
-        upgrade_mod_savepoint(true, 2026041600255, 'contentcreator');
+    if ($oldversion < 2026041600) {
+        upgrade_mod_savepoint(true, 2026041600, 'contentcreator');
     }
 
     // v12.56: FIX — Sync CC_VERSION constant in generator.js to '12.55' (was stale at '12.30').
     //   All debug console logs now correctly identify as [CC v12.55]. No functional changes.
     //   AMD-only: generator.js. No DB schema changes. version.php → 2026041600256.
-    if ($oldversion < 2026041600256) {
-        upgrade_mod_savepoint(true, 2026041600256, 'contentcreator');
+    if ($oldversion < 2026041601) {
+        upgrade_mod_savepoint(true, 2026041601, 'contentcreator');
     }
 
     // v12.57: THREE BUG FIXES — AMD-only (player5.js, cc-state.js, cc-card-slots.js,
@@ -1715,8 +1715,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //       UI — sets _voSkipRequested flag; pregenOne() exits early; voiceovers fall back to
     //       on-demand generation when the activity is first opened. No DB schema changes.
     //   CC_VERSION 12.56 → 12.57. version.php → 2026041700257.
-    if ($oldversion < 2026041700257) {
-        upgrade_mod_savepoint(true, 2026041700257, 'contentcreator');
+    if ($oldversion < 2026041700) {
+        upgrade_mod_savepoint(true, 2026041700, 'contentcreator');
     }
 
     // FEAT-CC-MULTILANG-54 (v12.58): Additional Student Languages expanded from 12 to all
@@ -1725,8 +1725,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   Languages list via syncAdditionalLangFilter() in builder.js whenever the primary
     //   voice language changes. No DB schema changes. AMD triple-matched (src/build/min).
     //   CC_VERSION 12.57 → 12.58. version.php → 2026041700258.
-    if ($oldversion < 2026041700258) {
-        upgrade_mod_savepoint(true, 2026041700258, 'contentcreator');
+    if ($oldversion < 2026041701) {
+        upgrade_mod_savepoint(true, 2026041701, 'contentcreator');
     }
 
     // v12.59 - FIX-CC-MULTILANG-54-VISIBILITY: Primary voice language was hidden (display:none)
@@ -1736,8 +1736,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   instead, keeping all 54 checkboxes visible. Primary shows tooltip "This is already the
     //   primary language". AMD triple-matched (MD5: a145175c8ab7627793a6b08f489bfc96).
     //   No DB schema changes. version.php → 2026041800259.
-    if ($oldversion < 2026041800259) {
-        upgrade_mod_savepoint(true, 2026041800259, 'contentcreator');
+    if ($oldversion < 2026041800) {
+        upgrade_mod_savepoint(true, 2026041800, 'contentcreator');
     }
 
     // v12.60 - FIX-CC-MULTILANG-DEFAULT-LABEL: Primary voice language checkbox in the
@@ -1747,19 +1747,19 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   restored whenever the primary changes. Tooltip updated to "Already your primary
     //   language — included automatically". No DB schema changes.
     //   AMD triple-matched (MD5: 07e75f7d63a6332257ed2d1df85ed9d3). version.php → 2026041800260.
-    if ($oldversion < 2026041800260) {
-        upgrade_mod_savepoint(true, 2026041800260, 'contentcreator');
+    if ($oldversion < 2026041801) {
+        upgrade_mod_savepoint(true, 2026041801, 'contentcreator');
     }
     // v12.61: AMD ENCODING FIX: All non-ASCII characters (em dashes, arrows, box-drawing chars, ellipsis, bullets, emoji, accented Latin) scrubbed from all AMD JS files (amd/src, amd/build, amd/build/*.min.js). Root cause of Moodle primary/secondary navigation menus disappearing site-wide: non-ASCII bytes in any installed plugin's AMD file cause a SyntaxError inside RequireJS's first.js bundle, throwing "No define call for core/first" and aborting the entire AMD module chain. No PHP, DB schema, or functional changes in this release.
-    if ($oldversion < 2026042200261) {
-        upgrade_mod_savepoint(true, 2026042200261, 'contentcreator');
+    if ($oldversion < 2026042200) {
+        upgrade_mod_savepoint(true, 2026042200, 'contentcreator');
     }
     // v12.62: FIX-CC-MULTILANG-WAIT-STUCK: isVoiceoverGenerationPending() now treats
     // voiceoverUrl==='pregenerated' as "audio available" so students switching to a
     // non-primary language are not stuck on "Preparing audio..." when navigating back
     // from slides. No DB schema changes.
-    if ($oldversion < 2026042300262) {
-        upgrade_mod_savepoint(true, 2026042300262, 'contentcreator');
+    if ($oldversion < 2026042300) {
+        upgrade_mod_savepoint(true, 2026042300, 'contentcreator');
     }
 
     // v12.63: FIX-CC-FAILED-SCENE-PARTS: hook-scenario/applied-scenario failed cards
@@ -1769,8 +1769,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     // numbered elements (e.g. "1.4. Load is packed...") caused fragments of the error
     // message to land in each quadrant. Fix: added card.failed guard in both synthesis
     // blocks; failed cards now receive clean error sceneParts directly. No DB schema changes.
-    if ($oldversion < 2026042400263) {
-        upgrade_mod_savepoint(true, 2026042400263, 'contentcreator');
+    if ($oldversion < 2026042400) {
+        upgrade_mod_savepoint(true, 2026042400, 'contentcreator');
     }
 
     // v12.64: TWO BUG FIXES (AMD-only: player5.js, cc-state.js):
@@ -1784,14 +1784,14 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   and in Knowledge body. Fix: suppress description when normalised text matches title.
     // BONUS FIX-CC-MULTILANG-LANG: preload and on-demand API calls now send activeLang.
     // No DB schema changes.
-    if ($oldversion < 2026042400264) {
-        upgrade_mod_savepoint(true, 2026042400264, 'contentcreator');
+    if ($oldversion < 2026042401) {
+        upgrade_mod_savepoint(true, 2026042401, 'contentcreator');
     }
 
     // v12.65 - NAV FIX: isset($settings) guard added to settings.php per BUG_FIXES.md
     //   defensive pattern. No DB schema changes. version.php -> 2026042500265.
-    if ($oldversion < 2026042500265) {
-        upgrade_mod_savepoint(true, 2026042500265, 'contentcreator');
+    if ($oldversion < 2026042500) {
+        upgrade_mod_savepoint(true, 2026042500, 'contentcreator');
     }
 
     // v12.66 - FIX-CC-TTS-CACHE: generate_voice checks Moodle file store (mod_contentcreator/
@@ -1799,8 +1799,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   FIX-CC-ML-LANG-CAPTURE: pregenLangOne IIFE captures langCode by value.
     //   AMD triple-match 722e62b7827095e752248e92dda67372. No DB schema changes.
     //   version.php → 2026043000266.
-    if ($oldversion < 2026043000266) {
-        upgrade_mod_savepoint(true, 2026043000266, 'contentcreator');
+    if ($oldversion < 2026043000) {
+        upgrade_mod_savepoint(true, 2026043000, 'contentcreator');
     }
 
     // v12.67 - FIX-CC-MULTILANG-PROGRESS: getVoiceoverProgress() now counts 'pregenerated'
@@ -1810,8 +1810,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   on additional-language slides without needing a page reload.
     //   AMD player5.js triple-match 80120e8b22fc1f375ccb725a172fb44f. No DB schema changes.
     //   version.php → 2026043000267.
-    if ($oldversion < 2026043000267) {
-        upgrade_mod_savepoint(true, 2026043000267, 'contentcreator');
+    if ($oldversion < 2026043001) {
+        upgrade_mod_savepoint(true, 2026043001, 'contentcreator');
     }
 
     // v12.89 - FIX-CC-START-LEARNING: _teacherNeedsRegen neutralised in player5.js.
@@ -1828,8 +1828,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   are preserved across page refreshes.
     //   AMD: player5.js (src + build + min synced). No PHP, CSS, or DB schema changes.
     //   version.php → 2026051100289.
-    if ($oldversion < 2026051100289) {
-        upgrade_mod_savepoint(true, 2026051100289, 'contentcreator');
+    if ($oldversion < 2026051100) {
+        upgrade_mod_savepoint(true, 2026051100, 'contentcreator');
     }
 
     // v13.0 - FIX-CC-LANG-EXPLICIT: explicit language= param sent through full generation
@@ -1840,8 +1840,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   generate_slide_async + generate_slide (sync, defensive) both read
     //   optional_param('language','en-AU') and forward to API. diag.php Section 18 added.
     //   PHP+AMD change. No DB schema changes. version.php → 2026051313000.
-    if ($oldversion < 2026051313000) {
-        upgrade_mod_savepoint(true, 2026051313000, 'contentcreator');
+    if ($oldversion < 2026051300) {
+        upgrade_mod_savepoint(true, 2026051300, 'contentcreator');
     }
 
     // v13.1 - 8-VOICE SELECTOR: replaces binary Female/Male toggle with 8 individual
@@ -1849,8 +1849,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   Backward compat: old manifests with voiceSettings.gender fall back to Puck (male)
     //   or Aoede (female). PHP+AMD+CSS change. No DB schema changes.
     //   version.php → 2026051313100.
-    if ($oldversion < 2026051313100) {
-        upgrade_mod_savepoint(true, 2026051313100, 'contentcreator');
+    if ($oldversion < 2026051301) {
+        upgrade_mod_savepoint(true, 2026051301, 'contentcreator');
     }
 
     // v13.2 - 8-VOICE MULTILANG FIX: generate_voiceover.php external function now accepts
@@ -1859,8 +1859,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   all 8 voices. lang strings updated. ajax.php + generate_voiceover.php both send
     //   voiceGender=voiceName in TTS payload. PHP-only change. No AMD or DB schema changes.
     //   version.php → 2026051313200.
-    if ($oldversion < 2026051313200) {
-        upgrade_mod_savepoint(true, 2026051313200, 'contentcreator');
+    if ($oldversion < 2026051302) {
+        upgrade_mod_savepoint(true, 2026051302, 'contentcreator');
     }
 
     // v13.3 - CC-ML-DEBUG: Comprehensive multi-language diagnostic logging injected into
@@ -1871,8 +1871,8 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   builder.js: additionalLangs gathered, per-lang content result, voiceover coverage audit
     //   before manifest push. PHP-only settings changes from v13.2 included. AMD+PHP change.
     //   No DB schema changes. version.php → 2026051313300.
-    if ($oldversion < 2026051313300) {
-        upgrade_mod_savepoint(true, 2026051313300, 'contentcreator');
+    if ($oldversion < 2026051303) {
+        upgrade_mod_savepoint(true, 2026051303, 'contentcreator');
     }
 
     // v13.4 - CC-ML-DEBUG-PLAY: Added [CC-ML PLAY *] debug logs directly inside
@@ -1888,74 +1888,74 @@ function xmldb_contentcreator_upgrade($oldversion) {
     //   [CC-ML PLAY CLEAN-URL]: fingerprint OK, playing HTTPS URL directly.
     //   [CC-ML PLAY ON-DEMAND-TTS]: on-demand TTS fired, shows exact language/voice sent.
     //   AMD-only (player5.js). No PHP, CSS, or DB schema changes. version.php → 2026051313400.
-    if ($oldversion < 2026051313400) {
-        upgrade_mod_savepoint(true, 2026051313400, 'contentcreator');
+    if ($oldversion < 2026051304) {
+        upgrade_mod_savepoint(true, 2026051304, 'contentcreator');
     }
 
-    if ($oldversion < 2026051313500) {
+    if ($oldversion < 2026051305) {
         // FIX-CC-ML-SECTIONID-COLLISION (v13.5): pregenLangOne in builder.js
         // now prefixes sectionid with langCode (e.g. 'de-DE_2.1') so additional-
         // language voiceover files are stored separately from primary-language files
         // instead of overwriting them. AMD-only change. No PHP, CSS, or DB schema changes.
         // version.php → 2026051313500.
-        upgrade_mod_savepoint(true, 2026051313500, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026051305, 'contentcreator');
     }
 
     // v13.20: SAVEPOINT-BUMP — no-op marker for clean upgrade path. No DB schema changes.
-    if ($oldversion < 2026060400020) {
-        upgrade_mod_savepoint(true, 2026060400020, 'contentcreator');
+    if ($oldversion < 2026060400) {
+        upgrade_mod_savepoint(true, 2026060400, 'contentcreator');
     }
 
     // v13.23: FIX-CC-IMGGEN-SESSLOCK + FIX-CC-IMGGEN-CSRF + FIX-CC-IMGGEN-BULKCTX
     // No DB schema changes. PHP: ajax.php (require_sesskey + write_close for generate_image).
     // AMD: player5.js (src+build+min) — added missing context fields to generateSlideImageBulk.
-    if ($oldversion < 2026061000023) {
-        upgrade_mod_savepoint(true, 2026061000023, 'contentcreator');
+    if ($oldversion < 2026061000) {
+        upgrade_mod_savepoint(true, 2026061000, 'contentcreator');
     }
 
     // v13.38: FIX-CC-QUIZ-VOICE-DELAY — Knowledge Check Q2-Q5 feedback narration delay fix.
     // setTimeout(50ms) after speechSynthesis.cancel() before speak() to let Chrome settle.
     // AMD: player5.js (src+build+min). No PHP, CSS, or DB schema changes.
-    if ($oldversion < 2026062200038) {
-        upgrade_mod_savepoint(true, 2026062200038, 'contentcreator');
+    if ($oldversion < 2026062200) {
+        upgrade_mod_savepoint(true, 2026062200, 'contentcreator');
     }
 
-    if ($oldversion < 2026062300040) {
+    if ($oldversion < 2026062300) {
         // FIX-CC-REGEN-FAILED-BTN: AMD-only fix. No DB schema changes.
-        upgrade_mod_savepoint(true, 2026062300040, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026062300, 'contentcreator');
     }
 
-    if ($oldversion < 2026062500045) {
+    if ($oldversion < 2026062500) {
         // FIX-ADMIN-UNLOCK: AMD-only fix. No DB schema changes.
         // canNavigateNext() and lockstep topic locking now bypass restrictions for editors/admins.
-        upgrade_mod_savepoint(true, 2026062500045, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026062500, 'contentcreator');
     }
 
-    if ($oldversion < 2026062500048) {
+    if ($oldversion < 2026062501) {
         // FIX-CC-SPLIT-BADGE-VISIBLE: AMD-only fix. No DB schema changes.
         // Amber split badge now shown in renderMajorTopicSelector() topic cards (not just structure DOM view).
-        upgrade_mod_savepoint(true, 2026062500048, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026062501, 'contentcreator');
     }
 
-    if ($oldversion < 2026062500049) {
+    if ($oldversion < 2026062502) {
         // FIX-CC-SPLIT-AI-PATH: AMD-only fix. No DB schema changes.
         // Auto-split post-processing now applied to AI-returned topics in suggestMajorTopics().
-        upgrade_mod_savepoint(true, 2026062500049, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026062502, 'contentcreator');
     }
 
-    if ($oldversion < 2026062600050) {
+    if ($oldversion < 2026062600) {
         // FIX-CC-SPLIT-PC-DISPLAY: AMD-only fix. No DB schema changes.
         // Split cards now show specific PC codes per part, not the total count for both.
-        upgrade_mod_savepoint(true, 2026062600050, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026062600, 'contentcreator');
     }
 
-    if ($oldversion < 2026062600051) {
+    if ($oldversion < 2026062601) {
         // FIX-CC-SPLIT-PROMPT-PCS: AMD-only fix. No DB schema changes.
         // ChatGPT prompt download now only includes PCs belonging to the selected split part.
-        upgrade_mod_savepoint(true, 2026062600051, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026062601, 'contentcreator');
     }
 
-    if ($oldversion < 2026071600052) {
+    if ($oldversion < 2026071600) {
         // FIX-CC-CCLOG-PLAYER5: AMD-only fix. No DB schema changes.
         // Added missing `const ccLog = _log.log` to player5.js logger setup.
         // Fixes voiceoversComplete never being persisted to DB after voiceover regeneration.
@@ -1970,10 +1970,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         } elseif (function_exists('opcache_reset')) {
             opcache_reset();
         }
-        upgrade_mod_savepoint(true, 2026071600052, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026071600, 'contentcreator');
     }
 
-    if ($oldversion < 2026071600053) {
+    if ($oldversion < 2026071601) {
         // FIX-CC-DP-VOICEOVER-EXEMPT: AMD-only fix. No DB schema changes.
         // decision-point cards are now exempt from voiceover validation in validateCards().
         // The system prompt says "NO voiceoverText" for decision-point — the validator was
@@ -1989,10 +1989,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         } elseif (function_exists('opcache_reset')) {
             opcache_reset();
         }
-        upgrade_mod_savepoint(true, 2026071600053, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026071601, 'contentcreator');
     }
 
-    if ($oldversion < 2026071600054) {
+    if ($oldversion < 2026071602) {
         // FIX-CC-PRELOAD-EARLY-SAVE: AMD-only fix. No DB schema changes.
         // checkComplete() called saveManifestSilent() unconditionally at PRELOAD DONE —
         // before persistVoiceoverToFileStore async POSTs returned. This wrote url=NULL to
@@ -2011,10 +2011,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         } elseif (function_exists('opcache_reset')) {
             opcache_reset();
         }
-        upgrade_mod_savepoint(true, 2026071600054, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026071602, 'contentcreator');
     }
 
-    if ($oldversion < 2026072300226) {
+    if ($oldversion < 2026072300) {
         // FIX-API-DOMAIN: Updated all API endpoint URLs from lms-labs.com to lms-labs.com.
         // lms-labs.com has no DNS resolution from Moodle server side; lms-labs.com is the
         // correct working domain. All ajax.php, api_client, unlock_verifier, lib.php calls updated.
@@ -2029,10 +2029,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         } elseif (function_exists('opcache_reset')) {
             opcache_reset();
         }
-        upgrade_mod_savepoint(true, 2026072300226, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026072300, 'contentcreator');
     }
 
-    if ($oldversion < 2026072300227) {
+    if ($oldversion < 2026072301) {
         // FIX-API-DOMAIN: Reverted API endpoint to lms-labs.com (correct domain).
         // lms-labs.com was the original single-plugin domain; lms-labs.com is correct.
         if (function_exists('opcache_invalidate')) {
@@ -2042,10 +2042,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
                 if (file_exists($_full)) { opcache_invalidate($_full, true); }
             }
         } elseif (function_exists('opcache_reset')) { opcache_reset(); }
-        upgrade_mod_savepoint(true, 2026072300227, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026072301, 'contentcreator');
     }
 
-    if ($oldversion < 2026072300228) {
+    if ($oldversion < 2026072302) {
         // FIX-DOMAIN: CSS/template references updated from old brand to lms-labs.com.
         if (function_exists('opcache_invalidate')) {
             $_pluginDir = realpath(__DIR__ . '/..');
@@ -2054,10 +2054,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
                 if (file_exists($_full)) { opcache_invalidate($_full, true); }
             }
         } elseif (function_exists('opcache_reset')) { opcache_reset(); }
-        upgrade_mod_savepoint(true, 2026072300228, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026072302, 'contentcreator');
     }
 
-    if ($oldversion < 2026072300229) {
+    if ($oldversion < 2026072303) {
         // Domain update: lms-labs.com → lms-labs.com
         if (function_exists('opcache_invalidate')) {
             $_pluginDir = realpath(__DIR__ . '/..');
@@ -2066,10 +2066,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
                 if (file_exists($_full)) { opcache_invalidate($_full, true); }
             }
         } elseif (function_exists('opcache_reset')) { opcache_reset(); }
-        upgrade_mod_savepoint(true, 2026072300229, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026072303, 'contentcreator');
     }
 
-    if ($oldversion < 2026072300230) {
+    if ($oldversion < 2026072304) {
         // CSS/template domain update: lms-labs.com → lms-labs.com
         if (function_exists('opcache_invalidate')) {
             $_pluginDir = realpath(__DIR__ . '/..');
@@ -2077,10 +2077,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
                 if (file_exists($_pluginDir . '/' . $_f)) opcache_invalidate($_pluginDir . '/' . $_f, true);
             }
         } elseif (function_exists('opcache_reset')) { opcache_reset(); }
-        upgrade_mod_savepoint(true, 2026072300230, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026072304, 'contentcreator');
     }
 
-    if ($oldversion < 2026072800231) {
+    if ($oldversion < 2026072800) {
         // FIX-CC-STALE-MINJS: Rebuild generator.min.js and manifest.builder.min.js from source.
         // Both were stale (built Jul 23, src modified afterward), causing generation issues.
         // AMD-only: no PHP or DB schema changes.
@@ -2090,10 +2090,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
                 if (file_exists($_pluginDir . '/' . $_f)) opcache_invalidate($_pluginDir . '/' . $_f, true);
             }
         } elseif (function_exists('opcache_reset')) { opcache_reset(); }
-        upgrade_mod_savepoint(true, 2026072800231, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026072800, 'contentcreator');
     }
 
-    if ($oldversion < 2026072800232) {
+    if ($oldversion < 2026072801) {
         // STALE-AMD-MASS-REBUILD (v13.61 — 28 Jul 2026): Full AMD src=build audit found
         // 22 out of 25 JS files had stale build files. Two distinct issues:
         //
@@ -2132,7 +2132,7 @@ function xmldb_contentcreator_upgrade($oldversion) {
                 if (file_exists($_pluginDir . '/' . $_f)) opcache_invalidate($_pluginDir . '/' . $_f, true);
             }
         } elseif (function_exists('opcache_reset')) { opcache_reset(); }
-        upgrade_mod_savepoint(true, 2026072800232, 'contentcreator');
+        upgrade_mod_savepoint(true, 2026072801, 'contentcreator');
     }
 
     return true;

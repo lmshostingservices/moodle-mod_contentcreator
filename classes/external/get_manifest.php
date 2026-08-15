@@ -69,7 +69,7 @@ class get_manifest extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'manifest' => new external_value(PARAM_RAW, 'JSON manifest'),
+            'manifest' => new external_value(PARAM_RAW, 'JSON manifest'), // pipeline-ignore: PARAM_RAW — return value: JSON manifest consumed by JSON.parse on the client
             'version' => new external_value(PARAM_TEXT, 'Manifest version')
         ]);
     }

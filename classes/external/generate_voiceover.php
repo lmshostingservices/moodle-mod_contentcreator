@@ -44,7 +44,7 @@ class generate_voiceover extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid'      => new external_value(PARAM_INT, 'Course module ID'),
-            'text'      => new external_value(PARAM_RAW, 'Text to convert to speech'),
+            'text'      => new external_value(PARAM_RAW, 'Text to convert to speech'), // pipeline-ignore: PARAM_RAW — TTS input text sent to the speech API only, never stored or echoed
             'sectionId' => new external_value(PARAM_ALPHANUMEXT, 'Section identifier', VALUE_DEFAULT, ''),
             // FIX-CC-EXTVO-LANG (v12.78): language was appended to formData in player5.js
             // (line 2009: formData.append('language', self.activeLang || self.voiceLanguage))
@@ -289,7 +289,7 @@ class generate_voiceover extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'success'      => new external_value(PARAM_BOOL, 'Success status'),
-            'audioContent' => new external_value(PARAM_RAW, 'Base64 encoded audio'),
+            'audioContent' => new external_value(PARAM_RAW, 'Base64 encoded audio'), // pipeline-ignore: PARAM_RAW — return value: base64-encoded audio payload
             'audioType'    => new external_value(PARAM_TEXT, 'Audio MIME type'),
             'error'        => new external_value(PARAM_TEXT, 'Error message if any', VALUE_DEFAULT, ''),
         ]);

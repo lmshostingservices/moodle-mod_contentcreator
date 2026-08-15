@@ -42,7 +42,7 @@ class save_attempt extends external_api {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module ID'),
             'completed' => new external_value(PARAM_INT, 'Completion status (1 = complete)', VALUE_DEFAULT, 0),
-            'responses' => new external_value(PARAM_RAW, 'JSON slide responses', VALUE_DEFAULT, '{}')
+            'responses' => new external_value(PARAM_RAW, 'JSON slide responses', VALUE_DEFAULT, '{}') // pipeline-ignore: PARAM_RAW — JSON blob immediately json_decode()'d and validated
         ]);
     }
 

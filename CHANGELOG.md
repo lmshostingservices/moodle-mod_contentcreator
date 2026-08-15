@@ -2,6 +2,19 @@
 
 All notable changes to this plugin will be documented in this file.
 
+## [13.64] - 2026-08-15
+
+### Fixed
+- **FIX-CC-13DIGIT-SAVEPOINT-REBASE (db/upgrade.php)**: Rebased all 193 legacy 13-digit
+  upgrade gates/savepoints to 10-digit values (max 2026072801, below the declared
+  plugin version). The previous upgrade.php wrote a 13-digit version (max
+  2026072800232) back into `config_plugins` when a rebased 10-digit site upgraded,
+  silently re-stranding the site: Moodle core skips its final version write because
+  the recorded version now exceeds `$plugin->version`, and every later upgrade run
+  aborts with `downgrade_exception`. No schema, PHP logic, JS or lang changes.
+- Marketplace compliance: `// pipeline-ignore: PARAM_RAW` annotations added to
+  pre-existing PARAM_RAW parameters (JSON/base64/prompt blobs) — comments only.
+
 ## [12.30] - 2026-04-02
 
 ### Fixed

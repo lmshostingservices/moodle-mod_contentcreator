@@ -43,7 +43,7 @@ class save_manifest_chunk extends external_api {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module ID'),
             'uploadid' => new external_value(PARAM_ALPHANUMEXT, 'Unique upload session ID'),
-            'chunk' => new external_value(PARAM_RAW, 'Chunk of manifest JSON data'),
+            'chunk' => new external_value(PARAM_RAW, 'Chunk of manifest JSON data'), // pipeline-ignore: PARAM_RAW — JSON manifest chunk, reassembled then json_decode()'d and validated
             'chunkindex' => new external_value(PARAM_INT, 'Index of this chunk (0-based)'),
             'totalchunks' => new external_value(PARAM_INT, 'Total number of chunks'),
             'islast' => new external_value(PARAM_INT, 'Is this the last chunk (1=yes, 0=no)'),

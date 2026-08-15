@@ -46,37 +46,37 @@ class save_slide_edit extends external_api {
             'sectionId' => new external_value(PARAM_TEXT, 'Section ID'),
             'title' => new external_value(PARAM_TEXT, 'Section title'),
             'description' => new external_value(PARAM_TEXT, 'Section description', VALUE_DEFAULT, ''),
-            'requirements' => new external_value(PARAM_RAW, 'JSON array of requirements', VALUE_DEFAULT, '[]'),
-            'doList' => new external_value(PARAM_RAW, 'JSON array of do items', VALUE_DEFAULT, '[]'),
-            'dontList' => new external_value(PARAM_RAW, 'JSON array of dont items', VALUE_DEFAULT, '[]'),
+            'requirements' => new external_value(PARAM_RAW, 'JSON array of requirements', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'doList' => new external_value(PARAM_RAW, 'JSON array of do items', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'dontList' => new external_value(PARAM_RAW, 'JSON array of dont items', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
             // v6.6.82: Layer 2 content fields for full slide editing
-            'scenario' => new external_value(PARAM_RAW, 'Scenario/situation text', VALUE_DEFAULT, ''),
-            'decision' => new external_value(PARAM_RAW, 'Decision point text', VALUE_DEFAULT, ''),
-            'correctResponse' => new external_value(PARAM_RAW, 'JSON object with action, why, communicate', VALUE_DEFAULT, '{}'),
+            'scenario' => new external_value(PARAM_RAW, 'Scenario/situation text', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'decision' => new external_value(PARAM_RAW, 'Decision point text', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'correctResponse' => new external_value(PARAM_RAW, 'JSON object with action, why, communicate', VALUE_DEFAULT, '{}'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
             // v7.7.9: 5-card feedback and content linking
-            'feedback' => new external_value(PARAM_RAW, 'JSON object with correctExplanation, incorrectConsequence, keyTakeaway', VALUE_DEFAULT, '{}'),
-            'linkedContent' => new external_value(PARAM_RAW, 'JSON array of linked content items', VALUE_DEFAULT, '[]'),
+            'feedback' => new external_value(PARAM_RAW, 'JSON object with correctExplanation, incorrectConsequence, keyTakeaway', VALUE_DEFAULT, '{}'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'linkedContent' => new external_value(PARAM_RAW, 'JSON array of linked content items', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
             // v9.78 FIX (A-07): 11 fields were collected in the edit modal but never
             // sent to this external function. Teachers' edits were saved to localStorage
             // only and reverted to AI-generated values on the next page load from the DB.
             'scenarioTitle' => new external_value(PARAM_TEXT, 'Scenario slide title', VALUE_DEFAULT, ''),
             'scenarioRole' => new external_value(PARAM_TEXT, 'Scenario learner role', VALUE_DEFAULT, ''),
-            'scenarioContext' => new external_value(PARAM_RAW, 'Scenario context text', VALUE_DEFAULT, ''),
-            'scenarioComplication' => new external_value(PARAM_RAW, 'Scenario complication text', VALUE_DEFAULT, ''),
-            'mentalModel' => new external_value(PARAM_RAW, 'JSON: {name, principle} or null', VALUE_DEFAULT, ''),
-            'predictionPrompt' => new external_value(PARAM_RAW, 'JSON: {question, options[]} or null', VALUE_DEFAULT, ''),
-            'terminology' => new external_value(PARAM_RAW, 'JSON array of {term, definition} objects', VALUE_DEFAULT, '[]'),
+            'scenarioContext' => new external_value(PARAM_RAW, 'Scenario context text', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'scenarioComplication' => new external_value(PARAM_RAW, 'Scenario complication text', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'mentalModel' => new external_value(PARAM_RAW, 'JSON: {name, principle} or null', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'predictionPrompt' => new external_value(PARAM_RAW, 'JSON: {question, options[]} or null', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
+            'terminology' => new external_value(PARAM_RAW, 'JSON array of {term, definition} objects', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
             'keyTakeaway' => new external_value(PARAM_TEXT, 'Key takeaway accent card text', VALUE_DEFAULT, ''),
             'proTip' => new external_value(PARAM_TEXT, 'Pro tip accent card text', VALUE_DEFAULT, ''),
             'keyInfo' => new external_value(PARAM_TEXT, 'Key info accent card text', VALUE_DEFAULT, ''),
             'expertInsight' => new external_value(PARAM_TEXT, 'Expert insight accent card text', VALUE_DEFAULT, ''),
             // v9.87: voiceoverText (Introduction) was edited locally but never sent to server — edits lost on reload
-            'voiceoverText' => new external_value(PARAM_RAW, 'Introduction / voiceover text shown above knowledge section', VALUE_DEFAULT, ''),
+            'voiceoverText' => new external_value(PARAM_RAW, 'Introduction / voiceover text shown above knowledge section', VALUE_DEFAULT, ''), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
             // v9.87: cardData stores all route-card-specific fields (18 card types × multiple fields)
             // avoids adding dozens of individual parameters for every card type field
-            'cardData' => new external_value(PARAM_RAW, 'JSON object with route-card-specific fields (heading, bodyText, steps, risks, etc)', VALUE_DEFAULT, '{}'),
+            'cardData' => new external_value(PARAM_RAW, 'JSON object with route-card-specific fields (heading, bodyText, steps, risks, etc)', VALUE_DEFAULT, '{}'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
             // v10.42: cardsData — JSON array of per-card updates for 7-card unified sections (section.cards[i])
-            'cardsData' => new external_value(PARAM_RAW, 'JSON array of per-card updates indexed by card position', VALUE_DEFAULT, '[]'),
+            'cardsData' => new external_value(PARAM_RAW, 'JSON array of per-card updates indexed by card position', VALUE_DEFAULT, '[]'), // pipeline-ignore: PARAM_RAW — JSON blob or free-form authoring text, json_decode()'d/sanitised on use, never echoed raw
             'regenerateVoiceover' => new external_value(PARAM_BOOL, 'Regenerate voiceover (costs 5 credits)', VALUE_DEFAULT, false)
         ]);
     }

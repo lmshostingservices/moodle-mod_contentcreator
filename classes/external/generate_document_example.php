@@ -202,7 +202,7 @@ class generate_document_example extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'content' => new external_value(PARAM_RAW, 'Generated document HTML content'),
+            'content' => new external_value(PARAM_RAW, 'Generated document HTML content'), // pipeline-ignore: PARAM_RAW — return value: generated HTML rendered through Moodle formatting on output
             'docId' => new external_value(PARAM_TEXT, 'Document type ID'),
             'docName' => new external_value(PARAM_TEXT, 'Document display name'),
             'domain' => new external_value(PARAM_TEXT, 'Document domain category'),

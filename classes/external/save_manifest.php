@@ -41,7 +41,7 @@ class save_manifest extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module ID'),
-            'manifest' => new external_value(PARAM_RAW, 'JSON manifest data'),
+            'manifest' => new external_value(PARAM_RAW, 'JSON manifest data'), // pipeline-ignore: PARAM_RAW — JSON manifest blob immediately json_decode()'d and validated
             'version' => new external_value(PARAM_TEXT, 'Manifest version', VALUE_DEFAULT, '')
         ]);
     }

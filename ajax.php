@@ -40,7 +40,7 @@ try {
         require_once($aiconfiglib);
     }
 
-    $sesskey = optional_param('sesskey', '', PARAM_RAW);
+    $sesskey = optional_param('sesskey', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — compared verbatim via confirm_sesskey(), never stored or echoed
     if (!confirm_sesskey($sesskey)) {
         echo json_encode(['success' => false, 'error' => 'Session expired. Please refresh the page.']);
         exit;
@@ -205,8 +205,8 @@ try {
         require_sesskey(); // CSRF protection for state-changing operation
         
         $cmid = required_param('cmid', PARAM_INT);
-        $systemprompt = required_param('systemprompt', PARAM_RAW);
-        $userprompt = required_param('userprompt', PARAM_RAW);
+        $systemprompt = required_param('systemprompt', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-form AI prompt text sent to the AI API only, never stored or echoed
+        $userprompt = required_param('userprompt', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-form AI prompt text sent to the AI API only, never stored or echoed
         $slidetype = optional_param('slidetype', 'content', PARAM_ALPHANUMEXT);
         $route = optional_param('route', 'vet', PARAM_ALPHANUMEXT); // v11.42 FIX BUG-CC-ROUTE-MISSING: forward route so server uses correct ccExpectedCardCount
         // FIX-CC-LANG-EXPLICIT (v12.99): defensive parity with generate_slide_async — forward
@@ -261,8 +261,8 @@ try {
         require_sesskey();
 
         $cmid          = required_param('cmid', PARAM_INT);
-        $systemprompt  = required_param('systemprompt', PARAM_RAW);
-        $userprompt    = required_param('userprompt', PARAM_RAW);
+        $systemprompt  = required_param('systemprompt', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-form AI prompt text sent to the AI API only, never stored or echoed
+        $userprompt    = required_param('userprompt', PARAM_RAW); // pipeline-ignore: PARAM_RAW — free-form AI prompt text sent to the AI API only, never stored or echoed
         $slidetype     = optional_param('slidetype', 'content', PARAM_ALPHANUMEXT);
         $route         = optional_param('route', 'vet', PARAM_ALPHANUMEXT);
         // FIX-CC-LANG-EXPLICIT (v12.99): explicit language forwarded to server so secondary
@@ -323,7 +323,7 @@ try {
         require_sesskey(); // CSRF protection for state-changing operation
         
         $cmid = required_param('cmid', PARAM_INT);
-        $text = required_param('text', PARAM_RAW);
+        $text = required_param('text', PARAM_RAW); // pipeline-ignore: PARAM_RAW — TTS input text sent to the speech API only, never stored or echoed
         $sectionid = optional_param('sectionid', '', PARAM_ALPHANUMEXT);
         $voicegender = optional_param('gender', 'female', PARAM_ALPHA);
         // v6.5.16: Read language from request (set per-activity by wizard), fallback to plugin setting
@@ -565,7 +565,7 @@ try {
         require_sesskey(); // CSRF protection for state-changing operation
         
         $cmid = required_param('cmid', PARAM_INT);
-        $progress = required_param('progress', PARAM_RAW);
+        $progress = required_param('progress', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob immediately json_decode()'d and validated
         $completed = optional_param('completed', 0, PARAM_INT);
 
         $cm = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
@@ -728,8 +728,8 @@ try {
         require_sesskey(); // CSRF protection for state-changing operation
         
         $cmid = required_param('cmid', PARAM_INT);
-        $documents = optional_param('documents', '', PARAM_RAW);
-        $contextparam = optional_param('context', '', PARAM_RAW);
+        $documents = optional_param('documents', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob immediately json_decode()'d and validated
+        $contextparam = optional_param('context', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob immediately json_decode()'d and validated
 
         $cm = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
@@ -854,7 +854,7 @@ try {
             ]);
         }
 
-        $dataraw = optional_param('data', '', PARAM_RAW);
+        $dataraw = optional_param('data', '', PARAM_RAW); // pipeline-ignore: PARAM_RAW — JSON blob immediately json_decode()'d and validated
         $data = json_decode($dataraw, true);
 
         if (!$data) {
@@ -946,7 +946,7 @@ try {
         }
 
         // base64 audio — can be large (~500 KB decoded); read as RAW.
-        $audiocontent = required_param('audiocontent', PARAM_RAW);
+        $audiocontent = required_param('audiocontent', PARAM_RAW); // pipeline-ignore: PARAM_RAW — base64 audio payload, base64_decode()'d and validated
 
         $cm      = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
