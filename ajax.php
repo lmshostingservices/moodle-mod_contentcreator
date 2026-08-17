@@ -302,10 +302,27 @@ try {
 
     // ASYNC POLL: Check status of a background generation job.
     if ($action === 'poll_job') {
+        // FIX-CC-POLL-AUTH (v13.65): this handler previously had no sesskey check, no login
+        // check and no capability check — any request could poll any jobId. The JS was
+        // already sending a sesskey; PHP simply never validated it. Now enforced, matching
+        // every other handler in this file.
+        require_sesskey();
+
         $jobId = required_param('jobId', PARAM_ALPHANUMEXT);
+        $cmid  = required_param('cmid', PARAM_INT);
+
+        $cm      = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
+        $context = context_module::instance($cm->id);
+        contentcreator_require_manage($context, $cm);
+
+        // Don't hold the session lock open across the upstream status call.
+        \core\session\manager::write_close();
 
         $curl = new \curl();
-        $curl->setopt(['CURLOPT_TIMEOUT' => 10, 'CURLOPT_CONNECTTIMEOUT' => 5]);
+        // FIX-CC-POLL-TIMEOUT (v13.65): 10s was tight enough that a busy job-status endpoint
+        // returned a false failure. The JS now tolerates transient poll errors, but a longer
+        // window avoids provoking them in the first place.
+        $curl->setopt(['CURLOPT_TIMEOUT' => 20, 'CURLOPT_CONNECTTIMEOUT' => 8]);
         $curl->setHeader(['Content-Type: application/json', 'Accept: application/json']);
         $pollUrl  = $apibaseurl . '/api/jobs/' . urlencode($jobId);
         $response = $curl->get($pollUrl);

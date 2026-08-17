@@ -2135,5 +2135,34 @@ function xmldb_contentcreator_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026072801, 'contentcreator');
     }
 
+    // v13.65: FIX-CC-ROUTE-CARDCOUNT + FIX-CC-UNIVERSITY-CARDTYPES + FIX-CC-VO-STRUCTURAL
+    // + FIX-CC-ACTIVITIES-CONTEXT + FIX-CC-POLL-CEILING + FIX-CC-POLL-TOLERANCE
+    // + FIX-CC-POLL-AUTH. No DB schema changes — savepoint only, plus opcache
+    // invalidation for the changed PHP and AMD files so the upgrade takes effect at once.
+    //
+    // Retains the 10-digit numbering scheme established by v13.64. This gate sits above
+    // v13.64's 2026072801 and matches $plugin->version = 2026081700.
+    //
+    // NOTE: amd/build/generator.min.js now sends &cmid= on poll_job requests and
+    // ajax.php now requires it. Both ship together in this upgrade; caches must be
+    // purged afterwards so the new AMD build is served.
+    if ($oldversion < 2026081700) {
+        if (function_exists('opcache_invalidate')) {
+            $_pluginDir = realpath(__DIR__ . '/..');
+            foreach ([
+                'version.php',
+                'db/upgrade.php',
+                'ajax.php',
+                'amd/build/generator.js',
+                'amd/build/generator.min.js',
+                'amd/build/cc-state.js',
+                'amd/build/cc-state.min.js',
+            ] as $_f) {
+                if (file_exists($_pluginDir . '/' . $_f)) opcache_invalidate($_pluginDir . '/' . $_f, true);
+            }
+        } elseif (function_exists('opcache_reset')) { opcache_reset(); }
+        upgrade_mod_savepoint(true, 2026081700, 'contentcreator');
+    }
+
     return true;
 }

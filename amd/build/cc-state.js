@@ -22,7 +22,7 @@ define('mod_contentcreator/cc-state', [], function() {
     'use strict';
 
     /** Current plugin version  -  single source of truth for builder.js and player5.js. */
-    var CC_VERSION = '13.61';
+    var CC_VERSION = '13.65';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was

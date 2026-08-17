@@ -896,8 +896,29 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
         'decision-point'
     ];
 
+    // FIX-CC-UNIVERSITY-CARDTYPES (v13.65): University is NOT a unified 7-card route.
+    // UNIVERSITY_SYSTEM_PROMPT in prompts.js requests exactly 6 academic cards with
+    // their own cardTypes. getExpectedCardOrder() accepted a `mode` argument and then
+    // ignored it, always returning UNIFIED_CARD_ORDER. Because the university types are
+    // absent from that list, normalizeCardSchema() force-rewrote each one to the
+    // positional unified type — concept-anchor became hook-scenario, analytical-lens
+    // became mental-model — and validateCards() then failed with
+    // "mental-model: requires at least 3 steps".
+    const UNIVERSITY_CARD_ORDER = [
+        'concept-anchor',
+        'theoretical-framework',
+        'analytical-lens',
+        'ethics-considerations',
+        'case-study-1',
+        'case-study-2'
+    ];
+
     const getExpectedCardOrder = (mode, activitiesEnabled) => {
-        // v10.27: unified 7-card flow for all modes
+        // v13.65: university has its own 6-card academic sequence and no decision-point.
+        if (mode === 'university') {
+            return UNIVERSITY_CARD_ORDER.slice();
+        }
+        // v10.27: unified 7-card flow for vet / workplace / pd
         var order = UNIFIED_CARD_ORDER.slice();
         // v11.11: When activities are disabled, exclude decision-point card
         if (activitiesEnabled === false) {
@@ -1269,23 +1290,59 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
     // -- Async job poller: used by callAI after it starts a generate_slide_async job --
     // Polls GET ajax.php?action=poll_job&jobId=xxx every 3s (first poll after 2s).
     // Returns the inner payload {success, content, credits} when status=done.
-    const pollJob = async (ajaxUrl, jobId, sesskey) => {
-        const MAX_POLLS = 50; // 50  x  3s = 150s max wait
+    // FIX-CC-POLL-CEILING (v13.65): MAX_POLLS was 50 (2s + 49x3s = 149s hard ceiling).
+    // The server-side pipeline is PASS 1 (7 cards, 54-field schema, ~14k token target)
+    // PLUS Pass 2 expansion, Pass 3 banned-word rewrite and micro-expansion — several
+    // sequential OpenAI calls, where a single 14k-token completion alone routinely takes
+    // 90-150s. ajax.php already allows the server 180s (CURLOPT_TIMEOUT => 180), so the
+    // browser was the tighter constraint and was abandoning jobs the server was still
+    // working on. 120 polls = ~6 minutes.
+    //
+    // FIX-CC-POLL-TOLERANCE (v13.65): a single non-2xx response, or the cURL timeout
+    // inside ajax.php's poll_job handler, used to throw immediately and abandon a job that
+    // was almost certainly still running fine — callAI() then started a BRAND NEW billable
+    // job. Transient poll failures are now absorbed.
+    //
+    // FIX-CC-POLL-AUTH (v13.65): poll_job in ajax.php now requires cmid so it can enforce
+    // a capability check, so cmid is passed through here. The AMD build and ajax.php must
+    // be deployed together.
+    const pollJob = async (ajaxUrl, jobId, sesskey, cmid) => {
+        const MAX_POLLS = 120;               // 2s + 119x3s = ~6 minutes
+        const MAX_CONSECUTIVE_POLL_ERRORS = 5;
+        let consecutiveErrors = 0;
         for (let i = 0; i < MAX_POLLS; i++) {
             // Wait before polling: 2s on first attempt so the loopback has time to start
             await new Promise(resolve => setTimeout(resolve, i === 0 ? 2000 : 3000));
-            const pollResp = await fetch(
-                ajaxUrl + '?action=poll_job&jobId=' + encodeURIComponent(jobId) + '&sesskey=' + encodeURIComponent(sesskey),
-                { method: 'GET' }
-            );
-            if (!pollResp.ok) { throw new Error('Poll HTTP error: ' + pollResp.status); }
-            const pollData = JSON.parse(await pollResp.text());
-            if (!pollData.ok) { throw new Error(pollData.error || 'Job status check failed'); }
+
+            let pollData;
+            try {
+                const pollResp = await fetch(
+                    ajaxUrl + '?action=poll_job&jobId=' + encodeURIComponent(jobId) +
+                        '&sesskey=' + encodeURIComponent(sesskey) +
+                        '&cmid=' + encodeURIComponent(cmid),
+                    { method: 'GET' }
+                );
+                if (!pollResp.ok) { throw new Error('Poll HTTP error: ' + pollResp.status); }
+                pollData = JSON.parse(await pollResp.text());
+                if (!pollData.ok) { throw new Error(pollData.error || 'Job status check failed'); }
+            } catch (pollErr) {
+                consecutiveErrors++;
+                if (consecutiveErrors >= MAX_CONSECUTIVE_POLL_ERRORS) {
+                    throw new Error('Job status check failed ' + consecutiveErrors +
+                        ' times in a row: ' + (pollErr.message || pollErr));
+                }
+                ccWarn('callAI() poll #' + (i + 1) + ' transient failure (' +
+                    consecutiveErrors + '/' + MAX_CONSECUTIVE_POLL_ERRORS + '): ' +
+                    (pollErr.message || pollErr) + '  ->  job still running, retrying');
+                continue;
+            }
+
+            consecutiveErrors = 0;
             if (pollData.status === 'done')  { return pollData.result; } // {success, content, credits}
             if (pollData.status === 'error') { throw new Error(pollData.error || 'Generation job failed'); }
             ccDiag('callAI() poll #' + (i + 1) + '  ->  pending, waiting 3s...');
         }
-        throw new Error('OPENAI_TIMEOUT: Content generation timed out after 150 seconds of polling');
+        throw new Error('OPENAI_TIMEOUT: Content generation timed out after ~6 minutes of polling');
     };
 
     // FIX-CC-LANG-EXPLICIT (v12.99): Add language parameter so the server receives
@@ -1368,8 +1425,8 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
             // pollJob() returns the inner {success, content, credits} payload so the
             // rest of callAI continues unchanged.
             if (data.async && data.jobId) {
-                ccDiag('callAI() ASYNC JOB queued | jobId=' + data.jobId + ' | polling every 3s (max 150s)');
-                data = await pollJob(ajaxUrl, data.jobId, M.cfg.sesskey);
+                ccDiag('callAI() ASYNC JOB queued | jobId=' + data.jobId + ' | polling every 3s (max ~6 min)');
+                data = await pollJob(ajaxUrl, data.jobId, M.cfg.sesskey, cmid);
                 ccDiag('callAI() ASYNC JOB done | content items=' + (Array.isArray(data?.content) ? data.content.length : 'n/a'));
             }
 
@@ -1606,7 +1663,29 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
             return { valid: false, issues: ['No cards returned from AI'] };
         }
         // Card count
-        var expectedCount = (context && context.mode === 'vet') ? 7 : 6;
+        // FIX-CC-ROUTE-CARDCOUNT (v13.65): the previous rule was
+        //   (context.mode === 'vet') ? 7 : 6
+        // but prompts.js instructs the model to return SEVEN cards for vet, workplace
+        // AND pd — WORKPLACE_SYSTEM_PROMPT and PD_SYSTEM_PROMPT both end with
+        // "exactly 7 cards. If fewer or more than 7 cards are returned, the output is
+        // invalid." Only UNIVERSITY_SYSTEM_PROMPT asks for 6. So on the Workplace and PD
+        // routes the model returned exactly what it was told to and the validator
+        // rejected it with "Expected 6 cards, got 7" — on attempt 1 AND on the attempt-2
+        // repair pass — so generateFiveCardSequence() always fell through to
+        // getFailedCardSequence(). That is a 100% failure rate on those two routes:
+        // every section rendered placeholder cards while burning full generation credits.
+        //
+        // prompts.js already exports getCardCountForMode() (university => 6, else => 7),
+        // which is the single source of truth the prompt builders themselves use. Deferring
+        // to it means the validator can never drift out of step with the prompt again.
+        var genMode = (context && context.mode) || 'vet';
+        var expectedCount = (Prompts && typeof Prompts.getCardCountForMode === 'function')
+            ? Prompts.getCardCountForMode(genMode)
+            : ((genMode === 'university') ? 6 : 7);
+        // v11.11 parity: with activities disabled the decision-point card is dropped.
+        if (genMode !== 'university' && context && context.activitiesEnabled === false) {
+            expectedCount = expectedCount - 1;
+        }
         if (cards.length !== expectedCount) {
             issues.push('Expected ' + expectedCount + ' cards, got ' + cards.length);
         }
@@ -1635,9 +1714,31 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
             // clears it to '' anyway. Checking voiceover on decision-point always failed, which
             // triggered the repair prompt. The repair AI then tried to add a voiceover AND often
             // dropped question/options, causing attempt 2 to fail with all three issues.
+            // FIX-CC-VO-STRUCTURAL (v13.65): normaliseAllVoiceovers() DELIBERATELY leaves
+            // voiceoverText empty for every _7CARD_TYPES_SET card — player5.js
+            // buildFullVoiceoverText() builds the narration script from the structural
+            // display fields (sceneParts / conceptInsights / steps / items / goodItems).
+            // Demanding a 30-char voiceoverText on those cards contradicted that design and
+            // sent perfectly good cards into the repair pass, where the repair model
+            // frequently dropped other required fields. A structural card is now valid if it
+            // carries renderable content, whether or not voiceoverText is populated.
             if (card.cardType !== 'decision-point') {
                 var vo = card.voiceoverText || card.voiceover || '';
-                if (!vo || String(vo).length < 30) {
+                var hasStructuralContent = !!(
+                    (card.sceneParts && card.sceneParts.length) ||
+                    (card.conceptInsights && card.conceptInsights.length) ||
+                    (card.steps && card.steps.length) ||
+                    (card.items && card.items.length) ||
+                    (card.goodItems && card.goodItems.length) ||
+                    (card.badItems && card.badItems.length) ||
+                    (card.frameworks && card.frameworks.length) ||
+                    (card.considerations && card.considerations.length) ||
+                    (card.analysisPrompts && card.analysisPrompts.length) ||
+                    (card.cognitiveConsiderations && card.cognitiveConsiderations.length) ||
+                    (card.keyTerms && card.keyTerms.length) ||
+                    card.content || card.bodyText || card.context || card.conceptDefinition
+                );
+                if ((!vo || String(vo).length < 30) && !hasStructuralContent) {
                     issues.push(prefix + ': missing or too-short voiceover');
                 }
             }
@@ -2286,6 +2387,13 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
         
         // v11.11: Activities setting  -  when false, decision-point cards are excluded
         const activitiesEnabled = plannedManifest.activitySettings?.enabled !== false;
+        // FIX-CC-ACTIVITIES-CONTEXT (v13.65): validateCards() only ever receives `context`,
+        // never the manifest, so it had no way to know activities were disabled and always
+        // demanded the full card count. Surface the flag on context so the card-count check
+        // and the prompt path agree.
+        if (plannedManifest.context) {
+            plannedManifest.context.activitiesEnabled = activitiesEnabled;
+        }
         
         // v7.8.7: Validate topics array exists
         const topics = plannedManifest.topics || [];
