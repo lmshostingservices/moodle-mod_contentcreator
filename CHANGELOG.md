@@ -1,4 +1,45 @@
-# Changelog extracted from version.php header (v13.65)
+# Changelog
+
+## 13.67 (2026-08-19)
+
+Version bump only. No functional change from 13.66, which is the build that
+passed the release pipeline.
+
+## 13.66 (2026-08-18)
+
+Passed the LMS-Labs plugin release pipeline.
+
+Security
+- The site API key is no longer sent to the browser. All vendor traffic is proxied
+  server-side through ajax.php against a 16-entry endpoint allowlist; the client
+  names an allowlist key and can never choose a host, path or credential.
+- require_login($cm->course, false, $cm) added to all 13 AJAX actions that resolve
+  a course module.
+- get_site_gallery no longer returns data from every activity on the site.
+- Rate limiting added for credit-consuming and vendor-facing requests.
+- Exception detail is no longer returned to the client.
+
+Correctness
+- Fixed a fatal in index.php: core\event\course_module_instance_list_viewed is
+  abstract and needs a plugin subclass.
+- Added the cmid foreign keys on upgrade, so upgraded sites match fresh installs.
+- Restored the generate-slide-image vendor route and its original payload shape.
+- Aligned the upload proxy with the vendor contract: correct multipart field names,
+  per-route size caps, GIF support, and pass-through of the provider's own errors.
+
+Privacy and data
+- contentcreator_checklist is now covered by the Privacy API and deleted with the
+  instance and on course reset.
+- Backup and restore now carry checklist rows and voiceover files, with the file
+  itemid remapped to the new course module.
+- Course reset support added.
+
+Compliance and tooling
+- Moodle coding standard: 3,877 errors and 826 warnings to zero.
+- Real AMD build pipeline (package.json, Gruntfile.js); amd/build regenerated with
+  Babel and Terser.
+- Google Fonts removed; Lucide declared in thirdpartylibs.xml; development
+  artefacts removed from the package. extracted from version.php header (v13.65)
 
 
 Content Creator v12.77
