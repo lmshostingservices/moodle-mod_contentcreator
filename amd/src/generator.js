@@ -17,7 +17,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(Prompts, CcState) {
+define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(Prompts, CcState) {
     'use strict';
 
     // v8.3.7: Debug logging with version prefix
@@ -27,12 +27,14 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
     // per section per attempt (including JSON.stringify(context, null, 2)) block the JS
     // event loop during generation and inflate GC pressure. Set true only when debugging.
     const CC_VERBOSE_LOG = false;
-    const ccLog = CC_VERBOSE_LOG ? ((...args) => console.log('[CC v' + CC_VERSION + ']', ...args)) : (() => {});
-    const ccWarn = (...args) => console.warn('[CC v' + CC_VERSION + ']', ...args);
-    const ccError = (...args) => console.error('[CC v' + CC_VERSION + ']', ...args);
+    // All diagnostics route through the shared gated logger in cc-state.js  -  no raw console here.
+    const ccLogger = CcState.createLogger(CC_VERBOSE_LOG);
+    const ccLog = ccLogger.log;
+    const ccWarn = ccLogger.warn;
+    const ccError = ccLogger.error;
     // v9.77 PERF: ccDiag also gated on CC_VERBOSE_LOG  -  was always-on and fired 20+
     // times per section including expensive JSON.stringify(context, null, 2) calls.
-    const ccDiag = CC_VERBOSE_LOG ? ((...args) => console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', ...args)) : (() => {});
+    const ccDiag = (...args) => ccLog('[CC DIAG]', ...args);
 
     // ===========================================================================
     // v7.9.65: DEBUG LOG CAPTURE SYSTEM (ChatGPT Approved)
@@ -230,7 +232,7 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
         const newItems = [...items];
         const usedVerbs = new Set();
         for (let i = 0; i < newItems.length; i++) {
-            const { verb, rest } = normaliseFirstVerb(newItems[i]);
+            const { verb } = normaliseFirstVerb(newItems[i]);
             if (!verb) continue;
             const verbLower = verb.toLowerCase();
             if (usedVerbs.has(verbLower) && TEMPLATE_VERBS.has(verbLower)) {
@@ -433,31 +435,6 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
 
     const countWords = (str) => (str || '').trim().split(/\s+/).filter(w => w).length;
 
-    const clampWords = (text, min, max) => {
-        if (!text) return text;
-        const words = text.trim().split(/\s+/).filter(w => w);
-        if (words.length <= max) return text;
-        return words.slice(0, max).join(' ') + '.';
-    };
-
-    const padVoiceover = (text, cardType) => {
-        const limits = VOICEOVER_LIMITS[cardType] || { min: 50, max: 100 };
-        let t = (text || '').trim();
-        const w = countWords(t);
-        if (w >= limits.min && w <= limits.max) return t;
-        if (w < limits.min) {
-            const starters = VOICEOVER_STARTERS[cardType] || VOICEOVER_STARTERS['performance-anchor'];
-            const randomStarter = starters[Math.floor(Math.random() * starters.length)];
-            if (!t.toLowerCase().startsWith(randomStarter.toLowerCase().split(' ')[0])) {
-                t = randomStarter + ' ' + t;
-            }
-        }
-        if (countWords(t) > limits.max) {
-            t = clampWords(t, limits.min, limits.max);
-        }
-        return t.trim();
-    };
-
     // ===========================================================================
     // v7.9.66: SMART VOICEOVER PADDING (ChatGPT Approved - NO fluff filler)
     // Pads using meaningful extras only, no generic filler
@@ -497,30 +474,6 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
     // v7.9.66: REPETITION DETECTION MEMORY BANK (ChatGPT Approved)
     // Prevents samey scenarios across topics within a session
     // ===========================================================================
-    const RECENT_SCENARIO_SIGNATURES = [];
-    const MAX_SIGNATURES = 25;
-
-    const scenarioSignature = (scenarioCard) => {
-        const text = `${scenarioCard?.context || ''} ${scenarioCard?.complication || ''}`.toLowerCase();
-        return text
-            .replace(/\d{1,2}:\d{2}/g, 'TIME')
-            .replace(/\b(kalgoorlie|perth|wa|western australia|nsw|vic|qld|sa|nt|tas|act)\b/gi, 'STATE')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 240);
-    };
-
-    const isTooSimilar = (sig) => {
-        return RECENT_SCENARIO_SIGNATURES.some(prev => prev.includes(sig.slice(0, 90)) || sig.includes(prev.slice(0, 90)));
-    };
-
-    const storeSignature = (sig) => {
-        RECENT_SCENARIO_SIGNATURES.unshift(sig);
-        if (RECENT_SCENARIO_SIGNATURES.length > MAX_SIGNATURES) {
-            RECENT_SCENARIO_SIGNATURES.pop();
-        }
-    };
-
     // v8.4.53: extractCardExtras DEPRECATED - returns empty array.
     // buildFullVoiceoverText in player5.js reads ALL visible structured fields
     // (requirements, description, contrast pairs, terms, accent cards, scenario
@@ -587,7 +540,6 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
     const fixVerbFirstRequirements = (items) => {
         if (!Array.isArray(items)) return items;
         const banned = new Set(['if', 'when', 'the', 'a', 'an', 'for', 'in', 'at', 'on', 'to', 'by', 'with', 'it', 'this', 'that', 'all', 'any', 'do', 'be', 'is', 'are', 'was', 'were', 'has', 'have', 'had', 'should', 'would', 'could', 'may', 'must', 'shall', 'will', 'each', 'every', 'before', 'after', 'during', 'while', 'once', 'also', 'then', 'per', 'based', 'according', 'immediately', 'always', 'never', 'only', 'first', 'where', 'not']);
-        const modals = new Set(['should', 'must', 'shall', 'will', 'would', 'could', 'may', 'need', 'needs']);
         return items.map(req => {
             if (!req || typeof req !== 'string') return req;
             const fw = req.trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, '');
@@ -1225,6 +1177,11 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
                     .replace(/\n/g, '\\n')
                     .replace(/\r/g, '\\r')
                     .replace(/\t/g, '\\t')
+                    // Intentional control-character match: after the escapes above, any
+                    // remaining C0 control character (U+0000-U+001F) or DEL (U+007F) is
+                    // illegal inside a JSON string literal and would break JSON.parse,
+                    // so the model's stray control bytes are dropped here.
+                    // eslint-disable-next-line no-control-regex
                     .replace(/[\x00-\x1F\x7F]/g, '');
                 return '"' + escaped + '"';
             });
@@ -2052,7 +2009,11 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
                 try {
                     const p = JSON.parse(str);
                     if (p && Array.isArray(p.cards) && p.cards.length >= 1) return p.cards;
-                } catch (e) {}
+                } catch (e) {
+                    // Expected: this is one of several speculative parse attempts on a
+                    // possibly truncated AI response. The caller falls back to the next
+                    // candidate string, so a parse failure here is not an error.
+                }
                 return null;
             };
             return tryParse(jsonStr) ||
@@ -2733,7 +2694,7 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
             ? Prompts.getLanguageName(targetLang)
             : targetLang;
 
-        console.log('[CC-ML TRANSLATE] Starting translation | lang=' + targetLang + ' | langName=' + langName + ' | topics=' + (primaryTopics || []).length);
+        ccLog('[CC-ML TRANSLATE] Starting translation | lang=' + targetLang + ' | langName=' + langName + ' | topics=' + (primaryTopics || []).length);
 
         const TRANSLATE_SYSTEM =
             'You are a professional translator specialising in workplace and vocational training content.\n' +
@@ -2765,7 +2726,7 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
             });
         });
 
-        console.log('[CC-ML TRANSLATE] Sections to translate: ' + allEntries.length);
+        ccLog('[CC-ML TRANSLATE] Sections to translate: ' + allEntries.length);
 
         let completed = 0;
         const total = allEntries.length;
@@ -2803,7 +2764,7 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
                 try {
                     translated = JSON.parse(cleaned);
                 } catch (parseErr) {
-                    console.log('[CC-ML TRANSLATE] JSON parse failed sec=' + section.id + ' — keeping English: ' + parseErr.message);
+                    ccLog('[CC-ML TRANSLATE] JSON parse failed sec=' + section.id + ' — keeping English: ' + parseErr.message);
                 }
 
                 if (translated && typeof translated === 'object' && !Array.isArray(translated)) {
@@ -2817,12 +2778,12 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
                     translated.voiceoverSchemaVersion = section.voiceoverSchemaVersion;
                     // Write translated content into the cloned section
                     Object.assign(entry.section, translated);
-                    console.log('[CC-ML TRANSLATE] OK sec=' + section.id + ' → ' + langName);
+                    ccLog('[CC-ML TRANSLATE] OK sec=' + section.id + ' → ' + langName);
                 } else {
-                    console.log('[CC-ML TRANSLATE] No valid JSON for sec=' + section.id + ' — English kept as fallback');
+                    ccLog('[CC-ML TRANSLATE] No valid JSON for sec=' + section.id + ' — English kept as fallback');
                 }
             } catch (e) {
-                console.log('[CC-ML TRANSLATE] callAI error sec=' + section.id + ': ' + e.message + ' — English kept');
+                ccLog('[CC-ML TRANSLATE] callAI error sec=' + section.id + ': ' + e.message + ' — English kept');
             }
 
             completed++;
@@ -2848,7 +2809,7 @@ define('mod_contentcreator/generator', ['mod_contentcreator/prompts', 'mod_conte
         }
         await Promise.all(_mlTrInFlight);
 
-        console.log('[CC-ML TRANSLATE] Complete | lang=' + targetLang + ' | translated=' + completed + '/' + total);
+        ccLog('[CC-ML TRANSLATE] Complete | lang=' + targetLang + ' | translated=' + completed + '/' + total);
         return topics;
     };
 

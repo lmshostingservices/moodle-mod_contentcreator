@@ -11,7 +11,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define('mod_contentcreator/cc-language-switcher', ['mod_contentcreator/cc-voiceover'], function(CcVoiceover) {
+define(['mod_contentcreator/cc-voiceover'], function(CcVoiceover) {
     'use strict';
 
     var LANGUAGE_LABELS = CcVoiceover.LANGUAGE_LABELS;

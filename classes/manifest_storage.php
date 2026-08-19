@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -36,11 +35,16 @@
 
 namespace mod_contentcreator;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Compresses and decompresses the manifest JSON blob stored on the activity record.
+ *
+ * @package    mod_contentcreator
+ * @copyright  2025 AI Grader
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class manifest_storage {
     /** Manifests smaller than this are stored raw (no compression overhead needed). */
-    const COMPRESS_THRESHOLD = 512 * 1024; // 512 KB
+    const COMPRESS_THRESHOLD = 524288;
 
     /**
      * Compress manifest JSON for storage.
@@ -55,13 +59,15 @@ class manifest_storage {
         }
         $gz = gzencode($json, 6);
         if ($gz === false) {
-            error_log('[CC_MANIFEST] gzencode() failed — storing raw JSON (' . strlen($json) . ' bytes)');
+            debugging(
+                'Content Creator gzencode() failed, storing raw JSON (' . strlen($json) . ' bytes).',
+                DEBUG_DEVELOPER
+            );
             return $json;
         }
         $stored = 'gz:' . base64_encode($gz);
-        error_log('[CC_MANIFEST] Compressed ' . round(strlen($json) / 1024) . ' KB → ' .
-                  round(strlen($stored) / 1024) . ' KB (' .
-                  round((1 - strlen($stored) / strlen($json)) * 100) . '% reduction)');
+        debugging('Content Creator compressed manifest ' . round(strlen($json) / 1024) . ' KB to ' .
+            round(strlen($stored) / 1024) . ' KB.', DEBUG_DEVELOPER);
         return $stored;
     }
 
@@ -79,12 +85,12 @@ class manifest_storage {
         }
         $decoded = base64_decode(substr($stored, 3), true);
         if ($decoded === false) {
-            error_log('[CC_MANIFEST] base64_decode() failed — returning stored value as-is');
+            debugging('Content Creator base64_decode() failed, returning the stored value as-is.', DEBUG_DEVELOPER);
             return $stored;
         }
         $json = gzdecode($decoded);
         if ($json === false) {
-            error_log('[CC_MANIFEST] gzdecode() failed — returning stored value as-is');
+            debugging('Content Creator gzdecode() failed, returning the stored value as-is.', DEBUG_DEVELOPER);
             return $stored;
         }
         return $json;

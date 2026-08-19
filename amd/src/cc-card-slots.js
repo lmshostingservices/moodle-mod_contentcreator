@@ -7,7 +7,7 @@
  *
  * Usage:
  *   CcCardSlots.init({ getLabel, escapeHtml, fixGrammar, getIcon,
- *                      formatText, formatTextWithDocLinks });
+ *                      resolveScenePartIcon, formatTextWithDocLinks });
  *   var html = CcCardSlots.renderPerformanceAnchor(section);
  *
  * The module is a singleton: call init() once before any render method.
@@ -17,10 +17,10 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/cc-card-slots', [], function() {
+define([], function() {
     'use strict';
 
-    var getLabel, escapeHtml, fixGrammar, getIcon, hasIcon, getContextualSlideIcon, resolveScenePartIcon, formatText, formatTextWithDocLinks;
+    var getLabel, escapeHtml, fixGrammar, getIcon, resolveScenePartIcon, formatTextWithDocLinks;
 
     /**
      * Inject helper functions from player5.js scope.
@@ -46,10 +46,7 @@ define('mod_contentcreator/cc-card-slots', [], function() {
         escapeHtml             = helpers.escapeHtml;
         fixGrammar             = helpers.fixGrammar;
         getIcon                = helpers.getIcon;
-        hasIcon                = helpers.hasIcon;
-        getContextualSlideIcon = helpers.getContextualSlideIcon;
         resolveScenePartIcon   = helpers.resolveScenePartIcon;
-        formatText             = helpers.formatText;
         formatTextWithDocLinks = helpers.formatTextWithDocLinks;
     }
 
@@ -669,7 +666,6 @@ define('mod_contentcreator/cc-card-slots', [], function() {
             html += '</div>';
         } else {
             // v10.39 / v11.54: Icon-based insight chips (no numbers) for legacy content
-            var fallbackIcons = ['lightbulb', 'check-circle', 'zap', 'shield', 'star', 'target', 'award'];
             var chipPalette   = ['cc5-chip-blue', 'cc5-chip-green', 'cc5-chip-orange', 'cc5-chip-purple'];
             var content = section.content || section.bodyText || section.description || '';
             if (content) {

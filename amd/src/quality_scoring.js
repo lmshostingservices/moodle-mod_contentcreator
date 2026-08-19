@@ -14,7 +14,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/quality_scoring', [], function() {
+define([], function() {
     'use strict';
 
     // ===========================================================================

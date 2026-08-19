@@ -8,8 +8,13 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/manifest.builder', ['mod_contentcreator/planner', 'mod_contentcreator/generator'], function(Planner, Generator) {
+define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_contentcreator/cc-state'], function(Planner, Generator, CcState) {
     'use strict';
+
+    // Gated diagnostics  -  silent in production, enabled by flipping the flag in cc-state.js.
+    var _log = CcState.createLogger(false);
+    var ccLog = _log.log;
+    var ccError = _log.error;
 
     const STATUS = {
         EMPTY: 'empty',
@@ -77,10 +82,10 @@ define('mod_contentcreator/manifest.builder', ['mod_contentcreator/planner', 'mo
         const { onStatus, onProgress, onComplete, onError } = callbacks || {};
         const { regenerateFailedOnly = false, existingManifest = null } = options;
 
-        console.log('%c[CC DIAG ManifestBuilder]', 'background: #059669; color: #fff; padding: 2px 6px; border-radius: 3px;', 'build() CALLED | mode=' + inputs?.mode + ' | cmid=' + cmid);
+        ccLog('[ManifestBuilder]', 'build() CALLED | mode=' + inputs?.mode + ' | cmid=' + cmid);
 
         const validation = validateInputs(inputs);
-        console.log('%c[CC DIAG ManifestBuilder]', 'background: #059669; color: #fff; padding: 2px 6px; border-radius: 3px;', 'Validation:', validation.valid ? 'PASSED' : 'FAILED: ' + validation.errors.join(', '));
+        ccLog('[ManifestBuilder]', 'Validation:', validation.valid ? 'PASSED' : 'FAILED: ' + validation.errors.join(', '));
         if (!validation.valid) {
             if (onError) onError(validation.errors.join('. '));
             return { success: false, errors: validation.errors };
@@ -88,7 +93,7 @@ define('mod_contentcreator/manifest.builder', ['mod_contentcreator/planner', 'mo
 
         try {
             if (onStatus) onStatus(STATUS.PLANNING);
-            console.log('%c[CC DIAG ManifestBuilder]', 'background: #059669; color: #fff; padding: 2px 6px; border-radius: 3px;', 'Has topicPlan=' + !!(inputs.topicPlan?.topics?.length > 0) + ' | topics=' + (inputs.topicPlan?.topics?.length || 0));
+            ccLog('[ManifestBuilder]', 'Has topicPlan=' + !!(inputs.topicPlan?.topics?.length > 0) + ' | topics=' + (inputs.topicPlan?.topics?.length || 0));
 
             let plannedManifest;
             if (inputs.topicPlan && inputs.topicPlan.topics && inputs.topicPlan.topics.length > 0) {
@@ -123,9 +128,9 @@ define('mod_contentcreator/manifest.builder', ['mod_contentcreator/planner', 'mo
             }
             
 
-            console.log('%c[CC DIAG ManifestBuilder]', 'background: #059669; color: #fff; padding: 2px 6px; border-radius: 3px;', 'plannedManifest ready | topics=' + (plannedManifest.topics?.length || 0) + ' | sections=' + plannedManifest.totalSections);
+            ccLog('[ManifestBuilder]', 'plannedManifest ready | topics=' + (plannedManifest.topics?.length || 0) + ' | sections=' + plannedManifest.totalSections);
             if (onStatus) onStatus(STATUS.GENERATING);
-            console.log('%c[CC DIAG ManifestBuilder]', 'background: #059669; color: #fff; padding: 2px 6px; border-radius: 3px;', 'Calling Generator.generate()...');
+            ccLog('[ManifestBuilder]', 'Calling Generator.generate()...');
 
             const generatedManifest = await Generator.generate(
                 plannedManifest,
@@ -144,7 +149,7 @@ define('mod_contentcreator/manifest.builder', ['mod_contentcreator/planner', 'mo
             return { success: true, manifest: generatedManifest };
 
         } catch (error) {
-            console.error('[CC DIAG ManifestBuilder] build() EXCEPTION:', error.message, error.stack);
+            ccError('[CC DIAG ManifestBuilder] build() EXCEPTION:', error.message, error.stack);
             if (onStatus) onStatus(STATUS.ERROR);
             if (onError) onError(error.message);
             return { success: false, error: error.message };

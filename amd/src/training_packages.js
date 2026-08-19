@@ -15,7 +15,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define('mod_contentcreator/training_packages', [], function() {
+define([], function() {
 'use strict';
 
 var TRAINING_PACKAGE_DATA = {
@@ -630,12 +630,11 @@ var TRAINING_PACKAGE_DATA = {
 
 var TRAINING_PACKAGE_KEYWORDS = TRAINING_PACKAGE_DATA;
 
-if (typeof window !== 'undefined') {
-    window.TRAINING_PACKAGE_DATA = TRAINING_PACKAGE_DATA;
-    window.TRAINING_PACKAGE_KEYWORDS = TRAINING_PACKAGE_KEYWORDS;
-}
-
 return {
+    // Preferred names used by dependent AMD modules.
+    DATA: TRAINING_PACKAGE_DATA,
+    KEYWORDS: TRAINING_PACKAGE_KEYWORDS,
+    // Long-form aliases retained for backwards compatibility.
     TRAINING_PACKAGE_DATA: TRAINING_PACKAGE_DATA,
     TRAINING_PACKAGE_KEYWORDS: TRAINING_PACKAGE_KEYWORDS
 };

@@ -1,0 +1,28 @@
+{
+  "env": {
+    "browser": true,
+    "amd": true,
+    "es2021": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "script"
+  },
+  "globals": {
+    "M": "readonly",
+    "Y": "readonly"
+  },
+  "extends": "eslint:recommended",
+  "rules": {
+    "no-console": "error",
+    "no-unused-vars": [
+      "warn",
+      {
+        "args": "none",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "eqeqeq": "error",
+    "no-prototype-builtins": "error"
+  }
+}

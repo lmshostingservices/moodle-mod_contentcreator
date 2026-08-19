@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -31,10 +30,25 @@ $course = $DB->get_record('course', ['id' => $id], '*', MUST_EXIST);
 
 require_login($course);
 
+$coursecontext = context_course::instance($course->id);
+
+// No require_capability() call here is deliberate, and matches every core activity
+// module's index.php. This page only lists the Content Creator activities that the
+// current user can already see: require_login() enforces enrolment and course
+// visibility, and get_all_instances_in_course() below applies each activity's own
+// visibility and availability rules per user. Adding a module-level capability check
+// at course context would additionally exclude legitimate guest and role-limited
+// access without protecting anything that is not already protected.
+
 $PAGE->set_url('/mod/contentcreator/index.php', ['id' => $id]);
+$PAGE->set_context($coursecontext);
 $PAGE->set_title(get_string('modulenameplural', 'mod_contentcreator'));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_pagelayout('incourse');
+
+$event = \mod_contentcreator\event\course_module_instance_list_viewed::create(['context' => $coursecontext]);
+$event->add_record_snapshot('course', $course);
+$event->trigger();
 
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('modulenameplural', 'mod_contentcreator'));

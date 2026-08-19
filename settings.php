@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -17,7 +16,7 @@
 
 /**
  * Content Creator - Admin settings
- * 
+ *
  * Note: Site ID and API Key are managed via AI Grader Central Config (local_aiconfig).
  * These fallback settings are only used if Central Config is not installed.
  *
@@ -29,31 +28,29 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig && isset($settings)) {
-    // Check if central config is available
+    // Check whether AI Grader Central Config is available.
     $centralconfigurl = new moodle_url('/admin/settings.php', ['section' => 'local_aiconfig']);
     $centralconfiginstalled = file_exists($CFG->dirroot . '/local/aiconfig/version.php');
-    
+
     if ($centralconfiginstalled) {
-        $settings->add(new admin_setting_heading(
-            'mod_contentcreator/centralconfig_notice',
-            '',
-            '<div style="padding: 12px; background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; margin-bottom: 16px;">' .
-            '<strong style="color: #047857;">AI Grader Central Config is installed.</strong><br>' .
-            'Site ID and API Key are managed centrally. ' .
-            '<a href="' . $centralconfigurl->out() . '">Configure Central Settings</a>' .
-            '</div>'
-        ));
+        $noticetext = get_string('centralconfigfound', 'mod_contentcreator') . ' ' .
+            html_writer::link($centralconfigurl, get_string('centralconfigconfigure', 'mod_contentcreator'));
+        $noticetype = \core\output\notification::NOTIFY_SUCCESS;
     } else {
-        $settings->add(new admin_setting_heading(
-            'mod_contentcreator/centralconfig_notice',
-            '',
-            '<div style="padding: 12px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; margin-bottom: 16px;">' .
-            '<strong style="color: #b45309;">Recommended: Install AI Grader Central Config</strong><br>' .
-            'Configure Site ID and API Key once for all AI Grader plugins. ' .
-            '<a href="https://lms-labs.com/docs/ai-central-config" target="_blank">Learn more</a>' .
-            '</div>'
-        ));
+        $noticetext = get_string('centralconfigmissing', 'mod_contentcreator') . ' ' .
+            html_writer::link(
+                new moodle_url('https://lms-labs.com/docs/ai-central-config'),
+                get_string('centralconfiglearnmore', 'mod_contentcreator'),
+                ['target' => '_blank', 'rel' => 'noreferrer noopener']
+            );
+        $noticetype = \core\output\notification::NOTIFY_INFO;
     }
+
+    $settings->add(new admin_setting_heading(
+        'mod_contentcreator/centralconfignotice',
+        '',
+        $OUTPUT->notification($noticetext, $noticetype, false)
+    ));
 
     $settings->add(new admin_setting_heading(
         'mod_contentcreator/aiheading',
@@ -64,14 +61,19 @@ if ($hassiteconfig && isset($settings)) {
     $settings->add(new admin_setting_configtext(
         'mod_contentcreator/siteid',
         get_string('siteid', 'mod_contentcreator'),
-        get_string('siteiddesc', 'mod_contentcreator') . ($centralconfiginstalled ? ' (Fallback - Central Config takes priority)' : ''),
-        ''
+        $centralconfiginstalled
+            ? get_string('settingfallbacknote', 'mod_contentcreator', get_string('siteiddesc', 'mod_contentcreator'))
+            : get_string('siteiddesc', 'mod_contentcreator'),
+        '',
+        PARAM_ALPHANUMEXT
     ));
 
     $settings->add(new admin_setting_configpasswordunmask(
         'mod_contentcreator/apikey',
         get_string('apikey', 'mod_contentcreator'),
-        get_string('apikeydesc', 'mod_contentcreator') . ($centralconfiginstalled ? ' (Fallback - Central Config takes priority)' : ''),
+        $centralconfiginstalled
+            ? get_string('settingfallbacknote', 'mod_contentcreator', get_string('apikeydesc', 'mod_contentcreator'))
+            : get_string('apikeydesc', 'mod_contentcreator'),
         ''
     ));
 
@@ -129,11 +131,11 @@ if ($hassiteconfig && isset($settings)) {
             'Argentina' => 'Argentina',
             'Chile' => 'Chile',
             'Colombia' => 'Colombia',
-            'Other' => 'Other'
+            'Other' => 'Other',
         ]
     ));
 
-    // Voice settings
+    // Voice settings.
     $settings->add(new admin_setting_heading(
         'mod_contentcreator/voiceheading',
         get_string('voicesettings', 'mod_contentcreator'),
@@ -215,17 +217,17 @@ if ($hassiteconfig && isset($settings)) {
         'Zephyr',
         [
             'Zephyr' => get_string('voice_zephyr', 'mod_contentcreator'),
-            'Aoede'  => get_string('voice_aoede',  'mod_contentcreator'),
-            'Kore'   => get_string('voice_kore',   'mod_contentcreator'),
-            'Leda'   => get_string('voice_leda',   'mod_contentcreator'),
-            'Puck'   => get_string('voice_puck',   'mod_contentcreator'),
+            'Aoede'  => get_string('voice_aoede', 'mod_contentcreator'),
+            'Kore'   => get_string('voice_kore', 'mod_contentcreator'),
+            'Leda'   => get_string('voice_leda', 'mod_contentcreator'),
+            'Puck'   => get_string('voice_puck', 'mod_contentcreator'),
             'Charon' => get_string('voice_charon', 'mod_contentcreator'),
             'Fenrir' => get_string('voice_fenrir', 'mod_contentcreator'),
-            'Orus'   => get_string('voice_orus',   'mod_contentcreator'),
+            'Orus'   => get_string('voice_orus', 'mod_contentcreator'),
         ]
     ));
 
-    // Focus requirement setting
+    // Focus requirement setting.
     $settings->add(new admin_setting_heading(
         'mod_contentcreator/focusheading',
         get_string('requirefocus', 'mod_contentcreator'),

@@ -11,7 +11,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/builder', [
+define([
     'core/ajax',
     'core/notification',
     'mod_contentcreator/manifest.builder',
@@ -21,9 +21,8 @@ define('mod_contentcreator/builder', [
 ], function(Ajax, Notification, ManifestBuilder, Planner, CcState, Generator) {
     'use strict';
 
-    // v9.83 Phase-1: Version and logger now come from the shared cc-state module,
+    // v9.83 Phase-1: The gated logger comes from the shared cc-state module,
     // eliminating the duplication that existed between builder.js and player5.js.
-    const CC_VERSION = CcState.CC_VERSION;
     const CC_VERBOSE_LOG = false; // dev flag  -  stays local so each module can tune independently
 
     // AUTO-SPLIT-SECTION (v12.78): Elements with more than this many PCs are automatically
@@ -45,38 +44,50 @@ define('mod_contentcreator/builder', [
     let suggestedMajorTopics = []; // AI-suggested Major Learning Topics (Stage 1)
     let selectedMajorTopicIds = []; // User-selected Major Topic IDs for generation
     let selectedElementIds = []; // v6.9.11: User-selected element IDs (e.g., just Element 1)
-    let elementSelectionInitialized = false; // v6.9.25: Flag to prevent re-init after deselect all
     let workplaceData = null; // Workplace mode: extracted document content
     let vetPastedContent = ''; // v7.9.0: Pasted text for VET reference content
     let uniPastedContent = ''; // v7.9.0: Pasted text for University course content
     let pdPastedContent = ''; // v9.21: Pasted text for PD course content
     let currentCredits = null; // Current AI credits balance
-    
-    // v6.9.1: Initialize AI context globals at module load to prevent undefined errors
-    window.CC_AI_CONTEXT = window.CC_AI_CONTEXT || null;
-    window.CC_AI_JOB_TITLES = window.CC_AI_JOB_TITLES || [];
-    window.CC_AI_TASK_CATEGORIES = window.CC_AI_TASK_CATEGORIES || [];
-    window.CC_AI_EQUIPMENT_CATEGORIES = window.CC_AI_EQUIPMENT_CATEGORIES || [];
-    window.CC_AI_DETECTED_INDUSTRY = window.CC_AI_DETECTED_INDUSTRY || '';
-    window.CC_AI_DETECTED_SECTOR = window.CC_AI_DETECTED_SECTOR || '';
-    window.CC_SELECTED_JOB_TITLES = window.CC_SELECTED_JOB_TITLES || [];
-    window.CC_SELECTED_TASKS = window.CC_SELECTED_TASKS || [];
-    window.CC_SELECTED_EQUIPMENT = window.CC_SELECTED_EQUIPMENT || [];
-    window.CC_SELECTED_JOB_ROLES = window.CC_SELECTED_JOB_ROLES || [];
-    window.CC_SELECTED_JOB_LEVELS = window.CC_SELECTED_JOB_LEVELS || [];
-    window.CC_SELECTED_TASK_CATEGORIES = window.CC_SELECTED_TASK_CATEGORIES || [];
-    window.CC_SELECTED_EQUIPMENT_CATEGORIES = window.CC_SELECTED_EQUIPMENT_CATEGORIES || [];
-    window.CC_SELECTED_EQUIPMENT_LEGACY = window.CC_SELECTED_EQUIPMENT_LEGACY || [];
-    
-    // v6.9.1: AI failure tracking
-    window.CC_AI_FAILED = window.CC_AI_FAILED || false;
-    window.CC_AI_NO_FALLBACK = window.CC_AI_NO_FALLBACK || false;
-    window.CC_AI_LOADING = window.CC_AI_LOADING || false;
+
+    // v13.66: These were window globals purely so that helpers nested inside
+    // bindCountryStateHandlers() could share state with the rest of the module.
+    // They are now ordinary module-scoped variables - nothing outside this module
+    // ever read them, and no generated markup references them by name.
+
+    // AI-detected context for VET mode.
+    let CC_AI_CONTEXT = null;
+
+    // User selections for VET mode.
+    let CC_SELECTED_JOB_TITLES = [];
+    let CC_SELECTED_TASKS = [];
+    let CC_SELECTED_EQUIPMENT = [];
+    let CC_SELECTED_JOB_ROLES = [];
+    let CC_SELECTED_JOB_LEVELS = [];
+    let CC_SELECTED_TASK_CATEGORIES = [];
+    let CC_SELECTED_EQUIPMENT_CATEGORIES = [];
+    let CC_SELECTED_EQUIPMENT_LEGACY = [];
+    let CC_SELECTED_JOB_TASKS = [];
+
+    // AI-detected context and user selections for Workplace mode.
+    let CC_WP_AI_CONTEXT = null;
+    let CC_WP_SELECTED_JOB_TITLES = [];
+    let CC_WP_SELECTED_TASKS = [];
+    let CC_WP_SELECTED_EQUIPMENT = [];
+    let CC_WP_SELECTED_TASK_CATEGORIES = [];
+    let CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
+
+    // Shared helpers that are defined inside bindCountryStateHandlers() but called
+    // from the wizard steps. These were three separate globals before v13.66.
+    const ccBuilder = {};
+    let updateCategoriesForUnit = null;
+    let autoSuggestFromContent = null;
 
     let storedContext = null; // Context captured from Step 2 for display in Step 3
     let storedOutcomes = []; // v6.5.48: Outcomes captured from Step 2 (DOM elements are replaced)
     let storedTopicHierarchy = null; // v9.24: Structured hierarchy from paste {topics: [{title, subtopics: [string]}]}
     let workplacePastedContent = ''; // v8.4.24: Pasted text for Workplace reference content
+
 
     /**
      * v7.9.10: Get Moodle site primary color from theme CSS variables
@@ -120,26 +131,6 @@ define('mod_contentcreator/builder', [
         return "#047857"; // Fallback emerald
     };
 
-    /**
-     * v6.6.6: Truncate text at word boundary to avoid mid-word cuts
-     * @param {string} text - Text to truncate
-     * @param {number} maxLength - Maximum character length (default 150)
-     * @returns {string} - Truncated text at word boundary, never mid-word
-     */
-    const truncateAtWordBoundary = (text, maxLength = 150) => {
-        if (!text || text.length <= maxLength) return text;
-        
-        // Find the last space before maxLength
-        const truncated = text.substring(0, maxLength);
-        const lastSpace = truncated.lastIndexOf(' ');
-        
-        if (lastSpace > maxLength * 0.5) {
-            // Truncate at the last word boundary
-            return truncated.substring(0, lastSpace).trim();
-        }
-        // If no good word boundary found, just return trimmed version
-        return truncated.trim();
-    };
 
     const fixGrammar = (str) => {
         if (!str || typeof str !== 'string') return str;
@@ -195,15 +186,6 @@ define('mod_contentcreator/builder', [
         const firstVerb = words[0]?.replace(/[,;]/g, '') || 'Complete';
         const restOfPC = words.slice(1).join(' ').replace(/^,?\s*(and\s+)?/i, '');
         
-        // v6.9.23: FUNCTIONAL ROLE MAPPING - ensures each PC has complete operational coverage
-        const functionalRoles = {
-            obtain: ['Locate', 'Access', 'Retrieve', 'Source', 'Collect'],
-            interpret: ['Review', 'Analyse', 'Assess', 'Evaluate', 'Check'],
-            confirm: ['Verify', 'Validate', 'Confirm', 'Cross-check', 'Ensure'],
-            document: ['Record', 'Complete', 'Log', 'Sign-off', 'Update'],
-            report: ['Notify', 'Communicate', 'Brief', 'Inform', 'Report'],
-            escalate: ['Escalate', 'Stop work', 'Refuse', 'Raise concern', 'Flag']
-        };
         
         // v6.9.23: CONCRETE ANCHORS - prevents abstract garbage
         const concreteAnchors = {
@@ -233,7 +215,6 @@ define('mod_contentcreator/builder', [
         keyPoints.push(`Confirm task requirements with ${role} before proceeding`);
         
         // KeyPoint 4: Direct PC action (the actual requirement)
-        const actionVerb = functionalRoles.interpret[Math.floor(Math.random() * 3)];
         keyPoints.push(`${firstVerb} ${restOfPC} according to site-specific procedures`);
         
         // KeyPoint 5: DOCUMENT - Where is this recorded?
@@ -430,7 +411,7 @@ define('mod_contentcreator/builder', [
                 if (jobTasksSelected) jobTasksSelected.innerHTML = '';
                 if (jobTasksCustomWrapper) jobTasksCustomWrapper.classList.add('cc-hidden');
                 // Clear stored tasks
-                window.CC_SELECTED_JOB_TASKS = [];
+                CC_SELECTED_JOB_TASKS = [];
                 // v6.9.18: Update button visibility when industry changes
                 updateGenerateTopicsButton();
             };
@@ -443,7 +424,7 @@ define('mod_contentcreator/builder', [
         // ===========================================================================
         
         // Initialize job roles array
-        window.CC_SELECTED_JOB_ROLES = [];
+        CC_SELECTED_JOB_ROLES = [];
         const MAX_JOB_ROLES = 5;
         
         // ===========================================================================
@@ -541,7 +522,7 @@ define('mod_contentcreator/builder', [
         // Auto-suggest using INTERSECTION logic (ChatGPT pattern)
         const autoSuggestCategories = () => {
             // Only trigger when exactly 3 roles selected
-            if (window.CC_SELECTED_JOB_ROLES.length !== MAX_JOB_ROLES) return;
+            if (CC_SELECTED_JOB_ROLES.length !== MAX_JOB_ROLES) return;
             
             // Get unit title and extract risk domains
             const unitTitleEl = document.getElementById('cc-unit-title');
@@ -568,7 +549,7 @@ define('mod_contentcreator/builder', [
             const equipmentCounts = {};
             const industry = document.getElementById('cc-industry')?.value || '';
             
-            window.CC_SELECTED_JOB_ROLES.forEach(role => {
+            CC_SELECTED_JOB_ROLES.forEach(role => {
                 const taskCats = getTaskCategoriesForJobTitle(industry, role);
                 const equipCats = getEquipmentCategoriesForJobTitle(industry, role);
                 
@@ -591,12 +572,12 @@ define('mod_contentcreator/builder', [
             
             // INTERSECTION: Prefer items shared across 2+ job roles
             const suggestedTasks = Object.entries(taskCounts)
-                .filter(([_, count]) => count >= 2)
+                .filter(entry => entry[1] >= 2)
                 .map(([id]) => id);
             
             // Equipment: Allow items relevant to at least 1 role (more permissive)
             const suggestedEquipment = Object.entries(equipmentCounts)
-                .filter(([_, count]) => count >= 1)
+                .filter(entry => entry[1] >= 1)
                 .map(([id]) => id);
             
             // Always include 'safety' task if heights/hazards unit
@@ -633,7 +614,7 @@ define('mod_contentcreator/builder', [
                 
                 // Show explainable "why" feedback (ChatGPT recommended)
                 if (selectedTaskNames.length > 0 || selectedEquipNames.length > 0) {
-                    const roleList = window.CC_SELECTED_JOB_ROLES.join(', ');
+                    const roleList = CC_SELECTED_JOB_ROLES.join(', ');
                     const unitShort = unitTitle.length > 40 ? unitTitle.substring(0, 40) + '...' : unitTitle;
                     
                     const feedback = document.createElement('div');
@@ -674,12 +655,12 @@ define('mod_contentcreator/builder', [
             const chipsContainer = document.getElementById('cc-job-roles-chips');
             if (!chipsContainer) return;
             
-            if (window.CC_SELECTED_JOB_ROLES.length === 0) {
+            if (CC_SELECTED_JOB_ROLES.length === 0) {
                 chipsContainer.innerHTML = '';
                 return;
             }
             
-            chipsContainer.innerHTML = window.CC_SELECTED_JOB_ROLES.map((role, idx) => `
+            chipsContainer.innerHTML = CC_SELECTED_JOB_ROLES.map((role, idx) => `
                 <div class="cc-role-chip" data-testid="chip-job-role-${idx}">
                     <span class="cc-role-chip-text">${role}</span>
                     <button type="button" class="cc-role-chip-remove" data-role="${role}" data-testid="button-remove-role-${idx}" aria-label="Remove ${role}">
@@ -693,16 +674,16 @@ define('mod_contentcreator/builder', [
                 btn.onclick = (e) => {
                     e.preventDefault();
                     const roleToRemove = btn.dataset.role;
-                    window.CC_SELECTED_JOB_ROLES = window.CC_SELECTED_JOB_ROLES.filter(r => r !== roleToRemove);
+                    CC_SELECTED_JOB_ROLES = CC_SELECTED_JOB_ROLES.filter(r => r !== roleToRemove);
                     renderJobRoleChips();
                     updateCategoriesForRoles();
                 };
             });
         };
         
-        // v6.8.2: Helper function to update task/equipment categories based on Unit of Competency
-        // v6.8.7: Attached to window for global access from fetchTGAUnit, handlePdfUpload
-        window.updateCategoriesForUnit = function() {
+        // v6.8.2: Helper function to update task/equipment categories based on Unit of Competency.
+        // v13.66: Published on the module-scoped binding so fetchTGAUnit and handlePdfUpload can call it.
+        updateCategoriesForUnit = function() {
             const taskCardsContainer = document.getElementById('cc-task-category-cards');
             const equipmentCardsContainer = document.getElementById('cc-equipment-category-cards');
             const industry = document.getElementById('cc-industry')?.value || '';
@@ -728,20 +709,18 @@ define('mod_contentcreator/builder', [
             const taskCategories = getTaskCategoriesForJobTitle(industry || '_default', '_default');
             const equipCategories = getEquipmentCategoriesForJobTitle(industry || '_default', '_default');
             
-            // Render all categories - use window.CC_BUILDER for module access
-            if (taskCardsContainer && window.CC_BUILDER?.renderCategoryCards) {
-                window.CC_BUILDER.renderCategoryCards(taskCardsContainer, taskCategories, 'task');
+            // Render all categories - use ccBuilder for module access
+            if (taskCardsContainer && ccBuilder?.renderCategoryCards) {
+                ccBuilder.renderCategoryCards(taskCardsContainer, taskCategories, 'task');
             }
-            if (equipmentCardsContainer && window.CC_BUILDER?.renderCategoryCards) {
-                window.CC_BUILDER.renderCategoryCards(equipmentCardsContainer, equipCategories, 'equipment');
+            if (equipmentCardsContainer && ccBuilder?.renderCategoryCards) {
+                ccBuilder.renderCategoryCards(equipmentCardsContainer, equipCategories, 'equipment');
             }
             
             // Auto-suggest based on unit keywords + PDF content
             setTimeout(() => {
                 if (typeof autoSuggestFromContent === 'function') {
                     autoSuggestFromContent(combinedText);
-                } else if (window.autoSuggestFromContent) {
-                    window.autoSuggestFromContent(combinedText);
                 }
             }, 200);
         };
@@ -749,8 +728,8 @@ define('mod_contentcreator/builder', [
         // v6.8.4: Auto-suggest categories based on combined unit title + PDF content
         // DYNAMIC MATCHING: Extracts words from unit/PDF and matches against category card text
         // Uses stemming-like matching for word roots (5+ chars for precision)
-        // v6.8.7: Also exposed to window for access from window.updateCategoriesForUnit
-        window.autoSuggestFromContent = function(combinedText) {
+        // v13.66: Module-scoped binding so updateCategoriesForUnit() can reach it.
+        autoSuggestFromContent = function(combinedText) {
             if (!combinedText) return;
             
             const taskCards = document.querySelectorAll('#cc-task-category-cards .cc-category-card');
@@ -910,8 +889,8 @@ define('mod_contentcreator/builder', [
                 if (jobTitleCustom) jobTitleCustom.classList.add('cc-hidden');
                 
                 // Add role if not already selected and under limit
-                if (jobTitle && !window.CC_SELECTED_JOB_ROLES.includes(jobTitle)) {
-                    if (window.CC_SELECTED_JOB_ROLES.length >= MAX_JOB_ROLES) {
+                if (jobTitle && !CC_SELECTED_JOB_ROLES.includes(jobTitle)) {
+                    if (CC_SELECTED_JOB_ROLES.length >= MAX_JOB_ROLES) {
                         // Show max roles message
                         const chipsContainer = document.getElementById('cc-job-roles-chips');
                         if (chipsContainer) {
@@ -928,12 +907,12 @@ define('mod_contentcreator/builder', [
                         return;
                     }
                     
-                    window.CC_SELECTED_JOB_ROLES.push(jobTitle);
+                    CC_SELECTED_JOB_ROLES.push(jobTitle);
                     renderJobRoleChips();
                     updateCategoriesForRoles();
                     
                     // v6.7.67: Auto-suggest when 3 roles selected
-                    if (window.CC_SELECTED_JOB_ROLES.length === MAX_JOB_ROLES) {
+                    if (CC_SELECTED_JOB_ROLES.length === MAX_JOB_ROLES) {
                         autoSuggestCategories();
                     }
                 }
@@ -942,9 +921,9 @@ define('mod_contentcreator/builder', [
                 vetJobTitle.value = '';
                 
                 // Clear legacy single-role variables
-                window.CC_SELECTED_TASK_CATEGORIES = [];
-                window.CC_SELECTED_EQUIPMENT_CATEGORIES = [];
-                window.CC_SELECTED_JOB_TASKS = [];
+                CC_SELECTED_TASK_CATEGORIES = [];
+                CC_SELECTED_EQUIPMENT_CATEGORIES = [];
+                CC_SELECTED_JOB_TASKS = [];
             };
         }
         
@@ -959,13 +938,13 @@ define('mod_contentcreator/builder', [
                 if (!customTitle) return;
                 
                 // Check if already added or at max
-                if (window.CC_SELECTED_JOB_ROLES.includes(customTitle)) {
+                if (CC_SELECTED_JOB_ROLES.includes(customTitle)) {
                     vetJobTitleCustom.value = '';
                     vetJobTitleCustom.classList.add('cc-hidden');
                     return;
                 }
                 
-                if (window.CC_SELECTED_JOB_ROLES.length >= MAX_JOB_ROLES) {
+                if (CC_SELECTED_JOB_ROLES.length >= MAX_JOB_ROLES) {
                     const chipsContainer = document.getElementById('cc-job-roles-chips');
                     if (chipsContainer) {
                         const msg = document.createElement('div');
@@ -978,12 +957,12 @@ define('mod_contentcreator/builder', [
                 }
                 
                 // Add to roles array
-                window.CC_SELECTED_JOB_ROLES.push(customTitle);
+                CC_SELECTED_JOB_ROLES.push(customTitle);
                 renderJobRoleChips();
                 updateCategoriesForRoles();
                 
                 // v6.7.67: Auto-suggest when 3 roles selected
-                if (window.CC_SELECTED_JOB_ROLES.length === MAX_JOB_ROLES) {
+                if (CC_SELECTED_JOB_ROLES.length === MAX_JOB_ROLES) {
                     autoSuggestCategories();
                 }
                 
@@ -1006,10 +985,10 @@ define('mod_contentcreator/builder', [
         
         // ===========================================================================
         // Render Category Cards - Beautiful multi-select cards with icons & examples
-        // v6.8.7: Exposed to window.CC_BUILDER for global access
+        // v6.8.7: Published on the shared ccBuilder object so the wizard steps
+        // outside this closure can call it.
         // ===========================================================================
-        window.CC_BUILDER = window.CC_BUILDER || {};
-        window.CC_BUILDER.renderCategoryCards = function(container, categories, type) {
+        ccBuilder.renderCategoryCards = function(container, categories, type) {
             if (!container || !categories || categories.length === 0) {
                 container.innerHTML = '<div class="cc-category-placeholder">No categories available</div>';
                 return;
@@ -1134,7 +1113,7 @@ define('mod_contentcreator/builder', [
             // Build cards HTML
             container.innerHTML = `
                 <div class="cc-category-cards-grid">
-                    ${categories.map((cat, idx) => `
+                    ${categories.map(cat => `
                         <div class="cc-category-card" data-category-id="${cat.id}" data-category-type="${type}" data-testid="card-${type}-${cat.id}">
                             <div class="cc-category-card-header">
                                 <div class="cc-category-icon">${getIcon(cat.icon)}</div>
@@ -1176,49 +1155,49 @@ define('mod_contentcreator/builder', [
                         card.classList.add('selected');
                         // VET mode arrays
                         if (catType === 'task') {
-                            if (!window.CC_SELECTED_TASK_CATEGORIES.includes(catId)) {
-                                window.CC_SELECTED_TASK_CATEGORIES.push(catId);
+                            if (!CC_SELECTED_TASK_CATEGORIES.includes(catId)) {
+                                CC_SELECTED_TASK_CATEGORIES.push(catId);
                             }
                         } else if (catType === 'equipment') {
-                            if (!window.CC_SELECTED_EQUIPMENT_CATEGORIES.includes(catId)) {
-                                window.CC_SELECTED_EQUIPMENT_CATEGORIES.push(catId);
+                            if (!CC_SELECTED_EQUIPMENT_CATEGORIES.includes(catId)) {
+                                CC_SELECTED_EQUIPMENT_CATEGORIES.push(catId);
                             }
                         }
                         // v6.6.40: Workplace mode arrays
                         else if (catType === 'wp-task') {
-                            if (!window.CC_WP_SELECTED_TASK_CATEGORIES) window.CC_WP_SELECTED_TASK_CATEGORIES = [];
-                            if (!window.CC_WP_SELECTED_TASK_CATEGORIES.includes(catId)) {
-                                window.CC_WP_SELECTED_TASK_CATEGORIES.push(catId);
+                            if (!CC_WP_SELECTED_TASK_CATEGORIES) CC_WP_SELECTED_TASK_CATEGORIES = [];
+                            if (!CC_WP_SELECTED_TASK_CATEGORIES.includes(catId)) {
+                                CC_WP_SELECTED_TASK_CATEGORIES.push(catId);
                             }
                         } else if (catType === 'wp-equipment') {
-                            if (!window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES) window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
-                            if (!window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES.includes(catId)) {
-                                window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES.push(catId);
+                            if (!CC_WP_SELECTED_EQUIPMENT_CATEGORIES) CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
+                            if (!CC_WP_SELECTED_EQUIPMENT_CATEGORIES.includes(catId)) {
+                                CC_WP_SELECTED_EQUIPMENT_CATEGORIES.push(catId);
                             }
                         }
                     } else {
                         card.classList.remove('selected');
                         // VET mode arrays
                         if (catType === 'task') {
-                            window.CC_SELECTED_TASK_CATEGORIES = window.CC_SELECTED_TASK_CATEGORIES.filter(id => id !== catId);
+                            CC_SELECTED_TASK_CATEGORIES = CC_SELECTED_TASK_CATEGORIES.filter(id => id !== catId);
                         } else if (catType === 'equipment') {
-                            window.CC_SELECTED_EQUIPMENT_CATEGORIES = window.CC_SELECTED_EQUIPMENT_CATEGORIES.filter(id => id !== catId);
+                            CC_SELECTED_EQUIPMENT_CATEGORIES = CC_SELECTED_EQUIPMENT_CATEGORIES.filter(id => id !== catId);
                         }
                         // v6.6.40: Workplace mode arrays
                         else if (catType === 'wp-task') {
-                            if (window.CC_WP_SELECTED_TASK_CATEGORIES) {
-                                window.CC_WP_SELECTED_TASK_CATEGORIES = window.CC_WP_SELECTED_TASK_CATEGORIES.filter(id => id !== catId);
+                            if (CC_WP_SELECTED_TASK_CATEGORIES) {
+                                CC_WP_SELECTED_TASK_CATEGORIES = CC_WP_SELECTED_TASK_CATEGORIES.filter(id => id !== catId);
                             }
                         } else if (catType === 'wp-equipment') {
-                            if (window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES) {
-                                window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES = window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES.filter(id => id !== catId);
+                            if (CC_WP_SELECTED_EQUIPMENT_CATEGORIES) {
+                                CC_WP_SELECTED_EQUIPMENT_CATEGORIES = CC_WP_SELECTED_EQUIPMENT_CATEGORIES.filter(id => id !== catId);
                             }
                         }
                     }
                     
                     // Update legacy CC_SELECTED_JOB_TASKS for prompt compatibility
                     if (catType === 'task' || catType === 'equipment') {
-                        window.CC_BUILDER.updateLegacyJobTasksFromCategories();
+                        ccBuilder.updateLegacyJobTasksFromCategories();
                     } else if (catType === 'wp-task' || catType === 'wp-equipment') {
                         updateWpSelectionCounts();
                     }
@@ -1228,11 +1207,11 @@ define('mod_contentcreator/builder', [
         
         // Update legacy job tasks array from selected categories (for prompt compatibility)
         // v6.9.1: Only runs if AI context is NOT available to avoid overwriting AI selections
-        window.CC_BUILDER.updateLegacyJobTasksFromCategories = function() {
+        ccBuilder.updateLegacyJobTasksFromCategories = function() {
             // v6.9.1: Skip if AI context is active - don't overwrite AI-selected data
-            if (window.CC_AI_CONTEXT && 
-                (window.CC_SELECTED_JOB_TITLES?.length > 0 || 
-                 window.CC_SELECTED_TASKS?.length > 0)) {
+            if (CC_AI_CONTEXT && 
+                (CC_SELECTED_JOB_TITLES?.length > 0 || 
+                 CC_SELECTED_TASKS?.length > 0)) {
                 return;
             }
             
@@ -1245,7 +1224,7 @@ define('mod_contentcreator/builder', [
             const selectedTasks = [];
             
             // Add task category titles + examples
-            window.CC_SELECTED_TASK_CATEGORIES.forEach(catId => {
+            CC_SELECTED_TASK_CATEGORIES.forEach(catId => {
                 const cat = taskCategories.find(c => c.id === catId);
                 if (cat) {
                     selectedTasks.push(`[${cat.title}] ${cat.examples.slice(0, 3).join(', ')}`);
@@ -1253,21 +1232,21 @@ define('mod_contentcreator/builder', [
             });
             
             // Store equipment info (legacy format - strings not IDs)
-            window.CC_SELECTED_EQUIPMENT_LEGACY = [];
-            window.CC_SELECTED_EQUIPMENT_CATEGORIES.forEach(catId => {
+            CC_SELECTED_EQUIPMENT_LEGACY = [];
+            CC_SELECTED_EQUIPMENT_CATEGORIES.forEach(catId => {
                 const cat = equipmentCategories.find(c => c.id === catId);
                 if (cat) {
-                    window.CC_SELECTED_EQUIPMENT_LEGACY.push(`[${cat.title}] ${cat.examples.slice(0, 3).join(', ')}`);
+                    CC_SELECTED_EQUIPMENT_LEGACY.push(`[${cat.title}] ${cat.examples.slice(0, 3).join(', ')}`);
                 }
             });
             
-            window.CC_SELECTED_JOB_TASKS = selectedTasks;
+            CC_SELECTED_JOB_TASKS = selectedTasks;
         };
         
         // v6.6.40: Update Workplace mode selection counts
         const updateWpSelectionCounts = function() {
-            const taskCount = (window.CC_WP_SELECTED_TASK_CATEGORIES || []).length;
-            const equipmentCount = (window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES || []).length;
+            const taskCount = (CC_WP_SELECTED_TASK_CATEGORIES || []).length;
+            const equipmentCount = (CC_WP_SELECTED_EQUIPMENT_CATEGORIES || []).length;
             
             const taskCountEl = document.getElementById('cc-wp-task-count');
             const equipmentCountEl = document.getElementById('cc-wp-equipment-count');
@@ -1295,38 +1274,12 @@ define('mod_contentcreator/builder', [
             'default': '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>'
         };
         
-        // Get training package data from code (first 3 characters of unit code)
-        const getTrainingPackageData = (unitCode) => {
-            if (!unitCode || unitCode.length < 3) return null;
-            const packageCode = unitCode.substring(0, 3).toUpperCase();
-            // Access TRAINING_PACKAGE_DATA from training_packages.js (v6.8.6: uses window global)
-            // CRITICAL: training_packages.js attaches to window.TRAINING_PACKAGE_DATA for AMD compatibility
-            const pkgData = window.TRAINING_PACKAGE_DATA || (typeof TRAINING_PACKAGE_DATA !== 'undefined' ? TRAINING_PACKAGE_DATA : null);
-            if (pkgData && pkgData[packageCode]) {
-                return { code: packageCode, ...pkgData[packageCode] };
-            }
-            return null;
-        };
         
         // ===========================================================================
         // v6.9.14: VET AI suggestions removed - AI auto-generates context based on
         // Industry + Sector + Job Level. No manual job/task/equipment selection UI.
         // ===========================================================================
         
-        // Helper to get level badge (kept for workplace mode)
-        const getLevelBadge = (level) => {
-            const colors = {
-                worker: 'cc-level-worker',
-                supervisor: 'cc-level-supervisor',
-                manager: 'cc-level-manager'
-            };
-            const labels = {
-                worker: 'Worker',
-                supervisor: 'Supervisor',
-                manager: 'Manager'
-            };
-            return `<span class="cc-level-badge ${colors[level] || colors.worker}">${labels[level] || 'Worker'}</span>`;
-        };
         
         // ===========================================================================
         // v6.9.1: AI-POWERED WORKPLACE SUGGESTIONS - Analyzes uploaded documents
@@ -1334,7 +1287,7 @@ define('mod_contentcreator/builder', [
         // NOTE: VET mode AI suggestions were removed in v6.9.14 - AI now auto-generates
         // ===========================================================================
         
-        window.CC_BUILDER.renderWorkplaceAISuggestions = async function(documentData) {
+        ccBuilder.renderWorkplaceAISuggestions = async function(documentData) {
             const container = document.getElementById('cc-wp-ai-suggestions-container');
             if (!container) {
                 return;
@@ -1369,45 +1322,34 @@ define('mod_contentcreator/builder', [
             }
             
             try {
-                const response = await fetch('https://lms-labs.com/api/moodle/content-creator/suggest-context-workplace', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                // Credentials are injected server side by the vendor proxy in ajax.php.
+                const result = await CcState.vendorFetch(cmid, 'suggestcontextworkplace', {
+                    payload: {
                         documentTitle: docTitle,
                         documentContent: docContent.substring(0, 15000), // Limit content size
                         documentSections: docSections.slice(0, 10),
                         industry: industry,
                         industrySector: industrySector,
                         trainingType: trainingType
-                    })
+                    }
                 });
-                
-                if (!response.ok) throw new Error(`API returned ${response.status}`);
-                const result = await response.json();
-                
-                if (!result.success || !result.data) {
-                    throw new Error(result.error || 'Failed to get suggestions');
+
+                if (!result || !result.success || !result.data) {
+                    throw new Error((result && result.error) || 'Failed to get suggestions');
                 }
-                
+
                 const aiData = result.data;
                 
                 // ===========================================================================
                 // v6.9.1: WORKPLACE AI CONTEXT RECEIVED - Job titles, tasks, equipment with section mappings
-                // ===========================================================================                
-                // Store all AI data for prompt use and Excel export
-                window.CC_WP_AI_JOB_TITLES = aiData.jobTitles || [];
-                window.CC_WP_AI_TASK_CATEGORIES = aiData.taskCategories || [];
-                window.CC_WP_AI_EQUIPMENT_CATEGORIES = aiData.equipmentCategories || [];
-                window.CC_WP_AI_DETECTED_INDUSTRY = aiData.detectedIndustry || '';
-                window.CC_WP_AI_DETECTED_SECTOR = aiData.detectedSector || '';
-                
+                // ===========================================================================
                 // Initialize selected arrays (first item of each pre-selected)
-                window.CC_WP_SELECTED_JOB_TITLES = aiData.jobTitles?.length > 0 ? [aiData.jobTitles[0].id] : [];
-                window.CC_WP_SELECTED_TASKS = aiData.taskCategories?.length > 0 ? [aiData.taskCategories[0].id] : [];
-                window.CC_WP_SELECTED_EQUIPMENT = aiData.equipmentCategories?.length > 0 ? [aiData.equipmentCategories[0].id] : [];
+                CC_WP_SELECTED_JOB_TITLES = aiData.jobTitles?.length > 0 ? [aiData.jobTitles[0].id] : [];
+                CC_WP_SELECTED_TASKS = aiData.taskCategories?.length > 0 ? [aiData.taskCategories[0].id] : [];
+                CC_WP_SELECTED_EQUIPMENT = aiData.equipmentCategories?.length > 0 ? [aiData.equipmentCategories[0].id] : [];
                 
                 // v6.9.1: Store full AI context for Excel export
-                window.CC_WP_AI_CONTEXT = {
+                CC_WP_AI_CONTEXT = {
                     documentTitle: docTitle,
                     detectedIndustry: aiData.detectedIndustry || '',
                     detectedSector: aiData.detectedSector || '',
@@ -1457,7 +1399,7 @@ define('mod_contentcreator/builder', [
                             </div>
                             <div class="cc-ai-cards" id="cc-wp-ai-job-cards">
                                 ${aiData.jobTitles.map((job, idx) => `
-                                    <label class="cc-ai-card ${idx === 0 ? 'cc-ai-card--selected' : ''}" data-id="${job.id}" data-testid="wp-ai-job-${job.id}">
+                                    <label class="cc-ai-card ${idx === 0 ? 'cc-ai-card--selected' : ''}" data-id="${escapeHtml(job.id)}" data-testid="wp-ai-job-${escapeHtml(job.id)}">
                                         <input type="checkbox" class="cc-ai-checkbox" ${idx === 0 ? 'checked' : ''} />
                                         <div class="cc-ai-card-body">
                                             <div class="cc-ai-card-header">
@@ -1487,7 +1429,7 @@ define('mod_contentcreator/builder', [
                             </div>
                             <div class="cc-ai-cards" id="cc-wp-ai-task-cards">
                                 ${aiData.taskCategories.map((task, idx) => `
-                                    <label class="cc-ai-card ${idx === 0 ? 'cc-ai-card--selected' : ''}" data-id="${task.id}" data-testid="wp-ai-task-${task.id}">
+                                    <label class="cc-ai-card ${idx === 0 ? 'cc-ai-card--selected' : ''}" data-id="${escapeHtml(task.id)}" data-testid="wp-ai-task-${escapeHtml(task.id)}">
                                         <input type="checkbox" class="cc-ai-checkbox" ${idx === 0 ? 'checked' : ''} />
                                         <div class="cc-ai-card-body">
                                             <span class="cc-ai-card-title">${escapeHtml(task.title)}</span>
@@ -1515,7 +1457,7 @@ define('mod_contentcreator/builder', [
                             </div>
                             <div class="cc-ai-cards" id="cc-wp-ai-equip-cards">
                                 ${aiData.equipmentCategories.map((equip, idx) => `
-                                    <label class="cc-ai-card ${idx === 0 ? 'cc-ai-card--selected' : ''}" data-id="${equip.id}" data-testid="wp-ai-equip-${equip.id}">
+                                    <label class="cc-ai-card ${idx === 0 ? 'cc-ai-card--selected' : ''}" data-id="${escapeHtml(equip.id)}" data-testid="wp-ai-equip-${escapeHtml(equip.id)}">
                                         <input type="checkbox" class="cc-ai-checkbox" ${idx === 0 ? 'checked' : ''} />
                                         <div class="cc-ai-card-body">
                                             <span class="cc-ai-card-title">${escapeHtml(equip.title)}</span>
@@ -1580,19 +1522,19 @@ define('mod_contentcreator/builder', [
                     if (section === 'wp-job-titles') {
                         const selected = Array.from(document.querySelectorAll('#cc-wp-ai-job-cards input:checked'))
                             .map(cb => cb.closest('.cc-ai-card').dataset.id);
-                        window.CC_WP_SELECTED_JOB_TITLES = selected;
+                        CC_WP_SELECTED_JOB_TITLES = selected;
                         const countEl = document.getElementById('cc-wp-job-count');
                         if (countEl) countEl.textContent = selected.length;
                     } else if (section === 'wp-tasks') {
                         const selected = Array.from(document.querySelectorAll('#cc-wp-ai-task-cards input:checked'))
                             .map(cb => cb.closest('.cc-ai-card').dataset.id);
-                        window.CC_WP_SELECTED_TASKS = selected;
+                        CC_WP_SELECTED_TASKS = selected;
                         const countEl = document.getElementById('cc-wp-task-count');
                         if (countEl) countEl.textContent = selected.length;
                     } else if (section === 'wp-equipment') {
                         const selected = Array.from(document.querySelectorAll('#cc-wp-ai-equip-cards input:checked'))
                             .map(cb => cb.closest('.cc-ai-card').dataset.id);
-                        window.CC_WP_SELECTED_EQUIPMENT = selected;
+                        CC_WP_SELECTED_EQUIPMENT = selected;
                         const countEl = document.getElementById('cc-wp-equip-count');
                         if (countEl) countEl.textContent = selected.length;
                     }
@@ -1650,8 +1592,8 @@ define('mod_contentcreator/builder', [
                 const equipmentGrid = document.getElementById('cc-wp-equipment-categories');
                 if (taskGrid) taskGrid.innerHTML = '<p class="cc-form-hint">Select job title first...</p>';
                 if (equipmentGrid) equipmentGrid.innerHTML = '<p class="cc-form-hint">Select job title first...</p>';
-                window.CC_WP_SELECTED_TASK_CATEGORIES = [];
-                window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
+                CC_WP_SELECTED_TASK_CATEGORIES = [];
+                CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
             };
         }
         
@@ -1673,8 +1615,8 @@ define('mod_contentcreator/builder', [
                 }
                 
                 // Initialize selection arrays for Workplace mode
-                window.CC_WP_SELECTED_TASK_CATEGORIES = [];
-                window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
+                CC_WP_SELECTED_TASK_CATEGORIES = [];
+                CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
                 
                 // Get task and equipment categories
                 const taskCategories = getTaskCategoriesForJobTitle(industry, jobTitle);
@@ -1682,12 +1624,12 @@ define('mod_contentcreator/builder', [
                 
                 // Render task category cards using same pattern as VET
                 if (taskContainer) {
-                    window.CC_BUILDER.renderCategoryCards(taskContainer, taskCategories, 'wp-task');
+                    ccBuilder.renderCategoryCards(taskContainer, taskCategories, 'wp-task');
                 }
                 
                 // Render equipment category cards
                 if (equipmentContainer) {
-                    window.CC_BUILDER.renderCategoryCards(equipmentContainer, equipmentCategories, 'wp-equipment');
+                    ccBuilder.renderCategoryCards(equipmentContainer, equipmentCategories, 'wp-equipment');
                 }
                 
                 updateWpSelectionCounts();
@@ -1709,18 +1651,18 @@ define('mod_contentcreator/builder', [
                 const equipmentContainer = document.getElementById('cc-wp-equipment-categories');
                 
                 // Clear previously selected categories
-                window.CC_WP_SELECTED_TASK_CATEGORIES = [];
-                window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
+                CC_WP_SELECTED_TASK_CATEGORIES = [];
+                CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
                 
                 // Get categories using custom job title
                 const taskCategories = getTaskCategoriesForJobTitle(industry, customTitle);
                 const equipmentCategories = getEquipmentCategoriesForJobTitle(industry, customTitle);
                 
                 if (taskContainer) {
-                    window.CC_BUILDER.renderCategoryCards(taskContainer, taskCategories, 'wp-task');
+                    ccBuilder.renderCategoryCards(taskContainer, taskCategories, 'wp-task');
                 }
                 if (equipmentContainer) {
-                    window.CC_BUILDER.renderCategoryCards(equipmentContainer, equipmentCategories, 'wp-equipment');
+                    ccBuilder.renderCategoryCards(equipmentContainer, equipmentCategories, 'wp-equipment');
                 }
                 
                 updateWpSelectionCounts();
@@ -3277,12 +3219,6 @@ define('mod_contentcreator/builder', [
         return EQUIPMENT_CATEGORIES['_default']['_default'];
     };
 
-    // Legacy function for backward compatibility
-    const getTasksForJobTitle = (jobTitle) => {
-        // This returns flat task list for old code paths
-        const categories = getTaskCategoriesForJobTitle('_default', jobTitle);
-        return categories.flatMap(cat => cat.examples.slice(0, 2));
-    };
 
     const JOB_LEVELS = [
         { value: 'entry', label: 'Entry Level / Trainee' },
@@ -3308,11 +3244,21 @@ define('mod_contentcreator/builder', [
         { value: 'professional', label: 'Professional Development' }
     ];
 
+    /**
+     * Escape a value for safe interpolation into generated markup.
+     *
+     * Uses the same DOM-based approach as player5.js for element content, then
+     * additionally escapes quotes so the result is also safe inside a double or
+     * single quoted HTML attribute.
+     *
+     * @param {String} str Untrusted value, typically third-party vendor data.
+     * @return {String} HTML- and attribute-safe text.
+     */
     const escapeHtml = (str) => {
         if (!str) return '';
         const div = document.createElement('div');
         div.textContent = str;
-        return div.innerHTML;
+        return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     };
 
     const countWords = (text) => {
@@ -3332,10 +3278,10 @@ define('mod_contentcreator/builder', [
         if (!container) return;
         
         // v6.6.38: Initialize category selection arrays at startup
-        window.CC_SELECTED_TASK_CATEGORIES = window.CC_SELECTED_TASK_CATEGORIES || [];
-        window.CC_SELECTED_EQUIPMENT_CATEGORIES = window.CC_SELECTED_EQUIPMENT_CATEGORIES || [];
-        window.CC_SELECTED_EQUIPMENT = window.CC_SELECTED_EQUIPMENT || [];
-        window.CC_SELECTED_JOB_TASKS = window.CC_SELECTED_JOB_TASKS || []; // Legacy compatibility
+        CC_SELECTED_TASK_CATEGORIES = CC_SELECTED_TASK_CATEGORIES || [];
+        CC_SELECTED_EQUIPMENT_CATEGORIES = CC_SELECTED_EQUIPMENT_CATEGORIES || [];
+        CC_SELECTED_EQUIPMENT = CC_SELECTED_EQUIPMENT || [];
+        CC_SELECTED_JOB_TASKS = CC_SELECTED_JOB_TASKS || []; // Legacy compatibility
         
         fetchCreditsBalance(); // Fetch credits on init
         
@@ -3349,32 +3295,14 @@ define('mod_contentcreator/builder', [
     // v6.5.18: Fixed endpoint URL and credential format
     const fetchCreditsBalance = async () => {
         try {
-            const siteId = window.CC_CONFIG?.siteId;
-            const apiKey = window.CC_CONFIG?.apiKey;
-            if (!siteId || !apiKey) {
-                return;
-            }
-            
-            // v6.5.18: Use correct endpoint /api/credits with siteId in query, apiKey in X-API-Key header for security
-            const url = `https://lms-labs.com/api/credits?siteId=${encodeURIComponent(siteId)}`;
-            
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-API-Key': apiKey
-                }
-            });
-            
-            
-            if (response.ok) {
-                const data = await response.json();
-                currentCredits = data.balance || data.credits || 0;
-                updateCreditsDisplay();
-            } else {
-                const errorText = await response.text();
-            }
+            // v13.66: The site id and API key are held server side; the proxy injects them.
+            const data = await CcState.vendorFetch(cmid, 'credits');
+            currentCredits = (data && (data.balance || data.credits)) || 0;
+            updateCreditsDisplay();
         } catch (error) {
+            // A missing or unconfigured credits balance is not fatal - the widget
+            // simply stays blank - so this is logged rather than surfaced to the user.
+            ccWarn('fetchCreditsBalance: unable to read credit balance:', error);
         }
     };
     
@@ -3542,11 +3470,11 @@ define('mod_contentcreator/builder', [
                     if (callback) callback(true);
                 }).catch((e) => {
                     var msg = (e && e.message) ? e.message : String(e);
-                    console.error('[CC SAVE] Direct save attempt ' + attempt + ' FAILED:', msg);
+                    ccError('[CC SAVE] Direct save attempt ' + attempt + ' FAILED:', msg);
                     if (attempt < MAX_SAVE_RETRIES) {
                         setTimeout(() => attemptDirectSave(attempt + 1), 1000 * attempt);
                     } else {
-                        console.error('[CC SAVE] All ' + MAX_SAVE_RETRIES + ' direct-save attempts exhausted.');
+                        ccError('[CC SAVE] All ' + MAX_SAVE_RETRIES + ' direct-save attempts exhausted.');
                         if (callback) callback(false);
                     }
                 });
@@ -3586,12 +3514,12 @@ define('mod_contentcreator/builder', [
                 if (callback) callback(true);
             } catch (e) {
                 var msg = (e && e.message) ? e.message : String(e);
-                console.error('[CC SAVE] Chunked save attempt ' + attempt + ' FAILED:', msg);
+                ccError('[CC SAVE] Chunked save attempt ' + attempt + ' FAILED:', msg);
                 if (attempt < MAX_SAVE_RETRIES) {
                     await new Promise(r => setTimeout(r, 1000 * attempt));
                     return attemptChunkedSave(attempt + 1);
                 }
-                console.error('[CC SAVE] All ' + MAX_SAVE_RETRIES + ' chunked-save attempts exhausted.');
+                ccError('[CC SAVE] All ' + MAX_SAVE_RETRIES + ' chunked-save attempts exhausted.');
                 if (callback) callback(false);
             }
         };
@@ -3911,7 +3839,7 @@ define('mod_contentcreator/builder', [
                             <div class="cc-input-with-button">
                                 <input type="text" class="cc-input" id="cc-unit-code" 
                                        placeholder="e.g., RIIWHS204E" data-testid="input-unit-code"
-                                       value="${tgaData?.unitCode || ''}">
+                                       value="${escapeHtml(tgaData?.unitCode || '')}">
                                 <button type="button" class="cc-btn cc-btn-secondary" id="cc-fetch-unit" 
                                         data-testid="button-fetch-unit">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
@@ -4242,7 +4170,7 @@ define('mod_contentcreator/builder', [
         if (selectedMode === 'vet') {
             const hasTgaData = tgaData && tgaData.elements && tgaData.elements.length > 0;
             const hasIndustry = !!document.getElementById('cc-industry')?.value;
-            const hasJobLevel = window.CC_SELECTED_JOB_LEVELS.length > 0;
+            const hasJobLevel = CC_SELECTED_JOB_LEVELS.length > 0;
             allInputsValid = hasTgaData && hasIndustry && hasJobLevel;
         } else if (selectedMode === 'workplace') {
             const hasDocument = !!workplaceData;
@@ -4343,7 +4271,7 @@ define('mod_contentcreator/builder', [
                                 <polyline points="14 2 14 8 20 8"/>
                             </svg>
                             <div>
-                                <span id="cc-uploaded-filename" class="cc-file-name">${workplaceData?.filename || ''}</span>
+                                <span id="cc-uploaded-filename" class="cc-file-name">${escapeHtml(workplaceData?.filename || '')}</span>
                                 <span id="cc-uploaded-filesize" class="cc-file-size">${workplaceData ? formatFileSize(workplaceData.wordCount * 6) : ''}</span>
                             </div>
                         </div>
@@ -4558,7 +4486,6 @@ define('mod_contentcreator/builder', [
 
     const renderStep2University = () => {
         const hasOutcomes = storedOutcomes.length > 0;
-        const hasChatGPTContent = !!uniPastedContent;
         return `
             <div class="cc-step-content" data-testid="step-2-university">
                 <h2 class="cc-section-title">Learning Context - University</h2>
@@ -4757,7 +4684,6 @@ define('mod_contentcreator/builder', [
 
     const renderStep2PD = () => {
         const hasOutcomes = storedOutcomes.length > 0;
-        const hasChatGPTContent = !!pdPastedContent;
         return `
             <div class="cc-step-content" data-testid="step-2-pd">
                 <h2 class="cc-section-title">Learning Context - Professional Development</h2>
@@ -4967,7 +4893,6 @@ define('mod_contentcreator/builder', [
     const renderWorkplaceDetails = (data) => {
         const wordCount = data.content?.split(/\s+/).length || 0;
         const topicCount = suggestedMajorTopics.length;
-        const selectedCount = selectedMajorTopicIds.length;
         
         return `
             <div class="cc-unit-card">
@@ -5173,10 +5098,10 @@ define('mod_contentcreator/builder', [
                         const coverageText = topic.coverageSummary ? 
                             `Elements: ${topic.coverageSummary.elements?.join(', ') || '-'} | PCs: ${_pcsDisplay}` : '';
                         return `
-                            <label class="cc-major-topic-card ${isChecked ? 'selected' : ''}" data-topic-id="${topic.id}">
+                            <label class="cc-major-topic-card ${isChecked ? 'selected' : ''}" data-topic-id="${escapeHtml(topic.id)}">
                                 <div class="cc-topic-card-checkbox">
                                     <input type="checkbox" class="cc-major-topic-checkbox" 
-                                           data-topic-id="${topic.id}" 
+                                           data-topic-id="${escapeHtml(topic.id)}" 
                                            ${isChecked ? 'checked' : ''}
                                            data-testid="checkbox-topic-${idx}">
                                 </div>
@@ -5240,8 +5165,8 @@ define('mod_contentcreator/builder', [
                     const state = document.getElementById('cc-state')?.value || '';
                     const industry = document.getElementById('cc-industry')?.value || '';
                     const industrySector = document.getElementById('cc-industry-sector')?.value || '';
-                    const jobLevel = window.CC_SELECTED_JOB_LEVELS.length > 0
-                        ? window.CC_SELECTED_JOB_LEVELS.join(', ')
+                    const jobLevel = CC_SELECTED_JOB_LEVELS.length > 0
+                        ? CC_SELECTED_JOB_LEVELS.join(', ')
                         : 'worker';
                     
                     // v6.9.14: jobTitle, jobTasks, taskEquipment left empty
@@ -5264,55 +5189,10 @@ define('mod_contentcreator/builder', [
             };
             
             ccLog('suggestMajorTopics: Sending request to API...', { unitCode: requestPayload.unitCode, elements: requestPayload.elements?.length });
-            const response = await fetch('https://lms-labs.com/api/moodle/content-creator/suggest-topics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestPayload)
-            });
-            
-            if (!response.ok) {
-            ccLog("suggestMajorTopics: Response status:", response.status, response.statusText);
-                // v7.9.7: Enhanced error details from server
-                let errorDetails = '';
-                let debugInfo = '';
-                let errorType = '';
-                let timestamp = '';
-                try {
-                    const errorBody = await response.json();
-                    errorDetails = errorBody.error || '';
-                    debugInfo = errorBody.debugInfo || '';
-                    errorType = errorBody.errorType || '';
-                    timestamp = errorBody.timestamp || '';
-                } catch (e) {
-                    // Response wasn't JSON
-                    try {
-                        const errorText = await response.text();
-                        errorDetails = errorText.substring(0, 200);
-                    } catch (e2) {
-                        errorDetails = 'Could not read error response';
-                    }
-                }
-                throw new Error('API returned ' + response.status + ': ' + (errorDetails || response.statusText) + (debugInfo ? ' | Debug: ' + debugInfo : ''));
-            }
-            
-            
-            const responseText = await response.text();
-            
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (parseErr) {
-                throw new Error('Server returned invalid JSON: ' + responseText.substring(0, 200));
-            }
-            
-            if (data.suggestedTopics) {
-            ccLog("suggestMajorTopics: Parsed data:", { success: data.success, topics: data.suggestedTopics?.length || 0, error: data.error });
-                data.suggestedTopics.forEach((t, i) => {
-                    (t.subtopics || []).forEach((s, j) => {
-                    });
-                });
-            }
-            
+            // v13.66: Routed through the server-side vendor proxy. The proxy rejects with
+            // the server's already-translated message, so no HTTP status handling is needed.
+            const data = await CcState.vendorFetch(cmid, 'suggesttopics', {payload: requestPayload});
+
             ccLog("suggestMajorTopics: Response received:", { success: data.success, topicCount: data.suggestedTopics?.length });
             if (data.success && data.suggestedTopics?.length > 0) {
                 // v11.78: Belt-and-suspenders client-side correction of element numbers.
@@ -5404,57 +5284,6 @@ define('mod_contentcreator/builder', [
         }
     };
 
-    // Convert abstract PC text to workplace-action title (Golden Rules compliant)
-    const pcToWorkplaceAction = (pcText) => {
-        if (!pcText) return 'Complete Required Tasks';
-        
-        // Remove common abstract prefixes and convert to action verbs
-        const abstractToAction = {
-            'identifying': 'Check',
-            'interpreting': 'Read and Apply',
-            'recognizing': 'Spot',
-            'understanding': 'Apply',  // v6.6.4: Changed from 'Learn' (BANNED) to 'Apply'
-            'demonstrating': 'Show',
-            'applying': 'Use',
-            'evaluating': 'Review',
-            'analyzing': 'Examine',
-            'selecting': 'Choose',
-            'determining': 'Decide',
-            'establishing': 'Set Up',
-            'maintaining': 'Keep Up',
-            'monitoring': 'Watch',
-            'communicating': 'Talk With Team About',
-            'documenting': 'Record',
-            'reporting': 'Report',
-            'implementing': 'Put Into Action',
-            'following': 'Follow',
-            'completing': 'Complete',
-            'preparing': 'Get Ready',
-            'inspecting': 'Check',
-            'verifying': 'Confirm',
-            'ensuring': 'Make Sure',
-            'obtaining': 'Get',
-            'accessing': 'Access',
-            'reviewing': 'Review'
-        };
-        
-        let result = pcText.trim();
-        const firstWord = result.split(' ')[0].toLowerCase();
-        
-        // Replace abstract gerund with action verb
-        if (abstractToAction[firstWord]) {
-            result = abstractToAction[firstWord] + ' ' + result.split(' ').slice(1).join(' ');
-        }
-        
-        // Capitalize first letter and limit length
-        result = result.charAt(0).toUpperCase() + result.slice(1);
-        const words = result.split(' ');
-        if (words.length > 8) {
-            result = words.slice(0, 8).join(' ');
-        }
-        
-        return result;
-    };
 
     const createDefaultMajorTopics = () => {
         if (!tgaData?.elements?.length) return;
@@ -6184,397 +6013,15 @@ define('mod_contentcreator/builder', [
         return title.replace(/^\d+(\.\d+)?\s*[- - :]?\s*/, '').trim();
     };
 
-    // Normalize title with escaping and cleanup
-    const normalizeTitle = (title) => escapeHtml(stripNumberPrefix(title || '').trim());
 
-    // Create DOM element utility (clean + testable)
-    const createEl = (tag, className, text) => {
-        const el = document.createElement(tag);
-        if (className) el.className = className;
-        if (text !== undefined) el.textContent = text;
-        return el;
-    };
 
-    // Normalize mappings for safe data handling (no silent failures)
-    const normalizeMappings = (m = {}) => ({
-        elements: Array.isArray(m.elements) ? m.elements : [],
-        performanceCriteria: Array.isArray(m.performanceCriteria) ? m.performanceCriteria : [],
-        performanceEvidence: Array.isArray(m.performanceEvidence) ? m.performanceEvidence : [],
-        knowledgeEvidence: Array.isArray(m.knowledgeEvidence) ? m.knowledgeEvidence : [],
-        foundationSkills: Array.isArray(m.foundationSkills) ? m.foundationSkills : []
-    });
 
-    // Subtopic renderer (componentised, accessible) - now includes keyPoints
-    // v6.6.76: Use actual pcNumber from data instead of array index
-    const renderSubtopicItemDOM = (subtopic, topicIndex, subIndex, elementNumber) => {
-        const item = createEl('div', 'cc-subtopic-item');
-        item.dataset.subtopicIndex = subIndex;
-        item.setAttribute('role', 'listitem');
 
-        // v6.6.76: Use actual PC number from subtopic data if available, else use element-based numbering
-        const pcNumber = subtopic.pcNumber || `${elementNumber || (topicIndex + 1)}.${subIndex + 1}`;
-        const number = createEl('span', 'cc-subtopic-number', pcNumber);
 
-        const info = createEl('div', 'cc-subtopic-info');
-        info.appendChild(createEl('span', 'cc-subtopic-title', normalizeTitle(subtopic.title)));
 
-        // Render keyPoints (sub-sub-topics) if available
-        const keyPoints = subtopic.keyPoints || [];
-        if (keyPoints.length > 0) {
-            const keyPointsList = createEl('ul', 'cc-keypoints-list');
-            keyPoints.forEach(kp => {
-                const li = createEl('li', 'cc-keypoint-item', typeof kp === 'string' ? kp : (kp.text || kp.title || ''));
-                keyPointsList.appendChild(li);
-            });
-            info.appendChild(keyPointsList);
-        }
 
-        item.append(number, info);
-        return item;
-    };
 
-    // Topic renderer (semantic + accessible with ARIA)
-    // v6.6.76: Extract element number from topic.id (e.g., "Element 3" -> 3)
-    const renderTopicItemDOM = (topic, topicIndex) => {
-        const container = createEl('section', 'cc-topic-item');
-        container.dataset.topicIndex = topicIndex;
-        container.setAttribute('aria-labelledby', `cc-topic-title-${topicIndex}`);
 
-        // v6.6.76: Extract actual element number from topic.id or title
-        const elementMatch = (topic.id || topic.title || '').match(/Element\s*(\d+)/i);
-        const elementNumber = elementMatch ? parseInt(elementMatch[1], 10) : (topicIndex + 1);
-
-        const header = createEl('header', 'cc-topic-header');
-
-        const toggle = createEl('button', 'cc-topic-toggle');
-        toggle.type = 'button';
-        toggle.setAttribute('aria-expanded', 'true');
-        toggle.setAttribute('aria-controls', `cc-subtopics-${topicIndex}`);
-
-        toggle.appendChild(createEl('span', 'cc-topic-number', elementNumber));
-
-        const info = createEl('div', 'cc-topic-info');
-        const titleEl = createEl('h4', 'cc-topic-title', normalizeTitle(topic.title));
-        titleEl.id = `cc-topic-title-${topicIndex}`;
-        info.appendChild(titleEl);
-        info.appendChild(createEl('span', 'cc-topic-sections', `${topic.subtopics?.length || 0} sections`));
-
-        // AUTO-SPLIT-SECTION (v12.78): Show a clear badge when this topic is a split part
-        if (topic.splitPart) {
-            const splitBadge = createEl('span', 'cc-topic-split-badge');
-            splitBadge.style.cssText = 'display:inline-block;margin-top:4px;padding:2px 8px;font-size:11px;font-weight:600;border-radius:4px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;';
-            splitBadge.textContent = `Part ${topic.splitPart} of ${topic.splitTotal} — element split because it has more than ${MAX_PCS_PER_SECTION} performance criteria`;
-            info.appendChild(splitBadge);
-        }
-
-        toggle.appendChild(info);
-        header.appendChild(toggle);
-
-        const subtopicsWrap = createEl('div', 'cc-subtopics');
-        subtopicsWrap.id = `cc-subtopics-${topicIndex}`;
-        subtopicsWrap.setAttribute('role', 'list');
-
-        (topic.subtopics || []).forEach((sub, si) => {
-            subtopicsWrap.appendChild(renderSubtopicItemDOM(sub, topicIndex, si, elementNumber));
-        });
-
-        container.append(header, subtopicsWrap);
-        return container;
-    };
-
-    // Render learning structure to DOM (clean + testable)
-    const renderLearningStructureDOM = (topics, mountEl) => {
-        mountEl.innerHTML = '';
-        topics.forEach((topic, index) => {
-            mountEl.appendChild(renderTopicItemDOM(topic, index));
-        });
-    };
-
-    // Generate mapping document rows - ChatGPT EXACT FORMAT
-    // Structure: Unit Requirement Type | Requirement Reference | Requirement Text | Learning Content Location | Coverage Explanation
-    // Each row = one unit requirement (Element, PC, KE, PE, FS) showing where it's taught
-    const generateMappingDocument = (topics) => {
-        const rows = [];
-        
-        // Build reverse lookup: for each requirement code, find which topics/subtopics cover it
-        const coverageMap = {
-            elements: {},      // e.g., "1" -> [{topic, subtopic, location}]
-            pc: {},            // e.g., "1.1" -> [{topic, subtopic, location}]
-            ke: {},            // e.g., "KE1" -> [{topic, subtopic, location}]
-            pe: {},            // e.g., "PE1" -> [{topic, subtopic, location}]
-            fs: {}             // e.g., "FS1" -> [{topic, subtopic, location}]
-        };
-        
-        topics.forEach((topic, tIndex) => {
-            const elementNum = tIndex + 1;
-            // Track element coverage
-            if (!coverageMap.elements[elementNum]) coverageMap.elements[elementNum] = [];
-            coverageMap.elements[elementNum].push({
-                location: `Element ${elementNum}`,
-                topicTitle: topic.title
-            });
-            
-            (topic.subtopics || []).forEach((sub, sIndex) => {
-                const pcNum = `${elementNum}.${sIndex + 1}`;
-                const location = `Element ${elementNum}  -  PC ${pcNum}`;
-                const mappings = sub.coversMappings || {};
-                
-                // Track PC coverage
-                if (!coverageMap.pc[pcNum]) coverageMap.pc[pcNum] = [];
-                coverageMap.pc[pcNum].push({
-                    location,
-                    subtopicTitle: sub.title,
-                    keyPoints: sub.keyPoints || []
-                });
-                
-                // Track KE coverage
-                (mappings.ke || []).forEach(ke => {
-                    if (!coverageMap.ke[ke]) coverageMap.ke[ke] = [];
-                    coverageMap.ke[ke].push({ location, subtopicTitle: sub.title });
-                });
-                
-                // Track PE coverage
-                (mappings.pe || []).forEach(pe => {
-                    if (!coverageMap.pe[pe]) coverageMap.pe[pe] = [];
-                    coverageMap.pe[pe].push({ location, subtopicTitle: sub.title });
-                });
-                
-                // Track FS coverage
-                (mappings.fs || []).forEach(fs => {
-                    if (!coverageMap.fs[fs]) coverageMap.fs[fs] = [];
-                    coverageMap.fs[fs].push({ location, subtopicTitle: sub.title });
-                });
-            });
-        });
-        
-        return coverageMap;
-    };
-
-    // Coverage analysis with gap detection (enterprise-grade validation)
-    const analyseCoverage = (coverageMap, unitRequirements) => {
-        const covered = {
-            elements: Object.keys(coverageMap.elements).length,
-            performanceCriteria: Object.keys(coverageMap.pc).length,
-            knowledgeEvidence: Object.keys(coverageMap.ke).length,
-            performanceEvidence: Object.keys(coverageMap.pe).length,
-            foundationSkills: Object.keys(coverageMap.fs).length
-        };
-
-        const findGaps = (required, coveredMap) => {
-            if (!required) return [];
-            return required.filter(r => !coveredMap[r]);
-        };
-
-        return {
-            covered,
-            gaps: {
-                elements: findGaps(unitRequirements?.elements, coverageMap.elements),
-                performanceCriteria: findGaps(unitRequirements?.performanceCriteria, coverageMap.pc),
-                knowledgeEvidence: findGaps(unitRequirements?.knowledgeEvidence, coverageMap.ke),
-                performanceEvidence: findGaps(unitRequirements?.performanceEvidence, coverageMap.pe),
-                foundationSkills: findGaps(unitRequirements?.foundationSkills, coverageMap.fs)
-            }
-        };
-    };
-
-    // Render mapping table - ChatGPT EXACT FORMAT
-    // Structure: Unit Requirement Type | Requirement Reference | Requirement Text | Learning Content Location | Coverage Explanation
-    const renderMappingTable = (coverageMap, unitData) => {
-        const table = document.createElement('table');
-        table.className = 'cc-mapping-table';
-        table.setAttribute('role', 'table');
-
-        const rows = [];
-        
-        // Helper to get requirement text from unit data
-        const getElementText = (elNum) => {
-            const el = unitData?.elements?.[parseInt(elNum) - 1];
-            return el?.name || el?.title || `Element ${elNum}`;
-        };
-        
-        const getPCText = (pcNum) => {
-            const parts = pcNum.split('.');
-            const elIdx = parseInt(parts[0]) - 1;
-            const el = unitData?.elements?.[elIdx];
-            if (!el) return `PC ${pcNum}`;
-            if (parts.length === 2) {
-                const pcIdx = parseInt(parts[1]) - 1;
-                const pc = el?.performanceCriteria?.[pcIdx];
-                return typeof pc === 'string' ? pc : (pc?.text || `PC ${pcNum}`);
-            }
-            if (parts.length === 3) {
-                // AI misread of multi-digit 2-level code: "5.1.0" → try "5.10"
-                const twoLevelCode = parts[0] + '.' + parts[1] + parts[2];
-                const findPc = (code) => el.performanceCriteria?.find(pc => {
-                    const s = typeof pc === 'string' ? pc : (pc?.text || '');
-                    return s.startsWith(code + ' ') || s === code;
-                });
-                const pc = findPc(pcNum) || findPc(twoLevelCode);
-                return typeof pc === 'string' ? pc : (pc?.text || `PC ${pcNum}`);
-            }
-            return `PC ${pcNum}`;
-        };
-        
-        const getKEText = (keRef) => {
-            const idx = parseInt(keRef.replace(/\D/g, '')) - 1;
-            const ke = unitData?.knowledgeEvidence?.[idx];
-            return typeof ke === 'string' ? ke : (ke?.text || keRef);
-        };
-        
-        const getPEText = (peRef) => {
-            const idx = parseInt(peRef.replace(/\D/g, '')) - 1;
-            const pe = unitData?.performanceEvidence?.[idx];
-            return typeof pe === 'string' ? pe : (pe?.text || peRef);
-        };
-        
-        const getFSText = (fsRef) => {
-            const idx = parseInt(fsRef.replace(/\D/g, '')) - 1;
-            const fs = unitData?.foundationSkills?.[idx];
-            return typeof fs === 'string' ? fs : (fs?.text || fsRef);
-        };
-
-        // Add Element rows
-        Object.entries(coverageMap.elements).forEach(([elNum, locations]) => {
-            rows.push({
-                type: 'Element',
-                ref: `Element ${elNum}`,
-                text: getElementText(elNum),
-                location: locations.map(l => l.location).join(', '),
-                explanation: `Learning content introduces ${getElementText(elNum).toLowerCase()} as a core learning focus.`
-            });
-        });
-
-        // Add PC rows
-        Object.entries(coverageMap.pc).forEach(([pcNum, locations]) => {
-            const keyPoints = locations[0]?.keyPoints || [];
-            const explanation = keyPoints.length > 0 
-                ? `Learning slides teach: ${keyPoints.slice(0, 2).map(kp => kp.substring(0, 60)).join('; ')}${keyPoints.length > 2 ? '...' : ''}`
-                : `Learning slides cover ${getPCText(pcNum).substring(0, 80)}`;
-            rows.push({
-                type: 'Performance Criteria',
-                ref: pcNum,
-                text: getPCText(pcNum),
-                location: locations.map(l => l.location).join(', '),
-                explanation
-            });
-        });
-
-        // Add KE rows
-        Object.entries(coverageMap.ke).forEach(([keRef, locations]) => {
-            rows.push({
-                type: 'Knowledge Evidence',
-                ref: keRef,
-                text: getKEText(keRef),
-                location: locations.map(l => l.location).join(', '),
-                explanation: `Learners are taught ${getKEText(keRef).substring(0, 80).toLowerCase()}`
-            });
-        });
-
-        // Add PE rows - v6.6.6: Fixed banned verb "develop skills"  ->  use observable action verbs
-        Object.entries(coverageMap.pe).forEach(([peRef, locations]) => {
-            const peText = getPEText(peRef);
-            // Extract first verb from PE text to create observable explanation
-            const peClean = peText.replace(/^(the candidate must\s+)?/i, '').trim();
-            const firstWord = peClean.split(/\s+/)[0] || 'Demonstrate';
-            const restOfText = peClean.split(/\s+/).slice(1).join(' ').substring(0, 60);
-            rows.push({
-                type: 'Performance Evidence',
-                ref: peRef,
-                text: peText,
-                location: locations.map(l => l.location).join(', '),
-                explanation: `Learners ${firstWord.toLowerCase()} ${restOfText}`
-            });
-        });
-
-        // Add FS rows
-        Object.entries(coverageMap.fs).forEach(([fsRef, locations]) => {
-            rows.push({
-                type: 'Foundation Skills',
-                ref: fsRef,
-                text: getFSText(fsRef),
-                location: locations.map(l => l.location).join(', '),
-                explanation: `${getFSText(fsRef).substring(0, 80)} is embedded through learning activities`
-            });
-        });
-
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th scope="col">Unit Requirement Type</th>
-                    <th scope="col">Requirement Reference</th>
-                    <th scope="col">Requirement Text</th>
-                    <th scope="col">Learning Content Location</th>
-                    <th scope="col">Coverage Explanation</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${rows.map(r => `
-                    <tr class="cc-mapping-row-${r.type.toLowerCase().replace(/\s/g, '-')}">
-                        <td>${escapeHtml(r.type)}</td>
-                        <td>${escapeHtml(r.ref)}</td>
-                        <td>${escapeHtml(r.text.substring(0, 120))}${r.text.length > 120 ? '...' : ''}</td>
-                        <td>${escapeHtml(r.location)}</td>
-                        <td>${escapeHtml(r.explanation)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        `;
-        return table;
-    };
-
-    // Render audit summary with gap detection
-    const renderAuditSummary = (coverageResult) => {
-        const hasGaps = Object.values(coverageResult.gaps).some(g => g.length > 0);
-
-        const summary = document.createElement('div');
-        summary.className = 'cc-audit-summary';
-
-        if (hasGaps) {
-            summary.innerHTML = `
-                <h4 class="cc-audit-title cc-audit-warning">Coverage Gaps Identified</h4>
-                <p>The following unit requirements are not currently mapped:</p>
-                <ul class="cc-gap-list">
-                    ${Object.entries(coverageResult.gaps)
-                        .filter(([, g]) => g.length)
-                        .map(([k, g]) => `<li><strong>${k}:</strong> ${g.join(', ')}</li>`)
-                        .join('')}
-                </ul>
-            `;
-        } else {
-            summary.innerHTML = `
-                <h4 class="cc-audit-title cc-audit-success">Full Coverage Confirmed</h4>
-                <p>
-                    This learning structure demonstrates full coverage of all unit
-                    elements, performance criteria, performance evidence, knowledge
-                    evidence, and foundation skills requirements.
-                </p>
-            `;
-        }
-        return summary;
-    };
-
-    // Render complete mapping document section (polished, ASQA-ready)
-    // ChatGPT EXACT FORMAT: Learning Coverage Mapping Document
-    const renderMappingDocumentSection = (topics, unitRequirements, mountEl) => {
-        const coverageMap = generateMappingDocument(topics);
-        const coverage = analyseCoverage(coverageMap, unitRequirements);
-
-        const section = document.createElement('section');
-        section.className = 'cc-mapping-document';
-
-        section.innerHTML = `
-            <h3 class="cc-mapping-title">Learning Coverage Mapping Document</h3>
-            <p class="cc-mapping-intro">
-                This mapping document demonstrates where unit requirements are taught.
-                Mapping is for training coverage only - no assessment or evidence collection.
-            </p>
-        `;
-
-        section.appendChild(renderAuditSummary(coverage));
-        // Pass tgaData to renderMappingTable so it can look up requirement texts
-        section.appendChild(renderMappingTable(coverageMap, tgaData));
-        mountEl.appendChild(section);
-    };
 
     // Render sub-subtopics (the specific PCs/KEs covered by each subtopic)
     // PRIORITY: keyPoints (dot points) > PC text lookup > PC codes
@@ -6626,7 +6073,7 @@ define('mod_contentcreator/builder', [
         }
         
         if (items.length === 0 && Array.isArray(mappings) && mappings.length > 0) {
-            items.push(`<div class="cc-subsubtopic-item cc-muted">Covers: ${mappings.join(', ')}</div>`);
+            items.push(`<div class="cc-subsubtopic-item cc-muted">Covers: ${escapeHtml(mappings.join(', '))}</div>`);
         }
         
         if (items.length === 0) return '';
@@ -6651,7 +6098,7 @@ define('mod_contentcreator/builder', [
             <section class="cc-topic-item" data-topic-index="${topicIndex}" aria-labelledby="cc-topic-title-${topicIndex}">
                 <header class="cc-topic-header">
                     <button type="button" class="cc-topic-toggle" aria-expanded="true" aria-controls="cc-subtopics-${topicIndex}">
-                        <span class="cc-topic-number">${elementNumber}</span>
+                        <span class="cc-topic-number">${escapeHtml(String(elementNumber))}</span>
                         <div class="cc-topic-info">
                             <h4 class="cc-topic-title" id="cc-topic-title-${topicIndex}">${escapeHtml(cleanTitle || topic.title)}</h4>
                             <span class="cc-topic-sections">${topic.subtopics?.length || 0} ${selectedMode === 'pd' ? (topic.subtopics?.length === 1 ? 'topic' : 'topics') : isUniversity ? (topic.subtopics?.length === 1 ? 'outcome' : 'outcomes') : 'sections'}</span>
@@ -6667,7 +6114,7 @@ define('mod_contentcreator/builder', [
                             : (sub.pcNumber || `${elementNumber}.${si + 1}`);
                         return `
                             <div class="cc-subtopic-item" data-subtopic-index="${si}" role="listitem">
-                                <span class="cc-subtopic-number">${displayNumber}</span>
+                                <span class="cc-subtopic-number">${escapeHtml(String(displayNumber))}</span>
                                 <div class="cc-subtopic-info">
                                     <span class="cc-subtopic-title">${escapeHtml(cleanSubTitle || sub.title)}</span>
                                     ${subSubtopics}
@@ -6718,36 +6165,7 @@ define('mod_contentcreator/builder', [
         container.querySelector('#cc-add-outcome')?.addEventListener('click', addOutcome);
         container.querySelector('#cc-bulk-paste-toggle')?.addEventListener('click', toggleBulkPaste);
         container.querySelector('#cc-bulk-paste-cancel')?.addEventListener('click', closeBulkPaste);
-        container.querySelector('#cc-bulk-paste-add')?.addEventListener('click', () => {
-            if (selectedMode === 'university' || selectedMode === 'workplace') {
-                const textarea = document.getElementById('cc-bulk-paste-text');
-                if (!textarea) return;
-                const items = parseBulkOutcomes(textarea.value);
-                if (items.length === 0) return;
-                storedOutcomes = items;
-                storedTopicHierarchy = buildSingleTopicHierarchy(getMajorTopicTitle(), items);
-
-                const confirmedPanel = document.getElementById('cc-uni-topics-confirmed') || document.getElementById('cc-wp-topics-confirmed');
-                if (confirmedPanel) {
-                    confirmedPanel.classList.remove('cc-hidden');
-                    const countEl = confirmedPanel.querySelector('[id$="-topics-count"]');
-                    if (countEl) countEl.textContent = countTopicsLabel(items);
-                    const previewEl = confirmedPanel.querySelector('[id$="-topics-preview"]');
-                    if (previewEl) previewEl.innerHTML = renderConfirmedTopicsHTML(items);
-                }
-
-                const pastePanel = document.getElementById('cc-bulk-paste-panel');
-                if (pastePanel) pastePanel.classList.add('cc-hidden');
-
-                const chatgptSection = document.getElementById('cc-uni-chatgpt-section') || document.getElementById('cc-wp-chatgpt-section');
-                if (chatgptSection) {
-                    chatgptSection.classList.remove('cc-hidden');
-                    chatgptSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            } else {
-                applyBulkPaste();
-            }
-        });
+        container.querySelector('#cc-bulk-paste-add')?.addEventListener('click', applyBulkPaste);
         container.querySelector('#cc-bulk-paste-text')?.addEventListener('input', updateBulkPasteCount);
 
         container.querySelector('#cc-uni-topics-edit')?.addEventListener('click', () => {
@@ -7249,7 +6667,6 @@ define('mod_contentcreator/builder', [
             radio.addEventListener('change', (e) => {
                 const elementId = parseInt(e.target.dataset.elementId, 10);
                 selectedElementIds = [elementId];
-                elementSelectionInitialized = true;
                 elementListEl.querySelectorAll('.cc-element-radio-card').forEach(card => {
                     card.classList.remove('selected');
                 });
@@ -7293,11 +6710,11 @@ define('mod_contentcreator/builder', [
                 const pill = e.target.closest('.cc-level-pill');
                 if (!pill) return;
                 const val = pill.dataset.value;
-                if (window.CC_SELECTED_JOB_LEVELS.includes(val)) {
-                    window.CC_SELECTED_JOB_LEVELS = window.CC_SELECTED_JOB_LEVELS.filter(v => v !== val);
+                if (CC_SELECTED_JOB_LEVELS.includes(val)) {
+                    CC_SELECTED_JOB_LEVELS = CC_SELECTED_JOB_LEVELS.filter(v => v !== val);
                     pill.classList.remove('cc-level-active');
                 } else {
-                    window.CC_SELECTED_JOB_LEVELS.push(val);
+                    CC_SELECTED_JOB_LEVELS.push(val);
                     pill.classList.add('cc-level-active');
                 }
                 updateGenerateTopicsButton();
@@ -7451,7 +6868,7 @@ define('mod_contentcreator/builder', [
             }
             
             // v6.9.14: Job Level is required
-            if (window.CC_SELECTED_JOB_LEVELS.length === 0) {
+            if (CC_SELECTED_JOB_LEVELS.length === 0) {
                 return { valid: false, error: 'Please select at least one Job Level for appropriate scenario complexity.' };
             }
             // v13.33: VET reference content is optional — no paste gate
@@ -7535,8 +6952,8 @@ define('mod_contentcreator/builder', [
     const parseBulkOutcomes = (text) => {
         return text.split('\n')
             .map(line => line.trim())
-            .map(line => line.replace(/^\d+[\.\)\-:\s]+/, ''))
-            .map(line => line.replace(/^[-**]\s*/, ''))
+            .map(line => line.replace(/^\d+[.)\-:\s]+/, ''))
+            .map(line => line.replace(/^[-*]\s*/, ''))
             .map(line => line.trim())
             .filter(line => line.length > 0);
     };
@@ -7557,54 +6974,6 @@ define('mod_contentcreator/builder', [
         return '';
     };
 
-    const parseTopicHierarchy = (text) => {
-        const lines = text.split('\n').filter(l => l.trim().length > 0);
-        if (lines.length === 0) return null;
-
-        const hasNumberedMajor = lines.some(l => /^\d+[\.\)]\s+/.test(l.trim()) && !/^\d+\.\d+/.test(l.trim()));
-        const hasNumberedSub = lines.some(l => /^\d+\.\d+/.test(l.trim()));
-        const hasIndented = lines.some(l => l.length > l.trimStart().length && (l.trimStart().startsWith('-') || l.trimStart().startsWith('*') || l.trimStart().startsWith('*')));
-
-        if (!hasNumberedMajor && !hasNumberedSub && !hasIndented) return null;
-
-        const topics = [];
-        let currentTopic = null;
-
-        for (const raw of lines) {
-            const trimmed = raw.trim();
-            const indent = raw.length - raw.trimStart().length;
-            const isMajor = /^\d+[\.\)]\s+/.test(trimmed) && !/^\d+\.\d+/.test(trimmed);
-            const isSub = /^\d+\.\d+/.test(trimmed) || (indent >= 2 && /^[-**]\s+/.test(trimmed));
-
-            const cleanText = trimmed
-                .replace(/^\d+\.\d+[\.\)\s]+/, '')
-                .replace(/^\d+[\.\)\-:\s]+/, '')
-                .replace(/^[-**]\s*/, '')
-                .trim();
-
-            if (!cleanText) continue;
-
-            const isPlainLine = !isMajor && !isSub && indent === 0 && !/^[-**]\s+/.test(trimmed);
-
-            if (isMajor) {
-                currentTopic = { title: cleanText, subtopics: [] };
-                topics.push(currentTopic);
-            } else if (isSub && currentTopic) {
-                currentTopic.subtopics.push(cleanText);
-            } else if (!currentTopic) {
-                currentTopic = { title: cleanText, subtopics: [] };
-                topics.push(currentTopic);
-            } else if (isPlainLine && currentTopic.subtopics.length > 0) {
-                currentTopic = { title: cleanText, subtopics: [] };
-                topics.push(currentTopic);
-            } else {
-                currentTopic.subtopics.push(cleanText);
-            }
-        }
-
-        const hasHierarchy = topics.some(t => t.subtopics.length > 0);
-        return hasHierarchy ? topics : null;
-    };
 
     const countTopicsLabel = (items) => {
         return items.length + (items.length === 1 ? ' subtopic' : ' subtopics') + ' confirmed';
@@ -7658,6 +7027,44 @@ define('mod_contentcreator/builder', [
         counter.textContent = items.length === 1 ? '1 item detected' : items.length + ' items detected';
     };
 
+    /**
+     * Confirm the subtopics typed or pasted into the bulk paste panel.
+     *
+     * Parses one subtopic per line, stores them as the single-major-topic
+     * hierarchy, then swaps the paste panel for the confirmed summary and
+     * reveals the optional reference content section.
+     *
+     * @return {void}
+     */
+    const applyBulkPaste = () => {
+        const textarea = document.getElementById('cc-bulk-paste-text');
+        if (!textarea) return;
+        const items = parseBulkOutcomes(textarea.value);
+        if (items.length === 0) return;
+        storedOutcomes = items;
+        storedTopicHierarchy = buildSingleTopicHierarchy(getMajorTopicTitle(), items);
+
+        const confirmedPanel = document.getElementById('cc-uni-topics-confirmed')
+            || document.getElementById('cc-wp-topics-confirmed');
+        if (confirmedPanel) {
+            confirmedPanel.classList.remove('cc-hidden');
+            const countEl = confirmedPanel.querySelector('[id$="-topics-count"]');
+            if (countEl) countEl.textContent = countTopicsLabel(items);
+            const previewEl = confirmedPanel.querySelector('[id$="-topics-preview"]');
+            if (previewEl) previewEl.innerHTML = renderConfirmedTopicsHTML(items);
+        }
+
+        const pastePanel = document.getElementById('cc-bulk-paste-panel');
+        if (pastePanel) pastePanel.classList.add('cc-hidden');
+
+        const chatgptSection = document.getElementById('cc-uni-chatgpt-section')
+            || document.getElementById('cc-wp-chatgpt-section');
+        if (chatgptSection) {
+            chatgptSection.classList.remove('cc-hidden');
+            chatgptSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
     const suggestPDTopics = async () => {
         const courseTitle = document.getElementById('cc-pd-course-title')?.value?.trim();
         if (!courseTitle) {
@@ -7665,7 +7072,6 @@ define('mod_contentcreator/builder', [
             return;
         }
         const majorTopic = courseTitle;
-        const audience = document.getElementById('cc-pd-audience')?.value || 'all-staff';
         const industry = document.getElementById('cc-pd-industry')?.value || '';
         const country = document.getElementById('cc-pd-country')?.value || 'AU';
 
@@ -7675,37 +7081,18 @@ define('mod_contentcreator/builder', [
         if (actionsEl) actionsEl.style.display = 'none';
 
         try {
-            const siteId = window.CC_CONFIG?.siteId || '';
-            const apiKey = window.CC_CONFIG?.apiKey || '';
-
-            if (!siteId || !apiKey) {
-                ccWarn('suggestPDTopics: Missing credentials - siteId:', !!siteId, 'apiKey:', !!apiKey);
-                showError('AI Grader credentials not configured. Please check your Site ID and API Key in the AI Config settings.');
-                return;
-            }
-
             ccLog('suggestPDTopics: Requesting subtopics for:', courseTitle, '| majorTopic:', majorTopic, '| industry:', industry, '| country:', country);
 
-            const response = await fetch('https://lms-labs.com/api/contentcreator/suggest-topics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    siteId: siteId,
-                    apiKey: apiKey,
+            // v13.66: Credentials are added server side by the vendor proxy.
+            const data = await CcState.vendorFetch(cmid, 'suggesttopicscc', {
+                payload: {
                     subjectName: courseTitle,
                     majorTopic: majorTopic,
                     industry: industry,
                     country: country
-                })
+                }
             });
-
-            if (!response.ok) {
-                const errorBody = await response.json().catch(() => ({}));
-                ccError('suggestPDTopics: API error:', response.status, errorBody);
-                throw new Error(errorBody.error || 'Failed to suggest topics (HTTP ' + response.status + ')');
-            }
-            const data = await response.json();
-            if (!data.ok) throw new Error(data.error || 'Failed to suggest topics');
+            if (!data || !data.ok) throw new Error((data && data.error) || 'Failed to suggest topics');
 
             ccLog('suggestPDTopics: Received response, topics length:', (data.topics || '').length);
 
@@ -7738,7 +7125,7 @@ define('mod_contentcreator/builder', [
                 showError('No topics were suggested. Try a different course title or paste your own topics.');
             }
         } catch (err) {
-            console.error('CC: Failed to suggest PD topics:', err);
+            ccError('CC: Failed to suggest PD topics:', err);
             showError('Could not suggest topics. Please paste your own topics instead.');
         } finally {
             if (loadingEl) loadingEl.classList.add('cc-hidden');
@@ -7770,7 +7157,7 @@ define('mod_contentcreator/builder', [
             const state = document.getElementById('cc-state')?.value || '';
             const industry = document.getElementById('cc-industry')?.value || '';
             const industrySector = document.getElementById('cc-industry-sector')?.value || '';
-            const jobLevelsText = window.CC_SELECTED_JOB_LEVELS
+            const jobLevelsText = CC_SELECTED_JOB_LEVELS
                 .map(v => JOB_LEVELS.find(j => j.value === v)?.label || v)
                 .join(', ');
 
@@ -7974,7 +7361,7 @@ define('mod_contentcreator/builder', [
                     }
                 }
             }
-            console.log('CC: downloadDynamicPrompt university  -  storedOutcomes:', storedOutcomes.length, 'topicsText length:', topicsText.length);
+            ccLog('CC: downloadDynamicPrompt university  -  storedOutcomes:', storedOutcomes.length, 'topicsText length:', topicsText.length);
         }
 
         let topicsHeader = '';
@@ -8865,7 +8252,6 @@ The context and task details follow below.
         if (detailsEl) detailsEl.innerHTML = renderTGADetails(tgaData);
         // Reset element selection
         selectedElementIds = [];
-        elementSelectionInitialized = false;
         // Re-show correction bar
         const corrBar = document.getElementById('cc-element-correction-bar');
         if (corrBar) corrBar.classList.remove('cc-hidden');
@@ -8883,9 +8269,7 @@ The context and task details follow below.
         const btn = document.getElementById('cc-refresh-elements');
         if (btn) { btn.disabled = true; btn.textContent = 'Refreshing...'; }
         try {
-            const response = await fetch(`https://lms-labs.com/api/tga/unit/${unitCode}?refresh=true`);
-            if (!response.ok) throw new Error('TGA returned ' + response.status);
-            const data = await response.json();
+            const data = await CcState.vendorFetch(cmid, 'tgaunitrefresh', {unitcode: unitCode});
             const unit = data.data || data.unit;
             if (data.success && unit) {
                 tgaData = {
@@ -8898,7 +8282,6 @@ The context and task details follow below.
                     foundationSkills: unit.foundationSkills || []
                 };
                 selectedElementIds = [];
-                elementSelectionInitialized = false;
                 const detailsEl = document.getElementById('cc-unit-details');
                 if (detailsEl) { detailsEl.innerHTML = renderTGADetails(tgaData); detailsEl.classList.remove('cc-hidden'); }
                 const elementListEl = document.getElementById('cc-element-list');
@@ -8933,36 +8316,21 @@ The context and task details follow below.
         if (fetchBtn) fetchBtn.disabled = true;
         
         // v6.9.1: Clear previous AI context before fetching new unit
-        window.CC_AI_CONTEXT = null;
-        window.CC_AI_JOB_TITLES = [];
-        window.CC_AI_TASK_CATEGORIES = [];
-        window.CC_AI_EQUIPMENT_CATEGORIES = [];
-        window.CC_AI_DETECTED_INDUSTRY = '';
-        window.CC_AI_DETECTED_SECTOR = '';
-        window.CC_SELECTED_JOB_TITLES = [];
-        window.CC_SELECTED_TASKS = [];
-        window.CC_SELECTED_EQUIPMENT = [];
+        CC_AI_CONTEXT = null;
+        CC_SELECTED_JOB_TITLES = [];
+        CC_SELECTED_TASKS = [];
+        CC_SELECTED_EQUIPMENT = [];
         
         // v6.9.1: Also clear legacy context variables
-        window.CC_SELECTED_JOB_ROLES = [];
-        window.CC_SELECTED_JOB_LEVELS = [];
+        CC_SELECTED_JOB_ROLES = [];
+        CC_SELECTED_JOB_LEVELS = [];
         document.querySelectorAll('.cc-level-pill').forEach(p => p.classList.remove('cc-level-active'));
-        window.CC_SELECTED_TASK_CATEGORIES = [];
-        window.CC_SELECTED_EQUIPMENT_CATEGORIES = [];
-        window.CC_SELECTED_EQUIPMENT_LEGACY = [];
-        
-        // v6.9.1: Clear AI failure flags
-        window.CC_AI_FAILED = false;
-        window.CC_AI_NO_FALLBACK = false;
-        window.CC_AI_LOADING = false;
+        CC_SELECTED_TASK_CATEGORIES = [];
+        CC_SELECTED_EQUIPMENT_CATEGORIES = [];
+        CC_SELECTED_EQUIPMENT_LEGACY = [];
 
         try {
-            const response = await fetch(`https://lms-labs.com/api/tga/unit/${unitCode}`);
-            
-            if (!response.ok) {
-                throw new Error('TGA API returned ' + response.status);
-            }
-            const data = await response.json();
+            const data = await CcState.vendorFetch(cmid, 'tgaunit', {unitcode: unitCode});
 
             // API returns { success: true, data: {...} } - unit is in data.data, not data.unit
             const unit = data.data || data.unit;
@@ -8979,7 +8347,6 @@ The context and task details follow below.
                 suggestedMajorTopics = [];
                 selectedMajorTopicIds = [];
                 selectedElementIds = []; // v8.4.34: Reset - user must pick ONE element
-                elementSelectionInitialized = false;
                 detailsEl.innerHTML = renderTGADetails(tgaData);
                 detailsEl?.classList.remove('cc-hidden');
                 // v8.4.34: Show unit-dependent sections (element selection appears first)
@@ -9067,18 +8434,8 @@ The context and task details follow below.
         if (uploadBtn) uploadBtn.disabled = true;
 
         try {
-            const formData = new FormData();
-            formData.append('pdf', file);
-
-            const response = await fetch(`https://lms-labs.com/api/tga/unit/${unitCode}/upload-pdf`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!response.ok) {
-                throw new Error('PDF upload API returned ' + response.status);
-            }
-            const data = await response.json();
+            // v13.66: The PDF is posted to Moodle, which validates it and relays it to the vendor.
+            const data = await CcState.vendorUpload(cmid, 'tgauploadpdf', file, {unitcode: unitCode});
 
             if (data.success && data.data) {
                 const unit = data.data;
@@ -9117,7 +8474,8 @@ The context and task details follow below.
                 showError(data.error || 'Failed to extract data from PDF.');
             }
         } catch (err) {
-            showError('Failed to upload PDF. Please try again.');
+            ccError('handlePdfUpload failed:', err);
+            showError(err.message || 'Failed to upload PDF. Please try again.');
         } finally {
             pdfLoadingEl?.classList.add('cc-hidden');
             if (uploadBtn) uploadBtn.disabled = false;
@@ -9163,13 +8521,10 @@ The context and task details follow below.
         if (processBtn) processBtn.disabled = true;
 
         try {
-            const response = await fetch(`https://lms-labs.com/api/tga/unit/${unitCode}/parse-text`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: pastedText })
+            const data = await CcState.vendorFetch(cmid, 'tgaparsetext', {
+                unitcode: unitCode,
+                payload: { text: pastedText }
             });
-            if (!response.ok) throw new Error('Text parse API returned ' + response.status);
-            const data = await response.json();
 
             if (data.success && data.data) {
                 const unit = data.data;
@@ -9253,18 +8608,9 @@ The context and task details follow below.
         contentEl?.classList.add('cc-hidden');
 
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-
-            const response = await fetch('https://lms-labs.com/api/moodle/content-creator/extract-document', {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (!response.ok) {
-                throw new Error('Document extraction API returned ' + response.status);
-            }
-            const data = await response.json();
+            // v13.66: This endpoint takes a binary document, so it goes through the
+            // multipart arm of the proxy (vendor_upload) rather than the JSON arm.
+            const data = await CcState.vendorUpload(cmid, 'extractdocument', file);
 
             if (data.success && data.data) {
                 workplaceData = {
@@ -9284,15 +8630,16 @@ The context and task details follow below.
                 hideError();
                 
                 // v6.9.1: Trigger AI-powered context suggestions from document
-                if (window.CC_BUILDER?.renderWorkplaceAISuggestions) {
-                    window.CC_BUILDER.renderWorkplaceAISuggestions(workplaceData);
+                if (ccBuilder?.renderWorkplaceAISuggestions) {
+                    ccBuilder.renderWorkplaceAISuggestions(workplaceData);
                 }
             } else {
                 showError(data.error || 'Failed to extract content from document.');
                 removeWorkplaceFile();
             }
         } catch (err) {
-            showError('Failed to process document. Please try again.');
+            ccError('handleWorkplaceFile failed:', err);
+            showError(err.message || 'Failed to process document. Please try again.');
             removeWorkplaceFile();
         } finally {
             extractLoading?.classList.add('cc-hidden');
@@ -9345,22 +8692,15 @@ The context and task details follow below.
 
         try {
             const context = gatherContext();
-            const response = await fetch('https://lms-labs.com/api/moodle/content-creator/suggest-workplace-topics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+            const data = await CcState.vendorFetch(cmid, 'suggestworkplacetopics', {
+                payload: {
                     content: workplaceData.content,
                     title: workplaceData.title,
                     majorTopic: majorTopic,
                     context: context,
                     duration: parseInt(document.querySelector('input[name="duration"]:checked')?.value) || 10
-                })
+                }
             });
-            
-            if (!response.ok) {
-                throw new Error('API returned ' + response.status + ': ' + response.statusText);
-            }
-            const data = await response.json();
 
             if (data.success && data.topics?.length > 0) {
                 suggestedMajorTopics = data.topics.map((t, i) => {
@@ -9387,7 +8727,8 @@ The context and task details follow below.
                 showError(data.error || 'Failed to suggest topics. Please try again.');
             }
         } catch (err) {
-            showError('Failed to suggest topics. Please try again.');
+            ccError('suggestWorkplaceTopics failed:', err);
+            showError(err.message || 'Failed to suggest topics. Please try again.');
         } finally {
             loadingEl?.classList.add('cc-hidden');
             innerLoadingEl?.classList.add('cc-hidden');
@@ -9451,13 +8792,6 @@ The context and task details follow below.
         if (selectedMode === 'vet' && tgaData) {
             // Pass selected Major Topics (ChatGPT's two-stage model)
             const selectedTopics = suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id));
-            selectedTopics.forEach((t, i) => {
-                if (t.subtopics && t.subtopics.length > 0) {
-                    t.subtopics.forEach((s, j) => {
-                    });
-                } else {
-                }
-            });
             inputs.selectedMajorTopics = selectedTopics;
             inputs.tgaData = tgaData;
         } else if (selectedMode === 'workplace' && workplaceData) {
@@ -9496,8 +8830,8 @@ The context and task details follow below.
             // v6.9.14: Get context from dropdowns - AI auto-generates scenarios based on these
             const industry = document.getElementById('cc-industry')?.value || '';
             const industrySector = document.getElementById('cc-industry-sector')?.value || '';
-            const jobLevel = window.CC_SELECTED_JOB_LEVELS.length > 0
-                ? window.CC_SELECTED_JOB_LEVELS.join(', ')
+            const jobLevel = CC_SELECTED_JOB_LEVELS.length > 0
+                ? CC_SELECTED_JOB_LEVELS.join(', ')
                 : 'worker';
             
             // v6.9.17: jobLevel is the input - AI dynamically generates job titles in scenarios
@@ -9505,7 +8839,6 @@ The context and task details follow below.
             const jobTitle = ''; // AI generates job titles dynamically
             
             // v6.9.14: No more manual job/task/equipment selection - AI handles this automatically
-            const selectedJobTitleIds = [];
             const selectedTaskIds = [];
             const selectedEquipmentIds = [];
             
@@ -9590,7 +8923,7 @@ The context and task details follow below.
                 aiSelectedJobTitles: selectedJobTitles,      // Full objects with level, elementMapping, rationale
                 aiSelectedTasks: selectedTasks,              // Full objects with examples, elementMapping, rationale
                 aiSelectedEquipment: selectedEquipment,      // Full objects with examples, elementMapping, rationale
-                aiContext: window.CC_AI_CONTEXT || {}        // Full AI response for export
+                aiContext: CC_AI_CONTEXT || {}        // Full AI response for export
             };
             
             
@@ -9608,14 +8941,14 @@ The context and task details follow below.
                 : (industry || 'Workplace training');
             const jobLevel = document.getElementById('cc-wp-job-level')?.value || 'worker';
             
-            const wpAiCtx = window.CC_WP_AI_CONTEXT || {};
-            const selectedJobIds = window.CC_WP_SELECTED_JOB_TITLES || [];
-            const selectedTaskIds = (window.CC_WP_SELECTED_TASKS && window.CC_WP_SELECTED_TASKS.length > 0) 
-                ? window.CC_WP_SELECTED_TASKS 
-                : (window.CC_WP_SELECTED_TASK_CATEGORIES || []);
-            const selectedEquipIds = (window.CC_WP_SELECTED_EQUIPMENT && window.CC_WP_SELECTED_EQUIPMENT.length > 0)
-                ? window.CC_WP_SELECTED_EQUIPMENT
-                : (window.CC_WP_SELECTED_EQUIPMENT_CATEGORIES || []);
+            const wpAiCtx = CC_WP_AI_CONTEXT || {};
+            const selectedJobIds = CC_WP_SELECTED_JOB_TITLES || [];
+            const selectedTaskIds = (CC_WP_SELECTED_TASKS && CC_WP_SELECTED_TASKS.length > 0) 
+                ? CC_WP_SELECTED_TASKS 
+                : (CC_WP_SELECTED_TASK_CATEGORIES || []);
+            const selectedEquipIds = (CC_WP_SELECTED_EQUIPMENT && CC_WP_SELECTED_EQUIPMENT.length > 0)
+                ? CC_WP_SELECTED_EQUIPMENT
+                : (CC_WP_SELECTED_EQUIPMENT_CATEGORIES || []);
             
             const allJobs = wpAiCtx.jobTitles || [];
             const allTasks = wpAiCtx.taskCategories || [];
@@ -9799,27 +9132,13 @@ The context and task details follow below.
                     foundationSkills: tgaData.foundationSkills || []
                 },
                 // v6.8.9: AI-generated context for Practical Mapping sheet
-                aiContext: window.CC_AI_CONTEXT || null
+                aiContext: CC_AI_CONTEXT || null
             };
 
-            const response = await fetch('https://lms-labs.com/api/moodle/content-creator/export-mapping-excel', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Site-ID': window.CC_CONFIG?.siteId || '',
-                    'X-API-Key': window.CC_CONFIG?.apiKey || ''
-                },
-                body: JSON.stringify(payload)
-            });
+            // v13.66: The workbook is streamed back through the proxy, which adds the
+            // site credentials server side.
+            const blob = await CcState.vendorDownload(cmid, 'exportmappingexcel', {payload: payload});
 
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Export failed: ${response.status} ${response.statusText} - ${errorText}`);
-            }
-
-            const blob = await response.blob();
-            
             if (blob.size < 100) {
                 const text = await blob.text();
                 throw new Error('Server returned invalid file: ' + text);
@@ -9856,13 +9175,8 @@ The context and task details follow below.
     };
 
     const generateContent = async () => {
-        console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', 'generateContent() CALLED');
-        console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', 'selectedMode=' + selectedMode + ' | cmid=' + cmid);
-        console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', 'topicPlan:', topicPlan ? ('topics=' + (topicPlan.topics?.length || 0)) : 'NULL');
-        console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', 'storedContext:', storedContext ? JSON.stringify(storedContext).substring(0, 300) : 'NULL');
-        console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', 'storedOutcomes:', storedOutcomes?.length || 0, 'items');
         if (!topicPlan) {
-            console.error('[CC DIAG] generateContent() ABORTED: topicPlan is null/undefined');
+            ccError('[CC] generateContent() ABORTED: topicPlan is null/undefined');
             showError('No topic plan available. Please go back and try again.');
             return;
         }
@@ -9944,15 +9258,6 @@ The context and task details follow below.
                 }
             };
             
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', 'generateContent() INPUTS READY:');
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', '  mode=' + inputs.mode);
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', '  context=' + JSON.stringify(inputs.context || {}).substring(0, 300));
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', '  criteria=' + JSON.stringify(inputs.criteria || {}).substring(0, 300));
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', '  topicPlan topics=' + (inputs.topicPlan?.topics?.length || 0));
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', '  voice=' + JSON.stringify(inputs.voiceSettings));
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', '  images=' + JSON.stringify(inputs.imageSettings));
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', '  activities=' + JSON.stringify(inputs.activitySettings));
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', 'Calling ManifestBuilder.build()...');
 
             // v9.74: Slow-generation warning  -  fires after 75s in 'generating' status.
             // AI API calls can take 1-3 minutes for large topic plans; without feedback
@@ -9962,7 +9267,7 @@ The context and task details follow below.
                 if (_slowGenTimer) { clearTimeout(_slowGenTimer); _slowGenTimer = null; }
             };
 
-            const result = await ManifestBuilder.build(inputs, cmid, {
+            await ManifestBuilder.build(inputs, cmid, {
                 onStatus: (status) => {
                     const statusText = {
                         planning: 'Planning content structure...',
@@ -10086,7 +9391,7 @@ The context and task details follow below.
                                 var _builderAbortCtrl = new AbortController();
                                 var _builderAbortTimer = setTimeout(function() {
                                     _builderAbortCtrl.abort();
-                                    console.warn('[VOICEOVER BUILDER v12.57] ABORT section ' + section.id + '  -  210s timeout exceeded on attempt ' + attempt);
+                                    ccWarn('[VOICEOVER BUILDER v12.57] ABORT section ' + section.id + '  -  210s timeout exceeded on attempt ' + attempt);
                                 }, 210000);
                                 let response;
                                 try {
@@ -10153,7 +9458,7 @@ The context and task details follow below.
                                     throw new Error(data.error || 'No audio returned');
                                 }
                             } catch (err) {
-                                console.error('[VOICEOVER BUILDER v8.4.11] PRE-GEN FAIL section ' + (section.id || '?') + ' | attempt: ' + attempt + ' | ' + err.message);
+                                ccError('[VOICEOVER BUILDER v8.4.11] PRE-GEN FAIL section ' + (section.id || '?') + ' | attempt: ' + attempt + ' | ' + err.message);
                                 if (attempt < 3 && !section.voiceoverUrl) {
                                     var retryDelay = attempt * 2000;
                                     ccLog('[VOICEOVER BUILDER v8.4.11] RETRY section ' + section.id + ' in ' + (retryDelay/1000) + 's (attempt ' + (attempt+1) + '/3)');
@@ -10193,7 +9498,7 @@ The context and task details follow below.
                             ccLog('%c[VOICEOVER BUILDER v8.4.11] PRE-GEN COMPLETE | ' + _builderVoDur + 's | success: ' + _withUrl + '/' + allSections.length + ' sections', 'color: #8b5cf6; font-weight: bold');
                         }
                         if (_withUrl < allSections.length && !_voSkipRequested) {
-                            console.error('[VOICEOVER BUILDER v8.4.11] WARNING: ' + (allSections.length - _withUrl) + ' sections FAILED pre-generation after 3 attempts each.');
+                            ccError('[VOICEOVER BUILDER v8.4.11] WARNING: ' + (allSections.length - _withUrl) + ' sections FAILED pre-generation after 3 attempts each.');
                         }
                         
                     }
@@ -10234,7 +9539,7 @@ The context and task details follow below.
                                     }
                                 );
                             } catch (_mlTransErr) {
-                                console.error('[CC-ML TRANSLATE] translateTopicsForLanguage failed for ' + _mlLang.code + ':', _mlTransErr.message);
+                                ccError('[CC-ML TRANSLATE] translateTopicsForLanguage failed for ' + _mlLang.code + ':', _mlTransErr.message);
                             }
                             var _mlResult = _mlTopics ? { topics: _mlTopics } : null;
 
@@ -10246,9 +9551,8 @@ The context and task details follow below.
                                     'background:#16a34a;color:#fff;padding:2px 6px;border-radius:3px;',
                                     _mlLang.code + ' generated: topics=' + _dbgTopics + ' sections=' + _dbgSects);
                             } else {
-                                console.error('%c[CC-ML BUILDER FAIL]',
-                                    'background:#dc2626;color:#fff;padding:2px 6px;border-radius:3px;',
-                                    _mlLang.code + ' ManifestBuilder.build() returned null — content NOT generated for this language!');
+                                ccError('[CC-ML BUILDER FAIL] ' + _mlLang.code
+                                    + ' ManifestBuilder.build() returned null - content NOT generated for this language.');
                             }
                             if (_mlResult && _mlResult.topics) {
                                 // Pre-generate voiceovers for this language
@@ -10402,7 +9706,7 @@ The context and task details follow below.
                     });
                 },
                 onError: (error) => {
-                    console.error('[CC DIAG] ManifestBuilder.build() onError callback:', error);
+                    ccError('[CC] ManifestBuilder.build() onError callback:', error);
                     const errStr = String(error || '');
                     const friendlyMsg = /invalid request|too long|request.*param|400/i.test(errStr)
                         ? 'Generation failed — the content may be too long. Try reducing your reference material, then click Try Again.'
@@ -10415,9 +9719,8 @@ The context and task details follow below.
                     if (prevBtn) prevBtn.disabled = false;
                 }
             });
-            console.log('%c[CC DIAG]', 'background: #1e40af; color: #fff; padding: 2px 6px; border-radius: 3px;', 'ManifestBuilder.build() returned:', result?.success ? 'SUCCESS' : 'FAILURE', result?.error || '');
         } catch (err) {
-            console.error('[CC DIAG] generateContent() CATCH BLOCK:', err.message, err.stack);
+            ccError('[CC] generateContent() CATCH BLOCK:', err.message, err.stack);
             const catchMsg = String(err?.message || '');
             const catchFriendly = /invalid request|too long|request.*param|400/i.test(catchMsg)
                 ? 'Generation failed — the content may be too long. Try reducing your reference material, then click Try Again.'
@@ -10432,109 +9735,9 @@ The context and task details follow below.
     };
 
 
-    // v10.27: Unified 7-card descriptions for all 4 routes
-    const UNIFIED_CARD_DESCRIPTIONS = [
-        { name: 'Hook Scenario',       type: 'hook-scenario',       summary: 'opening scene  -  a realistic job situation introducing the topic through narrative' },
-        { name: 'Concept Explainer',   type: 'concept-explainer',   summary: 'explains the concept behind Card 1  -  \"what you just saw means...\"' },
-        { name: 'Mental Model',        type: 'mental-model',        summary: 'numbered step-by-step flow  -  how to handle this type of situation' },
-        { name: 'Applied Scenario',    type: 'applied-scenario',    summary: '\"later that day...\"  -  continuation of Card 1\'s story, higher stakes or new complication' },
-        { name: 'Decision Point',      type: 'decision-point',      summary: 'interactive question placing the learner inside the Card 1/4 story' },
-        { name: 'Common Mistakes',     type: 'mistakes',            summary: 'warning cards  -  specific mistakes grounded in the scenario context' },
-        { name: 'Competency Summary',  type: 'competency-summary',  summary: 'checklist of observable competent behaviours  -  what a supervisor would see' }
-    ];
 
-    const CARD_DESC_TOKENS = {
-        workplace: {
-            contentType: 'workplace training content',
-            cardCount: 7,
-            cardDescriptions: UNIFIED_CARD_DESCRIPTIONS,
-            yourJob: 'Write rich reference content based on the uploaded document so the AI has enough depth to build all 7 cards well.',
-            step3Extra: '',
-            step7Text: 'Click "Parse & Apply" - your content will load as reference material',
-            step8Text: 'Click "Suggest Learning Topics" then "Generate" to create the interactive slides'
-        },
-        vet: {
-            contentType: 'vocational training content',
-            cardCount: 7,
-            cardDescriptions: UNIFIED_CARD_DESCRIPTIONS,
-            yourJob: 'Write rich reference content so the AI has enough depth to build all 7 cards well.',
-            step3Extra: '',
-            step7Text: 'Click "Parse & Apply" - your content will load as reference material',
-            step8Text: 'Click "Generate Topics" then "Generate" to create the interactive slides'
-        },
-        university: {
-            contentType: 'academic content',
-            cardCount: 7,
-            cardDescriptions: UNIFIED_CARD_DESCRIPTIONS,
-            yourJob: 'Write rich reference content so the AI has enough depth to build all 7 cards well.',
-            step3Extra: ' along with your syllabus/course outline',
-            step7Text: 'Click "Parse & Apply" - your learning outcomes and content will load',
-            step8Text: 'Click "Generate Topics" then "Generate" to create the interactive slides'
-        },
-        pd: {
-            contentType: 'professional development content',
-            cardCount: 7,
-            cardDescriptions: UNIFIED_CARD_DESCRIPTIONS,
-            yourJob: 'Write rich reference content so the AI has enough depth to build all 7 cards well.',
-            step3Extra: '',
-            step7Text: 'Click "Parse & Apply" - your content will load as reference material',
-            step8Text: 'Click "Generate Topics" then "Generate" to create the interactive slides'
-        }
-    };
 
-    /**
-     * Generate shared intro + instructions + route-specific card description for ChatGPT prompt
-     * @param {string} mode - 'workplace', 'vet', or 'university'
-     * @returns {string} The shared prompt text
-     */
-    const buildSharedPromptIntro = (mode) => {
-        const t = CARD_DESC_TOKENS[mode] || CARD_DESC_TOKENS.workplace;
-        let s = '';
-        s += 'The AI Content Creator builds interactive ' + t.cardCount + '-card learning slides\n';
-        s += 'for each topic. ChatGPT\'s job is to generate rich REFERENCE\n';
-        s += 'MATERIAL that the AI slide engine uses as its source of truth.\n\n';
-        s += 'ChatGPT does NOT generate the slides directly. Instead, it\n';
-        s += 'generates detailed ' + t.contentType + ' that the AI engine converts\n';
-        s += 'into ' + t.cardCount + ' interactive slide cards per topic:\n';
-        t.cardDescriptions.forEach((card, i) => {
-            s += '  Card ' + (i + 1) + ' - ' + card.name + ': ' + card.summary + '\n';
-        });
-        s += '\n';
-        s += 'The richer and more structured your ChatGPT output is, the\n';
-        s += 'better the AI slides will be.\n\n';
-        s += 'INSTRUCTIONS:\n';
-        s += '1. Copy ALL of the text below the dashed line\n';
-        s += '2. Open ChatGPT (GPT-4 recommended)\n';
-        s += '3. Paste it into a new conversation' + t.step3Extra + '\n';
-        s += '4. ChatGPT will generate structured reference content\n';
-        s += '5. Copy the ENTIRE output from ChatGPT (including the === markers)\n';
-        s += '6. Back in Content Creator, paste it into the "Paste ChatGPT Output Here" box\n';
-        s += '7. ' + t.step7Text + '\n';
-        s += '8. ' + t.step8Text + '\n\n';
-        s += '================================================================\n';
-        s += 'PASTE EVERYTHING BELOW INTO CHATGPT:\n';
-        s += '================================================================\n\n';
-        return s;
-    };
 
-    /**
-     * Generate route-specific card architecture description for ChatGPT prompt
-     * @param {string} mode - 'workplace', 'vet', or 'university'
-     * @returns {string} The card architecture description text
-     */
-    const build5CardDescription = (mode) => {
-        const t = CARD_DESC_TOKENS[mode] || CARD_DESC_TOKENS.workplace;
-        let s = '';
-        s += 'IMPORTANT CONTEXT - HOW YOUR OUTPUT WILL BE USED:\n';
-        s += 'An AI engine will read your output and convert it into interactive ' + t.cardCount + '-card learning slides for each topic.\n';
-        s += 'Each set of ' + t.cardCount + ' cards follows this structure:\n\n';
-        t.cardDescriptions.forEach((card, i) => {
-            s += '  CARD ' + (i + 1) + ' - ' + card.name.toUpperCase() + ': ' + card.summary + '\n';
-        });
-        s += '\n';
-        s += 'YOUR JOB: ' + t.yourJob + '\n\n';
-        return s;
-    };
 
     const showError = (message, showRetry = false) => {
         const section = document.getElementById('cc-error-section');
@@ -10640,7 +9843,12 @@ The context and task details follow below.
         `;
 
         document.getElementById('cc-reset-btn')?.addEventListener('click', () => {
-            if (confirm('Are you sure? This will delete all generated content and allow you to create new content.')) {
+            // v13.66: core/notification replaces the native confirm() dialog.
+            Notification.saveCancelPromise(
+                'Start over?',
+                'This will delete all generated content and allow you to create new content.',
+                'Start over'
+            ).then(() => {
                 manifest = null;
                 tgaData = null;
                 topicPlan = null;
@@ -10648,35 +9856,28 @@ The context and task details follow below.
                 suggestedMajorTopics = [];
                 selectedMajorTopicIds = [];
                 selectedElementIds = []; // v8.4.34
-                elementSelectionInitialized = false;
                 currentStep = 1;
                 
                 // v6.9.1: Clear AI context variables on reset
-                window.CC_AI_CONTEXT = null;
-                window.CC_AI_JOB_TITLES = [];
-                window.CC_AI_TASK_CATEGORIES = [];
-                window.CC_AI_EQUIPMENT_CATEGORIES = [];
-                window.CC_AI_DETECTED_INDUSTRY = '';
-                window.CC_AI_DETECTED_SECTOR = '';
-                window.CC_SELECTED_JOB_TITLES = [];
-                window.CC_SELECTED_TASKS = [];
-                window.CC_SELECTED_EQUIPMENT = [];
+                CC_AI_CONTEXT = null;
+                CC_SELECTED_JOB_TITLES = [];
+                CC_SELECTED_TASKS = [];
+                CC_SELECTED_EQUIPMENT = [];
                 
                 // v6.9.1: Also clear legacy context variables
-                window.CC_SELECTED_JOB_ROLES = [];
-                window.CC_SELECTED_TASK_CATEGORIES = [];
-                window.CC_SELECTED_EQUIPMENT_CATEGORIES = [];
-                window.CC_SELECTED_EQUIPMENT_LEGACY = [];
-                
-                // v6.9.1: Clear AI failure flags
-                window.CC_AI_FAILED = false;
-                window.CC_AI_NO_FALLBACK = false;
-                window.CC_AI_LOADING = false;
+                CC_SELECTED_JOB_ROLES = [];
+                CC_SELECTED_TASK_CATEGORIES = [];
+                CC_SELECTED_EQUIPMENT_CATEGORIES = [];
+                CC_SELECTED_EQUIPMENT_LEGACY = [];
                 
                 saveManifest({ locked: false, reset: true }, () => {
                     renderWizard();
                 });
-            }
+                return true;
+            }).catch(() => {
+                // User cancelled the reset - nothing to do.
+                return false;
+            });
         });
 
         document.getElementById('cc-player-btn')?.addEventListener('click', () => {

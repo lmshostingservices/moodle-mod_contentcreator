@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="mod_contentcreator">
+    <description>
+        Moodle coding standard for mod_contentcreator.
+
+        Run with:  vendor/bin/phpcs --standard=phpcs.xml.dist
+    </description>
+
+    <file>.</file>
+
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+    <exclude-pattern>*/amd/build/*</exclude-pattern>
+
+    <rule ref="moodle">
+        <!--
+            The release pipeline requires machine-readable justifications for every
+            deliberate PARAM_RAW use, in the exact form:
+
+                // pipeline-ignore: PARAM_RAW - <reason>
+
+            The marker is lowercase by specification, which collides with the
+            InlineComment.NotCapital sniff. The marker is an annotation for a tool,
+            not prose, so the sniff is excluded for the files that carry it. Every
+            other inline comment in the plugin is still checked normally.
+        -->
+        <exclude name="moodle.Commenting.InlineComment.NotCapital"/>
+    </rule>
+
+    <!--
+        Re-enable the sniff everywhere it does not conflict, so ordinary prose
+        comments are still held to the standard.
+    -->
+    <rule ref="moodle.Commenting.InlineComment.NotCapital">
+        <exclude-pattern>ajax.php</exclude-pattern>
+        <exclude-pattern>classes/external/*</exclude-pattern>
+    </rule>
+</ruleset>

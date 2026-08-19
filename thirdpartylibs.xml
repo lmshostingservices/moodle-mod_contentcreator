@@ -1,3 +1,30 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <libraries>
+    <library>
+        <location>amd/src/cc-icons.js</location>
+        <name>Lucide</name>
+        <description>SVG icon path data derived from the Lucide icon set, embedded as a JavaScript lookup table.</description>
+        <version>0.469.0</version>
+        <license>ISC</license>
+        <licenseversion></licenseversion>
+        <repository>https://github.com/lucide-icons/lucide</repository>
+    </library>
+    <library>
+        <location>pix/icon.svg</location>
+        <name>Lucide</name>
+        <description>Plugin icon derived from the Lucide "square-pen" glyph.</description>
+        <version>0.469.0</version>
+        <license>ISC</license>
+        <licenseversion></licenseversion>
+        <repository>https://github.com/lucide-icons/lucide</repository>
+    </library>
+    <library>
+        <location>pix/monologo.svg</location>
+        <name>Lucide</name>
+        <description>Plugin monologo derived from the Lucide "square-pen" glyph.</description>
+        <version>0.469.0</version>
+        <license>ISC</license>
+        <licenseversion></licenseversion>
+        <repository>https://github.com/lucide-icons/lucide</repository>
+    </library>
 </libraries>

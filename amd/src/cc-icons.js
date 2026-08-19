@@ -14,12 +14,20 @@
  * NOT exported here (kept in player5.js  -  needs UI_LABELS + currentLang):
  *   getContrastPair(contrastType)
  *
+ * THIRD PARTY CONTENT:
+ * The SVG path data in the ICONS table below is taken from Lucide
+ * (https://lucide.dev), a fork of Feather Icons, and is used under the
+ * ISC Licence. Copyright (c) for portions of Lucide are held by Cole Bemis
+ * 2013-2022 as part of Feather (MIT); all other copyright (c) for Lucide are
+ * held by Lucide Contributors 2022. See thirdpartylibs.xml for the plugin's
+ * declaration of this library.
+ *
  * @module     mod_contentcreator/cc-icons
  * @package    mod_contentcreator
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/cc-icons', [], function() {
+define([], function() {
     'use strict';
 
     // ===========================================================================

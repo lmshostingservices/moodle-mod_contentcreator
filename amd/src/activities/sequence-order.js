@@ -7,7 +7,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define('mod_contentcreator/activities/sequence-order', ['jquery'], function($) {
+define(['jquery'], function($) {
     'use strict';
 
     /**
@@ -93,17 +93,14 @@ define('mod_contentcreator/activities/sequence-order', ['jquery'], function($) {
         initDragDrop: function() {
             var self = this;
             var $list = this.container.find('.cc5-steps-list');
-            var draggedItem = null;
             
             $list.on('dragstart', '.cc5-step-item', function(e) {
-                draggedItem = this;
                 $(this).addClass('dragging');
                 e.originalEvent.dataTransfer.effectAllowed = 'move';
             });
             
             $list.on('dragend', '.cc5-step-item', function(e) {
                 $(this).removeClass('dragging');
-                draggedItem = null;
                 self.updateNumbers();
             });
             
@@ -198,7 +195,6 @@ define('mod_contentcreator/activities/sequence-order', ['jquery'], function($) {
             });
             
             var allCorrect = correctCount === this.correctOrder.length;
-            var percentage = Math.round((correctCount / this.correctOrder.length) * 100);
             
             var feedbackClass = allCorrect ? 'correct' : 'incorrect';
             var feedbackIcon = allCorrect 

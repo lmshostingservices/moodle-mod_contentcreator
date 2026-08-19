@@ -18,7 +18,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/cc-state', [], function() {
+define([], function() {
     'use strict';
 
     /** Current plugin version  -  single source of truth for builder.js and player5.js. */
@@ -65,12 +65,23 @@ define('mod_contentcreator/cc-state', [], function() {
      */
     function createLogger(verbose) {
         var prefix = '[CC v' + CC_VERSION + ']';
-        var log   = verbose
-            ? function() { console.log.apply(console, [prefix].concat(Array.prototype.slice.call(arguments))); }
+        // This factory is the plugin's single sanctioned console boundary. Every
+        // other module logs through the triple it returns, which is why the
+        // no-console rule is disabled here and nowhere else.
+        /* eslint-disable no-console */
+        var log = verbose
+            ? function() {
+                console.log.apply(console, [prefix].concat(Array.prototype.slice.call(arguments)));
+            }
             : function() {};
-        var warn  = function() { console.warn.apply(console, [prefix].concat(Array.prototype.slice.call(arguments))); };
-        var error = function() { console.error.apply(console, [prefix].concat(Array.prototype.slice.call(arguments))); };
-        return { log: log, warn: warn, error: error };
+        var warn = function() {
+            console.warn.apply(console, [prefix].concat(Array.prototype.slice.call(arguments)));
+        };
+        var error = function() {
+            console.error.apply(console, [prefix].concat(Array.prototype.slice.call(arguments)));
+        };
+        /* eslint-enable no-console */
+        return {log: log, warn: warn, error: error};
     }
 
     // v11.02: Moved from player5.js  -  DJB2a hash of voiceover text for staleness detection.
@@ -561,11 +572,127 @@ define('mod_contentcreator/cc-state', [], function() {
         }
     }
 
+    /**
+     * Build the URL of the plugin's AJAX endpoint.
+     *
+     * @return {String} Absolute URL of ajax.php.
+     */
+    function ajaxUrl() {
+        return M.cfg.wwwroot + '/mod/contentcreator/ajax.php';
+    }
+
+    /**
+     * Call the vendor API through the Moodle server-side proxy.
+     *
+     * The site's API credentials never reach the browser. The client names an
+     * allowlisted endpoint key and the server injects the credentials and the
+     * real URL. See the endpoint allowlist in ajax.php.
+     *
+     * @param {Number} cmid Course module id.
+     * @param {String} endpoint Allowlisted endpoint key, e.g. 'suggesttopics'.
+     * @param {Object} [options] Optional settings.
+     * @param {Object} [options.payload] Request body, JSON encoded by this helper.
+     * @param {String} [options.unitcode] Unit code substituted into {unit} paths.
+     * @return {Promise} Resolves with the vendor's decoded JSON payload.
+     */
+    function vendorFetch(cmid, endpoint, options) {
+        var opts = options || {};
+        var body = new FormData();
+        body.append('sesskey', M.cfg.sesskey);
+        body.append('action', 'vendor_proxy');
+        body.append('cmid', cmid);
+        body.append('endpoint', endpoint);
+        if (opts.unitcode) {
+            body.append('unitcode', opts.unitcode);
+        }
+        if (opts.payload) {
+            body.append('payload', JSON.stringify(opts.payload));
+        }
+        return fetch(ajaxUrl(), {method: 'POST', body: body, credentials: 'same-origin'})
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (!data || data.success !== true) {
+                    throw new Error((data && data.error) || 'Request failed');
+                }
+                return data.data;
+            });
+    }
+
+    /**
+     * Upload a file to the vendor through the server-side proxy.
+     *
+     * @param {Number} cmid Course module id.
+     * @param {String} endpoint Allowlisted endpoint key.
+     * @param {File} file The file to upload. PDF only, 20 MB maximum.
+     * @param {Object} [options] Optional settings.
+     * @param {String} [options.unitcode] Unit code substituted into {unit} paths.
+     * @return {Promise} Resolves with the vendor's decoded JSON payload.
+     */
+    function vendorUpload(cmid, endpoint, file, options) {
+        var opts = options || {};
+        var body = new FormData();
+        body.append('sesskey', M.cfg.sesskey);
+        body.append('action', 'vendor_upload');
+        body.append('cmid', cmid);
+        body.append('endpoint', endpoint);
+        if (opts.unitcode) {
+            body.append('unitcode', opts.unitcode);
+        }
+        body.append('file', file);
+        return fetch(ajaxUrl(), {method: 'POST', body: body, credentials: 'same-origin'})
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (!data || data.success !== true) {
+                    throw new Error((data && data.error) || 'Upload failed');
+                }
+                return data.data;
+            });
+    }
+
+    /**
+     * Fetch a binary vendor response through the server-side proxy.
+     *
+     * @param {Number} cmid Course module id.
+     * @param {String} endpoint Allowlisted endpoint key.
+     * @param {Object} [options] Optional settings.
+     * @param {Object} [options.payload] Request body, JSON encoded by this helper.
+     * @return {Promise} Resolves with the response Blob.
+     */
+    function vendorDownload(cmid, endpoint, options) {
+        var opts = options || {};
+        var body = new FormData();
+        body.append('sesskey', M.cfg.sesskey);
+        body.append('action', 'vendor_download');
+        body.append('cmid', cmid);
+        body.append('endpoint', endpoint);
+        if (opts.payload) {
+            body.append('payload', JSON.stringify(opts.payload));
+        }
+        return fetch(ajaxUrl(), {method: 'POST', body: body, credentials: 'same-origin'})
+            .then(function(response) {
+                var type = response.headers.get('Content-Type') || '';
+                if (type.indexOf('application/json') !== -1) {
+                    return response.json().then(function(data) {
+                        throw new Error((data && data.error) || 'Download failed');
+                    });
+                }
+                return response.blob();
+            });
+    }
+
     return {
         CC_VERSION: CC_VERSION,
         createLogger: createLogger,
         VOICEOVER_SCHEMA_VERSION: VOICEOVER_SCHEMA_VERSION,
         voiceoverTextHash: voiceoverTextHash,
-        buildVoiceoverText: buildVoiceoverText
+        buildVoiceoverText: buildVoiceoverText,
+        ajaxUrl: ajaxUrl,
+        vendorFetch: vendorFetch,
+        vendorUpload: vendorUpload,
+        vendorDownload: vendorDownload
     };
 });

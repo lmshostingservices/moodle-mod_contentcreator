@@ -13,8 +13,12 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/prompts', ['mod_contentcreator/legislation'], function(Legislation) {
+define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state'], function(Legislation, CcState) {
     'use strict';
+
+    // Gated diagnostics  -  silent in production, enabled from cc-state.js.
+    var _log = CcState.createLogger(false);
+    var ccWarn = _log.warn;
 
     // ===========================================================================
     // REGIONAL SPELLING SYSTEM (v6.4.0)
@@ -148,7 +152,7 @@ MANDATORY SPELLING (International English):
     const getLanguageName = (languageCode) => {
         if (LANGUAGE_NAMES[languageCode]) return LANGUAGE_NAMES[languageCode];
         if (!languageCode || (languageCode + '').startsWith('en-')) return 'English (Australian)';
-        try { console.warn('[CC PROMPTS v12.69] Unknown language code "' + languageCode + '" — falling through to raw code; please add it to LANGUAGE_NAMES.'); } catch (_e) {}
+        ccWarn('[Prompts] Unknown language code "' + languageCode + '" — falling through to raw code; please add it to LANGUAGE_NAMES.');
         return languageCode;
     };
 
@@ -816,7 +820,12 @@ Generate the full 6-card sequence.${langSuffix}`;
             if (allText !== before) needsReparse = true;
         }
         if (needsReparse) {
-            try { return JSON.parse(allText); } catch(e) {}
+            try {
+                return JSON.parse(allText);
+            } catch (e) {
+                // The slang substitution can break the JSON if it landed inside an escape
+                // sequence. Fall through and return the already-parsed cards unchanged.
+            }
         }
         
         return cards;
@@ -831,7 +840,7 @@ Generate the full 6-card sequence.${langSuffix}`;
         const mode = context?.mode || 'vet';
         const schema = getCardSchemaForMode(mode);
         const expectedCount = schema.cardTypes.length;
-        const wc = (str) => { const s = (typeof str === 'string') ? str : (str == null ? '' : String(str)); return s.trim().split(/\s+/).filter(w => w).length; };
+        const wc = (str) => { const s = (typeof str === 'string') ? str : ((str === null || str === undefined) ? '' : String(str)); return s.trim().split(/\s+/).filter(w => w).length; };
         const details = {
             schema: { score: 0, max: 20, issues: [] },
             content: { score: 0, max: 25, issues: [] },
@@ -864,7 +873,6 @@ Generate the full 6-card sequence.${langSuffix}`;
         }
 
         let contentScore = 25;
-        const allText = JSON.stringify(cards || {}).toLowerCase();
 
         const bannedHits = validateBannedWords(cards);
         if (bannedHits.length >= 3) { contentScore -= 10; details.content.issues.push(`Banned words (${bannedHits.length}): ${bannedHits.slice(0, 5).join(', ')}`); }
@@ -1013,12 +1021,6 @@ Generate the full 6-card sequence.${langSuffix}`;
             hardFailPenalty: 0,
             summary: `${totalScore}/${maxScore} (${action})`
         };
-    };
-
-    const getBloomsInstruction = (context) => {
-        const bloomsKey = (context?.bloomsLevel || 'apply').toLowerCase();
-        const info = BLOOMS_LEVEL_INSTRUCTIONS[bloomsKey] || BLOOMS_LEVEL_INSTRUCTIONS.apply;
-        return `- Content must target Bloom's Level: ${info.verb} (use verbs: ${info.verbs})  -  ${info.decisionFocus}`;
     };
 
     // ===========================================================================
@@ -1269,7 +1271,7 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
             consequenceSpecificity: { score: 0, max: 10, issues: [] }
         };
 
-        const wc = (str) => { const s = (typeof str === 'string') ? str : (str == null ? '' : String(str)); return s.trim().split(/\s+/).filter(w => w).length; };
+        const wc = (str) => { const s = (typeof str === 'string') ? str : ((str === null || str === undefined) ? '' : String(str)); return s.trim().split(/\s+/).filter(w => w).length; };
 
         const isVerbFirst = function(text) {
             var t = (text || '').trim();
@@ -1428,7 +1430,7 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
 
         var totalScore = 0;
         for (var cat in details) {
-            if (details.hasOwnProperty(cat)) {
+            if (Object.prototype.hasOwnProperty.call(details, cat)) {
                 totalScore += details[cat].score;
             }
         }
@@ -1477,7 +1479,7 @@ Keep existing cardType values. Return ONLY a valid JSON object with "cards" arra
 
         var issueLines = [];
         for (var cat in auditIssues) {
-            if (auditIssues.hasOwnProperty(cat)) {
+            if (Object.prototype.hasOwnProperty.call(auditIssues, cat)) {
                 var catIssues = auditIssues[cat]?.issues || [];
                 catIssues.forEach(function(issue) {
                     issueLines.push('- [' + cat + '] ' + issue);
@@ -1517,7 +1519,7 @@ Return ONLY the rewritten JSON object with "cards" array.`;
         if (mode === 'university') {
             var issues = [];
             for (var cat in auditDetails) {
-                if (auditDetails.hasOwnProperty(cat)) {
+                if (Object.prototype.hasOwnProperty.call(auditDetails, cat)) {
                     (auditDetails[cat]?.issues || []).forEach(function(i) { issues.push(i); });
                 }
             }
@@ -1526,7 +1528,7 @@ Return ONLY the rewritten JSON object with "cards" array.`;
         if (mode === 'workplace') {
             var wpIssues = [];
             for (var cat2 in auditDetails) {
-                if (auditDetails.hasOwnProperty(cat2)) {
+                if (Object.prototype.hasOwnProperty.call(auditDetails, cat2)) {
                     (auditDetails[cat2]?.issues || []).forEach(function(i) { wpIssues.push(i); });
                 }
             }
@@ -1535,7 +1537,7 @@ Return ONLY the rewritten JSON object with "cards" array.`;
         if (mode === 'pd') {
             var pdIssues = [];
             for (var cat3 in auditDetails) {
-                if (auditDetails.hasOwnProperty(cat3)) {
+                if (Object.prototype.hasOwnProperty.call(auditDetails, cat3)) {
                     (auditDetails[cat3]?.issues || []).forEach(function(i) { pdIssues.push(i); });
                 }
             }

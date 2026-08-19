@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -52,9 +51,9 @@ class restore_contentcreator_activity_task extends restore_activity_task {
      * @return array
      */
     public static function define_decode_contents() {
-        $contents = array();
+        $contents = [];
 
-        $contents[] = new restore_decode_content('contentcreator', array('intro'), 'contentcreator');
+        $contents[] = new restore_decode_content('contentcreator', ['intro'], 'contentcreator');
 
         return $contents;
     }
@@ -65,7 +64,7 @@ class restore_contentcreator_activity_task extends restore_activity_task {
      * @return array of restore_decode_rule
      */
     public static function define_decode_rules() {
-        $rules = array();
+        $rules = [];
 
         $rules[] = new restore_decode_rule('CONTENTCREATORVIEWBYID', '/mod/contentcreator/view.php?id=$1', 'course_module');
         $rules[] = new restore_decode_rule('CONTENTCREATORINDEX', '/mod/contentcreator/index.php?id=$1', 'course');
@@ -80,7 +79,7 @@ class restore_contentcreator_activity_task extends restore_activity_task {
      * @return array of restore_log_rule
      */
     public static function define_restore_log_rules() {
-        $rules = array();
+        $rules = [];
 
         $rules[] = new restore_log_rule('contentcreator', 'add', 'view.php?id={course_module}', '{contentcreator}');
         $rules[] = new restore_log_rule('contentcreator', 'update', 'view.php?id={course_module}', '{contentcreator}');
@@ -96,7 +95,7 @@ class restore_contentcreator_activity_task extends restore_activity_task {
      * @return array of restore_log_rule
      */
     public static function define_restore_log_rules_for_course() {
-        $rules = array();
+        $rules = [];
 
         $rules[] = new restore_log_rule('contentcreator', 'view all', 'index.php?id={course}', null);
 

@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -26,33 +25,53 @@
 
 namespace mod_contentcreator\external;
 
-defined('MOODLE_INTERNAL') || die();
-
-global $CFG;
-require_once($CFG->libdir . '/externallib.php');
-
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use context_module;
 
+/**
+ * Stores a learner attempt and updates activity completion.
+ *
+ * @package    mod_contentcreator
+ * @copyright  2025 AI Grader
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class save_attempt extends external_api {
+    /**
+     * Describes the parameters for execute().
+     *
+     * @return external_function_parameters
+     */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module ID'),
             'completed' => new external_value(PARAM_INT, 'Completion status (1 = complete)', VALUE_DEFAULT, 0),
-            'responses' => new external_value(PARAM_RAW, 'JSON slide responses', VALUE_DEFAULT, '{}') // pipeline-ignore: PARAM_RAW — JSON blob immediately json_decode()'d and validated
+            'responses' => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                'JSON slide responses',
+                VALUE_DEFAULT,
+                '{}',
+            ),
         ]);
     }
 
+    /**
+     * Store the current user's attempt for this activity.
+     *
+     * @param int $cmid Course module id.
+     * @param int $completed Completion status, 1 when the activity is complete.
+     * @param string $responses JSON encoded slide responses.
+     * @return array Result structure as described by execute_returns().
+     */
     public static function execute(int $cmid, int $completed = 0, string $responses = '{}'): array {
         global $DB, $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid' => $cmid,
             'completed' => $completed,
-            'responses' => $responses
+            'responses' => $responses,
         ]);
 
         $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
@@ -63,7 +82,7 @@ class save_attempt extends external_api {
 
         $existing = $DB->get_record('contentcreator_attempts', [
             'contentcreatorid' => $cm->instance,
-            'userid' => $USER->id
+            'userid' => $USER->id,
         ]);
 
         $record = new \stdClass();
@@ -90,14 +109,21 @@ class save_attempt extends external_api {
 
         return [
             'success' => true,
-            'message' => $params['completed'] ? 'Module completed' : 'Progress saved'
+            'message' => $params['completed']
+                ? get_string('modulecompleted', 'mod_contentcreator')
+                : get_string('progresssaved', 'mod_contentcreator'),
         ];
     }
 
+    /**
+     * Describes the return value for execute().
+     *
+     * @return external_single_structure
+     */
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'message' => new external_value(PARAM_TEXT, 'Response message')
+            'message' => new external_value(PARAM_TEXT, 'Response message'),
         ]);
     }
 }

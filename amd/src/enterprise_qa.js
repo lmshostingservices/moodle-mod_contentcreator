@@ -9,7 +9,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/enterprise_qa', [], function() {
+define([], function() {
     'use strict';
 
     var DEFAULT_POLICY = {

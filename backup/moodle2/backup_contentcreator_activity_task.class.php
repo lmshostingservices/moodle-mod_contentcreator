@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -55,11 +54,11 @@ class backup_contentcreator_activity_task extends backup_activity_task {
 
         $base = preg_quote($CFG->wwwroot, '/');
 
-        // Link to the list of contentcreator instances
+        // Link to the list of contentcreator instances.
         $search = '/(' . $base . '\/mod\/contentcreator\/index.php\?id\=)([0-9]+)/';
         $content = preg_replace($search, '$@CONTENTCREATORINDEX*$2@$', $content);
 
-        // Link to contentcreator view by moduleid
+        // Link to contentcreator view by moduleid.
         $search = '/(' . $base . '\/mod\/contentcreator\/view.php\?id\=)([0-9]+)/';
         $content = preg_replace($search, '$@CONTENTCREATORVIEWBYID*$2@$', $content);
 

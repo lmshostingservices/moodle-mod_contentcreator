@@ -25,8 +25,6 @@
 
 namespace mod_contentcreator;
 
-defined('MOODLE_INTERNAL') || die();
-
 use advanced_testcase;
 use context_module;
 use stdClass;
@@ -75,7 +73,7 @@ class ajax_test extends advanced_testcase {
 
         $this->contentcreator = $generator->create_module('contentcreator', [
             'course' => $this->course->id,
-            'name' => 'Test Content Creator'
+            'name' => 'Test Content Creator',
         ]);
 
         $this->cm = get_coursemodule_from_instance('contentcreator', $this->contentcreator->id);
@@ -128,9 +126,12 @@ class ajax_test extends advanced_testcase {
     }
 
     /**
-     * Test that generate_slide action requires manage capability.
+     * Test that the generate_slide action requires authoring rights.
      *
-     * Only users with mod/contentcreator:manage capability should be able to generate slides.
+     * generate_slide is gated on mod/contentcreator:manage, with the deliberate
+     * moodle/course:manageactivities fallback documented in
+     * test_manage_falls_back_to_manageactivities(). Neither a student nor a
+     * non-editing teacher holds either, so neither can generate slides.
      */
     public function test_generate_slide_requires_manage_capability(): void {
         $this->setUser($this->editingteacher);
@@ -141,6 +142,66 @@ class ajax_test extends advanced_testcase {
 
         $this->setUser($this->student);
         $this->assertFalse(has_capability('mod/contentcreator:manage', $this->context));
+    }
+
+    /**
+     * Test that the voiceover and document-example endpoints are gated on view, not manage.
+     *
+     * This is deliberate and must not be "tightened" without a product decision:
+     * generate_voiceover and generate_document_example spend vendor credits, and they
+     * are declared 'type' => 'write' in db/services.php because they store files and
+     * call the vendor, but the runtime check in both external classes is
+     * mod/contentcreator:view. Learners and non-editing teachers are meant to be able
+     * to play generated audio and view generated document examples, so the capability
+     * declared in db/services.php intentionally matches the runtime ':view' check
+     * rather than the 'write' type.
+     */
+    public function test_credit_consuming_endpoints_are_gated_on_view(): void {
+        $this->setUser($this->student);
+        $this->assertTrue(has_capability('mod/contentcreator:view', $this->context));
+
+        $this->setUser($this->teacher);
+        $this->assertTrue(has_capability('mod/contentcreator:view', $this->context));
+
+        $this->setUser($this->editingteacher);
+        $this->assertTrue(has_capability('mod/contentcreator:view', $this->context));
+    }
+
+    /**
+     * Test the deliberate moodle/course:manageactivities fallback on the authoring endpoints.
+     *
+     * save_manifest, save_manifest_chunk and save_slide_edit accept
+     * moodle/course:manageactivities in the course context as an alternative to
+     * mod/contentcreator:manage. This is INTENTIONAL: custom roles cloned from
+     * editingteacher frequently lack the plugin capability but are genuine course
+     * editors, and without the fallback they lose their work on every save.
+     *
+     * The documented trade-off is that a CAP_PROHIBIT on mod/contentcreator:manage
+     * alone does NOT block such a user — the prohibit must also be applied to
+     * moodle/course:manageactivities. Do not "fix" this assertion to expect the
+     * prohibit to win; that would reintroduce the data-loss bug the fallback exists
+     * to prevent.
+     */
+    public function test_manage_falls_back_to_manageactivities(): void {
+        global $DB;
+
+        $editingteacherrole = $DB->get_record('role', ['shortname' => 'editingteacher']);
+        role_change_permission(
+            $editingteacherrole->id,
+            $this->context,
+            'mod/contentcreator:manage',
+            CAP_PROHIBIT
+        );
+
+        $this->setUser($this->editingteacher);
+
+        // The plugin capability is now prohibited...
+        $this->assertFalse(has_capability('mod/contentcreator:manage', $this->context));
+
+        // ...but the course-level fallback still holds, so the authoring endpoints
+        // deliberately still admit this user.
+        $coursecontext = \context_course::instance($this->course->id);
+        $this->assertTrue(has_capability('moodle/course:manageactivities', $coursecontext));
     }
 
     /**
@@ -171,7 +232,7 @@ class ajax_test extends advanced_testcase {
         $progressdata = [
             'currentSlide' => 3,
             'totalSlides' => 10,
-            'viewedSlides' => [1, 2, 3]
+            'viewedSlides' => [1, 2, 3],
         ];
 
         $record = new stdClass();
@@ -208,7 +269,7 @@ class ajax_test extends advanced_testcase {
             'currentSlide' => 5,
             'totalSlides' => 15,
             'viewedSlides' => [1, 2, 3, 4, 5],
-            'completedAt' => null
+            'completedAt' => null,
         ];
 
         $record = new stdClass();
@@ -222,7 +283,7 @@ class ajax_test extends advanced_testcase {
 
         $loadedrecord = $DB->get_record('contentcreator_progress', [
             'cmid' => $this->cm->id,
-            'userid' => $this->student->id
+            'userid' => $this->student->id,
         ]);
 
         $this->assertNotEmpty($loadedrecord);
@@ -245,7 +306,7 @@ class ajax_test extends advanced_testcase {
 
         $record = $DB->get_record('contentcreator_progress', [
             'cmid' => $this->cm->id,
-            'userid' => $newuser->id
+            'userid' => $newuser->id,
         ]);
 
         $this->assertFalse($record);

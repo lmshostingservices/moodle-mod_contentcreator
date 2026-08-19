@@ -7,7 +7,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define('mod_contentcreator/activities/spot-issue', ['jquery'], function($) {
+define(['jquery'], function($) {
     'use strict';
 
     /**

@@ -8,7 +8,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/scorm.exporter', [], function() {
+define([], function() {
     'use strict';
 
     const SCORM_TEMPLATE = `<!DOCTYPE html>
@@ -17,8 +17,6 @@ define('mod_contentcreator/scorm.exporter', [], function() {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{TITLE}}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>{{STYLES}}</style>
 </head>
 <body>
@@ -313,7 +311,7 @@ function initPlayer(manifest) {
     --cc-tx:        180ms ease;
 }
 *  { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--cc-bg); min-height: 100vh; }
+body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif; background: var(--cc-bg); min-height: 100vh; }
 
 /* ---- Outer layout ---- */
 .cc-app   { min-height: 100vh; }

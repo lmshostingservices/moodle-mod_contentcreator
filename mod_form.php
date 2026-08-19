@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -27,7 +26,19 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/course/moodleform_mod.php');
 
+/**
+ * Activity settings form for mod_contentcreator.
+ *
+ * @package    mod_contentcreator
+ * @copyright  2025 AI Grader
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class mod_contentcreator_mod_form extends moodleform_mod {
+    /**
+     * Define the activity settings form.
+     *
+     * @return void
+     */
     public function definition() {
         $mform = $this->_form;
 
@@ -47,9 +58,9 @@ class mod_contentcreator_mod_form extends moodleform_mod {
     }
 
     /**
-     * Add custom completion rules for "view all slides"
+     * Add the custom completion rules for this activity.
      *
-     * @return array Array of string IDs of added items, empty array if none
+     * @return array Array of element names added to the form, empty if none.
      */
     public function add_completion_rules() {
         $mform = $this->_form;
@@ -78,14 +89,10 @@ class mod_contentcreator_mod_form extends moodleform_mod {
     /**
      * Called during validation. Indicates whether a module-specific completion rule is selected.
      *
-     * @param array $data Input data
-     * @return bool True if one or more rules is enabled, false if none are
+     * @param array $data Input data.
+     * @return bool True if one or more rules is enabled, false if none are.
      */
     public function completion_rule_enabled($data) {
         return !empty($data['completionviewallslides']) || !empty($data['completionallactivities']);
-    }
-
-    public function data_preprocessing(&$defaultvalues) {
-        parent::data_preprocessing($defaultvalues);
     }
 }

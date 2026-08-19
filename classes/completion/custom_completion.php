@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -25,10 +24,15 @@
 
 namespace mod_contentcreator\completion;
 
-defined('MOODLE_INTERNAL') || die();
-
 use core_completion\activity_custom_completion;
 
+/**
+ * Custom completion rules for the Content Creator activity.
+ *
+ * @package    mod_contentcreator
+ * @copyright  2025 AI Grader
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class custom_completion extends activity_custom_completion {
     /**
      * Fetches the completion state for a given completion rule.
@@ -47,7 +51,7 @@ class custom_completion extends activity_custom_completion {
         if ($rule === 'completionviewallslides') {
             $attempt = $DB->get_record('contentcreator_attempts', [
                 'contentcreatorid' => $cm->instance,
-                'userid' => $userid
+                'userid' => $userid,
             ]);
 
             if ($attempt && $attempt->completed) {
@@ -58,54 +62,54 @@ class custom_completion extends activity_custom_completion {
 
         if ($rule === 'completionallactivities') {
             $instance = $DB->get_record('contentcreator', ['id' => $cm->instance], 'manifestjson', MUST_EXIST);
-            // v11.48 FIX BUG-CC-DBWRITE: decompress before json_decode (may be gz: compressed)
+            // Version 11.48 FIX BUG-CC-DBWRITE: decompress before json_decode (may be gz: compressed).
             $manifest = json_decode(\mod_contentcreator\manifest_storage::decompress($instance->manifestjson ?? ''), true);
             if (!$manifest || empty($manifest['topics'])) {
                 return COMPLETION_COMPLETE;
             }
 
-            // v11.11: If activities are disabled, auto-complete — no challenges to track
-            $activitySettings = $manifest['activitySettings'] ?? [];
-            if (isset($activitySettings['enabled']) && $activitySettings['enabled'] === false) {
+            // Version 11.11: If activities are disabled, auto-complete — no challenges to track.
+            $activitysettings = $manifest['activitySettings'] ?? [];
+            if (isset($activitysettings['enabled']) && $activitysettings['enabled'] === false) {
                 return COMPLETION_COMPLETE;
             }
 
-            $challengeSectionIds = [];
+            $challengesectionids = [];
             foreach ($manifest['topics'] as $topic) {
                 foreach (($topic['sections'] ?? []) as $section) {
-                    $sectionId = $section['id'] ?? '';
-                    if (empty($sectionId)) {
+                    $sectionid = $section['id'] ?? '';
+                    if (empty($sectionid)) {
                         continue;
                     }
                     $cards = $section['cards'] ?? [];
                     foreach ($cards as $card) {
                         if (($card['cardType'] ?? '') === 'decision-point') {
-                            $challengeSectionIds[] = $sectionId . '_learning';
+                            $challengesectionids[] = $sectionid . '_learning';
                             break;
                         }
                     }
                 }
             }
 
-            if (empty($challengeSectionIds)) {
+            if (empty($challengesectionids)) {
                 return COMPLETION_COMPLETE;
             }
 
-            $progressRecord = $DB->get_record('contentcreator_progress', [
+            $progressrecord = $DB->get_record('contentcreator_progress', [
                 'cmid' => $cm->id,
-                'userid' => $userid
+                'userid' => $userid,
             ]);
 
-            if (!$progressRecord || empty($progressRecord->progress)) {
+            if (!$progressrecord || empty($progressrecord->progress)) {
                 return COMPLETION_INCOMPLETE;
             }
 
-            $progress = json_decode($progressRecord->progress, true);
+            $progress = json_decode($progressrecord->progress, true);
             if (!$progress || empty($progress['sections'])) {
                 return COMPLETION_INCOMPLETE;
             }
 
-            foreach ($challengeSectionIds as $csid) {
+            foreach ($challengesectionids as $csid) {
                 if (empty($progress['sections'][$csid]['challengeComplete'])) {
                     return COMPLETION_INCOMPLETE;
                 }
@@ -134,7 +138,7 @@ class custom_completion extends activity_custom_completion {
     public function get_custom_rule_descriptions(): array {
         return [
             'completionviewallslides' => get_string('completionviewallslidesdesc', 'contentcreator'),
-            'completionallactivities' => get_string('completionallactivitiesdesc', 'contentcreator')
+            'completionallactivities' => get_string('completionallactivitiesdesc', 'contentcreator'),
         ];
     }
 

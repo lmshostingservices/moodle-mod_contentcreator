@@ -11,7 +11,7 @@
  * @module mod_contentcreator/document_generator/documentRegistry
  */
 
-define('mod_contentcreator/document_generator/documentRegistry', [], function() {
+define([], function() {
     'use strict';
 
     // Job level ladder (standardised)

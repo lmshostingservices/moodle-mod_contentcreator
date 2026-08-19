@@ -16,7 +16,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/cc-activities', [], function() {
+define([], function() {
     'use strict';
 
     // Helper references populated by init()

@@ -7,7 +7,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define('mod_contentcreator/activities/requirement-match', ['jquery'], function($) {
+define(['jquery'], function($) {
     'use strict';
 
     /**
@@ -237,7 +237,6 @@ define('mod_contentcreator/activities/requirement-match', ['jquery'], function($
             });
             
             var allCorrect = correctCount === this.pairs.length;
-            var percentage = Math.round((correctCount / this.pairs.length) * 100);
             
             var feedbackClass = allCorrect ? 'correct' : 'incorrect';
             var feedbackIcon = allCorrect 

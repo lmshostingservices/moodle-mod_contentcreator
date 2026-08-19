@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -23,8 +22,12 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Return whether the module supports a given feature.
+ *
+ * @param string $feature Constant representing the feature.
+ * @return mixed True if module supports the feature, null if unknown.
+ */
 function contentcreator_supports($feature) {
     switch ($feature) {
         case FEATURE_MOD_INTRO:
@@ -32,18 +35,32 @@ function contentcreator_supports($feature) {
         case FEATURE_SHOW_DESCRIPTION:
             return true;
         case FEATURE_GRADE_HAS_GRADE:
-            return false; // No grading - simple completion only
+            // No grading: simple completion only.
+            return false;
         case FEATURE_BACKUP_MOODLE2:
             return true;
         case FEATURE_COMPLETION_TRACKS_VIEWS:
             return true;
         case FEATURE_COMPLETION_HAS_RULES:
             return true;
+        case FEATURE_GROUPS:
+            return false;
+        case FEATURE_GROUPINGS:
+            return false;
+        case FEATURE_MOD_PURPOSE:
+            return MOD_PURPOSE_CONTENT;
         default:
             return null;
     }
 }
 
+/**
+ * Add a new contentcreator instance.
+ *
+ * @param stdClass $contentcreator Data from the activity form.
+ * @param mod_contentcreator_mod_form|null $mform The form instance.
+ * @return int The id of the newly created instance.
+ */
 function contentcreator_add_instance($contentcreator, ?object $mform = null) {
     global $DB;
 
@@ -58,6 +75,13 @@ function contentcreator_add_instance($contentcreator, ?object $mform = null) {
     return $id;
 }
 
+/**
+ * Update an existing contentcreator instance.
+ *
+ * @param stdClass $contentcreator Data from the activity form.
+ * @param mod_contentcreator_mod_form|null $mform The form instance.
+ * @return bool True on success.
+ */
 function contentcreator_update_instance($contentcreator, ?object $mform = null) {
     global $DB;
 
@@ -69,6 +93,12 @@ function contentcreator_update_instance($contentcreator, ?object $mform = null) 
     return $result;
 }
 
+/**
+ * Delete a contentcreator instance and every trace of its user data and files.
+ *
+ * @param int $id The instance id.
+ * @return bool True on success, false if the instance does not exist.
+ */
 function contentcreator_delete_instance($id) {
     global $DB;
 
@@ -78,9 +108,20 @@ function contentcreator_delete_instance($id) {
 
     $DB->delete_records('contentcreator_attempts', ['contentcreatorid' => $id]);
 
-    $cms = $DB->get_records('course_modules', ['instance' => $id, 'module' => $DB->get_field('modules', 'id', ['name' => 'contentcreator'])]);
+    $moduleid = $DB->get_field('modules', 'id', ['name' => 'contentcreator']);
+    $cms = $DB->get_records('course_modules', ['instance' => $id, 'module' => $moduleid]);
+    $fs = get_file_storage();
     foreach ($cms as $cm) {
         $DB->delete_records('contentcreator_progress', ['cmid' => $cm->id]);
+        // The checklist table is also keyed by cmid; it was previously orphaned on delete.
+        $DB->delete_records('contentcreator_checklist', ['cmid' => $cm->id]);
+
+        // Remove the module's stored files: pre-generated voiceovers and any cached TTS audio.
+        $modulecontext = context_module::instance($cm->id, IGNORE_MISSING);
+        if ($modulecontext) {
+            $fs->delete_area_files($modulecontext->id, 'mod_contentcreator', 'voiceovers');
+            $fs->delete_area_files($modulecontext->id, 'mod_contentcreator', 'voice_cache');
+        }
     }
 
     $DB->delete_records('contentcreator', ['id' => $id]);
@@ -101,9 +142,9 @@ function contentcreator_view($contentcreator, $course, $cm, $context) {
     // separated from this function. set_module_viewed() calls write_close() internally
     // which closes the PHP session. When called BEFORE $OUTPUT->header(), the session
     // is closed before header() writes $SESSION->editedpages, causing:
-    //   "Script mutated the session after it was closed: $SESSION->editedpages"
+    // "Script mutated the session after it was closed: $SESSION->editedpages"
     // When called AFTER $OUTPUT->header(), completionlib.php throws:
-    //   "set_module_viewed must be called before header is printed" (DEBUG_DEVELOPER)
+    // "set_module_viewed must be called before header is printed" (DEBUG_DEVELOPER)
     // Both warnings are avoided by: (a) firing only the event here (before header,
     // correct Moodle pattern, no session writes), and (b) calling update_state()
     // directly in view.php AFTER the header once write_close() has been called
@@ -132,8 +173,13 @@ function contentcreator_view($contentcreator, $course, $cm, $context) {
 function contentcreator_get_coursemodule_info($coursemodule) {
     global $DB;
 
-    if (!$instance = $DB->get_record('contentcreator', ['id' => $coursemodule->instance],
-            'id, name, intro, introformat, completionviewallslides, completionallactivities')) {
+    if (
+        !$instance = $DB->get_record(
+            'contentcreator',
+            ['id' => $coursemodule->instance],
+            'id, name, intro, introformat, completionviewallslides, completionallactivities'
+        )
+    ) {
         return null;
     }
 
@@ -155,28 +201,6 @@ function contentcreator_get_coursemodule_info($coursemodule) {
 }
 
 /**
- * Return human-readable descriptions of active custom completion rules.
- *
- * @param cm_info|stdClass $cm The course module.
- * @return array Array of description strings.
- */
-function mod_contentcreator_get_completion_active_rule_descriptions($cm) {
-    global $DB;
-
-    $descriptions = [];
-    $instance = $DB->get_record('contentcreator', ['id' => $cm->instance]);
-
-    if ($instance && !empty($instance->completionviewallslides)) {
-        $descriptions[] = get_string('completionviewallslidesdesc', 'contentcreator');
-    }
-    if ($instance && !empty($instance->completionallactivities)) {
-        $descriptions[] = get_string('completionallactivitiesdesc', 'contentcreator');
-    }
-
-    return $descriptions;
-}
-
-/**
  * Serves voiceover audio files from the mod_contentcreator file store.
  *
  * v11.70: Pre-generated voiceover audio is persisted as files in Moodle's file API
@@ -187,14 +211,17 @@ function mod_contentcreator_get_completion_active_rule_descriptions($cm) {
  *
  * URL format: /pluginfile.php/{contextid}/mod_contentcreator/voiceovers/{cmid}/{filename}
  *
- * @param stdClass $course   Course record.
- * @param cm_info  $cm       Course-module record.
- * @param context  $context  Module context.
- * @param string   $filearea Must be 'voiceovers'.
- * @param array    $args     Remaining URL path segments: [itemid (cmid), filename].
- * @param bool     $forcedownload Whether to force a download response.
- * @param array    $options  Additional options.
- * @return bool False if file not found.
+ * The 'voice_cache' filearea is deliberately NOT served here: cached TTS audio is
+ * returned inline (base64) by ajax.php and is never addressed by URL.
+ *
+ * @param stdClass $course Course record.
+ * @param cm_info $cm Course-module record.
+ * @param context $context Module context.
+ * @param string $filearea Must be 'voiceovers'.
+ * @param array $args Remaining URL path segments: [itemid (cmid), filename].
+ * @param bool $forcedownload Whether to force a download response.
+ * @param array $options Additional options.
+ * @return bool False if the file was not found or may not be served.
  */
 function mod_contentcreator_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []) {
     if ($context->contextlevel != CONTEXT_MODULE) {
@@ -207,18 +234,103 @@ function mod_contentcreator_pluginfile($course, $cm, $context, $filearea, $args,
     require_login($course, true, $cm);
     require_capability('mod/contentcreator:view', $context);
 
-    $itemid   = (int)array_shift($args);
+    $itemid = (int)array_shift($args);
+
+    // The itemid is the cmid the audio was generated for. Reject any request whose
+    // itemid does not match the course module resolved from the context, so a file
+    // cannot be pulled out of one activity through another activity's context.
+    if ($itemid !== (int)$cm->id) {
+        return false;
+    }
+
     $filename = array_pop($args);
     $filepath = $args ? ('/' . implode('/', $args) . '/') : '/';
 
-    $fs   = get_file_storage();
+    $fs = get_file_storage();
     $file = $fs->get_file($context->id, 'mod_contentcreator', $filearea, $itemid, $filepath, $filename);
 
     if (!$file || $file->is_directory()) {
         return false;
     }
 
-    // Cache for 24 hours — voiceover content rarely changes and is re-generated
-    // by teachers when slide content is edited (staleness is detected by hash/wordcount).
+    // Cache for 24 hours: voiceover content rarely changes and is regenerated by
+    // teachers when slide content is edited (staleness is detected by hash/wordcount).
     send_stored_file($file, 86400, 0, $forcedownload, $options);
+}
+
+/**
+ * Add the course reset options for this module to the course reset form.
+ *
+ * @param MoodleQuickForm $mform The course reset form.
+ * @return void
+ */
+function contentcreator_reset_course_form_definition($mform) {
+    $mform->addElement('header', 'contentcreatorheader', get_string('modulenameplural', 'mod_contentcreator'));
+    $mform->addElement(
+        'advcheckbox',
+        'reset_contentcreator_all',
+        get_string('resetuserdata', 'mod_contentcreator')
+    );
+}
+
+/**
+ * Return the default values for the course reset form.
+ *
+ * @param stdClass $course The course being reset.
+ * @return array Default values keyed by form element name.
+ */
+function contentcreator_reset_course_form_defaults($course) {
+    return ['reset_contentcreator_all' => 1];
+}
+
+/**
+ * Remove all user data produced by contentcreator activities in the given course.
+ *
+ * Clears attempts, slide progress and the "before you start" checklist for every
+ * instance in the course.
+ *
+ * @param stdClass $data The data submitted from the course reset form.
+ * @return array Array of status records for the reset report.
+ */
+function contentcreator_reset_userdata($data) {
+    global $DB;
+
+    $status = [];
+    $componentstr = get_string('modulenameplural', 'mod_contentcreator');
+
+    if (empty($data->reset_contentcreator_all)) {
+        return $status;
+    }
+
+    $instanceids = $DB->get_fieldset_select('contentcreator', 'id', 'course = ?', [$data->courseid]);
+    if (!empty($instanceids)) {
+        [$insql, $inparams] = $DB->get_in_or_equal($instanceids);
+        $DB->delete_records_select('contentcreator_attempts', "contentcreatorid $insql", $inparams);
+    }
+
+    $moduleid = $DB->get_field('modules', 'id', ['name' => 'contentcreator']);
+    if ($moduleid) {
+        $cmids = $DB->get_fieldset_select(
+            'course_modules',
+            'id',
+            'course = ? AND module = ?',
+            [$data->courseid, $moduleid]
+        );
+        if (!empty($cmids)) {
+            [$cmsql, $cmparams] = $DB->get_in_or_equal($cmids);
+            $DB->delete_records_select('contentcreator_progress', "cmid $cmsql", $cmparams);
+            $DB->delete_records_select('contentcreator_checklist', "cmid $cmsql", $cmparams);
+        }
+    }
+
+    // Activity completion data is purged centrally by reset_course_userdata() when the
+    // "Delete completion data" option is ticked, so it is not handled again here.
+
+    $status[] = [
+        'component' => $componentstr,
+        'item' => get_string('resetuserdata', 'mod_contentcreator'),
+        'error' => false,
+    ];
+
+    return $status;
 }

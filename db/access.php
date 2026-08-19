@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -26,14 +25,16 @@
 defined('MOODLE_INTERNAL') || die();
 
 $capabilities = [
+    // Add a Content Creator activity to a course. Authoring capability: the
+    // activity name and intro are stored and rendered as HTML, hence RISK_XSS.
     'mod/contentcreator:addinstance' => [
         'riskbitmask' => RISK_XSS,
         'captype' => 'write',
         'contextlevel' => CONTEXT_COURSE,
         'archetypes' => [
             'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        ]
+            'manager' => CAP_ALLOW,
+        ],
     ],
     'mod/contentcreator:view' => [
         'captype' => 'read',
@@ -42,25 +43,30 @@ $capabilities = [
             'student' => CAP_ALLOW,
             'teacher' => CAP_ALLOW,
             'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        ]
+            'manager' => CAP_ALLOW,
+        ],
     ],
+    // Author and manage content: writes the manifest JSON, which is rendered
+    // into the player as HTML, hence RISK_XSS. Also gates every credit-consuming
+    // generation endpoint.
     'mod/contentcreator:manage' => [
         'riskbitmask' => RISK_XSS,
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes' => [
             'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        ]
+            'manager' => CAP_ALLOW,
+        ],
     ],
+    // Review learner attempts and progress. Reserved for the reporting UI; it is
+    // deliberately kept defined so that sites can already grant or prohibit it.
     'mod/contentcreator:review' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes' => [
             'teacher' => CAP_ALLOW,
             'editingteacher' => CAP_ALLOW,
-            'manager' => CAP_ALLOW
-        ]
-    ]
+            'manager' => CAP_ALLOW,
+        ],
+    ],
 ];

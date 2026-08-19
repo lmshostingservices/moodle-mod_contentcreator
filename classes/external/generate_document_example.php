@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -29,7 +28,6 @@ namespace mod_contentcreator\external;
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->libdir . '/filelib.php');
 
 use core_external\external_api;
@@ -38,7 +36,19 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use context_module;
 
+/**
+ * External function that generates a contextual workplace document example.
+ *
+ * @package    mod_contentcreator
+ * @copyright  2025 AI Grader
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class generate_document_example extends external_api {
+    /**
+     * Describes the parameters for execute().
+     *
+     * @return external_function_parameters
+     */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module ID'),
@@ -51,41 +61,58 @@ class generate_document_example extends external_api {
             'jobLevel' => new external_value(PARAM_ALPHANUMEXT, 'Job level', VALUE_DEFAULT, 'worker'),
             'jobTitle' => new external_value(PARAM_TEXT, 'Job title', VALUE_DEFAULT, 'Worker'),
             'route' => new external_value(PARAM_ALPHANUMEXT, 'Content route', VALUE_DEFAULT, 'workplace'),
-            // v7.1.5: Unit of competency context for relevant documents
+            // Version 7.1.5: Unit of competency context for relevant documents.
             'unitCode' => new external_value(PARAM_TEXT, 'Unit code', VALUE_DEFAULT, ''),
-            'unitTitle' => new external_value(PARAM_TEXT, 'Unit title', VALUE_DEFAULT, '')
+            'unitTitle' => new external_value(PARAM_TEXT, 'Unit title', VALUE_DEFAULT, ''),
         ]);
     }
 
+    /**
+     * Generate a workplace document example through the vendor API.
+     *
+     * @param int $cmid Course module id.
+     * @param string $docid Document type id.
+     * @param string $docname Document display name.
+     * @param string $country Country code.
+     * @param string $state State or region.
+     * @param string $industry Industry name.
+     * @param string $subindustry Sub-industry name.
+     * @param string $joblevel Job level.
+     * @param string $jobtitle Job title.
+     * @param string $route Content route.
+     * @param string $unitcode Unit of competency code.
+     * @param string $unittitle Unit of competency title.
+     * @return array Result structure as described by execute_returns().
+     */
     public static function execute(
         int $cmid,
-        string $docId,
-        string $docName,
+        string $docid,
+        string $docname,
         string $country = 'AU',
         string $state = '',
         string $industry = 'general',
-        string $subIndustry = '',
-        string $jobLevel = 'worker',
-        string $jobTitle = 'Worker',
+        string $subindustry = '',
+        string $joblevel = 'worker',
+        string $jobtitle = 'Worker',
         string $route = 'workplace',
-        string $unitCode = '',
-        string $unitTitle = ''
+        string $unitcode = '',
+        string $unittitle = ''
     ): array {
-        global $CFG;
+        global $CFG, $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'cmid' => $cmid,
-            'docId' => $docId,
-            'docName' => $docName,
+            'docId' => $docid,
+            'docName' => $docname,
             'country' => $country,
             'state' => $state,
             'industry' => $industry,
-            'subIndustry' => $subIndustry,
-            'jobLevel' => $jobLevel,
-            'jobTitle' => $jobTitle,
+            'subIndustry' => $subindustry,
+            'jobLevel' => $joblevel,
+            'jobTitle' => $jobtitle,
             'route' => $route,
-            'unitCode' => $unitCode,
-            'unitTitle' => $unitTitle
+            'unitCode' => $unitcode,
+            'unitTitle' => $unittitle,
         ]);
 
         $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
@@ -94,13 +121,18 @@ class generate_document_example extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
-        // Central Config integration with fallback
+        // This endpoint spends site credits and is available to any user who can view the
+        // activity, so abuse control is enforced by a per-user sliding-window rate limit
+        // rather than by the capability gate. Do not remove it without a replacement.
+        \mod_contentcreator\ratelimiter::check($USER->id, 'generate', 60, HOURSECS);
+
+        // Central Config integration with fallback.
         $aiconfiglib = $CFG->dirroot . '/local/aiconfig/lib.php';
         if (file_exists($aiconfiglib)) {
             require_once($aiconfiglib);
         }
 
-        // Get credentials from Central Config or fallback to plugin settings
+        // Get credentials from Central Config or fallback to plugin settings.
         if (function_exists('local_aiconfig_get_siteid')) {
             $siteid = local_aiconfig_get_siteid('mod_contentcreator');
         } else {
@@ -120,14 +152,14 @@ class generate_document_example extends external_api {
                 'docName' => $params['docName'],
                 'domain' => '',
                 'renderProfile' => '',
-                'error' => 'API not configured. Please install AI Grader Central Config or configure Site ID and API Key in plugin settings.'
+                'error' => get_string('errornotconfigured', 'mod_contentcreator'),
             ];
         }
 
         // Release session lock before long-running API call to prevent blocking other requests.
         \core\session\manager::write_close();
 
-        // Call EssayGraderAI API for document generation
+        // Call EssayGraderAI API for document generation.
         $curl = new \curl();
         $curl->setopt([
             'CURLOPT_TIMEOUT' => 60,
@@ -136,7 +168,7 @@ class generate_document_example extends external_api {
         ]);
         $curl->setHeader([
             'Content-Type: application/json',
-            'Accept: application/json'
+            'Accept: application/json',
         ]);
 
         $payload = [
@@ -151,9 +183,9 @@ class generate_document_example extends external_api {
             'jobLevel' => $params['jobLevel'],
             'jobTitle' => $params['jobTitle'],
             'route' => $params['route'],
-            // v7.1.5: Unit context for SWMS/procedures specific to the qualification
+            // Version 7.1.5: Unit context for SWMS/procedures specific to the qualification.
             'unitCode' => $params['unitCode'],
-            'unitTitle' => $params['unitTitle']
+            'unitTitle' => $params['unitTitle'],
         ];
 
         $url = 'https://lms-labs.com/api/moodle/content-creator/generate-document-example';
@@ -162,8 +194,7 @@ class generate_document_example extends external_api {
         $httpcode = isset($info['http_code']) ? $info['http_code'] : 0;
 
         if ($httpcode < 200 || $httpcode >= 300) {
-            $data = json_decode($response, true);
-            $error = $data['error'] ?? "API error: $httpcode";
+            debugging('Content Creator document API returned HTTP ' . $httpcode, DEBUG_DEVELOPER);
             return [
                 'success' => false,
                 'content' => '',
@@ -171,7 +202,7 @@ class generate_document_example extends external_api {
                 'docName' => $params['docName'],
                 'domain' => '',
                 'renderProfile' => '',
-                'error' => $error
+                'error' => get_string('errordocgenfailed', 'mod_contentcreator'),
             ];
         }
 
@@ -184,7 +215,7 @@ class generate_document_example extends external_api {
                 'docName' => $params['docName'],
                 'domain' => '',
                 'renderProfile' => '',
-                'error' => $data['error'] ?? 'Document generation failed'
+                'error' => get_string('errordocgenfailed', 'mod_contentcreator'),
             ];
         }
 
@@ -195,19 +226,27 @@ class generate_document_example extends external_api {
             'docName' => $data['docName'] ?? $params['docName'],
             'domain' => $data['domain'] ?? '',
             'renderProfile' => $data['renderProfile'] ?? '',
-            'error' => ''
+            'error' => '',
         ];
     }
 
+    /**
+     * Describes the return value for execute().
+     *
+     * @return external_single_structure
+     */
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'content' => new external_value(PARAM_RAW, 'Generated document HTML content'), // pipeline-ignore: PARAM_RAW — return value: generated HTML rendered through Moodle formatting on output
+            'content' => new external_value(
+                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                'Generated document HTML content',
+            ),
             'docId' => new external_value(PARAM_TEXT, 'Document type ID'),
             'docName' => new external_value(PARAM_TEXT, 'Document display name'),
             'domain' => new external_value(PARAM_TEXT, 'Document domain category'),
             'renderProfile' => new external_value(PARAM_TEXT, 'Render profile used'),
-            'error' => new external_value(PARAM_TEXT, 'Error message if any', VALUE_DEFAULT, '')
+            'error' => new external_value(PARAM_TEXT, 'Error message if any', VALUE_DEFAULT, ''),
         ]);
     }
 }

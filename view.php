@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -46,46 +45,50 @@ $PAGE->set_context($context);
 // has been called explicitly — avoiding both the "set_module_viewed before header" and the
 // "$SESSION->editedpages mutated after closed" debug warnings. See lib.php for full context.
 
-// Load Google Fonts via PHP (NOT via @import in tokens.css which breaks Moodle CSS minifier).
-$PAGE->requires->css(new moodle_url('https://fonts.googleapis.com/css2', [
-    'family' => 'Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600',
-    'display' => 'swap'
-]));
+// No remote web font is loaded: sending every learner's IP address to a third party
+// without consent is a privacy problem and the request fails outright on firewalled
+// sites. The stylesheets in styles/ declare a system font stack fallback instead.
+
 // CSS cache-busting: use plugin version as ?ver= so every release forces browsers
 // and CDNs to re-fetch the files. Plain-string paths have NO cache-busting and
 // browsers serve stale cached copies even after the plugin is upgraded.
-$cc_css_ver = get_config('mod_contentcreator', 'version');
-$PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/tokens.css',  ['ver' => $cc_css_ver]));
-$PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/builder.css', ['ver' => $cc_css_ver]));
-$PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/cards.css',   ['ver' => $cc_css_ver]));
-$PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/player5.css', ['ver' => $cc_css_ver]));
+$cssver = get_config('mod_contentcreator', 'version');
+// The design tokens and the shared card layer now live in the plugin's top-level styles.css,
+// which Moodle folds into the theme's aggregated, minified and cached stylesheet. Only the two
+// large screen-specific sheets are still requested separately: adding 750 KB of player and
+// builder CSS to the theme aggregate would load it on every page of the site to serve one
+// page type, which is a worse trade than one extra cacheable request here.
+if (has_capability('mod/contentcreator:manage', $context)) {
+    // The builder wizard is only rendered for users who can manage the activity.
+    $PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/builder.css', ['ver' => $cssver]));
+}
+$PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/player5.css', ['ver' => $cssver]));
 
-$hasCapability = has_capability('mod/contentcreator:addinstance', $context);
+$canmanage = has_capability('mod/contentcreator:manage', $context);
 
-// Check if manifest exists and is locked (content generated)
-// v7.1.3: Added backward compatibility for older manifests without locked flag
-$isLocked = false;
+// Check whether the manifest exists and is locked (content has been generated).
+// v7.1.3: Added backward compatibility for older manifests without a locked flag.
+$islocked = false;
 if (!empty($contentcreator->manifestjson)) {
-    // v11.48 FIX BUG-CC-DBWRITE: decompress before json_decode (may be gz: compressed)
-    $manifestData = json_decode(\mod_contentcreator\manifest_storage::decompress($contentcreator->manifestjson), true);
-    
-    // Primary check: explicit locked flag
-    if (isset($manifestData['locked']) && $manifestData['locked'] === true) {
-        $isLocked = true;
-    } 
-    // v7.1.3 BACKWARD COMPATIBILITY FIX:
-    // Older manifests may not have locked property but still have generated content.
-    // Check if manifest has topics with generated sections - prevents regeneration after upgrade.
-    elseif (!empty($manifestData['topics']) && is_array($manifestData['topics'])) {
-        foreach ($manifestData['topics'] as $topic) {
+    // FIX BUG-CC-DBWRITE (v11.48): decompress before json_decode (may be gz: compressed).
+    $manifestdata = json_decode(\mod_contentcreator\manifest_storage::decompress($contentcreator->manifestjson), true);
+
+    // Primary check: explicit locked flag.
+    if (isset($manifestdata['locked']) && $manifestdata['locked'] === true) {
+        $islocked = true;
+    } else if (!empty($manifestdata['topics']) && is_array($manifestdata['topics'])) {
+        // Backward compatibility fix (v7.1.3): older manifests may not carry a locked
+        // property but still hold generated content. Checking for generated sections
+        // prevents regeneration after an upgrade.
+        foreach ($manifestdata['topics'] as $topic) {
             $sections = $topic['sections'] ?? $topic['subtopics'] ?? [];
             foreach ($sections as $section) {
                 if (isset($section['generated']) && $section['generated'] === true) {
-                    $isLocked = true;
+                    $islocked = true;
                     break 2;
                 }
                 if (!empty($section['content']) || !empty($section['slideHtml'])) {
-                    $isLocked = true;
+                    $islocked = true;
                     break 2;
                 }
             }
@@ -93,75 +96,38 @@ if (!empty($contentcreator->manifestjson)) {
     }
 }
 
-// Check for edit mode parameter - allows teachers to go back to builder
-$editMode = optional_param('edit', 0, PARAM_INT);
+// Check for the edit mode parameter, which allows teachers to go back to the builder.
+$editmode = optional_param('edit', 0, PARAM_INT);
 
-if ($hasCapability && (!$isLocked || $editMode)) {
-    // Show builder for teachers when no content OR in edit mode
+// SECURITY: no vendor credentials are ever emitted to the browser. Every call to the
+// vendor API is made server-side by ajax.php, which injects the site id and API key
+// itself and only accepts an allowlisted endpoint key from the client.
+if ($canmanage && (!$islocked || $editmode)) {
+    // Show the builder for teachers when there is no content, or when in edit mode.
     $enablevoice = get_config('mod_contentcreator', 'enablevoice') ?: 1;
     $voicelanguage = get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU';
-    
-    // Get Site ID and API Key using priority-based fallback pattern:
-    // 1. Try local_aiconfig (central config - preferred)
-    // 2. Fall back to mod_contentcreator settings
-    $siteId = get_config('local_aiconfig', 'siteid');
-    if (empty($siteId)) {
-        $siteId = get_config('mod_contentcreator', 'siteid');
-    }
-    $apiKey = get_config('local_aiconfig', 'apikey');
-    if (empty($apiKey)) {
-        $apiKey = get_config('mod_contentcreator', 'apikey');
-    }
-    
-    // Pass config to JavaScript via inline script (CC_CONFIG global)
-    $jsConfig = json_encode([
-        'siteId' => $siteId ?: '',
-        'apiKey' => $apiKey ?: ''
-    ]);
-    $PAGE->requires->js_init_code("window.CC_CONFIG = {$jsConfig};", true);
 
     $PAGE->requires->js_call_amd('mod_contentcreator/builder', 'init', [[
         'cmid' => $cm->id,
         'enableVoice' => (bool)$enablevoice,
-        'voiceLanguage' => $voicelanguage
+        'voiceLanguage' => $voicelanguage,
     ]]);
 } else {
-    // Show player for students, OR for teachers when content is locked (not in edit mode)
+    // Show the player for students, and for teachers when content is locked and edit mode is off.
     $requirefocus = get_config('mod_contentcreator', 'requirefocus') ?: 0;
-    
-    // v6.5.3: Only show Edit button when Moodle's Edit mode is ON (top right toggle)
-    // v11.12 FIX: $PAGE->user_is_editing() returns false on mod/xxx/view.php pages
-    // because the activity page never calls $PAGE->set_editing(). The Moodle editing
-    // toggle sets $USER->editing globally, so check that instead.
-    global $USER;
-    $canEditSlides = $hasCapability && !empty($USER->editing);
-    
-    // v6.7.6: Get credentials for image generation (only passed for editors)
-    // v12.19 FIX: Expanded from canEditSlides to hasCapability so that teachers
-    // with Moodle edit mode OFF (isTeacher=true, canEdit=false) also receive
-    // credentials. The isTeacher code paths added in v12.16 call TTS API for
-    // voiceover generation — without siteId/apiKey those calls fail with 401.
-    $siteId = '';
-    $apiKey = '';
-    if ($hasCapability) {
-        $siteId = get_config('local_aiconfig', 'siteid');
-        if (empty($siteId)) {
-            $siteId = get_config('mod_contentcreator', 'siteid');
-        }
-        $apiKey = get_config('local_aiconfig', 'apikey');
-        if (empty($apiKey)) {
-            $apiKey = get_config('mod_contentcreator', 'apikey');
-        }
-    }
-    
+
+    // Only show the Edit button when Moodle's edit mode is on, the top right toggle (v6.5.3).
+    // v11.12 FIX: $PAGE->user_is_editing() returns false on mod/xxx/view.php pages because
+    // the activity page never calls $PAGE->set_editing(). The Moodle editing toggle sets
+    // $USER->editing globally, so check that instead.
+    $caneditslides = $canmanage && !empty($USER->editing);
+
     $PAGE->requires->js_call_amd('mod_contentcreator/player5', 'init', [[
         'cmid' => $cm->id,
-        'canEdit' => $canEditSlides,
-        'isTeacher' => (bool)$hasCapability,
+        'canEdit' => $caneditslides,
+        'isTeacher' => (bool)$canmanage,
         'requireFocus' => (bool)$requirefocus,
-        'siteId' => $siteId ?: '',
-        'apiKey' => $apiKey ?: '',
-        'courseUrl' => (new moodle_url('/course/view.php', ['id' => $cm->course]))->out(false)
+        'courseUrl' => (new moodle_url('/course/view.php', ['id' => $cm->course]))->out(false),
     ]]);
 }
 
@@ -183,7 +149,7 @@ $completion->update_state($cm, COMPLETION_VIEWED);
 
 echo html_writer::div('', 'contentcreator-container', ['id' => 'contentcreator-app', 'data-cmid' => $cm->id]);
 
-// v11.37: Add Moodle's standard prev/next activity navigation links so students
+// Add Moodle's standard prev/next activity navigation links (v11.37) so students
 // can move to the next activity in the course sequence without going back to the course page.
 echo $OUTPUT->activity_navigation();
 

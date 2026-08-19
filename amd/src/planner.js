@@ -16,7 +16,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define('mod_contentcreator/planner', [], function() {
+define([], function() {
     'use strict';
 
     // World-Class Topic-End Activities (v6.4.4)
@@ -178,7 +178,7 @@ define('mod_contentcreator/planner', [], function() {
                         if (pcText) {
                             const capped = pcText.charAt(0).toUpperCase() + pcText.slice(1);
                             subtopicTitle = pcCode + '. ' + (capped.endsWith('.') ? capped : capped + '.');
-                        } else if (!subtopicTitle.match(/^\d+\.\d+[\.\s]/)) {
+                        } else if (!subtopicTitle.match(/^\d+\.\d+[.\s]/)) {
                             const cleaned = subtopicTitle.replace(/^[\d.]+\s*/, '').trim();
                             const capped = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
                             subtopicTitle = pcCode + '. ' + (capped.endsWith('.') ? capped : capped + '.');
@@ -510,146 +510,7 @@ define('mod_contentcreator/planner', [], function() {
      * Plan topics from University learning outcomes
      * Groups outcomes  ->  Topics with Bloom's-aligned activities
      */
-    const generateKeyPoints = (outcome, bloomVerb) => {
-        const words = outcome.split(/\s+/);
-        const shortObject = words.slice(1).join(' ');
-        const verbLower = bloomVerb.toLowerCase();
-
-        const keyPointSets = {
-            analyse: [
-                'Break down the components of ' + shortObject,
-                'Examine relationships and patterns within ' + shortObject,
-                'Draw evidence-based conclusions from your analysis'
-            ],
-            analyze: [
-                'Break down the components of ' + shortObject,
-                'Examine relationships and patterns within ' + shortObject,
-                'Draw evidence-based conclusions from your analysis'
-            ],
-            evaluate: [
-                'Assess the strengths and limitations of ' + shortObject,
-                'Apply criteria to judge the quality or effectiveness',
-                'Justify your evaluation with supporting evidence'
-            ],
-            assess: [
-                'Assess the strengths and limitations of ' + shortObject,
-                'Apply criteria to judge the quality or effectiveness',
-                'Justify your evaluation with supporting evidence'
-            ],
-            examine: [
-                'Investigate the key aspects of ' + shortObject,
-                'Identify factors that influence or shape this topic',
-                'Draw conclusions based on your examination of the evidence'
-            ],
-            discuss: [
-                'Present the main arguments related to ' + shortObject,
-                'Consider multiple perspectives on this topic',
-                'Support your discussion with relevant evidence and examples'
-            ],
-            compare: [
-                'Identify similarities and differences in ' + shortObject,
-                'Assess the relative strengths of different approaches',
-                'Draw conclusions about which approach is most effective and why'
-            ],
-            identify: [
-                'Recognise key features and characteristics of ' + shortObject,
-                'Classify different types or categories within this topic',
-                'Explain the significance of what you have identified'
-            ],
-            describe: [
-                'Outline the key features of ' + shortObject,
-                'Explain how the main components relate to each other',
-                'Provide examples to illustrate the key characteristics'
-            ],
-            explain: [
-                'Clarify the key principles underlying ' + shortObject,
-                'Show how concepts connect to broader themes',
-                'Use examples to make abstract ideas concrete and understandable'
-            ],
-            critically: [
-                'Evaluate the evidence for and against ' + shortObject,
-                'Identify assumptions and potential biases in existing arguments',
-                'Formulate a well-reasoned position supported by evidence'
-            ],
-            create: [
-                'Design an original approach to ' + shortObject,
-                'Integrate multiple concepts into a cohesive output',
-                'Refine and iterate on your created work'
-            ],
-            design: [
-                'Design an original approach to ' + shortObject,
-                'Integrate multiple concepts into a cohesive output',
-                'Refine and iterate on your created work'
-            ],
-            develop: [
-                'Develop a structured approach to ' + shortObject,
-                'Integrate relevant concepts and methods into your plan',
-                'Evaluate and refine your approach based on feedback'
-            ],
-            apply: [
-                'Use relevant methods to address ' + shortObject,
-                'Demonstrate practical application of key concepts',
-                'Adapt your approach to different contexts'
-            ],
-            implement: [
-                'Use relevant methods to address ' + shortObject,
-                'Demonstrate practical application of key concepts',
-                'Adapt your approach to different contexts'
-            ],
-            understand: [
-                'Explain the key principles of ' + shortObject,
-                'Illustrate concepts with relevant examples',
-                'Connect ideas to broader themes in the subject area'
-            ],
-            demonstrate: [
-                'Show competence in ' + shortObject,
-                'Provide evidence of practical skill application',
-                'Reflect on your performance and identify improvements'
-            ],
-            prepare: [
-                'Gather and organise the information needed for ' + shortObject,
-                'Apply the correct procedures and methods systematically',
-                'Verify accuracy and completeness of your prepared output'
-            ],
-            investigate: [
-                'Research and gather evidence related to ' + shortObject,
-                'Analyse findings to identify patterns and key insights',
-                'Draw evidence-based conclusions from your investigation'
-            ],
-            interpret: [
-                'Analyse the meaning of ' + shortObject,
-                'Consider different ways this information could be understood',
-                'Explain the implications of your interpretation for practice'
-            ],
-            justify: [
-                'Provide reasoned arguments in support of ' + shortObject,
-                'Address potential counterarguments with evidence',
-                'Demonstrate why your position is well-supported'
-            ],
-            recommend: [
-                'Assess the available options related to ' + shortObject,
-                'Justify your recommendation with evidence and reasoning',
-                'Consider potential limitations of your recommendation'
-            ]
-        };
-
-        if (keyPointSets[verbLower]) {
-            return keyPointSets[verbLower];
-        }
-
-        return [
-            bloomVerb + ' ' + shortObject + ' in context',
-            'Connect theoretical concepts to practical application',
-            'Reflect on and evaluate your learning progress'
-        ];
-    };
-
-    const generateUniversitySubtopicKeyPoints = (subtopicTitle, outcome) => {
-        return [];
-    };
-
     const planUniversityTopics = (outcomes, duration, context, topicHierarchy) => {
-        const config = DURATION_CONFIG[duration] || DURATION_CONFIG[10];
         const topics = [];
         const usedActivityTypes = [];
 
@@ -852,11 +713,9 @@ define('mod_contentcreator/planner', [], function() {
             });
         } else if (Array.isArray(criteria)) {
             criteriaArray = criteria;
-        } else {
         }
-        
-        if (criteriaArray.length === 0) {
-        }
+        // Any other shape (null, string, object without units) leaves criteriaArray empty,
+        // which is handled below: the topic count falls back to the minimum of 2.
         
         const topicCount = Math.min(config.topics, Math.max(2, criteriaArray.length));
         const sectionsPerTopic = config.subtopicsPerTopic;

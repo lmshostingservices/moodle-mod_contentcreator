@@ -11,7 +11,7 @@
  * @module mod_contentcreator/document_generator/industryProfiles
  */
 
-define('mod_contentcreator/document_generator/industryProfiles', [], function() {
+define([], function() {
     'use strict';
 
     const industryProfiles = {
