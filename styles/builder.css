@@ -1,12 +1,3 @@
-/*
- * Specificity note (v13.66):
- * !important has been removed from this file. Where a declaration needed to
- * outrank the theme's own rules, the selector repeats a class it already
- * requires (e.g. ".cc5-foo.cc5-foo.cc5-foo") instead. That raises specificity
- * by two classes while matching exactly the same elements, so a site theme can
- * still override the plugin without an !important war. The few !important
- * declarations that remain each carry a comment explaining why.
- */
 /**
  * Content Creator v6.0.0 - Builder Wizard Styles
  * Premium 3-step wizard UI for VET/University content creation
@@ -72,45 +63,41 @@ body.dark .cc-wizard,
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 /* Radio cards (duration selector) */
-button.cc-radio-card.cc-radio-card.cc-radio-card,
-label.cc-radio-card.cc-radio-card.cc-radio-card,
-.cc-radio-card.cc-radio-card.cc-radio-card {
-    background: hsl(0 0% 100%);
-    background-color: hsl(0 0% 100%);
-    border-color: hsl(217 14% 85%);
-    color: hsl(217 19% 27%);
+button.cc-radio-card,
+label.cc-radio-card,
+.cc-radio-card {
+    background: hsl(0 0% 100%) !important;
+    background-color: hsl(0 0% 100%) !important;
+    border-color: hsl(217 14% 85%) !important;
+    color: hsl(217 19% 27%) !important;
 }
 
 /* FIXED: Hover uses 90% lightness (was 97% - too subtle) */
-button.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-label.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-.cc-radio-card.cc-radio-card.cc-radio-card:hover {
-    background: hsl(217 40% 90%);
-    background-color: hsl(217 40% 90%);
-    border-color: hsl(217 50% 50%);
-    color: hsl(217 19% 27%);
+button.cc-radio-card:hover,
+label.cc-radio-card:hover,
+.cc-radio-card:hover {
+    background: hsl(217 40% 90%) !important;
+    background-color: hsl(217 40% 90%) !important;
+    border-color: hsl(217 50% 50%) !important;
+    color: hsl(217 19% 27%) !important;
 }
 
-button.cc-radio-card.selected.selected.selected,
-label.cc-radio-card.selected.selected.selected,
-.cc-radio-card.selected.selected.selected {
-    background: hsl(217 91% 96%);
-    background-color: hsl(217 91% 96%);
-    border-color: hsl(217 91% 60%);
-    color: hsl(217 19% 27%);
+button.cc-radio-card.selected,
+label.cc-radio-card.selected,
+.cc-radio-card.selected {
+    background: hsl(217 91% 96%) !important;
+    background-color: hsl(217 91% 96%) !important;
+    border-color: hsl(217 91% 60%) !important;
+    color: hsl(217 19% 27%) !important;
 }
 
 /* Primary buttons */
 button.cc-btn-primary,
 .cc-btn.cc-btn-primary {
-    background: hsl(217 91% 60%) !important; /* !important kept: removing it would let builder.css:56 .cc-wizard button:not(.cc-btn-primary):not(.cc-btn-success):not(.cc-btn-error) win, changing the rendering */
-    background-color: hsl(217 91% 60%) !important; /* !important kept: removing it would let builder.css:56 .cc-wizard button:not(.cc-btn-primary):not(.cc-btn-success):not(.cc-btn-error) win, changing the rendering */
-}
-
-button.cc-btn-primary.cc-btn-primary.cc-btn-primary,
-.cc-btn.cc-btn-primary.cc-btn-primary.cc-btn-primary {
-    color: hsl(0 0% 100%);
-    border-color: hsl(217 91% 60%);
+    background: hsl(217 91% 60%) !important;
+    background-color: hsl(217 91% 60%) !important;
+    color: hsl(0 0% 100%) !important;
+    border-color: hsl(217 91% 60%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -119,179 +106,159 @@ button.cc-btn-primary.cc-btn-primary.cc-btn-primary,
    elements. Since the CC light-mode CSS vars are scoped to dark-only, we must
    use explicit values here to guarantee visibility on any Moodle theme.
    ═══════════════════════════════════════════════════════════════════════════════ */
-button.cc-level-pill.cc-level-pill.cc-level-pill,
-.cc-level-pill.cc-level-pill.cc-level-pill {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 14px;
-    border-radius: 999px;
-    border: 1.5px solid hsl(217 14% 82%);
-    background: transparent;
-    background-color: transparent;
-    color: hsl(217 19% 35%);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-    box-sizing: border-box;
-    line-height: 1.4;
-    text-decoration: none;
+button.cc-level-pill,
+.cc-level-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 6px 14px !important;
+    border-radius: 999px !important;
+    border: 1.5px solid hsl(217 14% 82%) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: hsl(217 19% 35%) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    line-height: 1.4 !important;
+    text-decoration: none !important;
 }
-button.cc-level-pill.cc-level-pill.cc-level-pill:hover,
-.cc-level-pill.cc-level-pill.cc-level-pill:hover {
-    border-color: hsl(217 91% 60%);
-    color: hsl(217 91% 45%);
-    background: hsl(217 91% 96%);
-    background-color: hsl(217 91% 96%);
+button.cc-level-pill:hover,
+.cc-level-pill:hover {
+    border-color: hsl(217 91% 60%) !important;
+    color: hsl(217 91% 45%) !important;
+    background: hsl(217 91% 96%) !important;
+    background-color: hsl(217 91% 96%) !important;
 }
-button.cc-level-pill.cc-level-active.cc-level-active.cc-level-active,
-.cc-level-pill.cc-level-active.cc-level-active.cc-level-active {
-    border-color: hsl(217 91% 60%);
-    background: hsl(217 91% 96%);
-    background-color: hsl(217 91% 96%);
-    color: hsl(217 91% 40%);
-    font-weight: 600;
+button.cc-level-pill.cc-level-active,
+.cc-level-pill.cc-level-active {
+    border-color: hsl(217 91% 60%) !important;
+    background: hsl(217 91% 96%) !important;
+    background-color: hsl(217 91% 96%) !important;
+    color: hsl(217 91% 40%) !important;
+    font-weight: 600 !important;
 }
-button.cc-level-pill.cc-level-active.cc-level-active.cc-level-active::before,
-.cc-level-pill.cc-level-active.cc-level-active.cc-level-active::before {
-    content: '\2713\00a0';
-    font-size: 11px;
+button.cc-level-pill.cc-level-active::before,
+.cc-level-pill.cc-level-active::before {
+    content: '\2713\00a0' !important;
+    font-size: 11px !important;
 }
 
 button.cc-btn-primary:hover:not(:disabled),
 .cc-btn.cc-btn-primary:hover:not(:disabled) {
-    background: hsl(217 91% 55%) !important; /* !important kept: removing it would let builder.css:97 button.cc-btn-primary win, changing the rendering */
-    background-color: hsl(217 91% 55%) !important; /* !important kept: removing it would let builder.css:97 button.cc-btn-primary win, changing the rendering */
-}
-
-button.cc-btn-primary.cc-btn-primary.cc-btn-primary:hover:not(:disabled),
-.cc-btn.cc-btn-primary.cc-btn-primary.cc-btn-primary:hover:not(:disabled) {
-    color: hsl(0 0% 100%);
+    background: hsl(217 91% 55%) !important;
+    background-color: hsl(217 91% 55%) !important;
+    color: hsl(0 0% 100%) !important;
 }
 
 /* Ghost buttons */
 button.cc-btn-ghost,
 .cc-btn.cc-btn-ghost {
-    background: transparent !important; /* !important kept: removing it would let builder.css:97 .cc-btn.cc-btn-primary win, changing the rendering */
-    background-color: transparent !important; /* !important kept: removing it would let builder.css:158 button.cc-btn-ghost win, changing the rendering */
-}
-
-button.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost,
-.cc-btn.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost {
-    color: hsl(217 14% 45%);
+    background: transparent !important;
+    background-color: transparent !important;
+    color: hsl(217 14% 45%) !important;
 }
 
 /* FIXED: Ghost hover uses 90% lightness (was 95% - too subtle) */
 button.cc-btn-ghost:hover:not(:disabled),
 .cc-btn.cc-btn-ghost:hover:not(:disabled) {
-    background: hsl(217 25% 90%) !important; /* !important kept: removing it would let builder.css:158 button.cc-btn-ghost win, changing the rendering */
-    background-color: hsl(217 25% 90%) !important; /* !important kept: removing it would let builder.css:158 button.cc-btn-ghost win, changing the rendering */
-}
-
-button.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled),
-.cc-btn.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled) {
-    color: hsl(217 19% 27%);
+    background: hsl(217 25% 90%) !important;
+    background-color: hsl(217 25% 90%) !important;
+    color: hsl(217 19% 27%) !important;
 }
 
 /* Secondary buttons */
 button.cc-btn-secondary,
 .cc-btn.cc-btn-secondary {
-    background: hsl(0 0% 100%) !important; /* !important kept: removing it would let builder.css:97 .cc-btn.cc-btn-primary win, changing the rendering */
-    background-color: hsl(0 0% 100%) !important; /* !important kept: removing it would let builder.css:174 button.cc-btn-secondary win, changing the rendering */
-}
-
-button.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary,
-.cc-btn.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary {
-    color: hsl(217 19% 27%);
-    border-color: hsl(217 14% 85%);
+    background: hsl(0 0% 100%) !important;
+    background-color: hsl(0 0% 100%) !important;
+    color: hsl(217 19% 27%) !important;
+    border-color: hsl(217 14% 85%) !important;
 }
 
 /* FIXED: Hover uses 90% lightness (was 95% - too close to white) */
 button.cc-btn-secondary:hover:not(:disabled),
 .cc-btn.cc-btn-secondary:hover:not(:disabled) {
-    background: hsl(217 25% 90%) !important; /* !important kept: removing it would let builder.css:174 button.cc-btn-secondary win, changing the rendering */
-    background-color: hsl(217 25% 90%) !important; /* !important kept: removing it would let builder.css:174 button.cc-btn-secondary win, changing the rendering */
-}
-
-button.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled),
-.cc-btn.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled) {
-    color: hsl(217 19% 27%);
-    border-color: hsl(217 50% 50%);
+    background: hsl(217 25% 90%) !important;
+    background-color: hsl(217 25% 90%) !important;
+    color: hsl(217 19% 27%) !important;
+    border-color: hsl(217 50% 50%) !important;
 }
 
 /* Icon-only buttons */
-button.cc-btn-icon-only.cc-btn-icon-only.cc-btn-icon-only,
-.cc-btn-icon-only.cc-btn-icon-only.cc-btn-icon-only {
-    background: transparent;
-    color: hsl(217 14% 45%);
+button.cc-btn-icon-only,
+.cc-btn-icon-only {
+    background: transparent !important;
+    color: hsl(217 14% 45%) !important;
 }
 
-button.cc-btn-icon-only.cc-btn-icon-only.cc-btn-icon-only:hover,
-.cc-btn-icon-only.cc-btn-icon-only.cc-btn-icon-only:hover {
-    background: hsl(0 70% 95%);
-    background-color: hsl(0 70% 95%);
-    color: hsl(0 70% 50%);
+button.cc-btn-icon-only:hover,
+.cc-btn-icon-only:hover {
+    background: hsl(0 70% 95%) !important;
+    background-color: hsl(0 70% 95%) !important;
+    color: hsl(0 70% 50%) !important;
 }
 
 /* Subtopic items */
-.cc-subtopic-item.cc-subtopic-item.cc-subtopic-item:hover {
-    background: hsl(217 14% 95%);
-    background-color: hsl(217 14% 95%);
+.cc-subtopic-item:hover {
+    background: hsl(217 14% 95%) !important;
+    background-color: hsl(217 14% 95%) !important;
 }
 
 /* Dark mode overrides for all buttons */
-.dark button.cc-radio-card.cc-radio-card.cc-radio-card,
-.dark label.cc-radio-card.cc-radio-card.cc-radio-card,
-.dark .cc-radio-card.cc-radio-card.cc-radio-card,
-.theme-dark button.cc-radio-card.cc-radio-card.cc-radio-card,
-.theme-dark label.cc-radio-card.cc-radio-card.cc-radio-card,
-.theme-dark .cc-radio-card.cc-radio-card.cc-radio-card,
-body.dark button.cc-radio-card.cc-radio-card.cc-radio-card,
-body.dark label.cc-radio-card.cc-radio-card.cc-radio-card,
-body.dark .cc-radio-card.cc-radio-card.cc-radio-card,
-[data-theme="dark"] button.cc-radio-card.cc-radio-card.cc-radio-card,
-[data-theme="dark"] label.cc-radio-card.cc-radio-card.cc-radio-card,
-[data-theme="dark"] .cc-radio-card.cc-radio-card.cc-radio-card {
-    background: hsl(0 0% 12%);
-    background-color: hsl(0 0% 12%);
-    border-color: hsl(0 0% 25%);
-    color: hsl(0 0% 90%);
+.dark button.cc-radio-card,
+.dark label.cc-radio-card,
+.dark .cc-radio-card,
+.theme-dark button.cc-radio-card,
+.theme-dark label.cc-radio-card,
+.theme-dark .cc-radio-card,
+body.dark button.cc-radio-card,
+body.dark label.cc-radio-card,
+body.dark .cc-radio-card,
+[data-theme="dark"] button.cc-radio-card,
+[data-theme="dark"] label.cc-radio-card,
+[data-theme="dark"] .cc-radio-card {
+    background: hsl(0 0% 12%) !important;
+    background-color: hsl(0 0% 12%) !important;
+    border-color: hsl(0 0% 25%) !important;
+    color: hsl(0 0% 90%) !important;
 }
 
-.dark button.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-.dark label.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-.dark .cc-radio-card.cc-radio-card.cc-radio-card:hover,
-.theme-dark button.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-.theme-dark label.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-.theme-dark .cc-radio-card.cc-radio-card.cc-radio-card:hover,
-body.dark button.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-body.dark label.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-body.dark .cc-radio-card.cc-radio-card.cc-radio-card:hover,
-[data-theme="dark"] button.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-[data-theme="dark"] label.cc-radio-card.cc-radio-card.cc-radio-card:hover,
-[data-theme="dark"] .cc-radio-card.cc-radio-card.cc-radio-card:hover {
-    background: hsl(0 0% 18%);
-    background-color: hsl(0 0% 18%);
-    border-color: hsl(0 0% 35%);
-    color: hsl(0 0% 95%);
+.dark button.cc-radio-card:hover,
+.dark label.cc-radio-card:hover,
+.dark .cc-radio-card:hover,
+.theme-dark button.cc-radio-card:hover,
+.theme-dark label.cc-radio-card:hover,
+.theme-dark .cc-radio-card:hover,
+body.dark button.cc-radio-card:hover,
+body.dark label.cc-radio-card:hover,
+body.dark .cc-radio-card:hover,
+[data-theme="dark"] button.cc-radio-card:hover,
+[data-theme="dark"] label.cc-radio-card:hover,
+[data-theme="dark"] .cc-radio-card:hover {
+    background: hsl(0 0% 18%) !important;
+    background-color: hsl(0 0% 18%) !important;
+    border-color: hsl(0 0% 35%) !important;
+    color: hsl(0 0% 95%) !important;
 }
 
-.dark button.cc-radio-card.selected.selected.selected,
-.dark label.cc-radio-card.selected.selected.selected,
-.dark .cc-radio-card.selected.selected.selected,
-.theme-dark button.cc-radio-card.selected.selected.selected,
-.theme-dark label.cc-radio-card.selected.selected.selected,
-.theme-dark .cc-radio-card.selected.selected.selected,
-body.dark button.cc-radio-card.selected.selected.selected,
-body.dark label.cc-radio-card.selected.selected.selected,
-body.dark .cc-radio-card.selected.selected.selected,
-[data-theme="dark"] button.cc-radio-card.selected.selected.selected,
-[data-theme="dark"] label.cc-radio-card.selected.selected.selected,
-[data-theme="dark"] .cc-radio-card.selected.selected.selected {
-    background: hsl(217 50% 20%);
-    background-color: hsl(217 50% 20%);
-    border-color: hsl(217 91% 60%);
-    color: hsl(0 0% 95%);
+.dark button.cc-radio-card.selected,
+.dark label.cc-radio-card.selected,
+.dark .cc-radio-card.selected,
+.theme-dark button.cc-radio-card.selected,
+.theme-dark label.cc-radio-card.selected,
+.theme-dark .cc-radio-card.selected,
+body.dark button.cc-radio-card.selected,
+body.dark label.cc-radio-card.selected,
+body.dark .cc-radio-card.selected,
+[data-theme="dark"] button.cc-radio-card.selected,
+[data-theme="dark"] label.cc-radio-card.selected,
+[data-theme="dark"] .cc-radio-card.selected {
+    background: hsl(217 50% 20%) !important;
+    background-color: hsl(217 50% 20%) !important;
+    border-color: hsl(217 91% 60%) !important;
+    color: hsl(0 0% 95%) !important;
 }
 
 .dark button.cc-btn-ghost:hover:not(:disabled),
@@ -302,19 +269,9 @@ body.dark button.cc-btn-ghost:hover:not(:disabled),
 body.dark .cc-btn.cc-btn-ghost:hover:not(:disabled),
 [data-theme="dark"] button.cc-btn-ghost:hover:not(:disabled),
 [data-theme="dark"] .cc-btn.cc-btn-ghost:hover:not(:disabled) {
-    background: hsl(0 0% 18%) !important; /* !important kept: removing it would let builder.css:158 button.cc-btn-ghost win, changing the rendering */
-    background-color: hsl(0 0% 18%) !important; /* !important kept: removing it would let builder.css:158 button.cc-btn-ghost win, changing the rendering */
-}
-
-.dark button.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled),
-.dark .cc-btn.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled),
-.theme-dark button.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled),
-.theme-dark .cc-btn.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled),
-body.dark button.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled),
-body.dark .cc-btn.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled),
-[data-theme="dark"] button.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled),
-[data-theme="dark"] .cc-btn.cc-btn-ghost.cc-btn-ghost.cc-btn-ghost:hover:not(:disabled) {
-    color: hsl(0 0% 95%);
+    background: hsl(0 0% 18%) !important;
+    background-color: hsl(0 0% 18%) !important;
+    color: hsl(0 0% 95%) !important;
 }
 
 .dark button.cc-btn-secondary:hover:not(:disabled),
@@ -325,28 +282,18 @@ body.dark button.cc-btn-secondary:hover:not(:disabled),
 body.dark .cc-btn.cc-btn-secondary:hover:not(:disabled),
 [data-theme="dark"] button.cc-btn-secondary:hover:not(:disabled),
 [data-theme="dark"] .cc-btn.cc-btn-secondary:hover:not(:disabled) {
-    background: hsl(0 0% 18%) !important; /* !important kept: removing it would let builder.css:174 button.cc-btn-secondary win, changing the rendering */
-    background-color: hsl(0 0% 18%) !important; /* !important kept: removing it would let builder.css:174 button.cc-btn-secondary win, changing the rendering */
+    background: hsl(0 0% 18%) !important;
+    background-color: hsl(0 0% 18%) !important;
+    color: hsl(0 0% 95%) !important;
+    border-color: hsl(0 0% 35%) !important;
 }
 
-.dark button.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled),
-.dark .cc-btn.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled),
-.theme-dark button.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled),
-.theme-dark .cc-btn.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled),
-body.dark button.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled),
-body.dark .cc-btn.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled),
-[data-theme="dark"] button.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled),
-[data-theme="dark"] .cc-btn.cc-btn-secondary.cc-btn-secondary.cc-btn-secondary:hover:not(:disabled) {
-    color: hsl(0 0% 95%);
-    border-color: hsl(0 0% 35%);
-}
-
-.dark .cc-subtopic-item.cc-subtopic-item.cc-subtopic-item:hover,
-.theme-dark .cc-subtopic-item.cc-subtopic-item.cc-subtopic-item:hover,
-body.dark .cc-subtopic-item.cc-subtopic-item.cc-subtopic-item:hover,
-[data-theme="dark"] .cc-subtopic-item.cc-subtopic-item.cc-subtopic-item:hover {
-    background: hsl(0 0% 15%);
-    background-color: hsl(0 0% 15%);
+.dark .cc-subtopic-item:hover,
+.theme-dark .cc-subtopic-item:hover,
+body.dark .cc-subtopic-item:hover,
+[data-theme="dark"] .cc-subtopic-item:hover {
+    background: hsl(0 0% 15%) !important;
+    background-color: hsl(0 0% 15%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -718,10 +665,15 @@ body.dark .cc-mode-icon svg,
 }
 
 .cc-form-hint {
+    font-size: var(--cc-text-sm);
+    color: var(--cc-text-subtle);
     margin: 0 0 var(--cc-space-4) 0;
 }
 
 /* Utility class to hide elements (v6.6.32 - for cascading dropdowns) */
+.cc-hidden {
+    display: none !important;
+}
 
 /* v9.42: Instruction card - explains one-topic-per-activity to teachers */
 .cc-instruction-card {
@@ -816,18 +768,18 @@ body.dark .cc-instruction-card-text strong,
     min-height: 28px;
 }
 
-.cc-role-chip.cc-role-chip.cc-role-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 8px 3px 12px;
-    background: hsl(217 91% 96%);
-    background-color: hsl(217 91% 96%);
-    border: 1px solid hsl(217 91% 60%);
-    border-radius: 999px;
-    font-size: 13px;
-    color: hsl(217 91% 45%);
-    font-weight: 500;
+.cc-role-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 3px 8px 3px 12px !important;
+    background: hsl(217 91% 96%) !important;
+    background-color: hsl(217 91% 96%) !important;
+    border: 1px solid hsl(217 91% 60%) !important;
+    border-radius: 999px !important;
+    font-size: 13px !important;
+    color: hsl(217 91% 45%) !important;
+    font-weight: 500 !important;
 }
 
 .cc-role-chip-text {
@@ -1150,12 +1102,37 @@ body.dark .cc-instruction-card-text strong,
 }
 
 /* Element Selector */
+.cc-element-selector {
+    margin-top: var(--cc-space-4);
+    padding-top: var(--cc-space-4);
+    border-top: 1px solid var(--cc-border);
+}
 
 .cc-element-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--cc-space-3);
     flex-wrap: wrap;
+    gap: var(--cc-space-2);
+}
+
+.cc-element-selector-title {
+    font-size: var(--cc-text-sm);
+    font-weight: var(--cc-font-semibold);
+    color: var(--cc-text);
+    margin: 0;
+}
+
+.cc-element-selector-actions {
+    display: flex;
+    gap: var(--cc-space-2);
 }
 
 .cc-element-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cc-space-2);
     max-height: 240px;
     overflow-y: auto;
     padding-right: var(--cc-space-2);
@@ -1198,15 +1175,26 @@ body.dark .cc-instruction-card-text strong,
     width: 24px;
     height: 24px;
     background: var(--cc-primary);
+    color: var(--cc-text-inverse);
     border-radius: var(--cc-radius-full);
+    font-size: var(--cc-text-xs);
+    font-weight: var(--cc-font-bold);
     flex-shrink: 0;
 }
 
 .cc-element-name {
+    flex: 1;
+    font-size: var(--cc-text-sm);
+    color: var(--cc-text);
     line-height: 1.4;
 }
 
 .cc-element-pc-count {
+    font-size: var(--cc-text-xs);
+    color: var(--cc-text-muted);
+    background: var(--cc-bg-muted);
+    padding: var(--cc-space-1) var(--cc-space-2);
+    border-radius: var(--cc-radius-full);
     flex-shrink: 0;
 }
 
@@ -1237,13 +1225,43 @@ body.dark .cc-instruction-card-text strong,
 }
 
 .cc-element-checkbox-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--cc-space-3);
+    padding: var(--cc-space-3);
+    background: var(--cc-bg-card);
+    border: 1px solid var(--cc-border);
+    border-radius: var(--cc-radius);
+    cursor: pointer;
+    transition: all var(--cc-duration-fast) var(--cc-ease);
     margin-bottom: var(--cc-space-2);
 }
 
+.cc-element-checkbox-card:hover {
+    border-color: var(--cc-border-strong);
+    background: var(--cc-bg-subtle);
+}
+
+.cc-element-checkbox-card.selected {
+    border-color: var(--cc-primary);
+    background: var(--cc-primary-muted);
+}
+
 .cc-element-checkbox-card input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
 
     cursor: pointer;
+    flex-shrink: 0;
     margin-top: 2px;
+}
+
+.cc-element-info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--cc-space-2);
+    flex: 1;
 }
 
 .cc-element-info .cc-element-number {
@@ -1567,8 +1585,9 @@ body.dark .cc-instruction-card-text strong,
 }
 
 .cc-topic-header {
-    /* align-items and gap are set by cards.css, which loads after this file. */
     display: flex;
+    align-items: center;
+    gap: var(--cc-space-3);
     padding: var(--cc-space-4);
     background: var(--cc-bg-muted);
     border-bottom: 1px solid var(--cc-border-muted);
@@ -1592,8 +1611,10 @@ body.dark .cc-instruction-card-text strong,
 }
 
 .cc-topic-title {
-    /* font-size, font-weight and margin are set by cards.css, which loads after this file. */
+    font-size: var(--cc-text-base);
+    font-weight: var(--cc-font-semibold);
     color: var(--cc-text);
+    margin: 0;
 }
 
 .cc-topic-sections {
@@ -2912,40 +2933,40 @@ body.dark .cc-file-upload-zone:hover,
     max-height: 100%;
 }
 
-.cc-wizard.cc-wizard.cc-wizard .cc-badge-icon {
-    width: 16px;
-    height: 16px;
-    max-width: 16px;
-    max-height: 16px;
+.cc-wizard .cc-badge-icon {
+    width: 16px !important;
+    height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
 }
 
-.cc-wizard.cc-wizard.cc-wizard .cc-info-icon {
-    width: 20px;
-    height: 20px;
-    max-width: 20px;
-    max-height: 20px;
+.cc-wizard .cc-info-icon {
+    width: 20px !important;
+    height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
 }
 
-.cc-wizard.cc-wizard.cc-wizard .cc-btn-icon,
-.cc-wizard.cc-wizard.cc-wizard .cc-btn-icon-right {
-    width: 20px;
-    height: 20px;
-    max-width: 20px;
-    max-height: 20px;
+.cc-wizard .cc-btn-icon,
+.cc-wizard .cc-btn-icon-right {
+    width: 20px !important;
+    height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
 }
 
-.cc-wizard.cc-wizard.cc-wizard .cc-mode-icon svg {
-    width: 24px;
-    height: 24px;
-    max-width: 24px;
-    max-height: 24px;
+.cc-wizard .cc-mode-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
 }
 
-.cc-wizard.cc-wizard.cc-wizard .cc-progression-icon {
-    width: 24px;
-    height: 24px;
-    max-width: 24px;
-    max-height: 24px;
+.cc-wizard .cc-progression-icon {
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
 }
 
 .cc-topic-card-content {
@@ -3330,6 +3351,10 @@ body.dark .cc-voice-card.selected,
 /* ═══════════════════════════════════════════════════════════════════════════════
    UTILITY CLASSES
    ═══════════════════════════════════════════════════════════════════════════════ */
+
+.cc-hidden {
+    display: none !important;
+}
 .cc-form-hint {
     display: block;
     margin-top: 4px;
@@ -3378,7 +3403,7 @@ body.dark .cc-voice-card.selected,
     padding: 10px 12px;
     border: 2px solid var(--cc-border);
     border-radius: var(--cc-radius-md);
-    font-family: var(--cc-font-mono);
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 14px;
     text-transform: uppercase;
     background: var(--cc-bg-card);
@@ -3419,7 +3444,7 @@ body.dark .cc-color-hex-input,
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 .cc-hidden {
-    display: none !important; /* !important kept: utility class must beat the inline style JS writes on the element */
+    display: none !important;
 }
 
 /* Selected task chips - displayed above checkbox list */
@@ -3726,16 +3751,13 @@ body.dark .cc-equipment-placeholder,
 }
 
 .cc-category-icon svg {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
+    max-width: 22px !important;
+    max-height: 22px !important;
     flex-shrink: 0;
-}
-
-.cc-category-icon.cc-category-icon.cc-category-icon svg {
-    width: 22px;
-    height: 22px;
-    min-width: 22px;
-    min-height: 22px;
-    max-width: 22px;
-    max-height: 22px;
 }
 
 .cc-category-card.selected .cc-category-icon {
@@ -3836,16 +3858,13 @@ body.dark .cc-equipment-placeholder,
 }
 
 .cc-category-section-title svg {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
     color: var(--cc-primary);
-}
-
-.cc-category-section-title.cc-category-section-title.cc-category-section-title svg {
-    width: 18px;
-    height: 18px;
-    min-width: 18px;
-    min-height: 18px;
-    max-width: 18px;
-    max-height: 18px;
 }
 
 /* Dark mode for category cards */
@@ -3997,28 +4016,25 @@ body.dark .cc-category-checkmark,
 }
 
 .cc-section-icon {
+    width: 24px !important;
+    height: 24px !important;
+    min-width: 24px !important;
+    max-width: 24px !important;
+    min-height: 24px !important;
+    max-height: 24px !important;
     color: var(--cc-primary);
     margin-right: var(--cc-space-2);
     vertical-align: middle;
     flex-shrink: 0;
 }
 
-.cc-section-icon.cc-section-icon.cc-section-icon {
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-    max-width: 24px;
-    min-height: 24px;
-    max-height: 24px;
-}
-
 /* v6.8.8: Ensure section title icons don't grow too large */
-.cc-form-section-title.cc-form-section-title.cc-form-section-title .cc-section-icon,
-h3.cc-form-section-title.cc-form-section-title.cc-form-section-title svg.cc-section-icon {
-    width: 24px;
-    height: 24px;
-    max-width: 24px;
-    max-height: 24px;
+.cc-form-section-title .cc-section-icon,
+h3.cc-form-section-title svg.cc-section-icon {
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
 }
 
 /* Dark mode for reference documents */
@@ -4213,9 +4229,9 @@ body.dark .cc-paste-textarea:focus,
     min-height: 140px;
 }
 
-.cc-bulk-paste-hint.cc-bulk-paste-hint.cc-bulk-paste-hint {
-    margin-top: 0;
-    margin-bottom: var(--cc-space-3);
+.cc-bulk-paste-hint {
+    margin-top: 0 !important;
+    margin-bottom: var(--cc-space-3) !important;
 }
 
 .cc-bulk-paste-actions {
@@ -4361,9 +4377,9 @@ body.dark .cc-bulk-paste-panel,
     color: white;
 }
 
-.cc-auto-section-icon.cc-auto-section-icon.cc-auto-section-icon svg {
-    width: 16px;
-    height: 16px;
+.cc-auto-section-icon svg {
+    width: 16px !important;
+    height: 16px !important;
 }
 
 .cc-auto-section-title {
@@ -4429,11 +4445,11 @@ body.dark .cc-bulk-paste-panel,
     color: white;
 }
 
-.cc-auto-card-icon.cc-auto-card-icon.cc-auto-card-icon svg {
-    width: 16px;
-    height: 16px;
-    min-width: 16px;
-    min-height: 16px;
+.cc-auto-card-icon svg {
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    min-height: 16px !important;
 }
 
 .cc-auto-card-content {
@@ -4553,9 +4569,9 @@ body.dark .cc-bulk-paste-panel,
     color: white;
 }
 
-.cc-package-detected-icon.cc-package-detected-icon.cc-package-detected-icon svg {
-    width: 20px;
-    height: 20px;
+.cc-package-detected-icon svg {
+    width: 20px !important;
+    height: 20px !important;
 }
 
 .cc-package-detected-content {
@@ -4802,9 +4818,9 @@ body.dark .cc-auto-fallback,
     color: white;
 }
 
-.cc-ai-header-icon.cc-ai-header-icon.cc-ai-header-icon svg {
-    width: 22px;
-    height: 22px;
+.cc-ai-header-icon svg {
+    width: 22px !important;
+    height: 22px !important;
 }
 
 .cc-ai-header-content {
@@ -4851,9 +4867,9 @@ body.dark .cc-auto-fallback,
     color: white;
 }
 
-.cc-ai-section-icon.cc-ai-section-icon.cc-ai-section-icon svg {
-    width: 18px;
-    height: 18px;
+.cc-ai-section-icon svg {
+    width: 18px !important;
+    height: 18px !important;
 }
 
 .cc-ai-section-text {
@@ -5070,15 +5086,12 @@ body.dark .cc-ai-card--selected,
 
 /* v8.5.0: ChatGPT Integration Section */
 .cc-chatgpt-section {
+    background: hsl(160 30% 97%) !important;
+    border: 1px solid hsl(160 20% 85%) !important;
+    border-left: 4px solid #10a37f !important;
     border-radius: var(--cc-radius-lg);
     padding: 24px 28px;
     margin-bottom: 20px;
-}
-
-.cc-chatgpt-section.cc-chatgpt-section.cc-chatgpt-section {
-    background: hsl(160 30% 97%);
-    border: 1px solid hsl(160 20% 85%);
-    border-left: 4px solid #10a37f;
 }
 
 .cc-chatgpt-header {
@@ -5089,33 +5102,24 @@ body.dark .cc-ai-card--selected,
 }
 
 .cc-chatgpt-header svg {
+    color: #10a37f !important;
     flex-shrink: 0;
     width: 24px;
     height: 24px;
 }
 
-.cc-chatgpt-header.cc-chatgpt-header.cc-chatgpt-header svg {
-    color: #10a37f;
-}
-
 .cc-chatgpt-title {
     font-size: var(--cc-text-xl);
     font-weight: 700;
+    color: hsl(160 70% 25%) !important;
     margin: 0;
-}
-
-.cc-chatgpt-title.cc-chatgpt-title.cc-chatgpt-title {
-    color: hsl(160 70% 25%);
 }
 
 .cc-chatgpt-subtitle {
     font-size: var(--cc-text-base);
+    color: hsl(220 10% 30%) !important;
     margin: 0 0 20px 0;
     line-height: 1.6;
-}
-
-.cc-chatgpt-subtitle.cc-chatgpt-subtitle.cc-chatgpt-subtitle {
-    color: hsl(220 10% 30%);
 }
 
 .cc-chatgpt-steps {
@@ -5143,26 +5147,22 @@ body.dark .cc-ai-card--selected,
     height: 28px;
     min-width: 28px;
     border-radius: 50%;
+    background: #10a37f !important;
+    color: white !important;
     font-size: var(--cc-text-xs);
     font-weight: 700;
 }
 
-.cc-chatgpt-step-number.cc-chatgpt-step-number.cc-chatgpt-step-number {
-    background: #10a37f;
-    color: white;
-}
-
 .cc-chatgpt-step-text {
     font-size: var(--cc-text-base);
+    color: hsl(220 15% 20%) !important;
     line-height: 1.6;
     padding-top: 3px;
 }
 
-.cc-chatgpt-step-text.cc-chatgpt-step-text.cc-chatgpt-step-text {
-    color: hsl(220 15% 20%);
-}
-
 .cc-btn-chatgpt {
+    background: #10a37f !important;
+    color: white !important;
     border: none;
     padding: 12px 24px;
     border-radius: var(--cc-radius);
@@ -5176,17 +5176,9 @@ body.dark .cc-ai-card--selected,
     min-height: var(--cc-touch-min);
 }
 
-.cc-btn-chatgpt.cc-btn-chatgpt.cc-btn-chatgpt {
-    background: #10a37f;
-    color: white;
-}
-
 .cc-btn-chatgpt:hover {
+    background: #0d8c6d !important;
     transform: translateY(-1px);
-}
-
-.cc-btn-chatgpt.cc-btn-chatgpt.cc-btn-chatgpt:hover {
-    background: #0d8c6d;
 }
 
 .cc-btn-chatgpt:active {
@@ -5194,12 +5186,9 @@ body.dark .cc-ai-card--selected,
 }
 
 .cc-btn-chatgpt svg {
+    color: white !important;
     width: 18px;
     height: 18px;
-}
-
-.cc-btn-chatgpt.cc-btn-chatgpt.cc-btn-chatgpt svg {
-    color: white;
 }
 
 .cc-chatgpt-paste-area {
@@ -5209,53 +5198,38 @@ body.dark .cc-ai-card--selected,
 .cc-chatgpt-paste-label {
     font-size: var(--cc-text-base);
     font-weight: 600;
+    color: hsl(220 15% 20%) !important;
     margin-bottom: 8px;
     display: block;
 }
 
-.cc-chatgpt-paste-label.cc-chatgpt-paste-label.cc-chatgpt-paste-label {
-    color: hsl(220 15% 20%);
-}
-
 .cc-chatgpt-paste-text,
 .cc-paste-textarea {
-    border: 2px solid hsl(220 10% 85%) !important; /* !important kept: removing it would let builder.css:4202 body.dark .cc-paste-textarea:focus win, changing the rendering */
+    color: hsl(220 15% 15%) !important;
+    background: hsl(0 0% 100%) !important;
+    border: 2px solid hsl(220 10% 85%) !important;
     font-size: var(--cc-text-base);
     line-height: 1.6;
     padding: 14px 16px;
     border-radius: var(--cc-radius);
 }
 
-.cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text,
-.cc-paste-textarea.cc-paste-textarea.cc-paste-textarea {
-    color: hsl(220 15% 15%);
-    background: hsl(0 0% 100%);
-}
-
 .cc-chatgpt-paste-text:focus,
 .cc-paste-textarea:focus {
-    border-color: #10a37f !important; /* !important kept: removing it would let builder.css:5207 .cc-chatgpt-paste-text win, changing the rendering */
+    border-color: #10a37f !important;
+    box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.12) !important;
     outline: none;
 }
 
-.cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text:focus,
-.cc-paste-textarea.cc-paste-textarea.cc-paste-textarea:focus {
-    box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.12);
-}
-
-.cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text::placeholder,
-.cc-paste-textarea.cc-paste-textarea.cc-paste-textarea::placeholder {
-    color: hsl(220 8% 55%);
+.cc-chatgpt-paste-text::placeholder,
+.cc-paste-textarea::placeholder {
+    color: hsl(220 8% 55%) !important;
 }
 
 .cc-paste-word-count,
 .cc-chatgpt-paste-count {
+    color: hsl(220 8% 40%) !important;
     font-size: var(--cc-text-sm);
-}
-
-.cc-paste-word-count.cc-paste-word-count.cc-paste-word-count,
-.cc-chatgpt-paste-count.cc-chatgpt-paste-count.cc-chatgpt-paste-count {
-    color: hsl(220 8% 40%);
 }
 
 .cc-chatgpt-result {
@@ -5268,23 +5242,17 @@ body.dark .cc-ai-card--selected,
     border-radius: var(--cc-radius);
     margin-top: 16px;
     font-size: var(--cc-text-base);
+    color: hsl(160 70% 28%) !important;
     font-weight: 600;
-}
-
-.cc-chatgpt-result.cc-chatgpt-result.cc-chatgpt-result {
-    color: hsl(160 70% 28%);
 }
 
 .cc-input-method-selector {
     display: flex;
     gap: 0;
+    background: hsl(220 14% 94%) !important;
     border-radius: var(--cc-radius-lg);
     padding: 4px;
     margin-bottom: 24px;
-}
-
-.cc-input-method-selector.cc-input-method-selector.cc-input-method-selector {
-    background: hsl(220 14% 94%);
 }
 
 .cc-input-method-btn {
@@ -5296,6 +5264,7 @@ body.dark .cc-ai-card--selected,
     cursor: pointer;
     font-size: var(--cc-text-base);
     font-weight: 600;
+    color: hsl(220 10% 40%) !important;
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -5304,41 +5273,31 @@ body.dark .cc-ai-card--selected,
     min-height: var(--cc-touch-min);
 }
 
-.cc-input-method-btn.cc-input-method-btn.cc-input-method-btn {
-    color: hsl(220 10% 40%);
-}
-
 .cc-input-method-btn.active {
+    background: white !important;
+    color: hsl(220 15% 12%) !important;
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
-.cc-input-method-btn.active.active.active {
-    background: white;
-    color: hsl(220 15% 12%);
-}
-
-.cc-input-method-btn.cc-input-method-btn.cc-input-method-btn:hover:not(.active) {
-    color: hsl(220 15% 25%);
-    background: hsl(220 10% 90%);
+.cc-input-method-btn:hover:not(.active) {
+    color: hsl(220 15% 25%) !important;
+    background: hsl(220 10% 90%) !important;
 }
 
 .cc-input-method-btn svg {
+    color: inherit !important;
     width: 18px;
     height: 18px;
 }
 
-.cc-input-method-btn.cc-input-method-btn.cc-input-method-btn svg {
-    color: inherit;
-}
-
 /* v9.42: Dark mode for ChatGPT integration */
-.dark .cc-chatgpt-section.cc-chatgpt-section.cc-chatgpt-section,
-.theme-dark .cc-chatgpt-section.cc-chatgpt-section.cc-chatgpt-section,
-body.dark .cc-chatgpt-section.cc-chatgpt-section.cc-chatgpt-section,
-[data-theme="dark"] .cc-chatgpt-section.cc-chatgpt-section.cc-chatgpt-section {
-    background: hsl(160 20% 10%);
-    border-color: hsl(160 20% 22%);
-    border-left-color: #10a37f;
+.dark .cc-chatgpt-section,
+.theme-dark .cc-chatgpt-section,
+body.dark .cc-chatgpt-section,
+[data-theme="dark"] .cc-chatgpt-section {
+    background: hsl(160 20% 10%) !important;
+    border-color: hsl(160 20% 22%) !important;
+    border-left-color: #10a37f !important;
 }
 
 .dark .cc-chatgpt-steps,
@@ -5349,39 +5308,41 @@ body.dark .cc-chatgpt-steps,
     border-color: hsl(160 15% 20%);
 }
 
-.dark .cc-chatgpt-title.cc-chatgpt-title.cc-chatgpt-title,
-.theme-dark .cc-chatgpt-title.cc-chatgpt-title.cc-chatgpt-title,
-body.dark .cc-chatgpt-title.cc-chatgpt-title.cc-chatgpt-title,
-[data-theme="dark"] .cc-chatgpt-title.cc-chatgpt-title.cc-chatgpt-title {
-    color: #34d399;
+.dark .cc-chatgpt-title,
+.theme-dark .cc-chatgpt-title,
+body.dark .cc-chatgpt-title,
+[data-theme="dark"] .cc-chatgpt-title {
+    color: #34d399 !important;
 }
 
 .dark .cc-chatgpt-result,
 .theme-dark .cc-chatgpt-result,
 body.dark .cc-chatgpt-result,
 [data-theme="dark"] .cc-chatgpt-result {
+    background: hsl(160 25% 14%);
     border-color: hsl(160 20% 22%);
+    color: #34d399 !important;
 }
 
-.dark .cc-chatgpt-subtitle.cc-chatgpt-subtitle.cc-chatgpt-subtitle,
-.theme-dark .cc-chatgpt-subtitle.cc-chatgpt-subtitle.cc-chatgpt-subtitle,
-body.dark .cc-chatgpt-subtitle.cc-chatgpt-subtitle.cc-chatgpt-subtitle,
-[data-theme="dark"] .cc-chatgpt-subtitle.cc-chatgpt-subtitle.cc-chatgpt-subtitle {
-    color: #9ca3af;
+.dark .cc-chatgpt-subtitle,
+.theme-dark .cc-chatgpt-subtitle,
+body.dark .cc-chatgpt-subtitle,
+[data-theme="dark"] .cc-chatgpt-subtitle {
+    color: #9ca3af !important;
 }
 
-.dark .cc-chatgpt-step-text.cc-chatgpt-step-text.cc-chatgpt-step-text,
-.theme-dark .cc-chatgpt-step-text.cc-chatgpt-step-text.cc-chatgpt-step-text,
-body.dark .cc-chatgpt-step-text.cc-chatgpt-step-text.cc-chatgpt-step-text,
-[data-theme="dark"] .cc-chatgpt-step-text.cc-chatgpt-step-text.cc-chatgpt-step-text {
-    color: #d1d5db;
+.dark .cc-chatgpt-step-text,
+.theme-dark .cc-chatgpt-step-text,
+body.dark .cc-chatgpt-step-text,
+[data-theme="dark"] .cc-chatgpt-step-text {
+    color: #d1d5db !important;
 }
 
-.dark .cc-chatgpt-paste-label.cc-chatgpt-paste-label.cc-chatgpt-paste-label,
-.theme-dark .cc-chatgpt-paste-label.cc-chatgpt-paste-label.cc-chatgpt-paste-label,
-body.dark .cc-chatgpt-paste-label.cc-chatgpt-paste-label.cc-chatgpt-paste-label,
-[data-theme="dark"] .cc-chatgpt-paste-label.cc-chatgpt-paste-label.cc-chatgpt-paste-label {
-    color: #d1d5db;
+.dark .cc-chatgpt-paste-label,
+.theme-dark .cc-chatgpt-paste-label,
+body.dark .cc-chatgpt-paste-label,
+[data-theme="dark"] .cc-chatgpt-paste-label {
+    color: #d1d5db !important;
 }
 
 .dark .cc-chatgpt-paste-text,
@@ -5392,41 +5353,31 @@ body.dark .cc-chatgpt-paste-text,
 .theme-dark .cc-paste-textarea,
 body.dark .cc-paste-textarea,
 [data-theme="dark"] .cc-paste-textarea {
-    border-color: hsl(217 20% 30%) !important; /* !important kept: removing it would let builder.css:5207 .cc-chatgpt-paste-text win, changing the rendering */
+    color: #e5e7eb !important;
+    background: hsl(217 30% 15%) !important;
+    border-color: hsl(217 20% 30%) !important;
 }
 
-.dark .cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text,
-.theme-dark .cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text,
-body.dark .cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text,
-[data-theme="dark"] .cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text,
-.dark .cc-paste-textarea.cc-paste-textarea.cc-paste-textarea,
-.theme-dark .cc-paste-textarea.cc-paste-textarea.cc-paste-textarea,
-body.dark .cc-paste-textarea.cc-paste-textarea.cc-paste-textarea,
-[data-theme="dark"] .cc-paste-textarea.cc-paste-textarea.cc-paste-textarea {
-    color: #e5e7eb;
-    background: hsl(217 30% 15%);
+.dark .cc-chatgpt-paste-text::placeholder,
+.theme-dark .cc-chatgpt-paste-text::placeholder,
+body.dark .cc-chatgpt-paste-text::placeholder,
+[data-theme="dark"] .cc-chatgpt-paste-text::placeholder,
+.dark .cc-paste-textarea::placeholder,
+.theme-dark .cc-paste-textarea::placeholder,
+body.dark .cc-paste-textarea::placeholder,
+[data-theme="dark"] .cc-paste-textarea::placeholder {
+    color: #6b7280 !important;
 }
 
-.dark .cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text::placeholder,
-.theme-dark .cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text::placeholder,
-body.dark .cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text::placeholder,
-[data-theme="dark"] .cc-chatgpt-paste-text.cc-chatgpt-paste-text.cc-chatgpt-paste-text::placeholder,
-.dark .cc-paste-textarea.cc-paste-textarea.cc-paste-textarea::placeholder,
-.theme-dark .cc-paste-textarea.cc-paste-textarea.cc-paste-textarea::placeholder,
-body.dark .cc-paste-textarea.cc-paste-textarea.cc-paste-textarea::placeholder,
-[data-theme="dark"] .cc-paste-textarea.cc-paste-textarea.cc-paste-textarea::placeholder {
-    color: #6b7280;
-}
-
-.dark .cc-paste-word-count.cc-paste-word-count.cc-paste-word-count,
-.theme-dark .cc-paste-word-count.cc-paste-word-count.cc-paste-word-count,
-body.dark .cc-paste-word-count.cc-paste-word-count.cc-paste-word-count,
-[data-theme="dark"] .cc-paste-word-count.cc-paste-word-count.cc-paste-word-count,
-.dark .cc-chatgpt-paste-count.cc-chatgpt-paste-count.cc-chatgpt-paste-count,
-.theme-dark .cc-chatgpt-paste-count.cc-chatgpt-paste-count.cc-chatgpt-paste-count,
-body.dark .cc-chatgpt-paste-count.cc-chatgpt-paste-count.cc-chatgpt-paste-count,
-[data-theme="dark"] .cc-chatgpt-paste-count.cc-chatgpt-paste-count.cc-chatgpt-paste-count {
-    color: #9ca3af;
+.dark .cc-paste-word-count,
+.theme-dark .cc-paste-word-count,
+body.dark .cc-paste-word-count,
+[data-theme="dark"] .cc-paste-word-count,
+.dark .cc-chatgpt-paste-count,
+.theme-dark .cc-chatgpt-paste-count,
+body.dark .cc-chatgpt-paste-count,
+[data-theme="dark"] .cc-chatgpt-paste-count {
+    color: #9ca3af !important;
 }
 
 .dark .cc-chatgpt-result,
@@ -5434,49 +5385,37 @@ body.dark .cc-chatgpt-paste-count.cc-chatgpt-paste-count.cc-chatgpt-paste-count,
 body.dark .cc-chatgpt-result,
 [data-theme="dark"] .cc-chatgpt-result {
     background: rgba(16, 163, 127, 0.15);
+    color: #34d399 !important;
 }
 
-.dark .cc-chatgpt-result.cc-chatgpt-result.cc-chatgpt-result,
-.theme-dark .cc-chatgpt-result.cc-chatgpt-result.cc-chatgpt-result,
-body.dark .cc-chatgpt-result.cc-chatgpt-result.cc-chatgpt-result,
-[data-theme="dark"] .cc-chatgpt-result.cc-chatgpt-result.cc-chatgpt-result {
-    color: #34d399;
+.dark .cc-input-method-selector,
+.theme-dark .cc-input-method-selector,
+body.dark .cc-input-method-selector,
+[data-theme="dark"] .cc-input-method-selector {
+    background: hsl(217 30% 15%) !important;
 }
 
-.dark .cc-input-method-selector.cc-input-method-selector.cc-input-method-selector,
-.theme-dark .cc-input-method-selector.cc-input-method-selector.cc-input-method-selector,
-body.dark .cc-input-method-selector.cc-input-method-selector.cc-input-method-selector,
-[data-theme="dark"] .cc-input-method-selector.cc-input-method-selector.cc-input-method-selector {
-    background: hsl(217 30% 15%);
-}
-
-.dark .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn,
-.theme-dark .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn,
-body.dark .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn,
-[data-theme="dark"] .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn {
-    color: #9ca3af;
+.dark .cc-input-method-btn,
+.theme-dark .cc-input-method-btn,
+body.dark .cc-input-method-btn,
+[data-theme="dark"] .cc-input-method-btn {
+    color: #9ca3af !important;
 }
 
 .dark .cc-input-method-btn.active,
 .theme-dark .cc-input-method-btn.active,
 body.dark .cc-input-method-btn.active,
 [data-theme="dark"] .cc-input-method-btn.active {
+    background: hsl(217 30% 22%) !important;
+    color: #f3f4f6 !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
-.dark .cc-input-method-btn.active.active.active,
-.theme-dark .cc-input-method-btn.active.active.active,
-body.dark .cc-input-method-btn.active.active.active,
-[data-theme="dark"] .cc-input-method-btn.active.active.active {
-    background: hsl(217 30% 22%);
-    color: #f3f4f6;
-}
-
-.dark .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn:hover:not(.active),
-.theme-dark .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn:hover:not(.active),
-body.dark .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn:hover:not(.active),
-[data-theme="dark"] .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn:hover:not(.active) {
-    color: #d1d5db;
+.dark .cc-input-method-btn:hover:not(.active),
+.theme-dark .cc-input-method-btn:hover:not(.active),
+body.dark .cc-input-method-btn:hover:not(.active),
+[data-theme="dark"] .cc-input-method-btn:hover:not(.active) {
+    color: #d1d5db !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -5569,10 +5508,7 @@ body.dark .cc-input-method-btn.cc-input-method-btn.cc-input-method-btn:hover:not
 
     .cc-chatgpt-section {
         padding: 16px;
-    }
-
-.cc-chatgpt-section.cc-chatgpt-section.cc-chatgpt-section {
-        border-left-width: 3px;
+        border-left-width: 3px !important;
     }
 
     .cc-chatgpt-title {

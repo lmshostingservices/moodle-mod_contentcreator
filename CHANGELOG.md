@@ -1,5 +1,74 @@
 # Changelog
 
+## 13.70 (2026-08-19)
+
+Restores the styling that 13.66-13.69 broke. All four stylesheets are now byte-identical to
+13.65 apart from three deliberate changes, listed below.
+
+- Stylesheet load order is restored to tokens -> builder -> cards -> player5. 13.66 folded
+  cards.css into an earlier file, which moved it BEFORE builder.css. Dozens of declarations
+  are ties on specificity between those two sheets and cards.css is meant to win them, so the
+  reorder silently inverted 63 declarations - icon sizes (24px became 56px), header alignment,
+  title sizes and weights, and several paddings. cards.css is a separate sheet again and
+  loads after builder.css, exactly as it did in 13.65.
+- All 2,354 !important declarations are restored. 13.66 removed 2,195 of them and replaced
+  them with repeated-class specificity hacks. That verification only compared the plugin's
+  own rules against each other, not against Bootstrap and Boost, whose utility classes carry
+  !important and therefore win against a non-important rule at any specificity.
+- Stylesheets are no longer served through a top-level styles.css. Moodle folds that file into
+  the theme's aggregated stylesheet, which is cached under $CFG->themerev and is not rebuilt
+  when a plugin is upgraded, so a site that upgraded without purging caches lost every design
+  token and rendered as unstyled text.
+- builder.css is loaded unconditionally again rather than being gated on a capability.
+
+The three intentional differences from 13.65:
+
+- Google Fonts are not loaded (removed for privacy; it sent every learner's IP to Google and
+  broke on firewalled sites). Six font-family declarations now use complete system stacks.
+- 19 custom properties that were referenced without a var() fallback but never declared are
+  now defined as aliases of the tokens they were meant to be. Affected focus rings, error and
+  success states and gradient headers, all of which previously rendered unstyled.
+- The rule hiding Moodle's "Skip to main content" link is removed (WCAG 2.4.1). The link is
+  visually hidden until focused, so there is no change for mouse users.
+
+## 13.69 (2026-08-19)
+
+Fixes "Expected object, received array" errors from the AI service.
+
+- The vendor proxy decoded request payloads with json_decode($raw, true), which turns every
+  empty JSON object into an empty PHP array; json_encode() then wrote it back as [] instead
+  of {}. The service validates payloads against a strict schema, so any field that is an
+  empty object was rejected -- most visibly context.taskEquipment, which is {} whenever no
+  job tasks are selected, producing:
+      "path": ["context","taskEquipment"], "message": "Expected object, received array"
+  The proxy now decodes to objects, so the body the service receives is exactly what the
+  browser built. This also protects coversMappings, which builder.js explicitly requires to
+  be an object rather than an array. Regression introduced in 13.66 when vendor calls moved
+  server-side.
+- pregenerate_documents had the same defect when forwarding its documents and context
+  payloads. Present since at least 13.65; fixed the same way.
+
+## 13.68 (2026-08-19)
+
+Fixes an unstyled Content Creator page after upgrade, plus two long-standing CSS defects.
+
+- The design tokens no longer depend on the theme's aggregated stylesheet. They were
+  moved into the plugin's top-level styles.css in 13.66, which Moodle folds into the
+  theme aggregate. That aggregate is cached under $CFG->themerev and is NOT rebuilt when
+  a plugin is upgraded, so a site that upgraded without purging caches kept serving an
+  aggregate containing no tokens, while builder.css and player5.css updated normally via
+  their ?ver= cache-buster. Those two sheets reference var(--cc*) around 3,800 times
+  between them, so every colour, space, radius and border collapsed and the activity
+  rendered as unstyled text. The token layer is now styles/tokens.css, loaded through the
+  same channel and the same cache-buster as the sheets that consume it. This also keeps
+  57 KB off every other page of the site.
+- Defined 18 custom properties that were referenced without a var() fallback but never
+  declared, so the declarations using them were silently dropped by the browser and those
+  elements rendered unstyled. Present since at least 13.65. Each is now an alias of the
+  token it was meant to be, so dark mode follows automatically.
+- Removed the rule that hid Moodle's "Skip to main content" link on Content Creator
+  pages. It was a WCAG 2.4.1 (Bypass Blocks) failure.
+
 ## 13.67 (2026-08-19)
 
 Version bump only. No functional change from 13.66, which is the build that

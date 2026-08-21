@@ -608,10 +608,18 @@ try {
         }
         $vendorurl = CONTENTCREATOR_API_BASE . $path;
 
-        $body = [];
+        // Decode to objects, NOT associative arrays.
+        //
+        // json_decode($raw, true) turns every empty JSON object into an empty PHP array, and
+        // json_encode() then writes it back out as [] instead of {}. The vendor validates its
+        // payloads with a strict schema, so a field such as context.taskEquipment -- which is
+        // {} whenever the author has selected no tasks -- was rejected with
+        // "Expected object, received array". Decoding to stdClass round-trips {} and []
+        // faithfully, so the body the vendor receives is byte-for-byte what the browser built.
+        $body = new stdClass();
         if ($payloadraw !== '') {
-            $decoded = json_decode($payloadraw, true);
-            if (!is_array($decoded)) {
+            $decoded = json_decode($payloadraw);
+            if (!is_object($decoded)) {
                 contentcreator_fail('vendorerrorinvalidjson');
             }
             $body = $decoded;
@@ -620,8 +628,8 @@ try {
         // them in the place it expected when the browser called it directly.
         $callopts = [];
         if ($endpoint['credentials'] === 'body' || $endpoint['credentials'] === 'query') {
-            $body['siteId'] = $siteid;
-            $body['apiKey'] = $apikey;
+            $body->siteId = $siteid;
+            $body->apiKey = $apikey;
         } else if ($endpoint['credentials'] === 'header') {
             $callopts['headers'] = ['X-API-Key: ' . $apikey];
         }
@@ -635,7 +643,7 @@ try {
                 parse_str($urlquery, $existingparams);
             }
             $query = [];
-            foreach ($body as $key => $value) {
+            foreach (get_object_vars($body) as $key => $value) {
                 if (is_scalar($value) && !array_key_exists($key, $existingparams)) {
                     $query[clean_param($key, PARAM_ALPHANUMEXT)] = (string)$value;
                 }
@@ -664,7 +672,7 @@ try {
             }
 
             $fields = [];
-            foreach ($body as $key => $value) {
+            foreach (get_object_vars($body) as $key => $value) {
                 $fields[$key] = is_scalar($value) ? (string)$value : json_encode($value);
             }
             $fields[$endpoint['filefield']] = new \CURLFile(
@@ -1258,8 +1266,14 @@ try {
             contentcreator_fail('errornodocuments');
         }
 
-        $docsarray = json_decode($documents, true);
-        $contextdata = json_decode($contextparam, true) ?? [];
+        // Decoded to objects rather than associative arrays: with assoc decoding an empty
+        // JSON object becomes an empty PHP array and is re-encoded as [], which the vendor's
+        // schema rejects. See the note in the vendor proxy above.
+        $docsarray = json_decode($documents);
+        $contextdata = json_decode($contextparam);
+        if (!is_object($contextdata)) {
+            $contextdata = new stdClass();
+        }
 
         if (!is_array($docsarray) || empty($docsarray)) {
             contentcreator_fail('errorinvaliddocuments');

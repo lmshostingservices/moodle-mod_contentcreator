@@ -53,15 +53,20 @@ $PAGE->set_context($context);
 // and CDNs to re-fetch the files. Plain-string paths have NO cache-busting and
 // browsers serve stale cached copies even after the plugin is upgraded.
 $cssver = get_config('mod_contentcreator', 'version');
-// The design tokens and the shared card layer now live in the plugin's top-level styles.css,
-// which Moodle folds into the theme's aggregated, minified and cached stylesheet. Only the two
-// large screen-specific sheets are still requested separately: adding 750 KB of player and
-// builder CSS to the theme aggregate would load it on every page of the site to serve one
-// page type, which is a worse trade than one extra cacheable request here.
-if (has_capability('mod/contentcreator:manage', $context)) {
-    // The builder wizard is only rendered for users who can manage the activity.
-    $PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/builder.css', ['ver' => $cssver]));
-}
+// Stylesheet order is load-bearing and matches v13.65 exactly:
+// tokens -> builder -> cards -> player5. cards.css deliberately loads AFTER builder.css,
+// because dozens of declarations are ties on specificity between the two and cards.css is
+// meant to win them. Reordering these (for example by folding cards.css into an earlier
+// file) silently inverts around 63 declarations - icon sizes, header alignment, title
+// weights and paddings - and visibly breaks the UI.
+//
+// They are also NOT served through a top-level styles.css. Moodle folds that into the theme's
+// aggregated stylesheet, which is cached under $CFG->themerev and is not rebuilt when a
+// plugin is upgraded, so a site that upgraded without purging caches would lose every design
+// token while these sheets updated normally via ?ver=.
+$PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/tokens.css', ['ver' => $cssver]));
+$PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/builder.css', ['ver' => $cssver]));
+$PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/cards.css', ['ver' => $cssver]));
 $PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/player5.css', ['ver' => $cssver]));
 
 $canmanage = has_capability('mod/contentcreator:manage', $context);
