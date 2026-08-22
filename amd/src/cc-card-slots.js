@@ -1015,7 +1015,10 @@ define([], function() {
         if (quizVoiceEnabled) {
             html += '<span class="cc5-quiz-voice-badge">';
             html += '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
-            html += ' ' + (getLabel('questionsReadAloud') || 'Questions & feedback are read aloud');
+            // v13.71: the badge used to promise "Questions & feedback are read aloud", but
+            // only the feedback shown after an answer is ever narrated. The claim is now
+            // accurate rather than aspirational.
+            html += ' ' + (getLabel('questionsReadAloud') || 'Answer feedback is read aloud');
             html += '</span>';
         }
         html += '</div>';

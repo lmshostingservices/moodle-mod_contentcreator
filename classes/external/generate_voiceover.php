@@ -169,33 +169,20 @@ class generate_voiceover extends external_api {
         $sitelanguage  = get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU';
         $voicelanguage = !empty(trim($params['language'])) ? trim($params['language']) : $sitelanguage;
 
-        // Version 13.1: resolve voice name. Priority:
-        // 1. Explicit voice param from JS caller (e.g. 'Kore', 'Fenrir')
-        // 2. Site-level voicegender config (may be a voice name or legacy 'male'/'female')
-        // 3. Ultimate fallback: Zephyr.
-        $validvoices     = ['Aoede', 'Kore', 'Leda', 'Zephyr', 'Puck', 'Charon', 'Fenrir', 'Orus'];
-        $sitevoiceconfig = get_config('mod_contentcreator', 'voicegender') ?: 'Zephyr';
-        // Handle legacy binary gender values stored before v13.1.
-        if ($sitevoiceconfig === 'male') {
-            $sitedefaultvoice = 'Puck';
-        } else if ($sitevoiceconfig === 'female') {
-            $sitedefaultvoice = 'Zephyr';
-        } else if (in_array($sitevoiceconfig, $validvoices)) {
-            $sitedefaultvoice = $sitevoiceconfig;
-        } else {
-            $sitedefaultvoice = 'Zephyr';
-        }
-        $voiceparam = trim($params['voice'] ?? '');
-        $voicename  = (in_array($voiceparam, $validvoices)) ? $voiceparam : $sitedefaultvoice;
+        // Version 13.71: voice name, voice identifier and text cleaning are all resolved by
+        // \mod_contentcreator\voice, shared with ajax.php. This class previously had its own
+        // copies, and they had drifted: no fallback existed for languages without a Chirp 3
+        // HD voice, so identifiers such as ms-MY-Chirp3-HD-Zephyr were built and rejected,
+        // and the language sent alongside the voice was the requested one rather than the
+        // one the voice belongs to.
+        $voicename = \mod_contentcreator\voice::resolve_name(trim($params['voice'] ?? ''));
 
-        // Build the voice ID: {language}-Chirp3-HD-{VoiceName}.
-        $voiceid = self::get_chirp_voice_id($voicelanguage, $voicename);
+        // Build the voice ID and the language it belongs to.
+        [$voiceid, $voicelanguage] = \mod_contentcreator\voice::resolve($voicelanguage, $voicename);
 
         // Clean text and enforce the same character cap that ajax.php applies.
-        $text = strip_tags($params['text']);
-        $text = preg_replace('/\s+/', ' ', $text);
-        $text = trim($text);
-        if (\core_text::strlen($text) > self::MAX_TEXT_LENGTH) {
+        $text = \mod_contentcreator\voice::clean_text($params['text'], self::MAX_TEXT_LENGTH);
+        if (\core_text::strlen($params['text']) > self::MAX_TEXT_LENGTH) {
             return [
                 'success'      => false,
                 'audioContent' => '',
@@ -209,7 +196,7 @@ class generate_voiceover extends external_api {
         // Mirror the MD5 cache from ajax.php generate_voice so repeated calls (e.g. mobile
         // or third-party integrations) return stored audio at zero credit cost.
         // Cache key: MD5(text | voiceid | language) — same scheme as ajax.php line ~407.
-        $cachekey  = md5($text . '|' . $voiceid . '|' . $voicelanguage);
+        $cachekey  = \mod_contentcreator\voice::cache_key($text, $voiceid, $voicelanguage);
         $fs        = get_file_storage();
         $cachefile = $fs->get_file(
             $context->id,
@@ -320,30 +307,6 @@ class generate_voiceover extends external_api {
         ];
     }
 
-    /**
-     * Build the Chirp 3 HD voice ID from a language code and a voice name.
-     *
-     * @param string $languagecode Language code, for example 'en-AU' or 'zh-CN'.
-     * @param string $voicename Voice name, for example 'Aoede' or 'Puck'.
-     * @return string Full voice ID.
-     */
-    private static function get_chirp_voice_id(string $languagecode, string $voicename): string {
-        // Special mappings for certain language codes
-        // FIX-CC-ML-NB-NO (v13.19): 'nb-NO' was incorrectly remapped to 'no-NO'.
-        // Google Chirp 3 HD has no 'no-NO' voice; 'nb-NO-Chirp3-HD-Aoede' is the
-        // correct identifier. Remove the wrong mapping so nb-NO passes through.
-        $languagemappings = [
-            'zh-CN'  => 'cmn-CN', // Mandarin Chinese.
-            'zh-TW'  => 'cmn-TW', // Traditional Chinese.
-            'zh-HK'  => 'yue-HK', // Cantonese
-            // nb-NO intentionally NOT mapped — nb-NO-Chirp3-HD-Aoede is valid.
-            'fil-PH' => 'fil-PH', // Filipino (kept for legacy zh-style callers).
-        ];
-
-        $mappedcode = $languagemappings[$languagecode] ?? $languagecode;
-
-        return "{$mappedcode}-Chirp3-HD-{$voicename}";
-    }
 
     /**
      * Describes the return value for execute().

@@ -150,5 +150,22 @@ function xmldb_contentcreator_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026081801, 'contentcreator');
     }
 
+    // Release 13.71: purge cached text to speech audio stranded in the system context.
+    //
+    // ajax.php generate_voice wrote its cache to the system context with itemid 0, while
+    // lib.php only ever deleted voice_cache from the module context. Nothing removed those
+    // files, no pluginfile handler served them, and they accumulated for the life of the
+    // site. The cache is now written to the module context alongside the web service's,
+    // so the stranded files are dead weight and can go.
+    if ($oldversion < 2026082100) {
+        $fs = get_file_storage();
+        $fs->delete_area_files(
+            \context_system::instance()->id,
+            'mod_contentcreator',
+            'voice_cache'
+        );
+        upgrade_mod_savepoint(true, 2026082100, 'contentcreator');
+    }
+
     return true;
 }

@@ -2392,6 +2392,133 @@ define([
         buildFullVoiceoverText: function(section) {
             return CcState.buildVoiceoverText(section, this.manifest);
         },
+
+        /**
+         * Narrate quiz feedback with the activity's Chirp 3 HD voice.
+         *
+         * Requests audio from ajax.php action=generate_voice, the same endpoint the slide
+         * narration uses, so the voice, accent and language match the rest of the activity.
+         * The server caches by MD5 of text, voice and language, so each distinct feedback
+         * string is generated once and every later playback is free.
+         *
+         * Audio is memoised in quizVoiceCache for the life of the page, so re-answering a
+         * question does not repeat the round trip.
+         *
+         * @param {String} text Feedback text to narrate.
+         * @return {void}
+         */
+        speakQuizFeedback: function(text) {
+            var self = this;
+            if (!text) {
+                return;
+            }
+            var lang = CcVoiceover.getEffectiveLang(this.activeLang, this.voiceLanguage);
+            var key = lang + '|' + (this.voiceName || '') + '|' + text;
+
+            this.quizVoiceCache = this.quizVoiceCache || {};
+
+            // Stop whatever is currently narrating feedback before starting the next one.
+            if (this.quizVoiceAudio) {
+                try {
+                    this.quizVoiceAudio.pause();
+                } catch (e) {
+                    // An audio element that never began playing throws on pause in some browsers.
+                    ccLog('quiz feedback audio pause ignored');
+                }
+                this.quizVoiceAudio = null;
+            }
+
+            var play = function(src) {
+                try {
+                    var audio = new Audio(src);
+                    self.quizVoiceAudio = audio;
+                    var playing = audio.play();
+                    if (playing && typeof playing.catch === 'function') {
+                        // Autoplay policies reject playback that is not tied to a gesture. The
+                        // click that answered the question is the gesture, so this is rare.
+                        playing.catch(function() {
+                            self.speakQuizFeedbackFallback(text, lang);
+                        });
+                    }
+                } catch (e) {
+                    self.speakQuizFeedbackFallback(text, lang);
+                }
+            };
+
+            if (this.quizVoiceCache[key]) {
+                play(this.quizVoiceCache[key]);
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('sesskey', Config.sesskey);
+            formData.append('action', 'generate_voice');
+            formData.append('cmid', this.cmid);
+            formData.append('text', text);
+            formData.append('language', lang);
+            if (this.voiceName) {
+                formData.append('voice', this.voiceName);
+            }
+
+            fetch(CcState.ajaxUrl(), {method: 'POST', body: formData, credentials: 'same-origin'})
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data && data.success && data.audioContent) {
+                        var src = 'data:' + (data.audioType || 'audio/ogg') + ';base64,' + data.audioContent;
+                        self.quizVoiceCache[key] = src;
+                        play(src);
+                        return;
+                    }
+                    // Voice generation off, out of credits, or rate limited: fall back rather
+                    // than leaving the learner with no narration at all.
+                    self.speakQuizFeedbackFallback(text, lang);
+                })
+                .catch(function() {
+                    self.speakQuizFeedbackFallback(text, lang);
+                });
+        },
+
+        /**
+         * Narrate quiz feedback with the browser's own speech engine.
+         *
+         * Only reached when the server side voice is unavailable. The voice is whichever one
+         * the learner's operating system provides, so it will not match the slide narration.
+         *
+         * @param {String} text Feedback text to narrate.
+         * @param {String} lang BCP 47 language tag used to steer the accent.
+         * @return {void}
+         */
+        speakQuizFeedbackFallback: function(text, lang) {
+            if (!('speechSynthesis' in window)) {
+                return;
+            }
+            window.speechSynthesis.cancel();
+            // Chrome leaves residual state in its speech engine after an utterance completes,
+            // which delays a speak() issued immediately after cancel(). Deferring by one
+            // timer cycle lets it settle. See FIX-CC-QUIZ-VOICE-DELAY (v13.38).
+            setTimeout(function() {
+                var utter = new window.SpeechSynthesisUtterance(text);
+                utter.lang = lang;
+                try {
+                    var voices = window.speechSynthesis.getVoices() || [];
+                    var wanted = lang.toLowerCase().replace('_', '-');
+                    var pick = voices.filter(function(v) {
+                        return v.lang && v.lang.toLowerCase().replace('_', '-') === wanted;
+                    })[0] || voices.filter(function(v) {
+                        return v.lang && v.lang.toLowerCase().replace('_', '-').indexOf(wanted.split('-')[0] + '-') === 0;
+                    })[0];
+                    if (pick) {
+                        utter.voice = pick;
+                    }
+                } catch (e) {
+                    // getVoices() unsupported: utter.lang alone still steers the accent.
+                    ccLog('speechSynthesis getVoices unavailable');
+                }
+                window.speechSynthesis.speak(utter);
+            }, 150);
+        },
         getSmartIconForText: function(text) {
             if (!text) return 'check-circle';
             
@@ -9000,6 +9127,16 @@ define([
                 $options.attr('data-answered', 'true').data('answered', true);
                 // For keyboard: focus the chosen option for accessibility
                 $option.focus();
+                // v13.71: Narrate the feedback, matching the decision-challenge cards.
+                // Standalone decision points had no narration at all: the voice branch was
+                // only ever bound to '.cc5-decision-challenge .cc5-dp-option', so an
+                // identical looking card outside a challenge wrapper stayed silent.
+                if (self.quizVoiceEnabled) {
+                    var _dpFeedback = $option.find('.cc5-dp-feedback').text().trim();
+                    if (_dpFeedback) {
+                        self.speakQuizFeedback(_dpFeedback);
+                    }
+                }
                 // v10.63: Play audio feedback
                 if (isCorrect) {
                     playDecisionCorrectSound();
@@ -9070,37 +9207,26 @@ define([
                 $opt.find('.cc5-dp-feedback').show();
                 $options.attr('data-answered', 'true').data('answered', true);
                 $opt.focus();
-                // v13.32: Quiz voiceover — speak feedback text aloud via Web Speech API
-                // FIX-CC-QUIZ-VOICE-DELAY (v13.38): Chrome Web Speech API has a known
-                // bug where calling speak() immediately after cancel() — even when no
-                // utterance is actively playing — causes a multi-second delay before the
-                // new utterance starts. Root cause: after a prior utterance finishes
-                // naturally, Chrome leaves residual state in its internal TTS state
-                // machine. Q1 fired instantly because the synth was completely idle on
-                // first use; Q2-Q5 were delayed because each had a prior completed
-                // utterance's residual state. Fix: cancel() to clear any queued/active
-                // utterance, then defer speak() by 50 ms (one event-loop cycle) so the
-                // browser fully settles the synth before queuing the new utterance.
-                if (self.quizVoiceEnabled && 'speechSynthesis' in window) {
+                // v13.71: Quiz feedback narration now uses the same Chirp 3 HD voice as the
+                // slide narration, via ajax.php action=generate_voice.
+                //
+                // Between v13.32 and v13.70 this block called the browser's Web Speech API
+                // directly, so the activity sections were narrated by whatever TTS engine the
+                // learner's operating system happened to ship (Microsoft David or Zira on
+                // Windows, Samantha on macOS, the stock engine on Android) while every slide
+                // in the same activity used Chirp. The voice changed audibly mid-activity and
+                // differed on every device.
+                //
+                // speakQuizFeedback() reuses the server-side MD5 audio cache, so a given
+                // feedback string costs credits once per activity and is free on every later
+                // playback. Web Speech remains as the fallback only, so a site with voice
+                // generation disabled, or a failed request, degrades to the old behaviour
+                // rather than to silence.
+                if (self.quizVoiceEnabled) {
                     var $fb = $opt.find('.cc5-dp-feedback');
                     var feedbackText = $fb.text().trim();
                     if (feedbackText) {
-                        window.speechSynthesis.cancel();
-                        setTimeout(function() {
-                            var utter = new window.SpeechSynthesisUtterance(feedbackText);
-                            // FIX-CC-QUIZ-VOICE-ACCENT: match the chosen narration language/accent (e.g. en-AU)
-                            // instead of the browser default voice (usually en-US / American).
-                            var _qlang = self.activeLang || self.voiceLanguage || 'en-AU';
-                            utter.lang = _qlang;
-                            try {
-                                var _qv = window.speechSynthesis.getVoices() || [];
-                                var _qlc = _qlang.toLowerCase().replace('_', '-');
-                                var _qpick = _qv.filter(function (v) { return v.lang && v.lang.toLowerCase().replace('_', '-') === _qlc; })[0]
-                                          || _qv.filter(function (v) { return v.lang && v.lang.toLowerCase().replace('_', '-').indexOf(_qlc.split('-')[0] + '-') === 0; })[0];
-                                if (_qpick) { utter.voice = _qpick; }
-                            } catch (e) { /* getVoices unsupported — utter.lang alone still steers the accent */ }
-                            window.speechSynthesis.speak(utter);
-                        }, 150);
+                        self.speakQuizFeedback(feedbackText);
                     }
                 }
                 if (isCorrect) {
