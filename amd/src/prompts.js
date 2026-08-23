@@ -283,7 +283,7 @@ clock  ->  deadlines, time pressure, urgency | calendar  ->  scheduling, dates
 lightbulb  ->  solution, idea, innovation | brain  ->  thinking, decision making, reflection | search  ->  checking, reviewing, inspecting | graduation-cap  ->  training, qualification | book-open  ->  learning, theory, study
 target  ->  goal, objective | dollar-sign  ->  cost, financial impact, budget | briefcase  ->  client, customer, service | trending-up  ->  escalation, growth
 ICON CONSISTENCY RULES:
-- hook-scenario + applied-scenario sceneParts  ->  prefer contextual (map-pin, users, zap, alert-triangle)
+- hook-scenario + applied-scenario keyPoints  ->  prefer contextual (map-pin, users, zap, alert-triangle)
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
 - mistakes items  ->  prefer risk icons (alert-triangle, alert-circle, heartbeat)
 - concept-explainer insights  ->  prefer thinking icons (lightbulb, message-circle, clipboard-check)
@@ -291,13 +291,13 @@ ICON CONSISTENCY RULES:
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  sceneParts[4]{title, icon, text(2 sentences, 2nd person, specific)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  conceptInsights[3]{title, icon, text(2-3 sentences)}, legalLink{legislationName, legalObligation(plain English  -  no section numbers), scenarioConnection(1 sentence linking to Card 1)}, voiceoverText
+1. hook-scenario  -  keyPoints[4]{title, text(2 sentences, 2nd person, specific)}, highlightText(optional, max 20 words), voiceoverText
+2. concept-explainer  -  keyPoints[3]{title, text(2-3 sentences)}, heading(the legislation or policy name), keyInfo(the obligation in plain English  -  no section numbers), summaryLine(1 sentence linking to Card 1), voiceoverText
 3. mental-model  -  steps[4-5]{step(verb-led), icon, detail(2-3 sentences with concrete nouns)}, voiceoverText
-4. applied-scenario  -  sceneParts[4]{title, icon, text(2 sentences)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
-5. mistakes  -  items[5]{mistake(verb or "Not..."), icon(different for each), consequence(15+ words, specific impact)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), goodItems[5](verb-first, 10+ words), badItems[5](verb or "Not...", 10+ words), voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  question(15+ words, 2nd person), options[4]{text, feedback(15+ words), correct(boolean  -  exactly ONE true)}  -  NO voiceoverText
+4. applied-scenario  -  keyPoints[4]{title, text(2 sentences)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Not..."), consequence(15+ words, specific impact)}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 10+ words)}, errorItems[5]{error(verb or "Not...", 10+ words), consequence(10+ words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 15+ words, 2nd person), standardItems[1]{text(the ONE correct answer), consequence(15+ words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer), consequence(15+ words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
 `;
 
     // ===========================================================================
@@ -350,7 +350,7 @@ clock  ->  deadlines, time pressure, urgency | calendar  ->  scheduling, dates
 lightbulb  ->  solution, idea, innovation | brain  ->  thinking, decision making, reflection | search  ->  checking, reviewing, inspecting | graduation-cap  ->  training, qualification | book-open  ->  learning, theory, study
 target  ->  goal, objective | dollar-sign  ->  cost, financial impact, budget | briefcase  ->  client, customer, service | trending-up  ->  escalation, growth
 ICON CONSISTENCY RULES:
-- hook-scenario + applied-scenario sceneParts  ->  prefer contextual (map-pin, users, zap, alert-triangle)
+- hook-scenario + applied-scenario keyPoints  ->  prefer contextual (map-pin, users, zap, alert-triangle)
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
 - mistakes items  ->  prefer risk icons (alert-triangle, alert-circle, heartbeat)
 - concept-explainer insights  ->  prefer thinking icons (lightbulb, message-circle, clipboard-check)
@@ -358,13 +358,13 @@ ICON CONSISTENCY RULES:
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  sceneParts[4]{title, icon, text(2 sentences, 2nd person, specific)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  conceptInsights[3]{title, icon, text(2-3 sentences)}, legalLink{legislationName, legalObligation(plain English  -  no section numbers), scenarioConnection(1 sentence linking to Card 1)}, voiceoverText
+1. hook-scenario  -  keyPoints[4]{title, text(2 sentences, 2nd person, specific)}, highlightText(optional, max 20 words), voiceoverText
+2. concept-explainer  -  keyPoints[3]{title, text(2-3 sentences)}, heading(the legislation or policy name), keyInfo(the obligation in plain English  -  no section numbers), summaryLine(1 sentence linking to Card 1), voiceoverText
 3. mental-model  -  steps[4-5]{step(verb-led), icon, detail(2-3 sentences, specific tools/systems/forms)}, voiceoverText
-4. applied-scenario  -  sceneParts[4]{title, icon, text(2 sentences)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
-5. mistakes  -  items[5]{mistake(verb or "Not..."), icon(different for each), consequence(15+ words, business/safety/regulatory impact)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), goodItems[5](verb-first, 10+ words), badItems[5](verb or "Not...", 10+ words), voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  question(15+ words, 2nd person, compliance stakes), options[4]{text, feedback(15+ words), correct(boolean  -  exactly ONE true)}  -  NO voiceoverText
+4. applied-scenario  -  keyPoints[4]{title, text(2 sentences)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Not..."), consequence(15+ words, business/safety/regulatory impact)}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 10+ words)}, errorItems[5]{error(verb or "Not...", 10+ words), consequence(10+ words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 15+ words, 2nd person, compliance stakes), standardItems[1]{text(the ONE correct answer), consequence(15+ words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer), consequence(15+ words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
 `;
 
     // ===========================================================================
@@ -393,7 +393,7 @@ clock  ->  deadlines, time pressure, urgency | calendar  ->  scheduling, dates
 lightbulb  ->  solution, idea, innovation | brain  ->  thinking, decision making, reflection | search  ->  checking, reviewing, inspecting | graduation-cap  ->  training, qualification | book-open  ->  learning, theory, study
 target  ->  goal, objective | dollar-sign  ->  cost, financial impact, budget | briefcase  ->  client, customer, service | trending-up  ->  escalation, growth
 ICON CONSISTENCY RULES:
-- hook-scenario + applied-scenario sceneParts  ->  prefer contextual (map-pin, users, zap, alert-triangle)
+- hook-scenario + applied-scenario keyPoints  ->  prefer contextual (map-pin, users, zap, alert-triangle)
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
 - mistakes items  ->  prefer risk icons (alert-triangle, alert-circle, heartbeat)
 - concept-explainer insights  ->  prefer thinking icons (lightbulb, message-circle, clipboard-check)
@@ -401,13 +401,13 @@ ICON CONSISTENCY RULES:
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  sceneParts[4]{title, icon, text(2 sentences, 2nd person, specific professional detail)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  conceptInsights[3]{title, icon, text(2-3 sentences)}, legalLink{legislationName, legalObligation(plain English  -  no section numbers), scenarioConnection(1 sentence linking to Card 1)}, voiceoverText
+1. hook-scenario  -  keyPoints[4]{title, text(2 sentences, 2nd person, specific professional detail)}, highlightText(optional, max 20 words), voiceoverText
+2. concept-explainer  -  keyPoints[3]{title, text(2-3 sentences)}, heading(the legislation or policy name), keyInfo(the obligation in plain English  -  no section numbers), summaryLine(1 sentence linking to Card 1), voiceoverText
 3. mental-model  -  steps[4-5]{step(verb-led), icon, detail(2-3 sentences, practitioner-level guidance)}, voiceoverText
-4. applied-scenario  -  sceneParts[4]{title, icon, text(2 sentences)}  -  DIFFERENT professional setting from Card 1, highlightText(optional), voiceoverText
-5. mistakes  -  items[5]{mistake(verb or "Assuming..."), icon(different for each), consequence(15+ words, professional/relational/organisational impact)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), goodItems[5](verb-first, 10+ words), badItems[5](verb or "Assuming...", 10+ words), voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  question(15+ words, 2nd person, professional judgment), options[4]{text, feedback(15+ words), correct(boolean  -  exactly ONE true)}  -  NO voiceoverText
+4. applied-scenario  -  keyPoints[4]{title, text(2 sentences)}  -  DIFFERENT professional setting from Card 1, highlightText(optional), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Assuming..."), consequence(15+ words, professional/relational/organisational impact)}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 10+ words)}, errorItems[5]{error(verb or "Assuming...", 10+ words), consequence(10+ words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 15+ words, 2nd person, professional judgment), standardItems[1]{text(the ONE correct answer), consequence(15+ words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer), consequence(15+ words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
 `;
 
     // ===========================================================================
@@ -1040,13 +1040,13 @@ Generate the full 6-card sequence.${langSuffix}`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, text, and details exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: sceneParts[] (4 objects: title/icon/text), voiceoverText (70+ words)
-- concept-explainer: conceptInsights[] (3 objects: title/icon/text), legalLink{legislationName/legalObligation/scenarioConnection}, voiceoverText (70+ words)
+- hook-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
 - mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: sceneParts[] (4 objects: title/icon/text), voiceoverText (70+ words)
-- mistakes: items[] (5 objects: mistake/icon/consequence 15+ words)
-- competency-summary: goodItems[] (5 verb-first strings), badItems[] (5 verb-first strings), voiceoverText (70+ words, ends "Now, complete the activity below.")
-- decision-point: question (15+ words), options[] (4 objects: text/feedback/correct, exactly one correct:true)
+- applied-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- mistakes: errorItems[] (5 objects: error/consequence 15+ words)
+- competency-summary: standardItems[] (5 objects: text, verb-first), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- decision-point: heading (the question, 15+ words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers)
 
 UNCHANGED CARDS MUST BE RETURNED EXACTLY AS PROVIDED  -  do not modify formatting, wording, or structure.
 If a card has one issue, fix ONLY that field. Do NOT regenerate the entire card.
@@ -1125,13 +1125,13 @@ Return ONLY a valid JSON object with "cards" array of exactly 6 cards.`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, text, and details exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: sceneParts[] (4 objects: title/icon/text), voiceoverText (70+ words)
-- concept-explainer: conceptInsights[] (3 objects: title/icon/text), legalLink{legislationName/legalObligation/scenarioConnection}, voiceoverText (70+ words)
+- hook-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
 - mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: sceneParts[] (4 objects: title/icon/text), voiceoverText (70+ words)
-- mistakes: items[] (5 objects: mistake/icon/consequence 15+ words)
-- competency-summary: goodItems[] (5 verb-first strings), badItems[] (5 verb-first strings), voiceoverText (70+ words, ends "Now, complete the activity below.")
-- decision-point: question (15+ words), options[] (4 objects: text/feedback/correct, exactly one correct:true)
+- applied-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- mistakes: errorItems[] (5 objects: error/consequence 15+ words)
+- competency-summary: standardItems[] (5 objects: text, verb-first), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- decision-point: heading (the question, 15+ words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers)
 
 UNCHANGED CARDS MUST BE RETURNED EXACTLY AS PROVIDED  -  do not modify formatting, wording, or structure.
 If a card has one issue, fix ONLY that field. Do NOT regenerate the entire card.
@@ -1168,13 +1168,13 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, frameworks, and text exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: sceneParts[] (4 objects: title/icon/text), voiceoverText (70+ words)
-- concept-explainer: conceptInsights[] (3 objects: title/icon/text), legalLink{legislationName/legalObligation/scenarioConnection}, voiceoverText (70+ words)
+- hook-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
 - mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: sceneParts[] (4 objects: title/icon/text), voiceoverText (70+ words)
-- mistakes: items[] (5 objects: mistake/icon/consequence 15+ words)
-- competency-summary: goodItems[] (5 verb-first strings), badItems[] (5 verb-first strings), voiceoverText (70+ words, ends "Now, complete the activity below.")
-- decision-point: question (15+ words), options[] (4 objects: text/feedback/correct, exactly one correct:true)
+- applied-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- mistakes: errorItems[] (5 objects: error/consequence 15+ words)
+- competency-summary: standardItems[] (5 objects: text, verb-first), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- decision-point: heading (the question, 15+ words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers)
 
 UNCHANGED CARDS MUST BE RETURNED EXACTLY AS PROVIDED  -  do not modify formatting, wording, or structure.
 If a card has one issue, fix ONLY that field. Do NOT regenerate the entire card.
@@ -1618,13 +1618,13 @@ RULES  -  FOLLOW THESE EXACTLY
 - Return ONLY valid JSON
 
 CRITICAL SCHEMA PRESERVATION  -  these structured arrays MUST be kept as arrays, never collapsed to a string:
-- hook-scenario: keep sceneParts as an array of exactly 4 objects (title, icon, text)  -  do NOT replace with a content field
-- applied-scenario: keep sceneParts as an array of exactly 4 objects (title, icon, text)  -  do NOT replace with a content field
-- concept-explainer: keep conceptInsights as an array of exactly 3 objects (title, icon, text)  -  do NOT replace with a content field
+- hook-scenario: keep keyPoints as an array of exactly 4 objects (title, text)  -  do NOT replace with a content field
+- applied-scenario: keep keyPoints as an array of exactly 4 objects (title, text)  -  do NOT replace with a content field
+- concept-explainer: keep keyPoints as an array of exactly 3 objects (title, text)  -  do NOT replace with a content field
 - mental-model: keep steps as an array of objects (step, icon, detail)  -  do NOT replace with a content field
-- mistakes: keep items as an array of objects (mistake, icon, consequence)  -  do NOT replace with a content field
-- competency-summary: keep goodItems and badItems as separate string arrays  -  do NOT merge them
-- decision-point: keep options as an array of exactly 4 objects (text, feedback, correct)`;
+- mistakes: keep errorItems as an array of objects (error, consequence)  -  do NOT replace with a content field
+- competency-summary: keep standardItems and errorItems as separate arrays  -  do NOT merge them
+- decision-point: keep heading, standardItems (the correct answer) and errorItems (the wrong answers)`;
 
     const buildStoryQAUserPrompt = (cards, context, topicTitle) => {
         const industry = (context && context.industry) ? context.industry : '';

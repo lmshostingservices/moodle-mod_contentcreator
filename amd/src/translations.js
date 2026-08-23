@@ -382,7 +382,7 @@ define([], function() {
             activitiesEnabledDesc: 'Show the 3-activity challenge (quiz, flip cards, category sort) at the end of each topic',
             quizVoiceEnabled: 'Quiz Voiceover',
             quizVoiceEnabledDesc: 'Read quiz questions and feedback aloud when students answer',
-            questionsReadAloud: 'Answer feedback is read aloud',
+            questionsReadAloud: 'Questions & feedback are read aloud',
             settingsSaved: 'Settings saved successfully',
             settingsSaveFailed: 'Failed to save settings',
             // v6.7.52: Additional UI labels for full translation coverage

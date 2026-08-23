@@ -1013,6 +1013,13 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             if (card.cardType === 'hook-scenario' || card.cardType === 'applied-scenario') {
                 if (!card.sceneParts && card.scene_parts) { card.sceneParts = card.scene_parts; delete card.scene_parts; }
                 if (!card.sceneParts && card.parts && Array.isArray(card.parts)) { card.sceneParts = card.parts; delete card.parts; }
+                // v13.75 VENDOR-SCHEMA: the API stopped emitting sceneParts and now returns
+                // the same content as keyPoints[]. Aliased so the renderers stay untouched.
+                // Saved content that already has sceneParts keeps its own value  -  this only
+                // ever fills a field that is missing.
+                if (!card.sceneParts && Array.isArray(card.keyPoints) && card.keyPoints.length) {
+                    card.sceneParts = card.keyPoints;
+                }
                 if (Array.isArray(card.sceneParts)) {
                     card.sceneParts = card.sceneParts.map(function(p) {
                         if (typeof p === 'string') return { title: '', icon: '', text: p };
@@ -1059,6 +1066,18 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             if (card.cardType === 'concept-explainer') {
                 if (!card.conceptInsights && card.concept_insights) { card.conceptInsights = card.concept_insights; delete card.concept_insights; }
                 if (!card.conceptInsights && card.insights && Array.isArray(card.insights)) { card.conceptInsights = card.insights; delete card.insights; }
+                // v13.75 VENDOR-SCHEMA: conceptInsights is no longer emitted; the same
+                // content arrives as keyPoints[], and the legalLink narrative as keyInfo.
+                if (!card.conceptInsights && Array.isArray(card.keyPoints) && card.keyPoints.length) {
+                    card.conceptInsights = card.keyPoints;
+                }
+                if (!card.legalLink && card.keyInfo) {
+                    card.legalLink = {
+                        legislationName: card.heading || '',
+                        legalObligation: card.keyInfo,
+                        scenarioConnection: card.summaryLine || ''
+                    };
+                }
                 if (Array.isArray(card.conceptInsights)) {
                     card.conceptInsights = card.conceptInsights.map(function(i) {
                         if (typeof i === 'string') return { title: '', icon: '', text: i };
@@ -1086,6 +1105,40 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 if (!card.options && card.choices) { card.options = card.choices; delete card.choices; }
                 if (!card.question && card.scenario) { card.question = card.scenario; delete card.scenario; }
                 if (!card.question && card.prompt) { card.question = card.prompt; delete card.prompt; }
+                // v13.75 VENDOR-SCHEMA: the API emits neither question nor options under any
+                // name or content type, so the prompt now asks for the decision to be carried
+                // in fields that do survive  -  the question as heading, the correct answer as
+                // standardItems[0], and the distractors as errorItems[{error, consequence}].
+                // Reassembled here into the {question, options[]} shape the player expects.
+                if (!card.question && (card.heading || card.summaryLine)) {
+                    card.question = card.heading || card.summaryLine;
+                }
+                if (!card.options && (Array.isArray(card.standardItems) || Array.isArray(card.errorItems))) {
+                    var _readOpt = function(o) {
+                        if (typeof o === 'string') { return { text: o, feedback: '' }; }
+                        if (!o) { return { text: '', feedback: '' }; }
+                        return {
+                            text: o.text || o.error || o.mistake || o.pitfall || o.step || '',
+                            feedback: o.consequence || o.feedback || o.detail || ''
+                        };
+                    };
+                    // The correct answer is the FIRST usable standardItem. Any extras are
+                    // ignored rather than added, because a decision point must have exactly
+                    // one right answer  -  the expansion pass sometimes pads these arrays.
+                    var _right = null;
+                    (card.standardItems || []).some(function(s) {
+                        var o = _readOpt(s);
+                        if (o.text) { _right = o; return true; }
+                        return false;
+                    });
+                    var _wrong = (card.errorItems || []).map(_readOpt).filter(function(o) { return o.text; });
+                    if (_right && _wrong.length) {
+                        card.options = [{ text: _right.text, feedback: _right.feedback, correct: true }]
+                            .concat(_wrong.map(function(o) {
+                                return { text: o.text, feedback: o.feedback, correct: false };
+                            }));
+                    }
+                }
                 // normalise option fields: {text,feedback,correct/isCorrect}
                 if (Array.isArray(card.options)) {
                     card.options = card.options.map(function(o) {
@@ -1133,14 +1186,28 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 };
                 // goodItems aliases
                 if (!card.goodItems) {
+                    // v13.75 VENDOR-SCHEMA: standardItems is what the API now emits for the
+                    // "what good looks like" column.
                     card.goodItems = card.good_items || card.dos || card.whatGoodLooksLike ||
-                                     card.what_good_looks_like || card.positiveExamples || null;
+                                     card.what_good_looks_like || card.positiveExamples ||
+                                     card.standardItems || null;
                 }
                 if (card.goodItems) card.goodItems = _toStrArray(card.goodItems);
                 // badItems aliases
                 if (!card.badItems) {
-                    card.badItems = card.bad_items || card.donts || card.whatToAvoid ||
-                                    card.what_to_avoid || card.negativeExamples || null;
+                    // v13.75 VENDOR-SCHEMA: errorItems is what the API now emits for the
+                    // "what to avoid" column. Entries are {error, consequence} objects, and
+                    // _toStrArray below already reads .text/.behaviour/.criterion/.item, so
+                    // the label is lifted out here first.
+                    var _vendorBad = card.bad_items || card.donts || card.whatToAvoid ||
+                                     card.what_to_avoid || card.negativeExamples || null;
+                    if (!_vendorBad && Array.isArray(card.errorItems) && card.errorItems.length) {
+                        _vendorBad = card.errorItems.map(function(e) {
+                            if (typeof e === 'string') return e;
+                            return e.error || e.mistake || e.pitfall || e.text || '';
+                        });
+                    }
+                    card.badItems = _vendorBad;
                 }
                 if (card.badItems) card.badItems = _toStrArray(card.badItems);
                 // backward-compat: old items[] checklist still supported for legacy saved content
@@ -1646,11 +1713,36 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         if (cards.length !== expectedCount) {
             issues.push('Expected ' + expectedCount + ' cards, got ' + cards.length);
         }
+        // FIX-CC-TITLE-GATE (v13.73): the validator demanded a top-level `title` on EVERY
+        // card, but the prompt builders in prompts.js only ask the model for one on a
+        // minority of card types. Reading the four card specs:
+        //
+        //   VET / WORKPLACE / PD  ->  only card 6, competency-summary, is asked for title(...)
+        //   UNIVERSITY            ->  only cards 5 and 6, case-study-1 and case-study-2
+        //
+        // On every other card type `title` is specified as a field of a NESTED object
+        // (sceneParts[]{title,...}, conceptInsights[]{title,...}), never on the card itself,
+        // so the model correctly returned no top-level title and the validator flagged
+        // "missing title" on 6 of 7 cards. Six issues on attempt 1 and again on the repair
+        // pass meant the validity gate could never pass, generateFiveCardSequence() always
+        // fell through to getFailedCardSequence(), and every section rendered placeholder
+        // cards reading "AI generation failed for ..." while consuming full generation
+        // credits. That is a 100% failure rate on all four routes.
+        //
+        // This is the same class of drift as FIX-CC-ROUTE-CARDCOUNT (v13.65, expected card
+        // count) and v11.79 (voiceover field name): the validator asserting something the
+        // prompt never asked for. The requirement is now scoped to exactly the card types
+        // the prompt requests a title for, and `heading` is accepted as an equivalent since
+        // several card builders populate that instead.
+        var TITLED_CARD_TYPES = ['competency-summary', 'case-study-1', 'case-study-2'];
+
         // Per-card structure
         cards.forEach(function(card, i) {
             var prefix = 'Card ' + (i + 1) + ' (' + (card.cardType || 'unknown') + ')';
             if (!card.cardType) { issues.push(prefix + ': missing cardType'); }
-            if (!card.title)    { issues.push(prefix + ': missing title'); }
+            if (TITLED_CARD_TYPES.indexOf(card.cardType) !== -1 && !card.title && !card.heading) {
+                issues.push(prefix + ': missing title');
+            }
             // decision-point specific
             if (card.cardType === 'decision-point') {
                 if (!card.question) { issues.push(prefix + ': missing question'); }
@@ -2820,6 +2912,9 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         generateFiveCardSequence: generateFiveCardSequence,
         generateFullTopicPack: generateFullTopicPack,
         // FIX-CC-MULTILANG-TRANSLATE (v13.15)
-        translateTopicsForLanguage: translateTopicsForLanguage
+        translateTopicsForLanguage: translateTopicsForLanguage,
+        // v13.75: exposed so the vendor-schema aliasing can be verified directly
+        // against real API payloads. Not used by the plugin at runtime.
+        normalizeCardSchema: normalizeCardSchema
     };
 });

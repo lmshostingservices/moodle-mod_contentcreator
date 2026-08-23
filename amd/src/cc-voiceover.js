@@ -43,17 +43,13 @@ define([], function() {
         'pt-BR': 'Portuguese (Brazil)',
         'pt-PT': 'Portuguese (Portugal)',
         'id-ID': 'Indonesian',
-        'ms-MY': 'Malay',
         'th-TH': 'Thai',
         'fr-FR': 'French',
         'de-DE': 'German',
         'it-IT': 'Italian',
         'ru-RU': 'Russian',
         'nl-NL': 'Dutch',
-        'pl-PL': 'Polish',
-        'ca-ES': 'Catalan',
-        'is-IS': 'Icelandic',
-        'nb-NO': 'Norwegian'
+        'pl-PL': 'Polish'
     };
 
     /**

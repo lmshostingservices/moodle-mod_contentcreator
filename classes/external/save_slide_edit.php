@@ -52,50 +52,58 @@ class save_slide_edit extends external_api {
             'sectionId' => new external_value(PARAM_TEXT, 'Section ID'),
             'title' => new external_value(PARAM_TEXT, 'Section title'),
             'description' => new external_value(PARAM_TEXT, 'Section description', VALUE_DEFAULT, ''),
+            // raw.
             'requirements' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of requirements',
                 VALUE_DEFAULT,
                 '[]',
             ),
+            // raw.
             'doList' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of do items',
                 VALUE_DEFAULT,
                 '[]',
             ),
+            // raw.
             'dontList' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of dont items',
                 VALUE_DEFAULT,
                 '[]',
             ),
-            // Version 6.6.82: Layer 2 content fields for full slide editing.
+            // Version 6.6.82: Layer 2 content fields for full slide editing
+            // raw.
             'scenario' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'Scenario/situation text',
                 VALUE_DEFAULT,
                 '',
             ),
+            // raw.
             'decision' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'Decision point text',
                 VALUE_DEFAULT,
                 '',
             ),
+            // raw.
             'correctResponse' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON object with action, why, communicate',
                 VALUE_DEFAULT,
                 '{}',
             ),
-            // Version 7.7.9: 5-card feedback and content linking.
+            // Version 7.7.9: 5-card feedback and content linking
+            // raw.
             'feedback' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON object with correctExplanation, incorrectConsequence, keyTakeaway',
                 VALUE_DEFAULT,
                 '{}',
             ),
+            // raw.
             'linkedContent' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of linked content items',
@@ -107,30 +115,35 @@ class save_slide_edit extends external_api {
             // only and reverted to AI-generated values on the next page load from the DB.
             'scenarioTitle' => new external_value(PARAM_TEXT, 'Scenario slide title', VALUE_DEFAULT, ''),
             'scenarioRole' => new external_value(PARAM_TEXT, 'Scenario learner role', VALUE_DEFAULT, ''),
+            // raw.
             'scenarioContext' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'Scenario context text',
                 VALUE_DEFAULT,
                 '',
             ),
+            // raw.
             'scenarioComplication' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'Scenario complication text',
                 VALUE_DEFAULT,
                 '',
             ),
+            // raw.
             'mentalModel' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON: {name, principle} or null',
                 VALUE_DEFAULT,
                 '',
             ),
+            // raw.
             'predictionPrompt' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON: {question, options[]} or null',
                 VALUE_DEFAULT,
                 '',
             ),
+            // raw.
             'terminology' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of {term, definition} objects',
@@ -141,7 +154,8 @@ class save_slide_edit extends external_api {
             'proTip' => new external_value(PARAM_TEXT, 'Pro tip accent card text', VALUE_DEFAULT, ''),
             'keyInfo' => new external_value(PARAM_TEXT, 'Key info accent card text', VALUE_DEFAULT, ''),
             'expertInsight' => new external_value(PARAM_TEXT, 'Expert insight accent card text', VALUE_DEFAULT, ''),
-            // Version 9.87: voiceoverText (Introduction) was edited locally but never sent to server — edits lost on reload.
+            // Version 9.87: voiceoverText (Introduction) was edited locally but never sent to server — edits lost on reload
+            // raw.
             'voiceoverText' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'Introduction / voiceover text shown above knowledge section',
@@ -149,14 +163,16 @@ class save_slide_edit extends external_api {
                 '',
             ),
             // Version 9.87: cardData stores all route-card-specific fields (18 card types × multiple fields)
-            // avoids adding dozens of individual parameters for every card type field.
+            // avoids adding dozens of individual parameters for every card type field
+            // raw.
             'cardData' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON object with route-card-specific fields (heading, bodyText, steps, risks, etc)',
                 VALUE_DEFAULT,
                 '{}',
             ),
-            // Version 10.42: cardsData — JSON array of per-card updates for 7-card unified sections (section.cards[i]).
+            // Version 10.42: cardsData — JSON array of per-card updates for 7-card unified sections (section.cards[i])
+            // raw.
             'cardsData' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of per-card updates indexed by card position',

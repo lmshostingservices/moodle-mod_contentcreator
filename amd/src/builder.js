@@ -6515,12 +6515,7 @@ define([
             });
         }
 
-        // bindWizardEvents() runs on every wizard render. Where the file input survives a
-        // render, an unguarded addEventListener stacks a second and third handler on the same
-        // element, so one file selection fired the upload, and the credit charge, several
-        // times over. The flag marks an element that is already wired.
-        if (workplaceFileInput && workplaceFileInput.dataset.ccBound !== '1') {
-            workplaceFileInput.dataset.ccBound = '1';
+        if (workplaceFileInput) {
             workplaceFileInput.addEventListener('change', (e) => {
                 const file = e.target.files?.[0];
                 if (file) handleWorkplaceFileUpload(file);
@@ -6531,8 +6526,7 @@ define([
             removeFileBtn.addEventListener('click', removeWorkplaceFile);
         }
 
-        if (dropZone && dropZone.dataset.ccBound !== '1') {
-            dropZone.dataset.ccBound = '1';
+        if (dropZone) {
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 dropZone.classList.add('dragover');

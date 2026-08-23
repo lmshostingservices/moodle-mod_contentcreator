@@ -66,21 +66,6 @@ plugin's privacy provider for the formal declaration.
 | `voicegender` | Default narration voice |
 | `requirefocus` | Pause playback when the learner leaves the tab |
 
-### Narration
-
-Slides and activity feedback are both narrated with the Google Chirp 3 HD voice chosen
-in `voicegender`, in the language set by `voicelanguage` or by the additional-language
-tab the learner has selected. A few languages offered in the additional-language list
-have no Chirp 3 HD voice and fall back to the closest available one — Punjabi is narrated
-with the Hindi voice, European Portuguese with the Brazilian one, Catalan with the
-Spanish one, and Malay, Filipino, Cantonese and Icelandic use standard voices.
-
-Generated audio costs 5 credits and is cached in the activity's own file area, keyed on
-the text, voice and language, so repeat playback of the same narration is free. The cache
-is removed with the activity. Where voice generation is disabled or unavailable, activity
-feedback falls back to the browser's own speech engine, which will not match the slide
-narration.
-
 If the optional `local_aiconfig` plugin is installed, the Site ID and API key
 are read from it instead, so a single set of credentials can be shared across
 all LMS-Labs plugins. This is an optional soft dependency — the plugin works

@@ -1,79 +1,65 @@
 # Changelog
 
-## 13.71 (2026-08-21)
+## 13.74 (2026-08-23)
 
-Fixes PDF upload in workplace training mode, brings activity narration onto the same
-Chirp 3 HD voice as the slides, and consolidates the text-to-speech pipeline.
+Release-number bump only; identical code to 13.73. The numeric version stays 2026082300, which
+clears the 2026082100 already promoted, and the release string now matches the ZIP filename so
+the pipeline's filename/release consistency check passes.
 
-### Workplace mode PDF upload
+## 13.73 (2026-08-19)
 
-- Uploads through the server-side vendor proxy now suppress the `Expect: 100-continue`
-  header. cURL adds it automatically to any POST body over roughly 1 KB; a browser never
-  sends it, so it was never exercised before uploads moved from the browser to the server
-  in 13.66. Where an intermediary answers it incorrectly the request body is discarded,
-  the vendor route still matches, and the failure surfaces as a parser error about a
-  missing document rather than as a transport error.
-- The workplace file input and drop zone are no longer bound more than once.
-  `bindWizardEvents()` runs on every wizard render, and where the input survived a render
-  each pass added another listener, so a single file selection fired the upload, and its
-  credit charge, several times over.
+Fixes "AI generation failed" cards on every route. This was a 100% failure rate.
 
-### Activity narration
+The card validity gate in generator.js required a top-level `title` on EVERY generated card.
+The prompt builders in prompts.js only ask the model for one on a minority of card types:
 
-- Quiz and decision-point feedback is narrated with the activity's Chirp 3 HD voice
-  instead of the browser's built-in speech engine. Since 13.32 the activity sections were
-  read by whatever text-to-speech engine the learner's operating system happened to ship,
-  so the voice changed audibly mid-activity and differed on every device. The browser
-  engine remains as a fallback only, used when voice generation is unavailable.
-- Standalone decision-point cards narrate their feedback. The voice branch was bound only
-  to `.cc5-decision-challenge .cc5-dp-option`, so an identical looking card outside a
-  challenge wrapper was silent.
-- The activity badge reads "Answer feedback is read aloud". It previously claimed
-  questions were read aloud as well, which was never implemented.
+  VET / Workplace / PD  ->  card 6 only (competency-summary)
+  University            ->  cards 5 and 6 only (case-study-1, case-study-2)
 
-### Text-to-speech pipeline
+On every other card type, `title` is specified to the model as a field of a NESTED object
+(sceneParts[]{title,...}, conceptInsights[]{title,...}) and never on the card itself. The model
+returned exactly what it was asked for, and the validator then flagged "missing title" on 6 of
+7 cards. Six issues on the first attempt and six again on the repair pass meant the gate could
+never pass, so generateFiveCardSequence() always fell through to getFailedCardSequence() and
+every section rendered placeholder cards reading "AI generation failed for ..." — while
+consuming full generation credits.
 
-- `ajax.php`, the `generate_voiceover` web service and the player each carried their own
-  copy of the language map, voice defaults and text cleaner, and the copies had drifted.
-  All three now share `\mod_contentcreator\voice`, covered by `tests/voice_test.php`.
-- Languages with no Chirp 3 HD voice are handled over the web service. It built
-  identifiers such as `ms-MY-Chirp3-HD-Zephyr`, which do not exist, so the speech service
-  rejected the request and the learner heard silence. Affected Malay, Filipino, Punjabi,
-  Cantonese, Taiwanese Mandarin, European Portuguese, Catalan and Icelandic, and was most
-  visible in the Moodle mobile app.
-- The language sent alongside a voice is the language that voice belongs to. The web
-  service sent the requested language while sending a fallback voice from another one,
-  a pair the speech service rejects.
-- The `voicegender` site setting is honoured on the player path. `ajax.php` never read it
-  and mapped a binary gender to a hardcoded name, so the voice chosen in plugin settings
-  had no effect there.
-- The narration length cap counts characters rather than bytes. The byte-based cap applied
-  a limit roughly three times tighter than intended for Japanese, Thai, Arabic and Chinese
-  and could split a character mid-sequence, sending malformed UTF-8 to the speech service.
-- The default voice for the legacy `female` value is Aoede on both paths, matching what the
-  player already used. It was Zephyr in PHP, so a caller that omitted the voice name got a
-  different voice and a different cache key from the player, and the same narration was
-  generated and charged twice.
-- Malay, Catalan, Icelandic and Norwegian are named in the language switcher. The speech
-  layer supported them but the interface had no label for them.
+Verified against the real card payload returned by the live API for a generation job: the gate
+rejected it with 6 issues before this change and accepts it after, while still correctly
+rejecting a competency-summary that genuinely has no title.
 
-### Cached audio
+Present since at least 13.65. Same class of drift as FIX-CC-ROUTE-CARDCOUNT (v13.65, expected
+card count) and v11.79 (voiceover field name) — the validator asserting something the prompt
+never asked for.
 
-- Cached narration is stored in the activity's own context, keyed on the course module,
-  matching the web service. `ajax.php` wrote it to the system context with itemid 0, where
-  nothing deleted it: `lib.php` clears the area from the module context, and no
-  `pluginfile` handler served it, so cached clips outlived the activity that created them
-  and accumulated for the life of the site. Upgrade step `2026082100` removes the files
-  left behind by earlier versions.
-- Because both routes now resolve voices identically and share one file area, audio
-  generated by the player is reused by the mobile app rather than paid for twice. Existing
-  clips cached under the previous key are regenerated once on first playback.
+## 13.72 (2026-08-19)
 
-### Packaging
+Version bump. No functional change from 13.71.
 
-- `$plugin->supported = [402, 502]` is declared, which the submission form requires.
-- The `CC_VERSION` constant in `cc-state.js` tracks the release. It had read `13.65` since
-  the remediation began, so every console message reported the wrong version.
+## 13.71 (2026-08-19)
+
+Fixes document and PDF upload in the Workplace route.
+
+Uploading or dragging a document failed with a PDF.js error from the AI service:
+"getDocument - no `url` parameter provided". The service was receiving the request but could
+not find the file, so its PDF parser was handed nothing.
+
+Cause: the proxy added siteId and apiKey to every request. Seven endpoints are unauthenticated
+and were never sent credentials by the browser in 13.65 -- for the multipart uploads that meant
+extra form fields alongside the file, changing the request the service's upload parser sees.
+
+Every endpoint's credential placement has now been checked against the v13.65 browser code,
+call site by call site, and corrected to match exactly:
+
+- suggest-context-workplace, suggest-topics, suggest-workplace-topics, extract-document,
+  tga parse-text and tga upload-pdf send no credentials at all, as before.
+- export-mapping-excel sends the key in an X-API-Key header, not in the body.
+- The rest were already correct: credits (siteId in the query, key in the header),
+  the legacy suggest-topics alias and generate-slide-image (body), gallery browse (query),
+  gallery use and contribute (body), and upload-slide-image (multipart fields).
+
+Verified against a local receiver: the document upload request is now multipart carrying only
+the file field, exactly as 13.65 sent it.
 
 ## 13.70 (2026-08-19)
 

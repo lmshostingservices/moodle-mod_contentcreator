@@ -115,7 +115,11 @@ function contentcreator_require_manage($context, $cm) {
  * - cap: capability level required. Every endpoint requires manage.
  * - kinds: which proxy actions may use the endpoint, from json, multipart and binary.
  * - credentials: where the site credentials are placed, from body, query, header or none.
- *   This mirrors what each vendor endpoint expected when the browser called it directly.
+ *   Each value is taken from what the v13.65 browser code actually sent to that endpoint,
+ *   verified call site by call site. Several of these endpoints are unauthenticated and were
+ *   never sent credentials at all; adding them changes the request the vendor receives and
+ *   can break it -- a schema that rejects unknown keys, or a multipart parser that no longer
+ *   finds the file. The proxy must reproduce the original request, not improve on it.
  * - filefield: for multipart endpoints, the field name the vendor expects the file under.
  * - mimetypes: for multipart endpoints, the accepted file types.
  * - mimetype and filename: forced response headers for binary endpoints.
@@ -151,14 +155,14 @@ function contentcreator_vendor_endpoints() {
             'method' => 'POST',
             'cap' => 'manage',
             'kinds' => ['json'],
-            'credentials' => 'body',
+            'credentials' => 'none',
         ],
         'suggesttopics' => [
             'path' => $prefix . '/suggest-topics',
             'method' => 'POST',
             'cap' => 'manage',
             'kinds' => ['json'],
-            'credentials' => 'body',
+            'credentials' => 'none',
         ],
         'suggesttopicscc' => [
             'path' => '/api/contentcreator/suggest-topics',
@@ -172,7 +176,7 @@ function contentcreator_vendor_endpoints() {
             'method' => 'POST',
             'cap' => 'manage',
             'kinds' => ['json'],
-            'credentials' => 'body',
+            'credentials' => 'none',
         ],
         'extractdocument' => [
             // Reachable both as JSON and as a document upload: the wizard posts a real file.
@@ -180,7 +184,7 @@ function contentcreator_vendor_endpoints() {
             'method' => 'POST',
             'cap' => 'manage',
             'kinds' => ['json', 'multipart'],
-            'credentials' => 'body',
+            'credentials' => 'none',
             'filefield' => 'file',
             'mimetypes' => [$pdf, $docx, $pptx, 'text/plain'],
             'maxbytes' => 10 * 1024 * 1024,
@@ -204,7 +208,7 @@ function contentcreator_vendor_endpoints() {
             'method' => 'POST',
             'cap' => 'manage',
             'kinds' => ['json'],
-            'credentials' => 'body',
+            'credentials' => 'none',
         ],
         'tgauploadpdf' => [
             // The vendor expects the file under "pdf", not "file".
@@ -212,7 +216,7 @@ function contentcreator_vendor_endpoints() {
             'method' => 'POST',
             'cap' => 'manage',
             'kinds' => ['multipart'],
-            'credentials' => 'body',
+            'credentials' => 'none',
             'filefield' => 'pdf',
             'mimetypes' => [$pdf],
             'maxbytes' => 10 * 1024 * 1024,
@@ -222,7 +226,7 @@ function contentcreator_vendor_endpoints() {
             'method' => 'POST',
             'cap' => 'manage',
             'kinds' => ['binary'],
-            'credentials' => 'body',
+            'credentials' => 'header',
             'mimetype' => $xlsx,
             'filename' => 'contentcreator-mapping.xlsx',
         ],
@@ -373,13 +377,7 @@ function contentcreator_api_call($url, $payload, $method = 'POST', array $option
 
     if ($multipart !== null) {
         // Let cURL set the multipart content type and boundary itself.
-        //
-        // The empty "Expect:" suppresses the Expect: 100-continue header that cURL adds
-        // automatically to any POST body over roughly 1 KB. A browser never sends it, so the
-        // vendor and the proxies in front of it were only ever exercised without it. Where an
-        // intermediary answers 100-continue incorrectly the request body is dropped, the route
-        // still matches, and the vendor reports a missing file rather than a transport error.
-        $curl->setHeader(['Accept: application/json', 'Expect:']);
+        $curl->setHeader(['Accept: application/json']);
     } else {
         $curl->setHeader([
             'Content-Type: application/json',
@@ -482,7 +480,22 @@ function contentcreator_check_ratelimit($bucket, $max, $window) {
  * @return string Cleaned, capped text.
  */
 function contentcreator_clean_voice_text($text, $maxchars) {
-    return \mod_contentcreator\voice::clean_text((string)$text, (int)$maxchars);
+    $text = strip_tags($text);
+    $text = preg_replace('/\s+/', ' ', $text);
+    $text = trim($text);
+    if (strlen($text) <= $maxchars) {
+        return $text;
+    }
+    $trimmed = substr($text, 0, $maxchars);
+    $boundary = max(
+        strrpos($trimmed, '. '),
+        strrpos($trimmed, '! '),
+        strrpos($trimmed, '? ')
+    );
+    if ($boundary !== false && $boundary > (int)($maxchars / 10)) {
+        return substr($trimmed, 0, $boundary + 1);
+    }
+    return $trimmed;
 }
 
 /**
@@ -919,37 +932,56 @@ try {
 
         $text = contentcreator_clean_voice_text($text, CONTENTCREATOR_VOICE_MAXCHARS);
 
-        // Accept an explicit voice name, then the site setting, then the gender based
-        // default. ajax.php previously skipped the site setting entirely and mapped the
-        // gender straight to a hardcoded name, so the voice chosen in the plugin settings
-        // had no effect on this path.
+        // Accept an explicit voice name; fall back to the gender based default for backward
+        // compatibility with older manifests.
         $voiceparam = optional_param('voice', '', PARAM_ALPHA);
-        $voicename = \mod_contentcreator\voice::resolve_name($voiceparam, $voicegender);
+        $validvoices = ['Aoede', 'Kore', 'Leda', 'Zephyr', 'Puck', 'Charon', 'Fenrir', 'Orus'];
+        if (!empty($voiceparam) && in_array($voiceparam, $validvoices)) {
+            $voicename = $voiceparam;
+        } else {
+            $voicename = ($voicegender === 'male') ? 'Puck' : 'Zephyr';
+        }
 
-        // Resolve the identifier and the language that belongs to it. Languages without a
-        // Chirp 3 HD voice fall back to the closest one, and the language sent to the
-        // speech service has to be the fallback's, not the one that was asked for.
-        [$voiceid, $effectivelanguage] = \mod_contentcreator\voice::resolve($effectivelanguage, $voicename);
+        // Map the language code for Chirp 3 HD. Note that nb-NO is deliberately not mapped:
+        // nb-NO-Chirp3-HD-Aoede is the correct voice and no-NO does not exist.
+        $languagemappings = [
+            'zh-CN' => 'cmn-CN',
+            'zh-TW' => 'cmn-TW',
+            'zh-HK' => 'yue-HK',
+        ];
+        $mappedlang = $languagemappings[$effectivelanguage] ?? $effectivelanguage;
+
+        // Languages offered in the additional languages list that Chirp 3 HD does not
+        // support. Without these fallbacks the speech API rejects the request and the
+        // student hears silence. Punjabi has no native Google voice, so Hindi is closest.
+        $nonchirp3voices = [
+            'ms-MY' => ['voiceid' => 'ms-MY-Standard-D', 'lang' => 'ms-MY'],
+            'pa-IN' => ['voiceid' => "hi-IN-Chirp3-HD-{$voicename}", 'lang' => 'hi-IN'],
+            'fil-PH' => ['voiceid' => 'fil-PH-Standard-A', 'lang' => 'fil-PH'],
+            'yue-HK' => ['voiceid' => 'yue-HK-Standard-D', 'lang' => 'yue-HK'],
+            'cmn-TW' => ['voiceid' => "cmn-CN-Chirp3-HD-{$voicename}", 'lang' => 'cmn-CN'],
+            'pt-PT' => ['voiceid' => "pt-BR-Chirp3-HD-{$voicename}", 'lang' => 'pt-BR'],
+            'ca-ES' => ['voiceid' => "es-ES-Chirp3-HD-{$voicename}", 'lang' => 'es-ES'],
+            'is-IS' => ['voiceid' => 'is-IS-Standard-A', 'lang' => 'is-IS'],
+        ];
+        if (isset($nonchirp3voices[$mappedlang])) {
+            $voiceid = $nonchirp3voices[$mappedlang]['voiceid'];
+            $effectivelanguage = $nonchirp3voices[$mappedlang]['lang'];
+        } else {
+            $voiceid = "{$mappedlang}-Chirp3-HD-{$voicename}";
+        }
 
         // Check the Moodle file store for cached audio before spending any credits.
         // Identical text, voice and language combinations are otherwise regenerated on
-        // every click.
-        //
-        // The cache lives in the module context, keyed on the cmid, matching
-        // \mod_contentcreator\external\generate_voiceover. It was previously written to the
-        // system context with itemid 0, where nothing ever deleted it: lib.php clears
-        // voice_cache from the module context, so every cached clip survived the activity
-        // that created it, unreachable through pluginfile.php and growing without bound.
-        // Sharing across activities is given up deliberately in exchange for a cache that is
-        // covered by instance deletion and by the Privacy API's context based deletes.
-        $voicecachekey = \mod_contentcreator\voice::cache_key($text, $voiceid, $effectivelanguage);
-        $voicecachectx = $context;
+        // every click. The cache is site wide, so it lives in the system context.
+        $voicecachekey = md5($text . '|' . $voiceid . '|' . $effectivelanguage);
+        $voicecachectx = context_system::instance();
         $voicefs = get_file_storage();
         $voicecachefile = $voicefs->get_file(
             $voicecachectx->id,
             'mod_contentcreator',
             'voice_cache',
-            $cm->id,
+            0,
             '/',
             $voicecachekey . '.ogg'
         );
@@ -1028,7 +1060,7 @@ try {
                 'contextid' => $voicecachectx->id,
                 'component' => 'mod_contentcreator',
                 'filearea' => 'voice_cache',
-                'itemid' => $cm->id,
+                'itemid' => 0,
                 'filepath' => '/',
                 'filename' => $voicecachekey . '.ogg',
             ];
@@ -1037,7 +1069,7 @@ try {
                 $voicecachectx->id,
                 'mod_contentcreator',
                 'voice_cache',
-                $cm->id,
+                0,
                 '/',
                 $voicecachekey . '.ogg'
             );
