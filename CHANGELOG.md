@@ -1,5 +1,29 @@
 # Changelog
 
+## 13.83 (2026-08-23)
+
+Release-pipeline blocker only; no functional change from 13.82. The pipeline scans for the
+literal token `PARAM_RAW`, and the explanatory comment added in 13.82 mentioned it by name while
+describing what the setting used to be. The comment is reworded; settings.php contains no
+occurrence of that token and uses PARAM_TEXT.
+
+## 13.82 (2026-08-23)
+
+**Site ID could no longer be saved  -  regression, and it blocked the whole settings page.**
+
+During the coding-standards pass the Site ID setting was tightened from the baseline default
+(PARAM_RAW) to PARAM_ALPHANUMEXT. That type strips dots, and a Site ID is commonly the site's own
+domain, so `moodle.example.com` was rejected as "This value is not valid".
+
+Moodle validates every field on a settings page before saving any of them, so this one field
+blocked saving ANY Content Creator setting  -  voice options, rate limits, everything. A site that
+re-saved its settings page could also end up with the Site ID rejected, which would break
+authentication to the AI service and make every vendor call fail.
+
+Now PARAM_TEXT: dots and hyphens are accepted, tags are still stripped. The value is only
+forwarded to the vendor and used in cache keys, and is never rendered as HTML. Audited the rest
+of settings.php: Site ID was the only setting given a stricter type than the baseline.
+
 ## 13.81 (2026-08-23)
 
 **Rate limits are now admin-configurable.** Site administration > Plugins > Activity modules >

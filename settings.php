@@ -65,7 +65,15 @@ if ($hassiteconfig && isset($settings)) {
             ? get_string('settingfallbacknote', 'mod_contentcreator', get_string('siteiddesc', 'mod_contentcreator'))
             : get_string('siteiddesc', 'mod_contentcreator'),
         '',
-        PARAM_ALPHANUMEXT
+        // V13.82 FIX-SITEID-INVALID: this was tightened to PARAM_ALPHANUMEXT during the
+        // coding-standards pass. That type strips dots, and Site IDs are commonly the
+        // site's own domain (moodle.example.com), so every such value was rejected with
+        // "This value is not valid". Because Moodle validates the entire settings page
+        // before saving, that one field blocked saving ANY setting on the page. The
+        // baseline left the type unset, which is the permissive default. PARAM_TEXT accepts
+        // dots and hyphens while still stripping tags; the value is only forwarded to the
+        // vendor and used in cache keys, and is never rendered as HTML.
+        PARAM_TEXT
     ));
 
     $settings->add(new admin_setting_configpasswordunmask(
