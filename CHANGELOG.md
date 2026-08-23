@@ -1,5 +1,18 @@
 # Changelog
 
+## 13.81 (2026-08-23)
+
+**Rate limits are now admin-configurable.** Site administration > Plugins > Activity modules >
+Content Creator now exposes three ceilings: content generations per hour (default 60), other AI
+requests per hour (default 200) and voiceovers per hour (default 100). Setting a value to 0
+disables that limit.
+
+Previously the ceilings were hard-coded, so an author who tripped one had no way to continue
+except to wait out the sliding hour or have an administrator purge caches  -  and purging does not
+reliably clear the counters on every cache backend. For a site doing bulk authoring, 60
+generations an hour is genuinely restrictive. The defaults are unchanged, so nothing loosens
+unless an administrator chooses it.
+
 ## 13.80 (2026-08-23)
 
 **Rate limiting no longer locks authors out of their own work.** The four read-only GET endpoints

@@ -240,4 +240,34 @@ if ($hassiteconfig && isset($settings)) {
         get_string('requirefocusdesc', 'mod_contentcreator'),
         0
     ));
+
+    $settings->add(new admin_setting_heading(
+        'mod_contentcreator/ratelimitheading',
+        get_string('ratelimitsettings', 'mod_contentcreator'),
+        get_string('ratelimitsettingsdesc', 'mod_contentcreator')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_contentcreator/ratelimitgenerate',
+        get_string('ratelimitgenerate', 'mod_contentcreator'),
+        get_string('ratelimitgeneratedesc', 'mod_contentcreator'),
+        60,
+        PARAM_INT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_contentcreator/ratelimitvendor',
+        get_string('ratelimitvendor', 'mod_contentcreator'),
+        get_string('ratelimitvendordesc', 'mod_contentcreator'),
+        200,
+        PARAM_INT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_contentcreator/ratelimitvoice',
+        get_string('ratelimitvoice', 'mod_contentcreator'),
+        get_string('ratelimitvoicedesc', 'mod_contentcreator'),
+        100,
+        PARAM_INT
+    ));
 }

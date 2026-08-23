@@ -461,6 +461,22 @@ function contentcreator_prepare_long_request($seconds = 300) {
 function contentcreator_check_ratelimit($bucket, $max, $window) {
     global $USER;
 
+    // V13.81: the ceilings are admin-configurable so a site doing bulk authoring can raise
+    // them without a code change, and so an author who trips one can be unblocked from the
+    // settings page instead of waiting out the window or purging caches. A configured value
+    // of 0 disables that bucket. Unknown buckets keep the caller's default.
+    $settingmap = [
+        'generate' => 'ratelimitgenerate',
+        'vendor' => 'ratelimitvendor',
+        'voice' => 'ratelimitvoice',
+    ];
+    if (isset($settingmap[$bucket])) {
+        $configured = get_config('mod_contentcreator', $settingmap[$bucket]);
+        if ($configured !== false && $configured !== '' && is_numeric($configured)) {
+            $max = (int)$configured;
+        }
+    }
+
     try {
         \mod_contentcreator\ratelimiter::check($USER->id, $bucket, $max, $window);
     } catch (\moodle_exception $e) {
