@@ -89,14 +89,30 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         { pattern: /\bit is important to\b/gi, replace: "You need to" },
         { pattern: /\bhighlights the importance of\b/gi, replace: "shows why it matters to" },
         { pattern: /\bemphasizes the importance of\b/gi, replace: "shows why it matters to" },
-        { pattern: /\bto ensure\b/gi, replace: "so you" },
+        // v13.77 FIX-GRAMMAR-SO-YOU: these were blanket swaps that only read correctly
+        // when a subject and verb followed. "to ensure accuracy" became "so you accuracy",
+        // "to ensure they feel heard" became "so you they feel heard". The corruption ran
+        // through every card, and the "so you <adjective>" repair rules further down in
+        // builder.js and cc-state.js were band-aids over this rule rather than a fix.
+        // Each replacement below is grammatical in every position it can match.
+        { pattern: /\bto ensure that\b/gi, replace: "to make sure" },
+        // Only rewrite to "so <subject>" when a subject actually follows.
+        {
+            pattern: /\bto ensure\s+(?=(?:you|they|we|it|he|she|everyone|no one|nobody|staff|workers|operators|customers|students|learners|the team)\b)/gi,
+            replace: "so "
+        },
+        // Any remaining "to ensure" is followed by a noun phrase, where "so you" is
+        // ungrammatical. "to keep" reads plainly and is always correct there.
+        { pattern: /\bto ensure\b/gi, replace: "to keep" },
         { pattern: /\bin order to\b/gi, replace: "so you can" },
         { pattern: /\bso that you can\b/gi, replace: "so you can" },
-        { pattern: /\bto prevent\b/gi, replace: "so you don't" },
-        { pattern: /\bto avoid\b/gi, replace: "so you don't" },
-        { pattern: /\bto reduce\b/gi, replace: "so you cut down" },
-        { pattern: /\bto minimise\b/gi, replace: "so you cut down" },
-        { pattern: /\bto minimize\b/gi, replace: "so you cut down" },
+        // "to prevent accidents" -> "to stop accidents"; "to prevent you falling" -> "to stop
+        // you falling". Grammatical with both nouns and clauses, unlike "so you don't".
+        { pattern: /\bto prevent\b/gi, replace: "to stop" },
+        // "avoid" and "reduce" are already plain English; the old swaps broke noun phrases
+        // ("to avoid delays" -> "so you don't delays"). Only the formal variants are changed.
+        { pattern: /\bto minimise\b/gi, replace: "to cut down" },
+        { pattern: /\bto minimize\b/gi, replace: "to cut down" },
         { pattern: /\bfor your safety and the safety of others\b/gi, replace: "so no one gets hurt" },
         { pattern: /\bensure compliance\b/gi, replace: "stay within site rules" },
         { pattern: /\bensure that\b/gi, replace: "make sure" },
