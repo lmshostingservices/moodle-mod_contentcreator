@@ -10,6 +10,41 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 define([], function() {
+    /**
+     * v13.77 FIX-OBJECT-TEXT: entries in the card content arrays arrive as EITHER
+     * plain strings or objects, depending on what the vendor API returns for that
+     * field on that run. Joining or concatenating them straight into text emitted
+     * "[object Object]" whenever an object turned up. These two helpers flatten
+     * either shape to readable text so every text-assembly path is shape-safe.
+     *
+     * @param {*} entry A string, or an object such as {title, text} / {error, consequence}.
+     * @return {String} Readable text for the entry, or an empty string.
+     */
+    var ccEntryText = function(entry) {
+        if (entry === null || entry === undefined) { return ''; }
+        if (typeof entry === 'string') { return entry; }
+        if (typeof entry !== 'object') { return String(entry); }
+        var head = entry.title || entry.step || entry.term || entry.name ||
+                   entry.dimension || entry.heading || entry.mistake ||
+                   entry.error || entry.pitfall || '';
+        var body = entry.text || entry.detail || entry.definition || entry.description ||
+                   entry.consequence || entry.principle || entry.content ||
+                   entry.prompt || entry.item || entry.behaviour || '';
+        if (head && body && head !== body) { return head + ': ' + body; }
+        return head || body || '';
+    };
+
+    /**
+     * Flatten an array of string-or-object entries to an array of non-empty strings.
+     *
+     * @param {Array} arr The array to flatten; anything non-array yields [].
+     * @return {Array} Array of readable strings.
+     */
+    var ccTextList = function(arr) {
+        if (!Array.isArray(arr)) { return []; }
+        return arr.map(ccEntryText).filter(function(s) { return s; });
+    };
+
     'use strict';
 
     var DEFAULT_POLICY = {
@@ -167,7 +202,7 @@ define([], function() {
                     break;
                 case 'plain-english':
                     if (card.bodyText) chunks.push(card.bodyText);
-                    if (Array.isArray(card.keyPoints)) chunks = chunks.concat(card.keyPoints);
+                    if (Array.isArray(card.keyPoints)) chunks = chunks.concat(ccTextList(card.keyPoints));
                     break;
                 case 'action-breakdown':
                     if (Array.isArray(card.actions)) {
@@ -179,7 +214,7 @@ define([], function() {
                     }
                     break;
                 case 'competence-standard':
-                    if (Array.isArray(card.standardItems)) chunks = chunks.concat(card.standardItems);
+                    if (Array.isArray(card.standardItems)) chunks = chunks.concat(ccTextList(card.standardItems));
                     break;
                 case 'scenario-1':
                 case 'scenario-2':
@@ -223,7 +258,7 @@ define([], function() {
                     break;
                 case 'analytical-lens':
                     if (card.bodyText) chunks.push(card.bodyText);
-                    if (Array.isArray(card.cognitiveConsiderations)) chunks = chunks.concat(card.cognitiveConsiderations);
+                    if (Array.isArray(card.cognitiveConsiderations)) chunks = chunks.concat(ccTextList(card.cognitiveConsiderations));
                     break;
                 case 'ethics-considerations':
                     if (card.bodyText) chunks.push(card.bodyText);
@@ -240,7 +275,7 @@ define([], function() {
                     if (card.context) chunks.push(card.context);
                     if (card.consequence) chunks.push(card.consequence);
                     if (card.criticalReflection) chunks.push(card.criticalReflection);
-                    if (Array.isArray(card.analysisPrompts)) chunks = chunks.concat(card.analysisPrompts);
+                    if (Array.isArray(card.analysisPrompts)) chunks = chunks.concat(ccTextList(card.analysisPrompts));
                     break;
                 case 'business-impact':
                     if (card.bodyText) chunks.push(card.bodyText);
@@ -253,8 +288,8 @@ define([], function() {
                             if (m.value) chunks.push(m.value);
                         });
                     }
-                    if (Array.isArray(card.consequences)) chunks = chunks.concat(card.consequences);
-                    if (Array.isArray(card.optimisationTips)) chunks = chunks.concat(card.optimisationTips);
+                    if (Array.isArray(card.consequences)) chunks = chunks.concat(ccTextList(card.consequences));
+                    if (Array.isArray(card.optimisationTips)) chunks = chunks.concat(ccTextList(card.optimisationTips));
                     break;
                 case 'action-framework':
                     if (Array.isArray(card.steps)) {
@@ -290,7 +325,7 @@ define([], function() {
                 case 'skill-anchor':
                     if (card.skillStatement) chunks.push(card.skillStatement);
                     if (card.relevance) chunks.push(card.relevance);
-                    if (Array.isArray(card.keyIndicators)) chunks = chunks.concat(card.keyIndicators);
+                    if (Array.isArray(card.keyIndicators)) chunks = chunks.concat(ccTextList(card.keyIndicators));
                     break;
                 case 'core-framework':
                     if (card.keyPrinciple) chunks.push(card.keyPrinciple);
@@ -840,9 +875,9 @@ define([], function() {
             if (card.keyPrinciple) texts.push(card.keyPrinciple);
             if (card.turningPoint) texts.push(card.turningPoint);
             if (card.reflection) texts.push(typeof card.reflection === 'string' ? card.reflection : '');
-            if (Array.isArray(card.standardItems)) texts = texts.concat(card.standardItems);
-            if (Array.isArray(card.keyPoints)) texts = texts.concat(card.keyPoints);
-            if (Array.isArray(card.keyIndicators)) texts = texts.concat(card.keyIndicators);
+            if (Array.isArray(card.standardItems)) texts = texts.concat(ccTextList(card.standardItems));
+            if (Array.isArray(card.keyPoints)) texts = texts.concat(ccTextList(card.keyPoints));
+            if (Array.isArray(card.keyIndicators)) texts = texts.concat(ccTextList(card.keyIndicators));
             if (Array.isArray(card.steps)) {
                 card.steps.forEach(function(s) {
                     if (!s) return;
@@ -853,8 +888,8 @@ define([], function() {
                     if (detail) texts.push(detail);
                 });
             }
-            if (Array.isArray(card.consequences)) texts = texts.concat(card.consequences);
-            if (Array.isArray(card.analysisPrompts)) texts = texts.concat(card.analysisPrompts);
+            if (Array.isArray(card.consequences)) texts = texts.concat(ccTextList(card.consequences));
+            if (Array.isArray(card.analysisPrompts)) texts = texts.concat(ccTextList(card.analysisPrompts));
             if (Array.isArray(card.risks)) {
                 card.risks.forEach(function(r) {
                     if (r && r.risk) texts.push(r.risk);

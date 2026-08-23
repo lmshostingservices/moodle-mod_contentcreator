@@ -1,5 +1,55 @@
 # Changelog
 
+## 13.78 (2026-08-23)
+
+Version bump only; identical code to 13.77. Issued because a separate 13.77 build exists, and
+two different packages sharing one release number is what the release pipeline refuses on upload.
+
+## 13.77 (2026-08-23)
+
+Two fixes, both found by inspecting live generation output from moodle.cbplugins.com.
+
+**Ungrammatical card text.** BANNED_PHRASE_RULES in generator.js rewrote `to ensure` to `so you`
+as a blanket swap. That only reads correctly when a subject and verb follow, so every noun phrase
+after it broke:
+
+    "Confirm the main points to ensure a mutual understanding."
+      ->  "...so you a mutual understanding."
+    "Reflect back what you heard to ensure accuracy."
+      ->  "...so you accuracy."
+    "Listen attentively to ensure they feel heard."
+      ->  "...so you they feel heard."
+
+`to prevent` -> `so you don't` and `to avoid` -> `so you don't` had the identical defect
+("to prevent accidents" -> "so you don't accidents"). The `so you <adjective>` repair regexes in
+builder.js and cc-state.js were band-aids over this rule rather than a fix, and are left in place
+as they are now inert. Each replacement is grammatical in every position it can match:
+
+    to ensure that X    ->  to make sure X
+    to ensure <subject> ->  so <subject>
+    to ensure <noun>    ->  to keep <noun>
+    to prevent          ->  to stop
+    to minimise         ->  to cut down
+
+`to avoid` and `to reduce` are already plain English and are no longer rewritten. The raw API
+response was confirmed clean, containing `ensure` 13 times with no corruption, so the mangling
+was entirely plugin-side.
+
+**"[object Object]" in every text-assembly path.** Card content arrays arrive as EITHER plain
+strings or objects depending on what the vendor API returns for that field on that run. 17 sites
+joined or concatenated those arrays straight into text and would emit `[object Object]` on the
+object shape:
+
+  enterprise_qa.js    12 sites  keyPoints, standardItems, cognitiveConsiderations,
+                                analysisPrompts, consequences, optimisationTips, keyIndicators
+  prompts.js           4 sites  topic.keyPoints joined into four prompt builders  -  corrupted
+                                text here is fed back to the model as context
+  scorm.exporter.js    1 site   keyPoints joined into exported SCORM narration
+
+Fixed with two shared helpers, `ccEntryText()` and `ccTextList()`, which flatten string,
+{title,text}, {error,consequence}, {step,detail} and {term,definition} entries to readable text
+and pass plain strings through untouched. Safe whichever shape the API sends.
+
 ## 13.74 (2026-08-23)
 
 Release-number bump only; identical code to 13.73. The numeric version stays 2026082300, which

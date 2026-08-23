@@ -14,6 +14,41 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state'], function(Legislation, CcState) {
+    /**
+     * v13.77 FIX-OBJECT-TEXT: entries in the card content arrays arrive as EITHER
+     * plain strings or objects, depending on what the vendor API returns for that
+     * field on that run. Joining or concatenating them straight into text emitted
+     * "[object Object]" whenever an object turned up. These two helpers flatten
+     * either shape to readable text so every text-assembly path is shape-safe.
+     *
+     * @param {*} entry A string, or an object such as {title, text} / {error, consequence}.
+     * @return {String} Readable text for the entry, or an empty string.
+     */
+    var ccEntryText = function(entry) {
+        if (entry === null || entry === undefined) { return ''; }
+        if (typeof entry === 'string') { return entry; }
+        if (typeof entry !== 'object') { return String(entry); }
+        var head = entry.title || entry.step || entry.term || entry.name ||
+                   entry.dimension || entry.heading || entry.mistake ||
+                   entry.error || entry.pitfall || '';
+        var body = entry.text || entry.detail || entry.definition || entry.description ||
+                   entry.consequence || entry.principle || entry.content ||
+                   entry.prompt || entry.item || entry.behaviour || '';
+        if (head && body && head !== body) { return head + ': ' + body; }
+        return head || body || '';
+    };
+
+    /**
+     * Flatten an array of string-or-object entries to an array of non-empty strings.
+     *
+     * @param {Array} arr The array to flatten; anything non-array yields [].
+     * @return {Array} Array of readable strings.
+     */
+    var ccTextList = function(arr) {
+        if (!Array.isArray(arr)) { return []; }
+        return arr.map(ccEntryText).filter(function(s) { return s; });
+    };
+
     'use strict';
 
     // Gated diagnostics  -  silent in production, enabled from cc-state.js.
@@ -501,7 +536,7 @@ ${context.jobTasks?.length ? `\nJOB TASKS: ${context.jobTasks.join('; ')}` : ''}
 ${topic.elementText ? `\nELEMENT: ${topic.elementText}` : ''}
 ${topic.criterionText ? `\nPERFORMANCE CRITERIA: ${topic.criterionText}` : ''}
 ${topic.knowledgeEvidence ? `\nKNOWLEDGE EVIDENCE: ${topic.knowledgeEvidence}` : ''}
-${topic.keyPoints?.length ? `\nKEY POINTS: ${topic.keyPoints.join('; ')}` : ''}
+${topic.keyPoints?.length ? `\nKEY POINTS: ${ccTextList(topic.keyPoints).join('; ')}` : ''}
 ${context.additionalInstructions ? `\nTEACHER INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
@@ -528,7 +563,7 @@ Generate the full 7-card sequence.${langSuffix}`;
 CONTEXT:
 ${contextLines.join('\n')}
 ${context.jobTasks?.length ? `\nJOB TASKS: ${context.jobTasks.join('; ')}` : ''}
-${topic.keyPoints?.length ? `\nKEY POINTS: ${topic.keyPoints.join('; ')}` : ''}
+${topic.keyPoints?.length ? `\nKEY POINTS: ${ccTextList(topic.keyPoints).join('; ')}` : ''}
 ${context.additionalInstructions ? `\nTRAINER INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
@@ -553,7 +588,7 @@ Generate the full 7-card sequence.${langSuffix}`;
 
 CONTEXT:
 ${contextLines.join('\n')}
-${topic.keyPoints?.length ? `\nKEY POINTS: ${topic.keyPoints.join('; ')}` : ''}
+${topic.keyPoints?.length ? `\nKEY POINTS: ${ccTextList(topic.keyPoints).join('; ')}` : ''}
 ${context.additionalInstructions ? `\nFACILITATOR INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
@@ -628,7 +663,7 @@ CONTEXT:
 - Academic Level: ${context.courseLevel || 'Undergraduate'}
 - Bloom's Level: ${bloomsInfo.verb} (use verbs: ${bloomsInfo.verbs})
 ${topic.outcome ? `\nLEARNING OUTCOME: ${topic.outcome}` : ''}
-${topic.keyPoints?.length ? `\nKEY POINTS: ${topic.keyPoints.join('; ')}` : ''}
+${topic.keyPoints?.length ? `\nKEY POINTS: ${ccTextList(topic.keyPoints).join('; ')}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
 BLOOM'S TARGETING: ${bloomsInfo.scenarioFocus} ${bloomsInfo.decisionFocus || ''} ${bloomsInfo.feedbackFocus || ''}
