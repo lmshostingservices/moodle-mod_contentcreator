@@ -19975,3 +19975,38 @@ body.dark .cc5-lang-pill {
     --cc5-amber-dark: hsl(38deg 92% 40%);
     --cc5-emerald-light: hsl(158deg 64% 95%);
 }
+
+/* v13.75 FIX-BROWSE-INVISIBLE (3/3): the card editor's 33 "Remove" buttons are
+   bare <button> elements carrying only their own cc5-edit-remove-* class, none
+   of which had any CSS. On themes that colour bare buttons white they vanish.
+   One shared rule covers every variant. These selectors had no rules at all
+   before, so this cannot override anything that was already working. */
+[class^="cc5-edit-remove-"],
+[class*=" cc5-edit-remove-"],
+.cc5-edit-card-move-up,
+.cc5-edit-card-move-down,
+.cc5-edit-card-delete {
+    padding: 2px 8px !important;
+    border: 1px solid var(--cc-border, #d7dbe2) !important;
+    border-radius: 6px;
+    background: var(--cc-bg-subtle, #f3f5f8) !important;
+    color: var(--cc-text, #15171c) !important;
+    font: inherit;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+[class^="cc5-edit-remove-"]:hover,
+[class*=" cc5-edit-remove-"]:hover,
+.cc5-edit-card-delete:hover {
+    background: hsl(0 72% 96%) !important;
+    border-color: hsl(0 72% 70%) !important;
+    color: hsl(0 72% 38%) !important;
+}
+
+.cc5-edit-card-move-up:hover,
+.cc5-edit-card-move-down:hover {
+    background: var(--cc-primary-muted, #eaf1fe) !important;
+    color: var(--cc-text, #15171c) !important;
+}

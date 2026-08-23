@@ -3954,6 +3954,49 @@ body.dark .cc-category-checkmark,
     color: var(--cc-text-muted);
 }
 
+/* v13.75 FIX-BROWSE-INVISIBLE: .cc-link-button has never had styling of its own,
+   so the "browse files" control inherited the Moodle theme's <button> colours  -
+   white text on no background, invisible against the light dropzone. Styled here
+   as the text link it is meant to be. !important is needed because Boost's .btn
+   rules land on bare buttons with higher specificity in some themes. */
+.cc-upload-hint {
+    color: var(--cc-text-muted);
+    font-size: var(--cc-text-sm);
+    margin: var(--cc-space-2) 0 0;
+}
+
+.cc-link-button {
+    display: inline;
+    padding: 0 !important;
+    margin: 0;
+    border: 0 !important;
+    background: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    color: var(--cc-primary) !important;
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.cc-link-button:hover,
+.cc-link-button:focus {
+    color: var(--cc-primary-hover) !important;
+    background: none !important;
+    background-color: transparent !important;
+    text-decoration: underline;
+}
+
+.cc-link-button:focus-visible {
+    outline: 2px solid var(--cc-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
 .cc-reference-docs-list {
     display: flex;
     flex-direction: column;
@@ -5583,4 +5626,37 @@ body.dark .cc-input-method-btn:hover:not(.active),
     border-color: var(--cc-primary, #6366f1);
     background: var(--cc-primary-light, #eef2ff);
     font-weight: 500;
+}
+
+/* v13.75 FIX-BROWSE-INVISIBLE (2/2): the builder's fallback tabs are bare
+   <button> elements with no rules of their own, so on themes that colour bare
+   buttons white they disappear the same way "browse files" did. */
+.cc-fallback-tabs {
+    display: flex;
+    gap: var(--cc-space-2);
+    margin-bottom: var(--cc-space-3);
+    flex-wrap: wrap;
+}
+
+.cc-fallback-tab {
+    padding: var(--cc-space-2) var(--cc-space-4) !important;
+    border: 1px solid var(--cc-border) !important;
+    border-radius: var(--cc-radius-md);
+    background: var(--cc-bg-subtle) !important;
+    color: var(--cc-text) !important;
+    font: inherit;
+    font-size: var(--cc-text-sm);
+    cursor: pointer;
+}
+
+.cc-fallback-tab:hover {
+    background: var(--cc-primary-muted) !important;
+    color: var(--cc-text) !important;
+}
+
+.cc-fallback-tab-active {
+    background: var(--cc-primary) !important;
+    border-color: var(--cc-primary) !important;
+    color: var(--cc-primary-foreground) !important;
+    font-weight: 600;
 }
