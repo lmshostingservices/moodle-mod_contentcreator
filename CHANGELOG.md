@@ -1,5 +1,23 @@
 # Changelog
 
+## 13.80 (2026-08-23)
+
+**Rate limiting no longer locks authors out of their own work.** The four read-only GET endpoints
+(credit balance, TGA unit lookup, TGA unit refresh, gallery browse) shared a single 200-per-hour
+bucket with document uploads and AI calls. The credit balance is re-read by the UI on load and
+after most actions, so ordinary authoring could drain the shared allowance and then fail a
+document upload with "You have made too many AI requests in a short time" that the author had
+done nothing to earn.
+
+Read-only endpoints now use their own `vendorread` bucket at 600 per hour. They consume no
+credits and cost the vendor nothing, so they can no longer starve the writes. The write bucket
+is unchanged at 200 per hour, and the `generate` (60/hr) and `voice` (100/hr) buckets are
+untouched.
+
+Note for operators: these counters live in the `mod_contentcreator/ratelimit` application cache.
+If a limit is ever tripped, Site administration > Development > Purge all caches clears it
+immediately; otherwise the sliding window frees up over the following hour.
+
 ## 13.79 (2026-08-23)
 
 **Card title size, fixed permanently in source.** `.cc5-player .cc5-unified-title` is the ONLY

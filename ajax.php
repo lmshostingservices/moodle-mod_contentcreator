@@ -586,7 +586,18 @@ try {
         $endpoint = $endpoints[$endpointkey];
 
         contentcreator_require_manage($context, $cm);
-        contentcreator_check_ratelimit('vendor', 200, HOURSECS);
+
+        // V13.80 FIX-RATELIMIT-READS: read-only GET endpoints previously shared the single
+        // 'vendor' bucket with uploads and AI calls. The credit balance is re-read by the UI
+        // on load and after most actions, so ordinary authoring could drain the shared
+        // allowance and then lock the author out of document upload with a rate-limit error
+        // they had done nothing to earn. Reads consume no credits, so they get their own
+        // generous bucket and can no longer starve the writes.
+        if (isset($endpoint['method']) && $endpoint['method'] === 'GET') {
+            contentcreator_check_ratelimit('vendorread', 600, HOURSECS);
+        } else {
+            contentcreator_check_ratelimit('vendor', 200, HOURSECS);
+        }
 
         // Each action may only reach endpoints of its own kind.
         $expectedkind = [
