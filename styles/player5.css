@@ -17056,11 +17056,28 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     opacity: 0.55;
 }
 
-/* ── Unified Title (consistent across all 7 cards) ──────────────────────── */
+/* ── Unified Title (consistent across all 7 cards) ──────────────────────────
+ * v13.79 FIX-SMALL-HEADING  -  THE ONLY RULE THAT SETS THE CARD TITLE SIZE.
+ * There is no second declaration and no media-query override anywhere in
+ * styles/; `grep cc5-unified-title styles/` returns this block alone.
+ *
+ * WHY THIS KEPT COMING BACK: the value sat at 1.18rem from the v13.65 baseline
+ * onward and was never once changed in version control (`git log -S"1.18rem"`
+ * returns only the baseline commit). Every time the heading was enlarged it was
+ * edited OUTSIDE the packaged source  -  on the server, or in a build that was
+ * never merged back  -  so the next plugin install shipped 1.18rem again and
+ * overwrote it. Nothing was reverting it; the larger value never existed in the
+ * source being packaged.
+ *
+ * It is fixed HERE so every future ZIP carries it. If the title ever looks
+ * small again: if this still reads clamp(...) the cause is elsewhere  -  a theme
+ * override or a stale CSS cache (purge caches)  -  not this rule.
+ * ─────────────────────────────────────────────────────────────────────────── */
 .cc5-player .cc5-unified-title {
-    font-size: 1.18rem;
+    /* Scales with viewport: ~21px on a phone, ~26px on a wide desktop. */
+    font-size: clamp(1.3rem, 1.05rem + 0.7vw, 1.6rem);
     font-weight: 700;
-    line-height: 1.35;
+    line-height: 1.3;
     color: var(--cc5-text);
     margin: 0 0 14px 0;
     letter-spacing: -0.01em;

@@ -1,5 +1,27 @@
 # Changelog
 
+## 13.79 (2026-08-23)
+
+**Card title size, fixed permanently in source.** `.cc5-player .cc5-unified-title` is the ONLY
+rule in the plugin that sets the card title size  -  one declaration, no media-query override.
+
+Root cause of the repeated regression: that rule read `font-size: 1.18rem` in the v13.65 baseline
+and was never changed in version control  -  `git log --all -S"1.18rem" -- styles/player5.css`
+returns the baseline commit and nothing else. Every time the heading was enlarged it was edited
+outside the packaged source, so the next install shipped 1.18rem again and overwrote it. Nothing
+was reverting the fix; the larger value had never existed in the source being packaged.
+
+Now `clamp(1.3rem, 1.05rem + 0.7vw, 1.6rem)`  -  about 21px on a phone, 26px on a wide desktop  -
+with a comment in the file recording why it must stay there. Any future ZIP carries it.
+
+The small uppercase eyebrow labels ("Result", "Knowledge", "Pro Tip") were reviewed at the same
+time and deliberately left alone; they are meant to be small.
+
+**PHP coding standards.** 11 inline comments capitalised for `moodle.Commenting.InlineComment`.
+0 errors remain. The 35 remaining warnings are all `// pipeline-ignore:` markers, which are
+deliberately lowercase because the release pipeline matches that exact token to grant the
+PARAM_RAW exemptions  -  capitalising them would score a clean run and break the pipeline.
+
 ## 13.78 (2026-08-23)
 
 Version bump only; identical code to 13.77. Issued because a separate 13.77 build exists, and

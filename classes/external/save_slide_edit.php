@@ -52,21 +52,21 @@ class save_slide_edit extends external_api {
             'sectionId' => new external_value(PARAM_TEXT, 'Section ID'),
             'title' => new external_value(PARAM_TEXT, 'Section title'),
             'description' => new external_value(PARAM_TEXT, 'Section description', VALUE_DEFAULT, ''),
-            // raw.
+            // Raw.
             'requirements' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of requirements',
                 VALUE_DEFAULT,
                 '[]',
             ),
-            // raw.
+            // Raw.
             'doList' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of do items',
                 VALUE_DEFAULT,
                 '[]',
             ),
-            // raw.
+            // Raw.
             'dontList' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of dont items',
@@ -81,14 +81,14 @@ class save_slide_edit extends external_api {
                 VALUE_DEFAULT,
                 '',
             ),
-            // raw.
+            // Raw.
             'decision' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'Decision point text',
                 VALUE_DEFAULT,
                 '',
             ),
-            // raw.
+            // Raw.
             'correctResponse' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON object with action, why, communicate',
@@ -103,7 +103,7 @@ class save_slide_edit extends external_api {
                 VALUE_DEFAULT,
                 '{}',
             ),
-            // raw.
+            // Raw.
             'linkedContent' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of linked content items',
@@ -115,35 +115,35 @@ class save_slide_edit extends external_api {
             // only and reverted to AI-generated values on the next page load from the DB.
             'scenarioTitle' => new external_value(PARAM_TEXT, 'Scenario slide title', VALUE_DEFAULT, ''),
             'scenarioRole' => new external_value(PARAM_TEXT, 'Scenario learner role', VALUE_DEFAULT, ''),
-            // raw.
+            // Raw.
             'scenarioContext' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'Scenario context text',
                 VALUE_DEFAULT,
                 '',
             ),
-            // raw.
+            // Raw.
             'scenarioComplication' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'Scenario complication text',
                 VALUE_DEFAULT,
                 '',
             ),
-            // raw.
+            // Raw.
             'mentalModel' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON: {name, principle} or null',
                 VALUE_DEFAULT,
                 '',
             ),
-            // raw.
+            // Raw.
             'predictionPrompt' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON: {question, options[]} or null',
                 VALUE_DEFAULT,
                 '',
             ),
-            // raw.
+            // Raw.
             'terminology' => new external_value(
                 PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                 'JSON array of {term, definition} objects',
