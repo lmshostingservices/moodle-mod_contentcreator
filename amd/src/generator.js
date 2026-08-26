@@ -281,6 +281,19 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         'decision-point':      { min: 50, max: 100 },
         'mistakes':            { min: 50, max: 100 },
         'competency-summary':  { min: 40, max: 80 },
+        // v13.92 topics-and-text prose cards. Each card is narrated on its own as the
+        // learner reveals it, so these need real text - shorter than the 7-card routes
+        // because the card itself is only 110-140 words.
+        'overview':             { min: 55, max: 95 },
+        'key-concepts':         { min: 55, max: 95 },
+        'examples-application': { min: 55, max: 95 },
+        'key-takeaways':        { min: 55, max: 95 },
+        // v13.91 topics-and-text slots (legacy, still narratable in saved modules)
+        'orientation':         { min: 55, max: 95 },
+        'foundations':         { min: 55, max: 95 },
+        'mechanism':           { min: 55, max: 95 },
+        'in-practice':         { min: 55, max: 95 },
+        'boundaries':          { min: 55, max: 95 },
         // legacy types (backward compat)
         'performance-anchor': { min: 40, max: 80 },
         'plain-english': { min: 60, max: 100 },
@@ -515,7 +528,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         'hook-scenario','concept-explainer','mental-model',
         'applied-scenario','mistakes','competency-summary','decision-point',
         'concept-anchor','theoretical-framework','analytical-lens',
-        'ethics-considerations','case-study-1','case-study-2'
+        'ethics-considerations','case-study-1','case-study-2',
+        // v13.92: Topics-and-Text. cc-state.buildVoiceoverText() reads the paragraphs
+        // verbatim for these, so voiceoverText must stay empty - padding it with
+        // generic filler would be narrated on any path that falls back to it.
+        'overview','key-concepts','examples-application','key-takeaways',
+        'orientation','foundations','mechanism','in-practice','boundaries'
     ]);
 
     const normaliseAllVoiceovers = (cards) => {
@@ -920,20 +938,37 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         'case-study-2'
     ];
 
-    // v13.91: Route 5 - "Topics and Text". Five prose sections, the Explanatory Spine.
-    // No decision-point, so the activities toggle does not apply to this route.
+    // v13.92: Route 5 - "Topics and Text". Four short prose cards with FIXED universal
+    // headings (Overview / Key Concepts / Examples & Application / Key Takeaways), then a
+    // decision-point which is not a content card at all - it renders as the same
+    // three-activity challenge block every other route ends on.
+    //
+    // Replaces the v13.91 five-slot Explanatory Spine (orientation / foundations /
+    // mechanism / in-practice / boundaries), which generated its own topic-specific
+    // headings and ran long. The legacy five are still rendered by cc-card-slots.js so
+    // modules built on v13.91 keep working; nothing generates them any more.
     const TOPICSTEXT_CARD_ORDER = [
-        'orientation',
-        'foundations',
-        'mechanism',
-        'in-practice',
-        'boundaries'
+        'overview',
+        'key-concepts',
+        'examples-application',
+        'key-takeaways',
+        'decision-point'
+    ];
+
+    // v13.92: the v13.91 slots. Retained for rendering and normalising saved modules.
+    const TOPICSTEXT_LEGACY_CARD_ORDER = [
+        'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'
     ];
 
     const getExpectedCardOrder = (mode, activitiesEnabled) => {
-        // v13.91: topics-and-text has its own 5-card prose sequence.
+        // v13.92: topics-and-text now carries a decision-point like the unified routes,
+        // so the activities toggle applies to it in exactly the same way.
         if (mode === 'topicstext') {
-            return TOPICSTEXT_CARD_ORDER.slice();
+            var ttOrder = TOPICSTEXT_CARD_ORDER.slice();
+            if (activitiesEnabled === false) {
+                ttOrder = ttOrder.filter(function(t) { return t !== 'decision-point'; });
+            }
+            return ttOrder;
         }
         // v13.65: university has its own 6-card academic sequence and no decision-point.
         if (mode === 'university') {
@@ -946,6 +981,57 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             order = order.filter(function(t) { return t !== 'decision-point'; });
         }
         return order;
+    };
+
+    // =======================================================================
+    // v13.92: PROSE PARAGRAPH SANITISER  -  Topics-and-Text.
+    //
+    // The v13.91 build shipped cards reading "...contemporary society.\n\nThis piece
+    // focuses on..." with the backslash and the n VISIBLE on screen. Cause: the model
+    // returned the whole card as ONE string in paragraphs[0] with escaped newlines
+    // inside it, so nothing ever split it and escapeHtml() faithfully printed the
+    // literal characters.
+    //
+    // This normalises every shape into a clean array of plain-text paragraphs:
+    //   - a single string, an array of strings, or an array of {text}/{paragraph}/{body}
+    //   - splits on real newlines AND on the two-character sequences \n and \r
+    //   - strips markdown emphasis, bullet glyphs, leading list markers and stray <br>
+    //   - drops a paragraph that is only a heading repeat
+    // Defensive on purpose: the prompt already forbids all of this. Prompts are advice;
+    // this is the guarantee.
+    // =======================================================================
+    const CC_PROSE_TYPES = ['overview', 'key-concepts', 'examples-application', 'key-takeaways',
+        'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'];
+
+    const normaliseProseParagraphs = function(raw) {
+        var out = [];
+        var push = function(v) {
+            if (typeof v !== 'string') { return; }
+            // Literal escape sequences first, then real newlines and <br>.
+            var t = v.replace(/\\r\\n|\\n|\\r/g, '\n')
+                     .replace(/<br\s*\/?>/gi, '\n')
+                     .replace(/<\/?p[^>]*>/gi, '\n');
+            t.split(/\n{1,}/).forEach(function(part) {
+                var cleaned = part
+                    .replace(/^\s*(?:[-*•–—]|\d+[.)])\s+/, '') // list markers
+                    .replace(/\*\*(.+?)\*\*/g, '$1')                          // bold
+                    .replace(/(^|\s)\*(?!\s)(.+?)\*(?=\s|$)/g, '$1$2')        // italic
+                    .replace(/^#{1,6}\s*/, '')                                // md heading
+                    .replace(/\s{2,}/g, ' ')
+                    .trim();
+                if (cleaned) { out.push(cleaned); }
+            });
+        };
+        if (typeof raw === 'string') { push(raw); }
+        else if (Array.isArray(raw)) {
+            raw.forEach(function(item) {
+                if (typeof item === 'string') { push(item); }
+                else if (item && typeof item === 'object') {
+                    push(item.text || item.paragraph || item.body || item.content || '');
+                }
+            });
+        }
+        return out;
     };
 
     const normalizeCardSchema = (cards, mode) => {
@@ -961,7 +1047,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             // legacy workplace types
             'business-impact','action-framework','risk-card','policy-alignment',
             // legacy PD types
-            'skill-anchor','core-framework','application-guide','common-pitfalls'
+            'skill-anchor','core-framework','application-guide','common-pitfalls',
+            // v13.92 topics-and-text prose types (+ the v13.91 slots they replaced)
+            'overview','key-concepts','examples-application','key-takeaways',
+            'orientation','foundations','mechanism','in-practice','boundaries'
         ]);
         const typeMap = {};
         expectedOrder.forEach(t => { typeMap[t] = t; });
@@ -1025,6 +1114,36 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         typeMap['coreframework'] = 'core-framework';
         typeMap['applicationguide'] = 'application-guide';
         typeMap['commonpitfalls'] = 'common-pitfalls';
+        // v13.92 topics-and-text aliases. The model is asked for the exact hyphenated
+        // names, but it reliably drifts to the human labels it sees in the heading spec.
+        // v13.92 topics-and-text aliases. SCOPED TO THE ROUTE ON PURPOSE. The
+        // unambiguous hyphen/underscore variants would be harmless anywhere, but the
+        // bare words below are not: 'application', 'examples', 'summary' and
+        // 'introduction' are plausible cardType values on the other four routes, and
+        // mapping them globally would route a PD or VET card into renderProseSection(),
+        // which drops every field it does not know and stamps a fixed Topics-and-Text
+        // heading on it. typeMap is consulted for any card whose type is not already
+        // known, on every route, so the gate has to be here.
+        if (mode === 'topicstext') {
+            typeMap['key_concepts']          = 'key-concepts';
+            typeMap['keyconcepts']           = 'key-concepts';
+            typeMap['key concepts']          = 'key-concepts';
+            typeMap['examples_application']  = 'examples-application';
+            typeMap['examplesapplication']   = 'examples-application';
+            typeMap['examples application']  = 'examples-application';
+            typeMap['examples & application'] = 'examples-application';
+            typeMap['examples and application'] = 'examples-application';
+            typeMap['application']           = 'examples-application';
+            typeMap['examples']              = 'examples-application';
+            typeMap['key_takeaways']         = 'key-takeaways';
+            typeMap['keytakeaways']          = 'key-takeaways';
+            typeMap['key takeaways']         = 'key-takeaways';
+            typeMap['takeaways']             = 'key-takeaways';
+            typeMap['summary']               = 'key-takeaways';
+            typeMap['introduction']          = 'overview';
+            typeMap['in_practice']           = 'in-practice';
+            typeMap['inpractice']            = 'in-practice';
+        }
 
         return cards.map((card, index) => {
             if (!card || typeof card !== 'object') return card;
@@ -1071,6 +1190,63 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             if (card.key_insight && !card.keyInsight) { card.keyInsight = card.key_insight; delete card.key_insight; }
             if (card.critical_reflection && !card.criticalReflection) { card.criticalReflection = card.critical_reflection; delete card.critical_reflection; }
             if (card.policy_items && !card.policyItems) { card.policyItems = card.policy_items; delete card.policy_items; }
+            // v13.92: Topics-and-Text prose cards. Paragraphs are cleaned into plain
+            // strings, and any heading the model returned against instructions is
+            // DROPPED - the four headings are fixed, supplied by the renderer, and must
+            // never carry the topic name ("Overview - Colonisation" was the defect).
+            // MODE-GATED, and it must stay that way. This branch DELETES heading, title,
+            // bodyText, text and string content/description and rewrites the card into
+            // paragraphs[]. 'overview' and 'key-takeaways' are perfectly natural cardType
+            // values for a model to emit on a PD or VET section; without the gate such a
+            // card would have its authored text destroyed and then render through
+            // renderProseSection() with a fixed Topics-and-Text heading inside a
+            // vocational module.
+            if (mode === 'topicstext' && CC_PROSE_TYPES.indexOf(card.cardType) !== -1) {
+                var _rawParas = card.paragraphs;
+                if (!_rawParas || (Array.isArray(_rawParas) && !_rawParas.length)) {
+                    _rawParas = card.bodyText || card.content || card.description || card.text || '';
+                }
+                card.paragraphs = normaliseProseParagraphs(_rawParas);
+                // v13.92: hard cap at two paragraphs. An overrun is merged into the
+                // second rather than thrown away - silently deleting generated content is
+                // worse than an over-long card, and an over-long one does not go
+                // unnoticed: depthIssues()/readabilityIssues() measure the merged card
+                // against the route's 110-150 band and drive a repair pass on it.
+                if (card.paragraphs.length > 2) {
+                    card.paragraphs = [
+                        card.paragraphs[0],
+                        card.paragraphs.slice(1).join(' ')
+                    ];
+                }
+                delete card.heading;
+                delete card.title;
+                delete card.bodyText;
+                delete card.text;
+                if (typeof card.content === 'string') { delete card.content; }
+                if (typeof card.description === 'string') { delete card.description; }
+                // keyTerms feed the flip-card activity; goodItems/badItems feed the sort.
+                if (!card.keyTerms && card.key_terms) { card.keyTerms = card.key_terms; delete card.key_terms; }
+                if (!card.keyTerms && card.terms) { card.keyTerms = card.terms; delete card.terms; }
+                if (Array.isArray(card.keyTerms)) {
+                    card.keyTerms = card.keyTerms.map(function(t) {
+                        if (typeof t === 'string') { return { term: t, definition: '' }; }
+                        return {
+                            term: (t && (t.term || t.title || t.name)) || '',
+                            definition: (t && (t.definition || t.text || t.meaning || t.description)) || ''
+                        };
+                    }).filter(function(t) { return t.term && t.definition; });
+                }
+                if (!card.goodItems && card.good_items) { card.goodItems = card.good_items; delete card.good_items; }
+                if (!card.badItems && card.bad_items) { card.badItems = card.bad_items; delete card.bad_items; }
+                ['goodItems', 'badItems'].forEach(function(k) {
+                    if (Array.isArray(card[k])) {
+                        card[k] = card[k].map(function(it) {
+                            return typeof it === 'string' ? { text: it } : { text: (it && (it.text || it.item || it.statement)) || '' };
+                        }).filter(function(it) { return it.text; });
+                    }
+                });
+            }
+
             // v10.27: Unified 7-card field normalizations
             if (card.cardType === 'hook-scenario' || card.cardType === 'concept-explainer' || card.cardType === 'applied-scenario') {
                 if (!card.content && card.description) { card.content = card.description; delete card.description; }
@@ -1889,7 +2065,9 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         vet: { grade: 9, sentence: 18 },
         workplace: { grade: 9, sentence: 18 },
         pd: { grade: 11, sentence: 20 },
-        university: { grade: 14, sentence: 22 }
+        university: { grade: 14, sentence: 22 },
+        // v13.92: general-audience explanatory prose, sentences capped at 22 by prompt.
+        topicstext: { grade: 10, sentence: 22 }
     };
 
     /**
@@ -1947,7 +2125,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         vet: { floor: 140, band: '160-240' },
         workplace: { floor: 140, band: '160-240' },
         pd: { floor: 140, band: '160-240' },
-        university: { floor: 150, band: '170-260' }
+        university: { floor: 150, band: '170-260' },
+        // v13.92: Topics-and-Text is deliberately the SHORT route. Two paragraphs of
+        // 55-70 words is 110-140 visible words a card, so the floor sits below that
+        // band rather than above it. Raising this without also raising the prompt's
+        // word limits would make every card fail depth and drive a pointless repair.
+        topicstext: { floor: 85, band: '110-150' }
     };
 
     /**
@@ -2170,9 +2353,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         // The decision-point card is dropped at render time from getExpectedCardOrder(),
         // so an extra card in the payload is harmless. Accept either count and let the
         // renderer do the dropping.
-        // v13.91: topicstext has no decision-point either, so the activities toggle is a
-        // no-op for it exactly as it is for university.
-        var activitiesOff = (genMode !== 'university' && genMode !== 'topicstext'
+        // v13.92: topicstext DOES have a decision-point now (it drives the 3-activity
+        // block), so the toggle applies to it as it does to vet/workplace/pd. Only
+        // university is exempt.
+        var activitiesOff = (genMode !== 'university'
             && context && context.activitiesEnabled === false);
         if (cards.length !== expectedCount && !(activitiesOff && cards.length === expectedCount - 1)) {
             issues.push('Expected ' + expectedCount + ' cards, got ' + cards.length);
@@ -2212,6 +2396,13 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 if (!card.question) { issues.push(prefix + ': missing question'); }
                 if (!card.options || card.options.length < 2) { issues.push(prefix + ': must have at least 2 options'); }
             }
+            // v13.92: Topics-and-Text prose cards. Two paragraphs is the spec; one is
+            // acceptable output, none is a broken card and worth a repair pass.
+            if (CC_PROSE_TYPES.indexOf(card.cardType) !== -1) {
+                if (!Array.isArray(card.paragraphs) || !card.paragraphs.length) {
+                    issues.push(prefix + ': missing paragraphs');
+                }
+            }
             // mental-model specific
             if (card.cardType === 'mental-model') {
                 if (!card.steps || card.steps.length < 3) { issues.push(prefix + ': requires at least 3 steps'); }
@@ -2249,6 +2440,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                     (card.analysisPrompts && card.analysisPrompts.length) ||
                     (card.cognitiveConsiderations && card.cognitiveConsiderations.length) ||
                     (card.keyTerms && card.keyTerms.length) ||
+                    // v13.92: Topics-and-Text carries its content in paragraphs[].
+                    (card.paragraphs && card.paragraphs.length) ||
                     card.content || card.bodyText || card.context || card.conceptDefinition
                 );
                 if ((!vo || String(vo).length < 30) && !hasStructuralContent) {
@@ -3252,6 +3445,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 firstCard.sceneParts?.length || firstCard.conceptInsights?.length ||
                 firstCard.content || firstCard.steps?.length || firstCard.options?.length ||
                 firstCard.items?.length || firstCard.question ||
+                // v13.92: Topics-and-Text card 1 carries its content in paragraphs[].
+                // Without this the card's voiceoverText was promoted to
+                // section.voiceoverText, which renders as the Overview box ABOVE the
+                // cards - a verbatim duplicate of card 1 on every prose section.
+                firstCard.paragraphs?.length ||
                 // legacy card fields
                 firstCard.heading || firstCard.skillStatement || firstCard.bodyText ||
                 firstCard.impactStatement || firstCard.conceptDefinition ||

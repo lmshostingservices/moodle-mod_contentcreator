@@ -1248,72 +1248,206 @@ define([], function() {
     // 21b. ROUTE CARD (dispatch  -  calls other card renderers by cardType)
     // ===========================================================================
     // ===========================================================================
-    // v13.91: ROUTE 5 - "TOPICS AND TEXT" prose section card.
+    // v13.92: ROUTE 5 - "TOPICS AND TEXT" prose card.
     //
-    // ONE renderer serves all five slots. They differ only in content, never in shape:
-    // a heading and two to four paragraphs. Keeping it to one function is deliberate -
-    // five near-identical renderers is exactly how the other routes drifted apart.
+    // ONE renderer serves all four slots. They differ in colour and icon, never in
+    // shape: a fixed heading and exactly two short paragraphs.
     //
-    // Two styling requirements, both standing:
-    //   - NO left accent rail, on the card or the paragraphs.
-    //   - NO nested container. The card IS the container: header, body, paragraphs
-    //     directly in the body. No wrapper div inside the body.
+    // Standing requirements, all four from the owner:
+    //   - The heading is FIXED and universal - Overview / Key Concepts /
+    //     Examples & Application / Key Takeaways - and NEVER carries the topic name.
+    //     It is supplied here, from the card type. Anything the model returned in
+    //     `heading` was already deleted in generator.js normalizeCardSchema().
+    //   - Colour-coordinated: each slot owns a soft tint, an accent and an icon chip.
+    //   - NO left accent rail, and NO nested container. The card IS the container.
+    //   - Cards reveal one at a time. Each carries a "Next Card" button; the last
+    //     one's button reveals the activity block instead.
+    //
+    // Sequential-reveal markup contract (player5.js and player5.css depend on it):
+    //   .cc5-prose-grid[data-prose-seq]   wrapper, one per section
+    //   .cc5-prose-card[data-prose-index] one per card, 0-based
+    //   .cc5-prose-card.cc5-prose-hidden  not yet revealed (display:none - it is OUT of
+    //                                     the flow; the grid fills left-to-right so no
+    //                                     card already on screen changes position, though
+    //                                     row 1 can grow taller when card 2 arrives)
+    //   .cc5-prose-card.cc5-prose-active  currently being narrated
+    //   .cc5-prose-para[data-para-index]  one per paragraph
+    //   .cc5-prose-para.cc5-para-focus    the paragraph being read right now
     // ===========================================================================
+    var TOPICSTEXT_HEADINGS = {
+        'overview':             'Overview',
+        'key-concepts':         'Key Concepts',
+        'examples-application': 'Examples & Application',
+        'key-takeaways':        'Key Takeaways',
+        // v13.91 slots. Four of the five map onto the nearest of the current headings so
+        // saved modules built on the old Explanatory Spine still read correctly.
+        // 'mechanism' keeps a heading of its own: it sat between Key Concepts and
+        // Examples, and folding it into either would put two identically-headed cards in
+        // the same saved module. Nothing generates it any more, so this is a
+        // legacy-rendering label only - the generated route still has exactly four.
+        'orientation':          'Overview',
+        'foundations':          'Key Concepts',
+        'mechanism':            'How It Works',
+        'in-practice':          'Examples & Application',
+        'boundaries':           'Key Takeaways'
+    };
+
     var TOPICSTEXT_ICONS = {
         // Every value here is verified present in cc-icons.js. Do not add one without
         // checking: getIcon() on an unknown name yields no glyph, and the header then
-        // renders with a gap where the icon should be. settings / git-branch / compass
-        // were the natural choices and none of the three exist.
-        'orientation': 'book-open',   // what this is
-        'foundations': 'layers',      // the ideas underneath
-        'mechanism':   'puzzle',      // how the parts fit and work
-        'in-practice': 'scale',       // weighing cases against each other
-        'boundaries':  'ruler'        // the limits of the account
+        // renders with a gap where the icon should be.
+        'overview':             'book-open',
+        'key-concepts':         'lightbulb',
+        'examples-application': 'clipboard-list',
+        'key-takeaways':        'award',
+        'orientation':          'book-open',
+        'foundations':          'lightbulb',
+        'mechanism':            'puzzle',
+        'in-practice':          'clipboard-list',
+        'boundaries':           'award'
     };
 
-    function renderProseSection(section) {
-        var cardType = section.cardType || '';
-        var paras = section.paragraphs;
+    // Colour token suffix per slot. The palette itself lives in player5.css as
+    // --cc5-prose-{tone}-* custom properties, so a rebrand is a CSS-only change.
+    var TOPICSTEXT_TONES = {
+        'overview':             'blue',
+        'key-concepts':         'violet',
+        'examples-application': 'amber',
+        'key-takeaways':        'green',
+        'orientation':          'blue',
+        'foundations':          'violet',
+        'mechanism':            'violet',
+        'in-practice':          'amber',
+        'boundaries':           'green'
+    };
 
-        // Tolerate every shape the model or an older manifest might supply: an array of
-        // strings, an array of {text}, or a single string in paragraphs/bodyText/text.
+    /**
+     * Clean paragraph strings from whatever shape the card carries.
+     *
+     * v13.91 shipped cards showing a literal backslash-n on screen, because the model
+     * returned the whole card as ONE string with escaped newlines inside it and nothing
+     * ever split it. generator.js now normalises this on the way in; this is the second
+     * line of defence for manifests saved before that fix.
+     *
+     * @param {Object} section The prose card.
+     * @return {Array} Plain-text paragraphs.
+     */
+    function proseParagraphsOf(section) {
+        var paras = section && section.paragraphs;
         if (typeof paras === 'string') { paras = [paras]; }
-        if (!Array.isArray(paras)) {
-            paras = section.bodyText ? [section.bodyText] : (section.text ? [section.text] : []);
+        if (!Array.isArray(paras) || !paras.length) {
+            // `description` last: getFailedCardSequence() stamps the "AI generation
+            // failed - use Regenerate Failed to retry" message there. Without this the
+            // author saw a bare "No content yet" and no way to tell a failed card from
+            // an empty one.
+            var fallback = (section && (section.bodyText || section.text || section.content || section.description)) || '';
+            paras = fallback ? [fallback] : [];
         }
-        paras = paras.map(function(p) {
-            if (typeof p === 'string') { return p; }
-            return (p && (p.text || p.paragraph || p.body)) || '';
-        }).filter(function(p) { return p && p.trim(); });
+        var out = [];
+        paras.forEach(function(p) {
+            var t = typeof p === 'string' ? p : ((p && (p.text || p.paragraph || p.body)) || '');
+            if (!t) { return; }
+            t.replace(/\\r\\n|\\n|\\r/g, '\n')
+             .replace(/<br\s*\/?>/gi, '\n')
+             .split(/\n+/)
+             .forEach(function(part) {
+                var c = part.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')
+                            .replace(/\*\*(.+?)\*\*/g, '$1')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                if (c) { out.push(c); }
+             });
+        });
+        return out;
+    }
+
+    /**
+     * Render one Topics-and-Text prose card.
+     *
+     * @param {Object} section   The card.
+     * @param {Object} seqOpts   Sequential-reveal options: { index, total, hasActivities }.
+     * @return {String} HTML.
+     */
+    function renderProseSection(section, seqOpts) {
+        var cardType = section.cardType || '';
+        var paras = proseParagraphsOf(section);
+        var opts = seqOpts || {};
+        var index = typeof opts.index === 'number' ? opts.index : 0;
+        var total = typeof opts.total === 'number' ? opts.total : 1;
+        var isLast = index >= total - 1;
 
         var icon = TOPICSTEXT_ICONS[cardType] || 'book-open';
-        var heading = section.heading || section.title || '';
+        var tone = TOPICSTEXT_TONES[cardType] || 'blue';
+        // The heading is never taken from the card. See the block comment above.
+        var heading = TOPICSTEXT_HEADINGS[cardType] || 'Overview';
 
-        var html = '<div class="cc5-card cc5-prose-card cc5-' + escapeHtml(cardType || 'prose') + '-card">';
-        html += '<div class="cc5-card-header">' + getIcon(icon)
-             + '<h4>' + escapeHtml(fixGrammar(heading)) + '</h4></div>';
+        var cls = 'cc5-card cc5-prose-card cc5-prose-' + tone
+                + ' cc5-' + escapeHtml(cardType || 'prose') + '-card';
+        // Card 0 is visible from the start; the rest wait to be revealed.
+        if (index > 0) { cls += ' cc5-prose-hidden'; }
+
+        var html = '<div class="' + cls + '" data-prose-index="' + index + '"'
+                 + ' data-prose-tone="' + tone + '"'
+                 + (index > 0 ? ' aria-hidden="true"' : '') + '>';
+        html += '<div class="cc5-card-header cc5-prose-header">'
+             +  '<span class="cc5-prose-icon">' + getIcon(icon) + '</span>'
+             +  '<h4>' + escapeHtml(heading) + '</h4>'
+             // v13.92: green pulsing speaker, top right. Shown ONLY while this card is
+             // the one being narrated - player5.js adds .cc5-prose-speaking. It is
+             // decorative; the audio state is already announced by the voiceover button.
+             +  '<span class="cc5-prose-vo-dot" aria-hidden="true">'
+             +  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" '
+             +  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+             +  '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>'
+             +  '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>'
+             +  '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>'
+             +  '</span>'
+             +  '</div>';
         html += '<div class="cc5-card-body cc5-prose-body">';
         if (!paras.length) {
             // Never render an empty shell - name the problem so the author sees which card.
             html += '<p class="cc5-prose-empty">' + escapeHtml(getLabel('noContentYet')) + '</p>';
         } else {
-            paras.forEach(function(p) {
-                html += '<p>' + escapeHtml(fixGrammar(p)) + '</p>';
+            paras.forEach(function(p, pi) {
+                html += '<p class="cc5-prose-para" data-para-index="' + pi + '">'
+                     +  escapeHtml(fixGrammar(p)) + '</p>';
             });
+        }
+        // The reveal control. Present on every card; the last card's button opens the
+        // activity block when there is one, and is simply omitted when there is not.
+        if (!isLast) {
+            html += '<button type="button" class="cc5-prose-next-btn" data-prose-next="' + (index + 1) + '">'
+                 +  '<span>' + escapeHtml(getLabel('nextCard') || 'Next Card') + '</span>'
+                 +  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
+                 +  'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                 +  '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
+                 +  '</button>';
+        } else if (opts.hasActivities) {
+            html += '<button type="button" class="cc5-prose-next-btn cc5-prose-final-btn" data-prose-next="activities">'
+                 +  '<span>' + escapeHtml(getLabel('startActivities') || 'Start Activities') + '</span>'
+                 +  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
+                 +  'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                 +  '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
+                 +  '</button>';
         }
         html += '</div></div>';
         return html;
     }
 
-    function renderRouteCard(section) {
+    function renderRouteCard(section, seqOpts) {
         var cardType = section.cardType || '';
         switch (cardType) {
-            // -- v13.91 Topics and Text: five prose slots, one renderer ---------
+            // -- v13.92 Topics and Text: four prose slots, one renderer ---------
+            // (the five v13.91 slot names still route here so saved modules render)
+            case 'overview':
+            case 'key-concepts':
+            case 'examples-application':
+            case 'key-takeaways':
             case 'orientation':
             case 'foundations':
             case 'mechanism':
             case 'in-practice':
-            case 'boundaries':          return renderProseSection(section);
+            case 'boundaries':          return renderProseSection(section, seqOpts);
             // -- v10.27 unified 7-card types (all routes) ----------------------
             case 'hook-scenario':       return renderHookScenario(section);
             case 'concept-explainer':   return renderConceptExplainer(section);

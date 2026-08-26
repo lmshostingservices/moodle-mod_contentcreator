@@ -1,5 +1,221 @@
 # Changelog
 
+## 13.92.0 - 26 August 2026
+
+### Changed - "Topics and Text" rebuilt: four fixed-heading cards, colour-coded, read one at a time
+
+The v13.91 route shipped five topic-specific headings, up to four paragraphs a card and
+250+ words a card. It was rhetorically sound and unreadable: walls of text, literal `\n\n`
+escape sequences visible on screen, and no cap on card length. Reported as "funny symbols,
+no paragraph spacing, no appropriate limits on card length, too much info to digest".
+
+**The four sections are now fixed and universal**, chosen so they carry any short-course
+subject without being reworded per topic:
+
+| Card | Contains |
+|---|---|
+| **Overview** | What the subject is; why it matters |
+| **Key Concepts** | The two or three load-bearing ideas, plus 3-4 flip-card terms |
+| **Examples & Application** | The same ideas in two real situations |
+| **Key Takeaways** | What to carry away, the common misconception corrected, plus 6 sortable items |
+
+The heading is supplied by the renderer from the card type, never by the model, and the
+topic name is never appended to it. "Overview - Colonisation" is now structurally
+impossible: `normalizeCardSchema()` deletes any `heading` or `title` the model returns on
+a prose card.
+
+**Length is now a hard limit.** Exactly two paragraphs a card, 55-70 words each - about
+110-140 words a card against 250+ before. `CC_DEPTH_TARGET.topicstext` and
+`CC_READABILITY_TARGET.topicstext` are set to match the prompt so a correctly short card
+never fails depth and triggers a pointless repair pass.
+
+**The literal `\n\n` defect is fixed in two places.** The prompt forbids escape sequences
+and requires one paragraph per array element; `normaliseProseParagraphs()` in generator.js
+splits on both literal `\n` and real newlines, strips markdown, bullet glyphs and `<br>`,
+and merges any third paragraph into the second rather than discarding it. The renderer
+repeats the clean-up for manifests saved before this release.
+
+### Added - the three activities, on this route too
+
+Topics-and-Text now ends on the same Challenge Mode block as the other routes: quiz, Flip
+& Learn, Category Sort. It feeds them from its own fields - `keyTerms` on Key Concepts
+become the flip cards, `goodItems`/`badItems` on Key Takeaways become the sort. The route
+carries a `decision-point` card for the first time, so the activities toggle now applies
+to it exactly as it does to VET, Workplace and PD.
+
+### Added - sequential reveal with narration sync
+
+Cards no longer all appear at once. Card 1 slides gently up on arrival; when its narration
+finishes the next card slides in, its "Next Card" button pulses to signal there is
+something to click, and a green speaker pulses on whichever card is being read. The
+paragraph currently being narrated lifts 3px on a soft shadow. When the audio ends, the
+final card and the activity block both open.
+
+Timing comes from the audio itself. `CcState.buildProseVoiceoverSegments()` produces the
+narration script - fixed heading, then each paragraph **verbatim** - and the player divides
+the audio duration across those same segments in proportion to word count. One source, so
+the animation and the audio cannot drift apart by construction.
+
+Every step also works by hand: the "Next Card" button on each card, and "Start Activities"
+on the last, do the same thing with audio muted, finished, or blocked by the browser. All
+motion is disabled under `prefers-reduced-motion`.
+
+`VOICEOVER_SCHEMA_VERSION` is bumped to `13.92` - audio synthesised from the old
+voiceoverText summary has both the wrong content and the wrong segment lengths.
+
+### Verified - "must listen to voiceover" progression on this route
+
+The route inherits the existing gate rather than reimplementing it. With progression set
+to Voiceover, `canNavigateNext()` blocks the next slide until `voiceoverPlayed` is set on
+the audio's `ended` event, and the next chevron is disabled for the duration of playback on
+every route. With the gate off, `navigateToSlide()` pauses and discards the audio before
+rendering the next slide, so narration never continues over a slide the learner has left -
+the new sync listener is now torn down on the same three paths (next/prev, back to topics,
+and finish on the last slide) so it cannot outlive the grid it was driving.
+
+### Changed - colour-coordinated cards
+
+Four soft tones, one per slot: blue Overview, violet Key Concepts, amber Examples &
+Application, green Key Takeaways. Each is defined once as custom properties on the card, so
+a rebrand means editing four blocks in `player5.css`. Tint, icon chip, heading colour and
+hover glow all read from those properties. There is no top accent strip and no left accent
+rail — the tone carries on its own — and no nested container.
+
+### Fixed - defects found in review of this release, before shipping
+
+A full adversarial pass over the diff turned up nine substantiated defects. All are fixed
+here; they are listed because several were regressions this change would have introduced.
+
+- **`render()` did not tear down the narration sync.** `navigateToSlide()` did, but ~24
+  other call sites reach `render()` directly — the activity "Retry" button most reachably.
+  The listener was left driving detached nodes: cards stopped revealing and the activity
+  block never reopened. Teardown moved to the top of `render()`, which covers every path.
+- **`animation-fill-mode: both` killed the hover lift.** Animation declarations outrank
+  normal author declarations, so the entrance animation's `transform: translateY(0)`
+  was retained permanently and `.cc5-prose-card:hover { transform: translateY(-3px) }`
+  never applied. Changed to `backwards`. Verified by computed style: the card now lifts.
+- **A non-finite `audio.duration` disabled the whole reveal.** Audio plays from a base64
+  data URL, and an Ogg/WebM stream with no duration header reports `Infinity` in Chrome
+  forever — in which case no card revealed, no paragraph lifted and no speaker pulsed for
+  the entire section. An unusable duration now falls back to a words-per-second estimate.
+- **New card-type aliases leaked to the other four routes.** `typeMap` is built once and
+  applied on every route, so `'application'`, `'examples'`, `'summary'` and
+  `'introduction'` would have re-routed PD, VET, Workplace and University cards into the
+  prose renderer, discarding their fields. The loose aliases are now scoped to
+  `mode === 'topicstext'`. Verified: `normalizeCardSchema()` output on all four other
+  routes is byte-identical to 13.91.4.
+- **The five-card span rule was dropped.** Saved v13.91 modules have five prose cards; the
+  fifth sat half-width beside an empty cell. Restored — and it cannot match on the
+  four-card route, where the last card is an even child.
+- **`keyTerms` fed the flip cards from any card type.** University's `concept-anchor` also
+  carries `keyTerms` and already renders them as a definition list. Now gated to the
+  prose Key Concepts slot.
+- **The green speaker kept pulsing while paused.** `pause`/`play` listeners now clear and
+  restore it; the revealed card and highlighted paragraph correctly stay put.
+- **"Next Card" and "Start Activities" were hardcoded English** — the only two controls in
+  the route, on a plugin with 40 locale tables. Both now go through `getLabel()`, with
+  `nextCard` / `startActivities` added to all 40.
+- **Two paragraph helpers had divergent fallbacks.** `cc-state.proseParagraphs()` and
+  `cc-card-slots.proseParagraphsOf()` address the same paragraphs by index; a one-element
+  difference would lift the wrong paragraph for the rest of the section. Their emptiness
+  test and fallback chain are now identical, and both say so.
+
+### Fixed - defects found in a second review, of the fixes above
+
+The fixes themselves were then reviewed. Seven more issues, three of them substantive:
+
+- **The prose-normalisation branch was not route-gated.** It deletes `heading`, `title`,
+  `bodyText`, `text` and string `content`/`description` and rewrites the card into
+  `paragraphs[]`. `overview` and `key-takeaways` are entirely natural cardType values for
+  a model to emit on a PD or VET section — such a card would have had its authored text
+  destroyed and rendered with a fixed Topics-and-Text heading inside a vocational module.
+  Now gated on `mode === 'topicstext'`, along with the two `in_practice` aliases that were
+  also left global. Re-verified: `normalizeCardSchema()` output on all four other routes
+  is identical to 13.91.4, including for the exact payload that triggered this.
+- **The words-per-second fallback cached itself forever.** Chrome reports `Infinity` for a
+  header-less Ogg/WebM data URL at first and can resolve a real duration moments later;
+  the estimate was never replaced, so the whole section ran off a guess. Bounds are now
+  recomputed while they are estimated. The `readyState` guard that was supposed to handle
+  this was near-unreachable — `timeupdate` does not fire before the element has data.
+- **The `onended` recovery read the grid through `_proseSync`,** which a mid-narration
+  `render()` has already cleared — so after using the activity Retry button the learner
+  was left on card 1 with the audio finished and the activity block shut. It now finds
+  the grid in the DOM.
+- A second `decision-point` card would have emitted a bare `</div>`, closing the slide
+  container. Nothing produces one, but the price of trusting that was the whole page.
+- The category-sort source omitted the legacy `boundaries` slot, which the edit modal
+  already offers good/bad rows on.
+- `onPlay` restored the speaker pulse but not the button pulse, so resuming mid-segment
+  left the nudge off until the next segment boundary.
+- 13 of the 53 locale tables had been missed. All 53 now carry both keys, verified by
+  parsing the file and enumerating.
+
+Three comments that were factually wrong have been corrected rather than left to mislead
+the next edit: `:last-child` is structural and *does* match during the reveal (the rule is
+safe for a different reason, now stated); `height: 100%` under `align-items: start` does
+not equalise card heights; and the two paragraph builders were *asserted* to be identical
+while differing by one whitespace rule — they are now genuinely identical, verified across
+13 input shapes.
+
+`overflow: hidden` was also dropped from the card. It existed only to clip the top accent
+strip to the corner radius, and with the strip gone it clipped the focused paragraph's
+lift shadow.
+
+### Fixed - Topics-and-Text content was missing from the text export
+
+`extractAllTextContent()` read no `paragraphs[]`, so the one route that is nothing but
+text exported with none of its text. It now writes the fixed heading, both paragraphs and
+the key terms. (This gap predates v13.92; the print view has the same shape and is not
+addressed here.)
+
+### Added - prose card editing in the Edit Slide modal
+
+The route claimed full card editing and did not have it: the modal builds per-card-type
+field blocks and there was none for the prose types, so an author saw a Card Title and a
+Voiceover Script and no way to touch the actual words. There is now a paragraph editor,
+key-term rows on Key Concepts and good/bad item rows on Key Takeaways. Card Title and
+Voiceover Script are replaced on these cards with the fixed heading (read-only) and a note
+explaining that narration reads the paragraphs verbatim — both fields are still emitted,
+hidden, because the save collector reads them unconditionally.
+
+### Added - "this card is being narrated" on all five routes
+
+The card highlight and the green pulsing speaker are no longer specific to Topics and
+Text. While a section's voiceover plays, the card currently being read carries a soft ring
+and a speaker chip, on VET, Workplace, PD and University as well.
+
+**No audio is regenerated and the schema is not bumped.** The segments come from
+`buildVoiceoverText()`'s own traversal — the same function that produces the TTS script —
+via an optional out-param that records `{ cardIndex, text }` per card. There is one
+traversal, so the map and the narration cannot drift. `buildCardVoiceoverSegments()`
+asserts this rather than assuming it: it calls the builder with and without the out-param
+and returns nothing at all if the two strings ever differ, so a future edit that changed
+the script would silently disable the highlight instead of running it out of step.
+Verified across nine section shapes — promoted `voiceoverText`, the 7-card early-return
+branch, the ultimate fallback, University, Workplace legacy, no-cards, terminology and
+accent cards, empty arrays — all byte-identical to 13.91.4.
+
+Cards are addressed by a `data-vo-card` index stamped by the player, not by editing nine
+card renderers. The speaker chip is injected at playback time into the flow badge the
+unified card types already carry, or the card header on the legacy and University types,
+so it exists only while a section is actually being narrated.
+
+**Deliberately not ported: the sequential reveal and the Next Card gating.** Those cards
+are interactive — flip, sort, quiz — and their order is a narrative; putting each behind a
+button changes the teaching, and the decision-point already gates progression.
+
+**Also deliberately not ported: the paragraph-level highlight.** The other routes narrate
+structural sub-elements — scene parts, insights, steps, mistake rows — and timing a
+five-word step title off a proportional split is visibly loose, wrong outright on the cards
+where an authored `voiceoverText` is narrated in place of the structural fields. A card is
+60-110 words, which the split handles well. Card-level is the honest granularity here.
+
+### Compatibility
+
+The five v13.91 slot names (orientation / foundations / mechanism / in-practice /
+boundaries) still render, mapped onto the new headings and colours, so modules built on the
+old route keep working. Nothing generates them any more.
+
 ## 13.91.4 - 26 August 2026
 
 ### Fixed - non-editing teachers were treated as learners in the player

@@ -54,7 +54,12 @@ define([], function() {
     // as stale and kept playing the truncated version. This bump ensures every section across
     // all four routes (Vocational, Workplace, University, PD) re-synthesises at the new
     // 20000-char limit on the teacher's next activity open.
-    var VOICEOVER_SCHEMA_VERSION = '12.32';
+    // v13.92: bumped from '12.32'. Topics-and-Text sections are now narrated PARAGRAPH
+    // BY PARAGRAPH, verbatim, because the player syncs the card reveal and the in-focus
+    // paragraph lift to the audio timeline. Any audio synthesised from the old
+    // voiceoverText-summary script has the wrong content AND the wrong segment lengths,
+    // so it must be regenerated.
+    var VOICEOVER_SCHEMA_VERSION = '13.92';
 
     /**
      * Create a namespaced logger triple for a module.
@@ -148,8 +153,182 @@ define([], function() {
      * @param {Object} manifest The full manifest (used for slide-number prefix)
      * @returns {string} The complete voiceover text ready for TTS synthesis
      */
-    function buildVoiceoverText(section, manifest) {
+    // =======================================================================
+    // v13.92: TOPICS-AND-TEXT prose narration.
+    //
+    // These cards are read VERBATIM, one paragraph at a time, and the player uses the
+    // very same segment list to drive the sequential card reveal and the in-focus
+    // paragraph lift. Both come from _proseCardSegments() so the audio and the animation
+    // can never drift apart: change the narration here and the timing map follows.
+    // =======================================================================
+    var PROSE_CARD_TYPES = ['overview', 'key-concepts', 'examples-application', 'key-takeaways',
+        // v13.91 slot names, still present in saved modules.
+        'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'];
+
+    // The four headings are FIXED and universal - never topic-specific, and never
+    // "Overview - Colonisation". The v13.91 slots map onto the nearest of the four.
+    var PROSE_HEADINGS = {
+        'overview':             'Overview',
+        'key-concepts':         'Key Concepts',
+        'examples-application': 'Examples & Application',
+        'key-takeaways':        'Key Takeaways',
+        'orientation':          'Overview',
+        'foundations':          'Key Concepts',
+        'mechanism':            'How It Works',
+        'in-practice':          'Examples & Application',
+        'boundaries':           'Key Takeaways'
+    };
+
+    /**
+     * Paragraphs of a prose card as clean plain strings.
+     *
+     * Tolerates every shape a saved manifest might hold, and strips the literal "\n"
+     * escape sequences that v13.91 output shipped on screen.
+     *
+     * @param {Object} card A prose card.
+     * @return {Array} Plain-text paragraphs.
+     */
+    function proseParagraphs(card) {
+        // Character-for-character identical to cc-card-slots.js proseParagraphsOf().
+        // See the comment on the emptiness test below for why that matters.
+        var raw = card && card.paragraphs;
+        if (typeof raw === 'string') { raw = [raw]; }
+        // The emptiness test and the fallback chain here MUST match
+        // cc-card-slots.js proseParagraphsOf() exactly. The reveal animation and the
+        // paragraph highlight are addressed by index into this list, so a list one
+        // element longer or shorter than the rendered <p> list silently lifts the wrong
+        // paragraph for the rest of the section.
+        if (!Array.isArray(raw) || !raw.length) {
+            var fb = (card && (card.bodyText || card.text || card.content || card.description)) || '';
+            raw = fb ? [fb] : [];
+        }
+        var out = [];
+        raw.forEach(function(item) {
+            var t = typeof item === 'string' ? item : ((item && (item.text || item.paragraph || item.body)) || '');
+            if (!t) { return; }
+            t.replace(/\\r\\n|\\n|\\r/g, '\n').replace(/<br\s*\/?>/gi, '\n').split(/\n+/).forEach(function(part) {
+                var c = part.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')
+                            .replace(/\*\*(.+?)\*\*/g, '$1')
+                            .replace(/\s{2,}/g, ' ')
+                            .trim();
+                if (c) { out.push(c); }
+            });
+        });
+        return out;
+    }
+
+    /**
+     * True when this section is a Topics-and-Text prose pack.
+     *
+     * Detected from the cards themselves rather than a route flag, so a saved manifest
+     * behaves correctly even when its route metadata is missing.
+     *
+     * @param {Object} section A manifest section.
+     * @return {Boolean} Whether the section renders as prose cards.
+     */
+    function isProseSection(section) {
+        var cards = section && section.cards;
+        if (!Array.isArray(cards) || !cards.length) { return false; }
+        var prose = 0;
+        for (var i = 0; i < cards.length; i++) {
+            var t = cards[i] && cards[i].cardType;
+            if (PROSE_CARD_TYPES.indexOf(t) >= 0) { prose++; }
+            else if (t !== 'decision-point') { return false; }
+        }
+        return prose > 0;
+    }
+
+    /**
+     * Narration segments for one prose card: the fixed heading, then each paragraph.
+     *
+     * @param {Object} card      A prose card.
+     * @param {Number} cardIndex Its index among the section's prose cards.
+     * @return {Array} Segments of { cardIndex, cardType, kind, paraIndex, text }.
+     */
+    function proseCardSegments(card, cardIndex) {
+        var segs = [];
+        var heading = PROSE_HEADINGS[card.cardType] || '';
+        if (heading) {
+            segs.push({ cardIndex: cardIndex, cardType: card.cardType, kind: 'heading', paraIndex: -1, text: heading });
+        }
+        proseParagraphs(card).forEach(function(p, i) {
+            segs.push({ cardIndex: cardIndex, cardType: card.cardType, kind: 'para', paraIndex: i, text: p });
+        });
+        return segs;
+    }
+
+    /**
+     * Card-level narration segments for ANY route.
+     *
+     * v13.92: the Topics-and-Text card reveal and paragraph highlight proved out on prose
+     * cards; this is the same idea generalised so every route can show WHICH CARD is being
+     * narrated. It is deliberately card-level only. The other routes narrate structural
+     * sub-elements (scene parts, insights, steps, mistake rows), and highlighting those
+     * would mean timing four-to-eight-word fragments off a proportional split - visibly
+     * loose, and wrong outright on the cards where an authored voiceoverText is narrated
+     * instead of the structural fields. A card is 60-110 words, which the split handles
+     * well.
+     *
+     * The segments come from buildVoiceoverText()'s own traversal, so the audio script is
+     * unchanged - no regeneration, no schema bump. That is asserted rather than assumed:
+     * if the out-param ever altered the text, this returns nothing and the highlight
+     * simply does not run, rather than running out of step with the audio.
+     *
+     * @param {Object} section  A manifest section.
+     * @param {Object} manifest The manifest.
+     * @return {Array} [{ cardIndex, text, words }] in spoken order; empty when unavailable.
+     */
+    function buildCardVoiceoverSegments(section, manifest) {
+        if (!section) { return []; }
+        var ranges = [];
+        var withOut = buildVoiceoverText(section, manifest, ranges);
+        if (!withOut || !ranges.length) { return []; }
+        if (withOut !== buildVoiceoverText(section, manifest)) { return []; }
+
+        var segs = [];
+        ranges.forEach(function(r) {
+            var text = r.text || '';
+            var words = text.split(/\s+/).filter(Boolean).length;
+            // A card that contributed no narration - decision-point always, and any card
+            // whose fields were all empty - gets no segment. It is never highlighted, which
+            // is correct: nothing is being said about it.
+            if (!words) { return; }
+            segs.push({ cardIndex: r.cardIndex, text: text, words: words });
+        });
+        return segs;
+    }
+
+    /**
+     * The whole section's narration, segment by segment, in spoken order.
+     *
+     * The player divides the audio duration across these segments in proportion to
+     * their word counts to know which card to reveal and which paragraph to lift.
+     *
+     * @param {Object} section A manifest section.
+     * @return {Array} Ordered segments.
+     */
+    function buildProseVoiceoverSegments(section) {
+        if (!isProseSection(section)) { return []; }
+        var segs = [];
+        var proseIdx = 0;
+        (section.cards || []).forEach(function(card) {
+            if (!card || PROSE_CARD_TYPES.indexOf(card.cardType) < 0) { return; }
+            segs = segs.concat(proseCardSegments(card, proseIdx));
+            proseIdx++;
+        });
+        return segs;
+    }
+
+    function buildVoiceoverText(section, manifest, cardRangesOut) {
         var parts = [];
+        // v13.92: optional out-param. When an array is passed, this records
+        // { cardIndex, text } for each card - the narration that card contributed.
+        // It is written as a SIDE EFFECT of the one function that builds the audio
+        // script, which is the whole point: the segment map and the narration cannot
+        // drift apart, because there is only one traversal. Nothing about the returned
+        // text changes when the out-param is present - buildCardVoiceoverSegments()
+        // asserts exactly that.
+        var _ranges = Array.isArray(cardRangesOut) ? cardRangesOut : null;
 
         // -- TITLE PREFIX --------------------------------------------------
         // v11.36 FIX-VO-NUMBERING: Removed automatic "X.Y: " slide-number prefix.
@@ -168,6 +347,7 @@ define([], function() {
         // -- CARD-BASED SECTIONS -------------------------------------------
         if (section.cardType && !(section.cards && section.cards.length > 0)) {
             // Single-card legacy section (promoted cardType, no cards[])
+            var _singleStart = parts.length;
             var hasVoiceoverScript = false;
             if (section.voiceoverText) {
                 parts.push(_fg(section.voiceoverText));
@@ -178,6 +358,7 @@ define([], function() {
                 // in voiceover output (title was removed from the push above).
                 _pushLegacyCardFields(parts, section, true);
             }
+            if (_ranges) { _ranges.push({ cardIndex: 0, text: parts.slice(_singleStart).join('. ') }); }
         } else {
             if (section.cards && section.cards.length > 0) {
                 // Multi-card (route-card) section
@@ -188,12 +369,29 @@ define([], function() {
                 var _voFirstCard = section.cards[0];
                 var _voIs7CardSection = _voFirstCard && _vo7CardTypes.indexOf(_voFirstCard.cardType) >= 0;
                 var _voCards = section.cards;
-                if (!_voIs7CardSection && section.voiceoverText && section.voiceoverText.trim()) {
+                var _voIsProse = isProseSection(section);
+                if (!_voIs7CardSection && !_voIsProse && section.voiceoverText && section.voiceoverText.trim()) {
+                    var _promotedStart = parts.length;
                     parts.push(_fg(section.voiceoverText));
                     _voCards = section.cards.slice(1);
+                    // The promoted section.voiceoverText stands IN PLACE OF card 0 - which
+                    // is exactly why card 0 is sliced off the loop below. It is card 0's
+                    // narration, so it gets card 0's segment; without this the first card
+                    // is never highlighted while its own script is being read.
+                    if (_ranges) {
+                        _ranges.push({ cardIndex: 0, text: parts.slice(_promotedStart).join('. ') });
+                    }
                 }
-                _voCards.forEach(function(card) {
+                var _voEmitCard = function(card) {
                     if (!card) return;
+                    // v13.92: Topics-and-Text - read the visible prose verbatim, heading
+                    // first, so the audio timeline maps one-to-one onto what is on screen.
+                    if (PROSE_CARD_TYPES.indexOf(card.cardType) >= 0) {
+                        proseCardSegments(card, 0).forEach(function(seg) {
+                            parts.push(_fg(seg.text));
+                        });
+                        return;
+                    }
                     var _7CARD_TYPES = ['hook-scenario','concept-explainer','mental-model',
                         'applied-scenario','mistakes','competency-summary','decision-point'];
                     if (_7CARD_TYPES.indexOf(card.cardType) >= 0) {
@@ -358,6 +556,23 @@ define([], function() {
                     }
                     if (cardParts.length) {
                         parts.push(cardParts.join('. '));
+                    }
+                };
+                // The body above is untouched and keeps its early returns; this wrapper
+                // brackets each call so the range is recorded on every path.
+                //
+                // NOTE the index: it is the index into section.cards, NOT into _voCards,
+                // which may have had card 0 sliced off when section.voiceoverText was
+                // promoted. The player maps these onto rendered cards by that index.
+                var _voOffset = section.cards.length - _voCards.length;
+                _voCards.forEach(function(card, _vi) {
+                    var _cardStart = parts.length;
+                    _voEmitCard(card);
+                    if (_ranges) {
+                        _ranges.push({
+                            cardIndex: _vi + _voOffset,
+                            text: parts.slice(_cardStart).join('. ')
+                        });
                     }
                 });
             } else {
@@ -690,6 +905,14 @@ define([], function() {
         VOICEOVER_SCHEMA_VERSION: VOICEOVER_SCHEMA_VERSION,
         voiceoverTextHash: voiceoverTextHash,
         buildVoiceoverText: buildVoiceoverText,
+        // v13.92: Topics-and-Text prose helpers, shared with player5.js so the reveal
+        // animation and the narration are built from one source.
+        PROSE_CARD_TYPES: PROSE_CARD_TYPES,
+        PROSE_HEADINGS: PROSE_HEADINGS,
+        proseParagraphs: proseParagraphs,
+        isProseSection: isProseSection,
+        buildProseVoiceoverSegments: buildProseVoiceoverSegments,
+        buildCardVoiceoverSegments: buildCardVoiceoverSegments,
         ajaxUrl: ajaxUrl,
         vendorFetch: vendorFetch,
         vendorUpload: vendorUpload,

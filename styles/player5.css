@@ -16977,6 +16977,10 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 /* ── Flow Badge (top-left pill label on every unified card) ────────────── */
 .cc5-player .cc5-flow-badge {
     margin-bottom: 10px;
+    /* v13.92: a row, so the injected voiceover chip can sit at the right-hand end.
+       The badge holds a single inline-flex pill, which is unaffected by the change. */
+    display: flex;
+    align-items: center;
 }
 .cc5-player .cc5-flow-pill {
     display: inline-flex;
@@ -19990,20 +19994,26 @@ body.dark .cc5-lang-pill {
 }
 
 /* ===========================================================================
-   v13.91  -  ROUTE 5: "TOPICS AND TEXT"
-   Five prose sections laid out two across, in the VET route's card styling.
+   v13.92  -  ROUTE 5: "TOPICS AND TEXT"
 
-   Design constraints, both standing owner requirements:
-     - NO left accent rail anywhere in this block. Not on the card, not on the
-       paragraphs. Card identity is carried by the header icon alone.
-     - NO nested container. The card IS the container: .cc5-card > header + body,
-       with <p> elements directly in the body. There is deliberately no wrapper
-       div inside .cc5-prose-body, so this route can never produce the
-       container-inside-container-inside-container nesting.
+   Four short prose cards, two across, colour-coordinated, revealed one at a
+   time as the voiceover reads them.
 
-   This block inherits .cc5-card wholesale (border, radius, shadow, hover) so it
-   matches the VET reference route by construction rather than by copied values -
-   if the base card changes, these change with it.
+   Design constraints, all standing owner requirements:
+     - NO left accent rail anywhere in this block. Card identity is carried by
+       the tint, the icon chip and the heading colour - never by a rail, and no top accent
+       strip.
+     - NO nested container. The card IS the container: .cc5-card > header +
+       body, with <p> elements directly in the body.
+     - Restrained motion. A slow slide up, a soft shadow, a 3px lift on the
+       paragraph being read. No scaling, no bounce, no colour flash. "Not over
+       the top" is the brief and it is a requirement, not a preference.
+     - Every animation is disabled under prefers-reduced-motion, where the
+       cards simply appear.
+
+   Colour: four tones, one per slot, defined ONCE as custom properties on the
+   card. Every rule below reads the properties rather than a literal, so a
+   rebrand means editing the four blocks at the top and nothing else.
    =========================================================================== */
 
 .cc5-prose-grid {
@@ -20014,40 +20024,317 @@ body.dark .cc5-lang-pill {
 }
 
 /* Cards in the grid manage their own spacing via the grid gap, so the base
-   2.5rem margin would double it. */
+   2.5rem margin would double it. Cards are NOT equalised in height: the grid is
+   align-items:start, so each card is as tall as its own content. */
 .cc5-prose-grid > .cc5-prose-card {
     margin-bottom: 0;
-    height: 100%;
 }
 
-/* The last card on an odd count spans both columns rather than leaving a hole.
-   With five sections this is always the fifth, "boundaries". */
+/* A saved v13.91 module has FIVE prose cards, and this release still renders those.
+   Without this the fifth sits half-width beside an empty cell.
+
+   :last-child and :nth-child are STRUCTURAL - they count elements regardless of
+   display:none, so this matches during the sequential reveal too, not just at the end.
+   That is safe only because the grid's children are exactly the prose cards and nothing
+   else: the decision-point is emitted after the grid closes, and _isProsePack rejects a
+   section containing anything but prose and decision-point cards. So :last-child is
+   always the FINAL prose card - the 5th on a legacy module (odd, spans, correct) and
+   the 4th on the current route (even, never matches, correct). Put anything else inside
+   .cc5-prose-grid and card 3 of 4 will span both columns mid-reveal. */
 .cc5-prose-grid > .cc5-prose-card:last-child:nth-child(odd) {
     grid-column: 1 / -1;
 }
 
+/* -- The four tones ------------------------------------------------------- */
+
+.cc5-prose-card.cc5-prose-blue {
+    --cc5-prose-bg:      #f7fafe;
+    --cc5-prose-bg-2:    #eef5fd;
+    --cc5-prose-border:  #dbe7f8;
+    --cc5-prose-accent:  #2f6fd0;
+    --cc5-prose-chip:    #e6effc;
+    --cc5-prose-glow:    rgba(47, 111, 208, 0.16);
+}
+
+.cc5-prose-card.cc5-prose-violet {
+    --cc5-prose-bg:      #f9f8fe;
+    --cc5-prose-bg-2:    #f2effc;
+    --cc5-prose-border:  #e4dff7;
+    --cc5-prose-accent:  #6b4bc0;
+    --cc5-prose-chip:    #ede8fb;
+    --cc5-prose-glow:    rgba(107, 75, 192, 0.16);
+}
+
+.cc5-prose-card.cc5-prose-amber {
+    --cc5-prose-bg:      #fffbf5;
+    --cc5-prose-bg-2:    #fdf3e5;
+    --cc5-prose-border:  #f3e5cd;
+    --cc5-prose-accent:  #a9711f;
+    --cc5-prose-chip:    #fbeed8;
+    --cc5-prose-glow:    rgba(169, 113, 31, 0.16);
+}
+
+.cc5-prose-card.cc5-prose-green {
+    --cc5-prose-bg:      #f6fbf8;
+    --cc5-prose-bg-2:    #ecf6f0;
+    --cc5-prose-border:  #d9ebe0;
+    --cc5-prose-accent:  #2c7a52;
+    --cc5-prose-chip:    #e3f2e9;
+    --cc5-prose-glow:    rgba(44, 122, 82, 0.16);
+}
+
+/* -- The card ------------------------------------------------------------- */
+
+.cc5-prose-card {
+    position: relative;
+    /* No overflow:hidden. It was here only to clip the top accent strip to the corner
+       radius; with the strip gone it does nothing but clip the focused paragraph's lift
+       shadow against the card's top edge. */
+    background: linear-gradient(168deg, var(--cc5-prose-bg) 0%, var(--cc5-prose-bg-2) 100%);
+    border: 1px solid var(--cc5-prose-border);
+    border-radius: 16px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    transition: transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
+                box-shadow 260ms cubic-bezier(0.22, 0.61, 0.36, 1),
+                border-color 260ms ease;
+    /* Explicitly no rail. Stated so a future edit has to be deliberate. */
+    border-left-width: 1px;
+}
+
+/* v13.92: no top accent strip. Removed at the owner's call - the tint, the icon chip
+   and the heading colour already carry the tone, and the strip read as one decoration
+   too many. Deliberately not replaced with a rail: no rails on this route. */
+
+.cc5-prose-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px -12px var(--cc5-prose-glow),
+                0 2px 6px rgba(16, 24, 40, 0.05);
+    border-color: var(--cc5-prose-accent);
+}
+
+/* The card currently being narrated sits a little forward of the others. */
+.cc5-prose-card.cc5-prose-active {
+    box-shadow: 0 10px 26px -14px var(--cc5-prose-glow),
+                0 0 0 1px var(--cc5-prose-border);
+}
+
+/* -- Header --------------------------------------------------------------- */
+
+.cc5-prose-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: var(--cc5-space-4) var(--cc5-space-5) 0 var(--cc5-space-5);
+    background: transparent;
+    border-bottom: 0;
+}
+
+.cc5-prose-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--cc5-prose-accent);
+}
+
+.cc5-prose-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    border-radius: 9px;
+    background: var(--cc5-prose-chip);
+    color: var(--cc5-prose-accent);
+}
+
+.cc5-prose-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* -- Green pulsing speaker, top right, only while this card is narrated ---- */
+
+.cc5-prose-vo-dot {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin-left: auto;
+    flex: 0 0 26px;
+    border-radius: 50%;
+    background: #e6f6ec;
+    color: #1f8a4c;
+}
+
+.cc5-prose-card.cc5-prose-speaking .cc5-prose-vo-dot {
+    display: inline-flex;
+    animation: cc5-prose-vo-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes cc5-prose-vo-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(31, 138, 76, 0.35); }
+    50%      { box-shadow: 0 0 0 6px rgba(31, 138, 76, 0); }
+}
+
+/* -- Body and paragraphs -------------------------------------------------- */
+
 .cc5-prose-body {
-    padding: var(--cc5-space-5) var(--cc5-space-6);
+    padding: var(--cc5-space-4) var(--cc5-space-5) var(--cc5-space-5) var(--cc5-space-5);
 }
 
-.cc5-prose-body p {
-    margin: 0 0 var(--cc5-space-4) 0;
+.cc5-prose-body p.cc5-prose-para {
+    margin: 0 0 0.875rem 0;
+    padding: 0.5rem 0.75rem;
     font-size: 0.9375rem;
-    line-height: 1.7;
-    color: var(--cc5-text-secondary);
-    /* Explicitly no border-left. Stated so a future edit has to be deliberate. */
+    line-height: 1.75;
+    color: var(--cc5-text-secondary, #45505f);
+    border-radius: 10px;
+    background: transparent;
+    transition: transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1),
+                background-color 380ms ease,
+                box-shadow 380ms ease,
+                color 380ms ease;
+    /* Explicitly no border-left. */
     border-left: 0;
-    padding-left: 0;
 }
 
-.cc5-prose-body p:last-child {
+.cc5-prose-body p.cc5-prose-para:last-of-type {
     margin-bottom: 0;
+}
+
+/* The paragraph being read. A 3px lift, a whisper of tint, a soft shadow -
+   enough to say "here", not enough to distract from reading it. */
+.cc5-prose-body p.cc5-prose-para.cc5-para-focus {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 8px 20px -12px var(--cc5-prose-glow),
+                inset 0 0 0 1px var(--cc5-prose-border);
+    color: var(--cc5-text, #1d2430);
 }
 
 .cc5-prose-empty {
     color: var(--cc5-text-muted);
     font-style: italic;
 }
+
+/* -- Sequential reveal ---------------------------------------------------- */
+
+/* An unrevealed card is taken out of the flow entirely.
+   Reserving its cell (visibility:hidden) was tried first and left a screen-height
+   blank under card 1, which reads as a broken page. Removing it is safe here
+   because the grid fills left-to-right: revealing card 2 fills the empty cell
+   beside card 1, and cards 3 and 4 open a new row BELOW, so no card already on
+   screen changes position. Row 1 does grow taller if card 2 is the taller of the
+   pair - the cards are stretch-aligned - which is why card 1 is not pinned to a
+   height that would make that visible as a jump. */
+.cc5-prose-card.cc5-prose-hidden {
+    display: none;
+}
+
+/* The activity block sits BELOW the grid, so hiding it with display:none costs
+   nothing in layout - and leaving it as an invisible-but-present block would
+   open a screen-height hole under the cards. */
+.cc5-prose-activities.cc5-prose-hidden {
+    display: none;
+}
+
+/* `backwards`, NOT `both`. animation-fill-mode: both retains the final keyframe
+   indefinitely, and animation declarations outrank normal author declarations in the
+   cascade - so `to { transform: translateY(0) }` permanently overrode the hover lift on
+   .cc5-prose-card:hover and made its transform + transition dead code. `backwards`
+   applies the FROM state before the animation starts, which is all the reveal needs,
+   and releases the property when it finishes. */
+.cc5-prose-grid > .cc5-prose-card {
+    animation: cc5-prose-rise 720ms cubic-bezier(0.16, 0.84, 0.31, 1) backwards;
+}
+
+/* The entrance animation runs the moment display flips from none, and never
+   before. */
+.cc5-prose-grid > .cc5-prose-card.cc5-prose-hidden {
+    animation: none;
+}
+
+/* Runs the moment display flips from none, and never before. `backwards` again, so no
+   transform is retained on an ancestor of the whole activity block - a retained
+   transform there would establish a containing block and a stacking context for
+   everything inside it. */
+.cc5-prose-activities:not(.cc5-prose-hidden) {
+    animation: cc5-prose-rise 720ms cubic-bezier(0.16, 0.84, 0.31, 1) backwards;
+}
+
+@keyframes cc5-prose-rise {
+    from { opacity: 0; transform: translateY(22px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* -- Next Card button ----------------------------------------------------- */
+
+.cc5-prose-next-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: var(--cc5-space-4);
+    padding: 0.5rem 0.95rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--cc5-prose-accent);
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid var(--cc5-prose-border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 200ms ease, border-color 200ms ease,
+                transform 200ms ease, box-shadow 200ms ease;
+}
+
+.cc5-prose-next-btn:hover {
+    background: #fff;
+    border-color: var(--cc5-prose-accent);
+    transform: translateX(2px);
+    box-shadow: 0 6px 16px -10px var(--cc5-prose-glow);
+}
+
+.cc5-prose-next-btn:focus-visible {
+    outline: 2px solid var(--cc5-prose-accent);
+    outline-offset: 2px;
+}
+
+.cc5-prose-next-btn svg {
+    transition: transform 200ms ease;
+}
+
+.cc5-prose-next-btn:hover svg {
+    transform: translateX(2px);
+}
+
+/* v13.92: the card has just slid in under its own narration - pulse its button so a
+   learner who is listening rather than watching knows there is something to click.
+   Cleared on click, and when the narration moves on or ends. Deliberately quiet: a
+   soft ring and a 1px nudge, no colour change and no bounce. */
+.cc5-prose-next-btn.cc5-prose-btn-ready {
+    animation: cc5-prose-btn-attention 2.4s ease-in-out infinite;
+}
+
+@keyframes cc5-prose-btn-attention {
+    0%, 100% { box-shadow: 0 0 0 0 var(--cc5-prose-glow); transform: translateX(0); }
+    45%      { box-shadow: 0 0 0 5px rgba(0, 0, 0, 0); transform: translateX(1px); }
+}
+
+/* Once its card has been passed, the button steps back rather than vanishing -
+   removing it would reflow the card the learner is still reading. */
+.cc5-prose-next-btn.cc5-prose-btn-used {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.cc5-prose-final-btn {
+    font-weight: 650;
+}
+
+/* -- Responsive ----------------------------------------------------------- */
 
 @media (max-width: 900px) {
     .cc5-prose-grid {
@@ -20056,5 +20343,84 @@ body.dark .cc5-lang-pill {
     }
     .cc5-prose-grid > .cc5-prose-card:last-child:nth-child(odd) {
         grid-column: auto;
+    }
+}
+
+/* -- Motion preferences --------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    .cc5-prose-grid > .cc5-prose-card,
+    .cc5-prose-card,
+    .cc5-prose-body p.cc5-prose-para,
+    .cc5-prose-activities,
+    .cc5-prose-next-btn {
+        animation: none !important;
+        transition: none !important;
+    }
+    .cc5-prose-card.cc5-prose-speaking .cc5-prose-vo-dot,
+    .cc5-prose-next-btn.cc5-prose-btn-ready {
+        animation: none;
+    }
+    .cc5-prose-body p.cc5-prose-para.cc5-para-focus,
+    .cc5-prose-card:hover {
+        transform: none;
+    }
+}
+
+
+/* ===========================================================================
+   v13.92  -  "THIS CARD IS BEING NARRATED", ALL ROUTES
+
+   The card-level half of the Topics-and-Text treatment, generalised. While the
+   section voiceover plays, the card currently being read carries a soft ring and
+   a green pulsing speaker; everything else is untouched.
+
+   Deliberately NOT ported to the other routes: the sequential reveal and the
+   Next Card gating. Those cards are interactive (flip, sort, quiz) and their
+   order is a narrative - putting each behind a button changes the teaching.
+
+   The chip is injected by player5.js at playback time rather than added to nine
+   card renderers, so it exists only while a section is actually being narrated.
+   It lands in .cc5-flow-badge on the unified 7-card types and in .cc5-card-header
+   on the legacy/university types; .cc5-prose-vo-dot is the prose route's own,
+   rendered in its markup, and shares the keyframes below.
+   =========================================================================== */
+
+.cc5-vo-chip {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin-left: auto;
+    flex: 0 0 26px;
+    border-radius: 50%;
+    background: #e6f6ec;
+    color: #1f8a4c;
+}
+
+.cc5-card.cc5-vo-speaking .cc5-vo-chip,
+.cc5-vo-speaking > .cc5-vo-chip {
+    display: inline-flex;
+    animation: cc5-prose-vo-pulse 1.8s ease-in-out infinite;
+}
+
+/* The narrated card, on any route and any card colour. A ring and a shadow only -
+   no transform, because these cards contain absolutely-positioned decoration
+   (corner accents, badges) that a transform would re-anchor. */
+.cc5-card.cc5-vo-speaking {
+    box-shadow: 0 0 0 1px rgba(31, 138, 76, 0.35),
+                0 10px 26px -16px rgba(31, 138, 76, 0.45),
+                0 1px 2px rgba(16, 24, 40, 0.04);
+    transition: box-shadow 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cc5-card.cc5-vo-speaking .cc5-vo-chip,
+    .cc5-vo-speaking > .cc5-vo-chip {
+        animation: none;
+    }
+    .cc5-card.cc5-vo-speaking {
+        transition: none;
     }
 }

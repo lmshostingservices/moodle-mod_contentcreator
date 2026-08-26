@@ -270,7 +270,8 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
     };
 
     const getCardCountForMode = (mode) => {
-        if (mode === 'topicstext') return 5; // v13.91: the Explanatory Spine.
+        // v13.92: four prose cards + the decision-point that drives the activity block.
+        if (mode === 'topicstext') return 5;
         if (mode === 'university') return 6;
         return 7;
     };
@@ -447,113 +448,119 @@ CARDS (generate in this order):
 `;
 
     // ===========================================================================
-    // v13.91: ROUTE 5  -  "TOPICS AND TEXT"
+    // ===========================================================================
+    // v13.92: ROUTE 5  -  "TOPICS AND TEXT"
     //
-    // A plain explanatory-article route. No scenarios, no quiz, no legislation, no
-    // competency framing  -  just headings and prose that read like a well-made
-    // encyclopedia entry or explanatory article.
+    // A plain explanatory-article route. No legislation, no competency framing, no
+    // vocational scenario  -  just four short, fixed-heading sections of readable
+    // prose, followed by the same three-activity challenge block every other route
+    // ends on.
     //
-    // The five sections are "The Explanatory Spine". Each is defined by a RHETORICAL
-    // OPERATION performed on the topic, never by subject matter, which is what lets the
-    // same five slots carry forklift safety, Renaissance art, GST and grief counselling
-    // without any of them feeling forced.
+    // v13.92 REPLACES the v13.91 five-slot "Explanatory Spine". That spine was
+    // rhetorically sound and unreadable in practice: five topic-specific headings, up
+    // to four paragraphs a card and 250+ words a card produced walls of text that no
+    // short-course learner will read. The owner's brief, taken verbatim:
     //
-    //   1 orientation   what it is + why it matters      (description)
-    //   2 foundations   the 2-4 load-bearing ideas       (description / compare-contrast)
-    //   3 mechanism     the thing WORKING                (cause-effect | sequence | part-whole)
-    //   4 in-practice   same mechanism, different cases  (compare-contrast)
-    //   5 boundaries    refute, bound, connect outward   (problem-solution, then description)
+    //   "simple layout, 4 cards, headings Overview / Key Concepts / Examples &
+    //    Application / Key Takeaways, do NOT put the topic name next to the heading,
+    //    colour-coordinated cards, appropriate limits on card length, 3 activities at
+    //    the end like the other routes."
     //
-    // Sections 4 and 5 are what make this more than intro/body/conclusion: 4 forces
-    // conditionality, 5 forces refutation of the common wrong belief. Both are
-    // evidence-backed rather than stylistic - refutation text produces measurably more
-    // durable conceptual change than the same content written affirmatively.
+    // The four headings are UNIVERSAL and FIXED. They are not generated, and the
+    // renderer supplies them from the card type  -  the model is told not to return a
+    // heading at all, which is the only reliable way to guarantee the author never
+    // sees "Overview - Colonisation".
     //
-    // Provenance: Meyer's expository text structures (each section bound to exactly one,
-    // which is what makes drift checkable); Reigeluth's elaboration theory (the "epitome"
-    // - section 1 embodies the whole idea in simplest complete form rather than
-    // summarising it); the Diataxis Explanation quadrant (understanding-oriented prose
-    // with NO actionable steps - the line section 3 must not cross); the journalistic
-    // nut graf; and the refutation-text literature.
+    //   1 overview               what it is and why it matters
+    //   2 key-concepts           the 2-3 load-bearing ideas, plus flip-card terms
+    //   3 examples-application   the same ideas in real situations
+    //   4 key-takeaways          what to carry away, plus sortable practice items
+    //   5 decision-point         NOT a content card - it renders as the activity block
+    //
+    // LENGTH IS A HARD REQUIREMENT, not a style note. Exactly two paragraphs a card,
+    // 55-70 words each. The route's depth floor and readability band in generator.js
+    // are set to match; do not raise one without the other.
+    //
+    // PLAIN TEXT IS A HARD REQUIREMENT. The v13.91 output shipped literal "\n\n"
+    // sequences into the rendered card because the model emitted escaped newlines
+    // inside a single paragraph string. The prompt now forbids it, and
+    // normalizeCardSchema() splits on them defensively as well  -  belt and braces,
+    // because this is the defect the owner saw first.
     // ===========================================================================
 
-    const TOPICSTEXT_SYSTEM_PROMPT = `You are an expert explanatory writer producing a written learning module on a single topic.
+    const TOPICSTEXT_SYSTEM_PROMPT = `You are an expert writer of short-course learning content. You write clear, compact explanatory prose for adults.
 
-Return ONLY valid JSON: { "cards": [...] }  -  exactly 5 cards. If fewer or more than 5 cards are returned, the output is invalid. No markdown, no code fences.
+Return ONLY valid JSON: { "cards": [...] }  -  exactly 5 cards, in the order below. If fewer or more than 5 cards are returned, the output is invalid. No markdown, no code fences.
 
-FIELDS: All fields must be returned exactly as specified. Do not rename, omit, or reorder fields.
+FIELDS: Return every field exactly as specified. Do not rename, omit, add or reorder fields.
 
-WHAT THIS IS: a written article, not a lesson plan and not a course. Prose in paragraphs. No bullet lists, no exercises, no quizzes, no scenarios with characters, no "in this module you will learn", no calls to action, no summary of what you are about to say.
+HEADINGS: Do NOT return a heading, title or name field on cards 1-4. The four headings are fixed and are supplied by the platform. Writing your own heading, or repeating the topic name, breaks the layout.
 
-REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve specific details  -  do NOT replace named systems, people, works, figures or terms with generic equivalents.
+PARAGRAPH FORMAT  -  READ THIS TWICE:
+- Each paragraph is a SEPARATE STRING in the paragraphs[] array.
+- NEVER write the characters backslash-n. Never write \\n, \\r, <br>, <p>, "--", markdown, bullet characters, asterisks, or numbered list markers anywhere in any paragraph.
+- A paragraph is plain sentences and nothing else.
 
-VOICE: Explain to an intelligent adult who does not yet know this subject. Third person by default. Confident and plain. Define a term the first time you use it. Sentences under 25 words. Never pad, never hedge, never moralise.
+LENGTH  -  A HARD LIMIT:
+- Cards 1-4 carry EXACTLY TWO paragraphs each.
+- Each paragraph is 55-70 words. Not 40. Not 90.
+- A whole card is therefore about 110-140 words. Never exceed 150 words on a card.
+- This is short-course content on a screen. Cut anything the learner does not need. Do not pad to reach a count.
 
-PARAGRAPHS: Each card carries 2-4 paragraphs in a paragraphs[] array. Most paragraphs run 60-110 words of continuous prose  -  a real paragraph, not a sentence and not a wall. A framing or transitional paragraph may run as short as 45 words where that is genuinely what it needs; never pad one to reach a count. No paragraph may begin with the same word as the paragraph before it.
+VOICE: Explain to an intelligent adult who does not know the subject yet. Third person. Plain, confident, specific. Define a term the first time it is used. Sentences under 22 words. No hedging, no moralising, no "in this module you will learn", no calls to action.
 
-HEADINGS: Every card needs a heading written for THIS topic  -  specific, 3-8 words, no colons, no "Introduction", no "Overview", no "Conclusion", no generic slot names. A reader scanning only the five headings should learn something.
+REFERENCE MATERIAL: When present, use it as the PRIMARY source. Keep named systems, people, works, places, dates and terms  -  never replace a specific with a generic.
 
 CARDS (generate in this order):
 
-1. orientation  -  heading, paragraphs[2-3], voiceoverText
-   Say what the subject IS and why it is worth attention, completely, before any detail.
-   Paragraph 1 MUST open with a definitional sentence: name the subject and place it in its
-   broadest true category, in plain language. No metaphor, no rhetorical question, no anecdote,
-   no statistic. Paragraph 2 states why it matters and what changes for someone who understands
-   it  -  concrete stakes, consequence or usefulness. Optional paragraph 3 sets the frame: what
-   this piece treats the subject as, and what it leaves aside.
-   TEST: sentence one must survive being read alone, out of context, as a true definition.
+1. overview  -  paragraphs[2]
+   Paragraph 1: say what the subject IS. Open with a plain definitional sentence that names
+   the subject and places it in its broadest true category. No metaphor, no question, no
+   anecdote, no statistic.
+   Paragraph 2: why it matters and what changes for someone who understands it  -  concrete
+   stakes, consequence or usefulness.
+   TEST: sentence one must survive being read alone as a true definition.
 
-2. foundations  -  heading, paragraphs[2-3], voiceoverText
-   Install the TWO TO FOUR load-bearing ideas without which the rest is unreadable. No more
-   than four. For each: name it, define it in one sentence, then say what work it does in the
-   subject. Prefer ideas that are DISTINCTIONS (X as against Y) over ideas that are just labels
-   - a distinction is what the reader actually lacks.
-   Give the simplest COMPLETE version of each idea here, never a simplification you must later
-   retract. Do not write a glossary. Do not define a term you never use again. Do not introduce
-   an idea here that only becomes relevant in card 5.
+2. key-concepts  -  paragraphs[2], keyTerms[3-4]{term, definition}
+   The two or three load-bearing ideas the rest of the article depends on. Name each idea,
+   define it in one sentence, then say what work it does in the subject. Prefer ideas that are
+   DISTINCTIONS (X as against Y) over ideas that are only labels.
+   Give the simplest COMPLETE version of each idea, never a simplification you must retract.
+   keyTerms: 3-4 terms drawn from these paragraphs. term = 1-4 words. definition = ONE
+   sentence, 12-25 words, that stands on its own without the term in front of it. These become
+   flip cards in the activity block, so a definition must be learnable in isolation.
 
-3. mechanism  -  heading, structureType, paragraphs[2-4], voiceoverText
-   Show the subject WORKING  -  the internal structure that makes it behave as it does.
-   Choose ONE structure and commit to it for the whole card. Set structureType to the one you chose:
-     "causal"        something drives something else  -  trace the chain
-     "sequential"    a process or cycle  -  trace it stage by stage, in real order
-     "compositional" constituted rather than caused (an artefact, a body of work, a system of
-                     rules, an idea)  -  the components, and how they relate and constrain each other
-   Explain WHY each step follows from the last, not merely that it does.
-   DO NOT give instructions, steps for the reader to perform, or anything in the imperative.
-   This card explains how the thing works, never how to work it.
-   DO NOT mix two structures. Starting causal and drifting into a step list is a failure.
-   TEST: a reader who will NEVER perform this activity must still find this card informative.
-
-4. in-practice  -  heading, paragraphs[2-3], voiceoverText
-   Show the SAME mechanism producing different outcomes under different conditions.
-   Name two or three variables, contexts, cases or schools of approach under which the subject
-   behaves differently, and explain what about the mechanism in card 3 causes them to diverge.
-   Where real disagreement or trade-off exists, state both positions and what each buys at what
-   cost. Where there is a defensible default, say so and say why.
-   Every difference described must trace back to something already established in card 3. Do not
-   introduce new mechanism here.
-   DO NOT pose a hypothetical for the reader to resolve, ask the reader questions, or write a
-   case study with characters. The contrast is analytic, not narrative.
+3. examples-application  -  paragraphs[2]
+   The same ideas in real situations. Give two concrete examples, cases, settings or contexts
+   and show what the ideas from card 2 look like in each. Name real particulars  -  a place, a
+   role, a situation, a decision. Where two approaches differ, say what each buys and at what
+   cost.
+   Everything here must trace back to card 2. Do not introduce a new concept.
+   DO NOT ask the reader questions or write a story with named characters.
    TEST: at least one sentence must take the form "X rather than Y, because...".
 
-5. boundaries  -  heading, paragraphs[2-3], voiceoverText
-   Paragraph 1 is a REFUTATION and is mandatory. Name the most common mistaken belief about this
-   subject explicitly. State plainly that it is mistaken. Explain WHY IT IS PLAUSIBLE  -  this
-   step is what makes refutation work and must not be skipped. Then give the correct account and
-   the reason it is correct.
-   Paragraph 2 states the limits of the account just given: what this treatment simplified, where
-   the subject is genuinely contested or unsettled, and when the explanation stops holding.
-   Paragraph 3 connects outward: what this subject touches, what understanding it now unlocks,
-   what a reader would sensibly pursue next  -  as prose, not a reading list.
-   DO NOT summarise the preceding cards. This is not a conclusion and must contain material not
-   stated earlier. Do not end on an inspirational sentence.
-   TEST: paragraph 1 must contain an explicit negation  -  "is not", "does not", "contrary to".
+4. key-takeaways  -  paragraphs[2], goodItems[3]{text}, badItems[3]{text}
+   Paragraph 1: the points that must survive if the learner forgets everything else, written as
+   prose, not a list. Say why each one matters, not just that it does.
+   Paragraph 2: the most common mistaken belief about this subject. Name it, say plainly it is
+   mistaken, say why it is plausible, then give the correct account. This paragraph MUST contain
+   an explicit negation  -  "is not", "does not", "contrary to".
+   goodItems: 3 short statements (8-16 words) that are sound practice or correct understanding.
+   badItems: 3 short statements (8-16 words) that are the matching errors or misconceptions.
+   These six become a drag-to-sort activity, so each must be judgeable on its own, and a
+   badItem must be plainly wrong rather than merely less good.
 
-VOICEOVER: every card needs voiceoverText, minimum 70 words, spoken register, covering the same
-ground as the paragraphs without reading them back verbatim. Start with substance, never with the
-card name or "In this section...".`;
+5. decision-point  -  title, question, options[4]{text, correct, feedback}
+   One multiple-choice question testing understanding of cards 1-4, not recall of a phrase.
+   title: 3-7 words naming what is being checked. No topic name repeated verbatim.
+   question: 15-30 words, answerable only by someone who understood the article.
+   options: exactly 4. Exactly ONE has correct: true. The three wrong answers must each be
+   plausible to someone who half-understood. feedback on every option: 12-25 words saying why
+   it is right or exactly what the misunderstanding is.
+
+VOICEOVER: do NOT return a voiceoverText field on any card. The narration for this route is the
+paragraphs themselves, read verbatim, so that the card reveal and the highlighted paragraph stay
+in step with the audio. A separate narration script would desynchronise them.`;
 
     // ===========================================================================
     // SYSTEM PROMPT SELECTORS
@@ -627,14 +634,11 @@ Do NOT use English for any card content. Ignore any English writing style or spe
         if (context.readingLevel) { lines.push(`- Reading level: ${context.readingLevel}`); }
         if (context.courseName) { lines.push(`- Part of: ${context.courseName}`); }
 
-        // The author may pin the card-3 structure rather than leaving it to the model. This
-        // is the highest-variance decision in the route, so pinning it is worth offering.
-        const forced = (context.mechanismType || '').toLowerCase();
-        const forcedLine = (forced === 'causal' || forced === 'sequential' || forced === 'compositional')
-            ? `\nCARD 3 STRUCTURE: use "${forced}" and set structureType to "${forced}". This is chosen, not a suggestion.`
-            : '';
+        // v13.92: the v13.91 mechanism-structure pin is gone with the card it pinned.
+        // Card 3 is now examples-and-application, which has no structure to choose.
+        const forcedLine = '';
 
-        return `${langPrefix}Write a 5-card explanatory article.
+        return `${langPrefix}Write a short-course text module: 4 short prose cards plus 1 question card.
 
 CONTEXT:
 ${lines.join('\n')}
@@ -642,7 +646,8 @@ ${topic.keyPoints?.length ? `\nPOINTS THAT MUST BE COVERED: ${ccTextList(topic.k
 ${context.additionalInstructions ? `\nAUTHOR INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
-Write the full 5-card sequence: orientation, foundations, mechanism, in-practice, boundaries.${langSuffix}`;
+Write all 5 cards in order: overview, key-concepts, examples-application, key-takeaways, decision-point.
+Remember: no heading fields on cards 1-4, exactly two paragraphs each, 55-70 words per paragraph, and never the characters backslash-n anywhere.${langSuffix}`;
     };
 
     const buildFiveCardUserPrompt = (context, topic) => {
@@ -1410,15 +1415,16 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
     // v13.91.3: Route 5 repair. Without these two branches a structural failure on a
     // Topics-and-Text section was repaired with the VET prompt - which asks for seven
     // vocational cards with scenarios, mistakes and a decision point. That cannot fix a
-    // five-card prose article; it would ask the model to produce something of the wrong
-    // shape entirely. Reuse the route's own system prompt, which already carries the full
-    // five-slot spec, and state the issues against it.
+    // prose article; it would ask the model to produce something of the wrong shape
+    // entirely. Reuse the route's own system prompt, which already carries the full
+    // card spec, and state the issues against it.
     const buildTopicsTextContentRepairSystemPrompt = (context) => {
         return TOPICSTEXT_SYSTEM_PROMPT
-            + '\n\nYou are REPAIRING an existing 5-card article, not writing a new one.'
-            + '\nKeep every heading and paragraph that is already good. Change ONLY what the'
-            + '\nlisted issues name. Return all 5 cards in the same order: orientation,'
-            + '\nfoundations, mechanism, in-practice, boundaries.';
+            + '\n\nYou are REPAIRING an existing module, not writing a new one.'
+            + '\nKeep every paragraph that is already good. Change ONLY what the listed'
+            + '\nissues name. Return all 5 cards in the same order: overview, key-concepts,'
+            + '\nexamples-application, key-takeaways, decision-point. Do not add heading'
+            + '\nfields to cards 1-4 and do not exceed two paragraphs per card.';
     };
 
     const buildTopicsTextContentRepairPrompt = (cards, issues, topicTitle, context) => {

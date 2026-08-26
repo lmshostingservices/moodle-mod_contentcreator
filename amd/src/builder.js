@@ -4178,23 +4178,22 @@ define([
                             </svg>
                         </div>
                         <h3 class="cc-mode-title">Topics and Text</h3>
-                        <p class="cc-mode-description">A written explanatory article. Headings and prose, nothing else.</p>
+                        <p class="cc-mode-description">Four short, colour-coded cards of plain explanatory writing, then the activities.</p>
                         <ul class="cc-mode-features">
                             <li>Works for any subject at all</li>
-                            <li>No scenarios, no quiz, no compliance framing</li>
-                            <li>Reads like a good article, not a lesson plan</li>
-                            <li>Two cards across, same styling as Vocational</li>
+                            <li>Universal headings &ndash; no compliance or scenario framing</li>
+                            <li>Short by design: two paragraphs a card, easy to digest</li>
+                            <li>Cards reveal one at a time as the voiceover reads them</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">Generates 5 cards per section</span>
+                            <span class="cc-mode-cardlist-label">Generates 4 cards per section, plus 3 activities</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li><strong>Orientation</strong> &ndash; what the subject is and why it is worth knowing, in full, before any detail</li>
-                                <li><strong>Foundations</strong> &ndash; the two to four ideas the rest depends on</li>
-                                <li><strong>Mechanism</strong> &ndash; the subject actually working: what causes what, or what follows what</li>
-                                <li><strong>In Practice</strong> &ndash; how the same thing behaves differently in different cases, and why</li>
-                                <li><strong>Boundaries</strong> &ndash; the common misunderstanding corrected, the limits named, what it connects to</li>
+                                <li><strong>Overview</strong> &ndash; what the subject is and why it matters</li>
+                                <li><strong>Key Concepts</strong> &ndash; the two or three ideas the rest depends on</li>
+                                <li><strong>Examples &amp; Application</strong> &ndash; the same ideas in real situations</li>
+                                <li><strong>Key Takeaways</strong> &ndash; what to carry away, and the misunderstanding to avoid</li>
                             </ol>
-                            <span class="cc-mode-cardlist-note">Every card is a heading and two to four paragraphs. Voiceover, images and full card editing all work as normal.</span>
+                            <span class="cc-mode-cardlist-note">Headings are fixed and never carry the topic name. Each card is two short paragraphs. Ends with the same quiz, flip cards and category sort as the other routes. Voiceover, images and full card editing all work as normal.</span>
                         </div>
                     </div>
                 </div>

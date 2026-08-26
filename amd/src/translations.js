@@ -14,6 +14,8 @@ define([], function() {
 
     const UI_LABELS = {
         'en': {
+            nextCard: 'Next Card',
+            startActivities: 'Start Activities',
             // Edit Modal
             editSlide: 'Edit Slide',
             title: 'Title',
@@ -418,6 +420,8 @@ define([], function() {
             riskVo: 'Risk:'
         },
         'ja': {
+            nextCard: '次のカード',
+            startActivities: 'アクティビティを始める',
             // Edit Modal
             editSlide: 'スライドを編集',
             title: 'タイトル',
@@ -778,6 +782,8 @@ define([], function() {
             imageRemoved: '画像が削除されました',
         },
         'zh': {
+            nextCard: '下一张卡片',
+            startActivities: '开始活动',
             // Edit Modal
             editSlide: '编辑幻灯片',
             title: '标题',
@@ -1138,6 +1144,8 @@ define([], function() {
             imageRemoved: '图片已删除',
         },
         'ko': {
+            nextCard: '다음 카드',
+            startActivities: '활동 시작하기',
             editSlide: '슬라이드 편집',
             title: '제목',
             description: '설명',
@@ -1489,6 +1497,8 @@ define([], function() {
             imageRemoved: '이미지가 삭제되었습니다',
         },
         'vi': {
+            nextCard: 'Thẻ tiếp theo',
+            startActivities: 'Bắt đầu hoạt động',
             editSlide: 'Chỉnh sửa trang',
             title: 'Tiêu đề',
             description: 'Mô tả',
@@ -1815,6 +1825,8 @@ define([], function() {
             settingsSaveFailed: 'Lưu cài đặt thất bại',
         },
         'th': {
+            nextCard: 'การ์ดถัดไป',
+            startActivities: 'เริ่มกิจกรรม',
             editSlide: 'แก้ไขสไลด์',
             title: 'ชื่อเรื่อง',
             description: 'คำอธิบาย',
@@ -2139,6 +2151,8 @@ define([], function() {
             settingsSaveFailed: 'บันทึกการตั้งค่าล้มเหลว',
         },
         'id': {
+            nextCard: 'Kartu berikutnya',
+            startActivities: 'Mulai aktivitas',
             editSlide: 'Edit Slide',
             title: 'Judul',
             description: 'Deskripsi',
@@ -2463,6 +2477,8 @@ define([], function() {
             settingsSaveFailed: 'Gagal menyimpan pengaturan',
         },
         'de': {
+            nextCard: 'Nächste Karte',
+            startActivities: 'Aktivitäten starten',
             editSlide: 'Folie bearbeiten',
             title: 'Titel',
             description: 'Beschreibung',
@@ -2814,6 +2830,8 @@ define([], function() {
             imageRemoved: 'Bild entfernt',
         },
         'fr': {
+            nextCard: 'Carte suivante',
+            startActivities: 'Commencer les activités',
             editSlide: 'Modifier la diapositive',
             title: 'Titre',
             description: 'Description',
@@ -3165,6 +3183,8 @@ define([], function() {
             imageRemoved: 'Image supprimée',
         },
         'es': {
+            nextCard: 'Siguiente tarjeta',
+            startActivities: 'Comenzar actividades',
             editSlide: 'Editar diapositiva',
             title: 'Título',
             description: 'Descripción',
@@ -3516,6 +3536,8 @@ define([], function() {
             imageRemoved: 'Imagen eliminada',
         },
         'pt': {
+            nextCard: 'Próximo cartão',
+            startActivities: 'Iniciar atividades',
             editSlide: 'Editar slide',
             title: 'Título',
             description: 'Descrição',
@@ -3866,6 +3888,8 @@ define([], function() {
             imageRemoved: 'Imagem removida',
         },
         'ar': {
+            nextCard: 'البطاقة التالية',
+            startActivities: 'ابدأ الأنشطة',
             editSlide: 'تحرير الشريحة',
             title: 'العنوان',
             description: 'الوصف',
@@ -4216,7 +4240,9 @@ define([], function() {
         // ═══════════════════════════════════════════════════════════════════
         // v6.7.58: Additional Chirp 3 HD languages (40 more languages)
         // ═══════════════════════════════════════════════════════════════════
-        'nl': { // Dutch - Complete translations
+        'nl': {
+            nextCard: 'Volgende kaart',
+            startActivities: 'Activiteiten starten', // Dutch - Complete translations
             editSlide: 'Dia bewerken', title: 'Titel', description: 'Beschrijving', keyRequirements: 'Belangrijke vereisten',
             scenario: 'De situatie', decision: 'Uw beslissing', correctAction: 'Juiste actie', correctWhy: 'Waarom dit werkt',
             correctCommunicate: 'Wat te communiceren', dos: 'Wel doen', donts: 'Niet doen',
@@ -4387,7 +4413,9 @@ define([], function() {
             checkOrderToUnlock: 'Controleer de volgorde om door te gaan',
             whatCouldGoWrong: 'Voordat u verder leest: Wat zou er mis kunnen gaan?',
         },
-        'da': { // Danish - Complete translations
+        'da': {
+            nextCard: 'Næste kort',
+            startActivities: 'Start aktiviteter', // Danish - Complete translations
             editSlide: 'Rediger dias', title: 'Titel', description: 'Beskrivelse', keyRequirements: 'Nøglekrav',
             scenario: 'Situationen', decision: 'Din beslutning', correctAction: 'Korrekt handling', correctWhy: 'Hvorfor dette virker',
             correctCommunicate: 'Hvad du skal kommunikere', dos: 'Gør', donts: 'Gør ikke',
@@ -4558,7 +4586,9 @@ define([], function() {
             checkOrderToUnlock: 'Tjek rækkefølgen for at fortsætte',
             whatCouldGoWrong: 'Før du læser videre: Hvad tror du der kan gå galt?',
         },
-        'fi': { // Finnish - Complete translations
+        'fi': {
+            nextCard: 'Seuraava kortti',
+            startActivities: 'Aloita tehtävät', // Finnish - Complete translations
             editSlide: 'Muokkaa diaa', title: 'Otsikko', description: 'Kuvaus', keyRequirements: 'Keskeiset vaatimukset',
             scenario: 'Tilanne', decision: 'Päätöksesi', correctAction: 'Oikea toimenpide', correctWhy: 'Miksi tämä toimii',
             correctCommunicate: 'Mitä kommunikoida', dos: 'Tee näin', donts: 'Älä tee näin',
@@ -4730,7 +4760,9 @@ define([], function() {
             voiceoverButton: 'Selostuspainike',
             whatCouldGoWrong: 'Mitä voisi mennä pieleen',
         },
-        'no': { // Norwegian - Complete translations
+        'no': {
+            nextCard: 'Neste kort',
+            startActivities: 'Start aktiviteter', // Norwegian - Complete translations
             editSlide: 'Rediger lysbilde', title: 'Tittel', description: 'Beskrivelse', keyRequirements: 'Nøkkelkrav',
             scenario: 'Situasjonen', decision: 'Din beslutning', correctAction: 'Riktig handling', correctWhy: 'Hvorfor dette fungerer',
             correctCommunicate: 'Hva du skal kommunisere', dos: 'Gjør', donts: 'Ikke gjør',
@@ -4901,7 +4933,9 @@ define([], function() {
             voiceoverButton: 'Spill av lydbeskrivelse',
             whatCouldGoWrong: 'Før du leser videre: Hva tror du kan gå galt?',
         },
-        'nb': { // Norwegian Bokmal - Complete translations (alias for 'no')
+        'nb': {
+            nextCard: 'Neste kort',
+            startActivities: 'Start aktiviteter', // Norwegian Bokmal - Complete translations (alias for 'no')
             editSlide: 'Rediger lysbilde', title: 'Tittel', description: 'Beskrivelse', keyRequirements: 'Nøkkelkrav',
             scenario: 'Situasjonen', decision: 'Din beslutning', correctAction: 'Riktig handling', correctWhy: 'Hvorfor dette fungerer',
             correctCommunicate: 'Hva du skal kommunisere', dos: 'Gjør', donts: 'Ikke gjør',
@@ -5072,7 +5106,9 @@ define([], function() {
             voiceoverButton: 'Spill av lydbeskrivelse',
             whatCouldGoWrong: 'Før du leser videre: Hva tror du kan gå galt?',
         },
-        'sv': { // Swedish - Complete translations
+        'sv': {
+            nextCard: 'Nästa kort',
+            startActivities: 'Starta aktiviteter', // Swedish - Complete translations
             editSlide: 'Redigera bild', title: 'Titel', description: 'Beskrivning', keyRequirements: 'Nyckelkrav',
             scenario: 'Situationen', decision: 'Ditt beslut', correctAction: 'Rätt åtgärd', correctWhy: 'Varför detta fungerar',
             correctCommunicate: 'Vad du ska kommunicera', dos: 'Gör', donts: 'Gör inte',
@@ -5243,7 +5279,9 @@ define([], function() {
             voiceoverButton: 'Röstknapp',
             whatCouldGoWrong: 'Vad kan gå fel',
         },
-        'it': { // Italian - Complete translations
+        'it': {
+            nextCard: 'Scheda successiva',
+            startActivities: 'Inizia le attività', // Italian - Complete translations
             editSlide: 'Modifica diapositiva', title: 'Titolo', description: 'Descrizione', keyRequirements: 'Requisiti chiave',
             scenario: 'La situazione', decision: 'La tua decisione', correctAction: 'Azione corretta', correctWhy: 'Perché funziona',
             correctCommunicate: 'Cosa comunicare', dos: 'Da fare', donts: 'Da non fare',
@@ -5439,7 +5477,9 @@ define([], function() {
             bulkVoiceoverComplete: 'Tutte le voci narranti generate con successo',
             slidesWithoutVoiceover: '{count} diapositive necessitano di voce narrante',
         },
-        'el': { // Greek - Complete translations
+        'el': {
+            nextCard: 'Επόμενη κάρτα',
+            startActivities: 'Έναρξη δραστηριοτήτων', // Greek - Complete translations
             // Edit Modal
             editSlide: 'Επεξεργασία διαφάνειας',
             title: 'Τίτλος',
@@ -5788,7 +5828,9 @@ define([], function() {
             checkOrderToUnlock: 'Ελέγξτε τη σειρά για να συνεχίσετε',
             whatCouldGoWrong: 'Πριν συνεχίσετε: Τι νομίζετε ότι θα μπορούσε να πάει στραβά;',
         },
-        'pa': { // Punjabi
+        'pa': {
+            nextCard: 'ਅਗਲਾ ਕਾਰਡ',
+            startActivities: 'ਗਤੀਵਿਧੀਆਂ ਸ਼ੁਰੂ ਕਰੋ', // Punjabi
             // Edit Modal
             editSlide: 'ਸਲਾਈਡ ਸੰਪਾਦਿਤ ਕਰੋ',
             title: 'ਸਿਰਲੇਖ',
@@ -6138,7 +6180,9 @@ define([], function() {
             commonMistakeVo: 'ਆਮ ਗਲਤੀ',
             riskVo: 'ਖਤਰਾ:',
         },
-        'pl': { // Polish - Complete translations
+        'pl': {
+            nextCard: 'Następna karta',
+            startActivities: 'Rozpocznij ćwiczenia', // Polish - Complete translations
             // Edit Modal
             editSlide: 'Edytuj slajd',
             title: 'Tytuł',
@@ -6487,7 +6531,9 @@ define([], function() {
             commonMistakeVo: 'Częsty błąd',
             riskVo: 'Ryzyko:',
         },
-        'ru': { // Russian - Complete translations
+        'ru': {
+            nextCard: 'Следующая карточка',
+            startActivities: 'Начать задания', // Russian - Complete translations
             // Edit Modal
             editSlide: 'Редактировать слайд',
             title: 'Заголовок',
@@ -6861,7 +6907,9 @@ define([], function() {
             closeZoom: 'Закрыть просмотр',
             imageRemoved: 'Изображение удалено',
         },
-        'tr': { // Turkish - Complete translations
+        'tr': {
+            nextCard: 'Sonraki kart',
+            startActivities: 'Etkinliklere başla', // Turkish - Complete translations
             // Edit Modal
             editSlide: 'Slaydı düzenle',
             title: 'Başlık',
@@ -7210,7 +7258,9 @@ define([], function() {
             checkOrderToUnlock: 'Devam etmek için sırayı kontrol edin',
             whatCouldGoWrong: 'Okumaya devam etmeden önce: Sizce ne yanlış gidebilir?',
         },
-        'he': { // Hebrew - Complete translations
+        'he': {
+            nextCard: 'הכרטיס הבא',
+            startActivities: 'התחל פעילויות', // Hebrew - Complete translations
             // Edit Modal
             editSlide: 'ערוך שקופית',
             title: 'כותרת',
@@ -7559,7 +7609,9 @@ define([], function() {
             commonMistakeVo: 'טעות נפוצה',
             riskVo: 'סיכון:',
         },
-        'cs': { // Czech - Complete translations
+        'cs': {
+            nextCard: 'Další karta',
+            startActivities: 'Zahájit aktivity', // Czech - Complete translations
             // Edit Modal
             editSlide: 'Upravit snímek',
             title: 'Název',
@@ -7908,7 +7960,9 @@ define([], function() {
             checkOrderToUnlock: 'Zkontrolujte pořadí pro pokračování',
             whatCouldGoWrong: 'Než budete číst dále: Co si myslíte, že by se mohlo pokazit?',
         },
-        'hu': { // Hungarian - Complete translations
+        'hu': {
+            nextCard: 'Következő kártya',
+            startActivities: 'Feladatok indítása', // Hungarian - Complete translations
             // Edit Modal
             editSlide: 'Dia szerkesztése',
             title: 'Cím',
@@ -8257,7 +8311,9 @@ define([], function() {
             commonMistakeVo: 'Gyakori hiba',
             riskVo: 'Kockázat:',
         },
-        'is': { // Icelandic - Complete translations
+        'is': {
+            nextCard: 'Næsta spjald',
+            startActivities: 'Hefja verkefni', // Icelandic - Complete translations
             // Edit Modal
             editSlide: 'Breyta glæru',
             title: 'Titill',
@@ -8607,7 +8663,9 @@ define([], function() {
             commonMistakeVo: 'Algengt mistök',
             riskVo: 'Áhætta:',
         },
-        'ro': { // Romanian - Complete translations
+        'ro': {
+            nextCard: 'Cardul următor',
+            startActivities: 'Începe activitățile', // Romanian - Complete translations
             editSlide: 'Editează diapozitivul', title: 'Titlu', description: 'Descriere', keyRequirements: 'Cerințe cheie',
             scenario: 'Situația', decision: 'Decizia ta', correctAction: 'Acțiune corectă', correctWhy: 'De ce funcționează',
             correctCommunicate: 'Ce să comunici', dos: 'De făcut', donts: 'De evitat',
@@ -8778,7 +8836,9 @@ define([], function() {
             checkOrderToUnlock: 'Verifică ordinea pentru a continua',
             whatCouldGoWrong: 'Înainte de a continua: Ce crezi că ar putea merge rău?'
         },
-        'bg': { // Bulgarian - Complete translations
+        'bg': {
+            nextCard: 'Следваща карта',
+            startActivities: 'Започни дейностите', // Bulgarian - Complete translations
             editSlide: 'Редактиране на слайд', title: 'Заглавие', description: 'Описание', keyRequirements: 'Ключови изисквания',
             scenario: 'Ситуацията', decision: 'Вашето решение', correctAction: 'Правилно действие', correctWhy: 'Защо работи',
             correctCommunicate: 'Какво да комуникирате', dos: 'Да се прави', donts: 'Да не се прави',
@@ -8949,7 +9009,9 @@ define([], function() {
             checkOrderToUnlock: 'Проверете реда, за да продължите',
             whatCouldGoWrong: 'Преди да продължите: Какво мислите, че може да се обърка?'
         },
-        'ca': { // Catalan - Complete translations
+        'ca': {
+            nextCard: 'Targeta següent',
+            startActivities: 'Comença les activitats', // Catalan - Complete translations
             editSlide: 'Edita la diapositiva', title: 'Títol', description: 'Descripció', keyRequirements: 'Requisits clau',
             scenario: 'La situació', decision: 'La teva decisió', correctAction: 'Acció correcta', correctWhy: 'Per què funciona',
             correctCommunicate: 'Què comunicar', dos: 'Fer', donts: 'No fer',
@@ -9159,7 +9221,9 @@ define([], function() {
             makeAllDecisionsToUnlock: 'Pren totes les decisions per continuar',
             checkOrderToUnlock: 'Comprova l\'ordre per continuar'
         },
-        'hr': { // Croatian - Complete translations
+        'hr': {
+            nextCard: 'Sljedeća kartica',
+            startActivities: 'Započni aktivnosti', // Croatian - Complete translations
             editSlide: 'Uredi slajd', title: 'Naslov', description: 'Opis', keyRequirements: 'Ključni zahtjevi',
             scenario: 'Situacija', decision: 'Vaša odluka', correctAction: 'Ispravna radnja', correctWhy: 'Zašto funkcionira',
             correctCommunicate: 'Što komunicirati', dos: 'Činiti', donts: 'Ne činiti',
@@ -9330,7 +9394,9 @@ define([], function() {
             checkOrderToUnlock: 'Provjerite redoslijed za nastavak',
             whatCouldGoWrong: 'Prije nego nastavite: Što mislite da bi moglo poći po zlu?'
         },
-        'sk': { // Slovak - Complete translations
+        'sk': {
+            nextCard: 'Ďalšia karta',
+            startActivities: 'Spustiť aktivity', // Slovak - Complete translations
             editSlide: 'Upraviť snímku', title: 'Názov', description: 'Popis', keyRequirements: 'Kľúčové požiadavky',
             scenario: 'Situácia', decision: 'Vaše rozhodnutie', correctAction: 'Správna akcia', correctWhy: 'Prečo to funguje',
             correctCommunicate: 'Čo komunikovať', dos: 'Robiť', donts: 'Nerobiť',
@@ -9501,7 +9567,9 @@ define([], function() {
             checkOrderToUnlock: 'Skontrolujte poradie na pokračovanie',
             whatCouldGoWrong: 'Skôr ako budete pokračovať: Čo by sa podľa vás mohlo pokaziť?'
         },
-        'sl': { // Slovenian - Complete translations
+        'sl': {
+            nextCard: 'Naslednja kartica',
+            startActivities: 'Začni dejavnosti', // Slovenian - Complete translations
             editSlide: 'Uredi diapozitiv', title: 'Naslov', description: 'Opis', keyRequirements: 'Ključne zahteve',
             scenario: 'Situacija', decision: 'Vaša odločitev', correctAction: 'Pravilno dejanje', correctWhy: 'Zakaj deluje',
             correctCommunicate: 'Kaj sporočiti', dos: 'Delaj', donts: 'Ne delaj',
@@ -9672,7 +9740,9 @@ define([], function() {
             checkOrderToUnlock: 'Preverite vrstni red za nadaljevanje',
             whatCouldGoWrong: 'Preden nadaljujete: Kaj mislite, da bi lahko šlo narobe?'
         },
-        'sr': { // Serbian (Cyrillic) - Complete translations
+        'sr': {
+            nextCard: 'Следећа картица',
+            startActivities: 'Почни активности', // Serbian (Cyrillic) - Complete translations
             editSlide: 'Уреди слајд', title: 'Наслов', description: 'Опис', keyRequirements: 'Кључни захтеви',
             scenario: 'Ситуација', decision: 'Ваша одлука', correctAction: 'Исправна радња', correctWhy: 'Зашто функционише',
             correctCommunicate: 'Шта саопштити', dos: 'Радити', donts: 'Не радити',
@@ -9843,7 +9913,9 @@ define([], function() {
             checkOrderToUnlock: 'Проверите редослед за наставак',
             whatCouldGoWrong: 'Пре него што наставите: Шта мислите да би могло поћи по злу?'
         },
-        'uk': { // Ukrainian - Complete translations
+        'uk': {
+            nextCard: 'Наступна картка',
+            startActivities: 'Розпочати завдання', // Ukrainian - Complete translations
             editSlide: 'Редагувати слайд', title: 'Заголовок', description: 'Опис', keyRequirements: 'Ключові вимоги',
             scenario: 'Ситуація', decision: 'Ваше рішення', correctAction: 'Правильна дія', correctWhy: 'Чому це працює',
             correctCommunicate: 'Що повідомити', dos: 'Робити', donts: 'Не робити',
@@ -10014,7 +10086,9 @@ define([], function() {
             checkOrderToUnlock: 'Перевірте порядок, щоб продовжити',
             whatCouldGoWrong: 'Перш ніж продовжити: Як ви думаєте, що може піти не так?'
         },
-        'et': { // Estonian - Complete translations
+        'et': {
+            nextCard: 'Järgmine kaart',
+            startActivities: 'Alusta tegevusi', // Estonian - Complete translations
             // Edit Modal
             editSlide: 'Muuda slaidi',
             title: 'Pealkiri',
@@ -10375,7 +10449,9 @@ define([], function() {
             commonMistakeVo: 'Levinud viga',
             riskVo: 'Risk:',
         },
-        'lt': { // Lithuanian - Complete translations
+        'lt': {
+            nextCard: 'Kita kortelė',
+            startActivities: 'Pradėti veiklas', // Lithuanian - Complete translations
             // Edit Modal
             editSlide: 'Redaguoti skaidrę',
             title: 'Pavadinimas',
@@ -10736,7 +10812,9 @@ define([], function() {
             commonMistakeVo: 'Dažna klaida',
             riskVo: 'Rizika:',
         },
-        'lv': { // Latvian - Complete translations
+        'lv': {
+            nextCard: 'Nākamā kartīte',
+            startActivities: 'Sākt aktivitātes', // Latvian - Complete translations
             // Edit Modal
             editSlide: 'Rediģēt slaidu',
             title: 'Virsraksts',
@@ -11096,7 +11174,9 @@ define([], function() {
             commonMistakeVo: 'Bieža kļūda',
             riskVo: 'Risks:',
         },
-        'ml': { // Malayalam - Complete translations
+        'ml': {
+            nextCard: 'അടുത്ത കാർഡ്',
+            startActivities: 'പ്രവർത്തനങ്ങൾ ആരംഭിക്കുക', // Malayalam - Complete translations
             // Edit Modal
             editSlide: 'സ്ലൈഡ് എഡിറ്റ് ചെയ്യുക',
             title: 'ശീർഷകം',
@@ -11597,7 +11677,9 @@ define([], function() {
             realWorldInsight: 'യഥാർത്ഥ ലോക ഉൾക്കാഴ്ച',
             reflectOnThis: 'ഇതിനെക്കുറിച്ച് ചിന്തിക്കുക',
         },
-        'mr': { // Marathi - Complete translations
+        'mr': {
+            nextCard: 'पुढील कार्ड',
+            startActivities: 'उपक्रम सुरू करा', // Marathi - Complete translations
             // Edit Modal
             editSlide: 'स्लाइड संपादित करा',
             title: 'शीर्षक',
@@ -11984,7 +12066,9 @@ define([], function() {
             realWorldInsight: 'वास्तविक जग अंतर्दृष्टी',
             reflectOnThis: 'यावर विचार करा',
         },
-        'ms': { // Malay - Complete translations
+        'ms': {
+            nextCard: 'Kad seterusnya',
+            startActivities: 'Mulakan aktiviti', // Malay - Complete translations
             // Edit Modal
             editSlide: 'Edit Slaid',
             title: 'Tajuk',
@@ -12335,7 +12419,9 @@ define([], function() {
             commonMistakeVo: 'Kesilapan biasa',
             riskVo: 'Risiko:',
         },
-        'bn': { // Bengali - Complete translations
+        'bn': {
+            nextCard: 'পরবর্তী কার্ড',
+            startActivities: 'কার্যক্রম শুরু করুন', // Bengali - Complete translations
             // Edit Modal
             editSlide: 'স্লাইড সম্পাদনা করুন',
             title: 'শিরোনাম',
@@ -12696,7 +12782,9 @@ define([], function() {
             commonMistakeVo: 'সাধারণ ভুল',
             riskVo: 'ঝুঁকি:',
         },
-        'hi': { // Hindi - Complete translations
+        'hi': {
+            nextCard: 'अगला कार्ड',
+            startActivities: 'गतिविधियाँ शुरू करें', // Hindi - Complete translations
             // Edit Modal
             editSlide: 'स्लाइड संपादित करें',
             title: 'शीर्षक',
@@ -13063,7 +13151,11 @@ define([], function() {
             reflectOnThis: 'इस पर विचार करें',
         },
 
-        'kn': { // Kannada - Complete translations
+        'kn': {
+
+            nextCard: 'ಮುಂದಿನ ಕಾರ್ಡ್',
+
+            startActivities: 'ಚಟುವಟಿಕೆಗಳನ್ನು ಪ್ರಾರಂಭಿಸಿ', // Kannada - Complete translations
             // Edit Modal
             editSlide: 'ಸ್ಲೈಡ್ ಸಂಪಾದಿಸಿ',
             title: 'ಶೀರ್ಷಿಕೆ',
@@ -13577,7 +13669,11 @@ define([], function() {
             reflectOnThis: 'ಇದರ ಬಗ್ಗೆ ಯೋಚಿಸಿ',
         },
 
-        'gu': { // Gujarati - Complete translations
+        'gu': {
+
+            nextCard: 'આગલું કાર્ડ',
+
+            startActivities: 'પ્રવૃત્તિઓ શરૂ કરો', // Gujarati - Complete translations
             // Edit Modal
             editSlide: 'સ્લાઇડ સંપાદિત કરો',
             title: 'શીર્ષક',
@@ -13943,7 +14039,9 @@ define([], function() {
             realWorldInsight: 'વાસ્તવિક દુનિયાની સમજ',
             reflectOnThis: 'આના પર ચિંતન કરો',
         },
-        'ur': { // Urdu - Complete translations (RTL)
+        'ur': {
+            nextCard: 'اگلا کارڈ',
+            startActivities: 'سرگرمیاں شروع کریں', // Urdu - Complete translations (RTL)
             // Edit Modal
             editSlide: 'سلائیڈ میں ترمیم کریں',
             title: 'عنوان',
@@ -14304,7 +14402,9 @@ define([], function() {
             commonMistakeVo: 'عام غلطی',
             riskVo: 'خطرہ:',
         },
-        'sw': { // Swahili - Complete translations
+        'sw': {
+            nextCard: 'Kadi inayofuata',
+            startActivities: 'Anza shughuli', // Swahili - Complete translations
             // Edit Modal
             editSlide: 'Hariri Slaidi',
             title: 'Kichwa',
@@ -14664,7 +14764,9 @@ define([], function() {
             commonMistakeVo: 'Kosa la kawaida',
             riskVo: 'Hatari:',
         },
-        'ta': { // Tamil - Complete translations
+        'ta': {
+            nextCard: 'அடுத்த அட்டை',
+            startActivities: 'செயல்பாடுகளைத் தொடங்கு', // Tamil - Complete translations
             // Edit Modal
             editSlide: 'ஸ்லைடை திருத்து',
             title: 'தலைப்பு',
@@ -15081,7 +15183,9 @@ define([], function() {
             removeImage: 'நீக்கு',
             thinkFirst: 'முதலில் சிந்தியுங்கள்',
         },
-        'te': { // Telugu - Complete translations
+        'te': {
+            nextCard: 'తదుపరి కార్డు',
+            startActivities: 'కార్యకలాపాలు ప్రారంభించండి', // Telugu - Complete translations
             // Edit Modal
             editSlide: 'స్లైడ్ సవరించు',
             title: 'శీర్షిక',
@@ -15498,7 +15602,9 @@ define([], function() {
             removeImage: 'తీసివేయి',
             thinkFirst: 'మొదట ఆలోచించండి',
         },
-        'cmn': { // Mandarin Chinese (alias for zh)
+        'cmn': {
+            nextCard: '下一张卡片',
+            startActivities: '开始活动', // Mandarin Chinese (alias for zh)
             // Edit Modal
             editSlide: '编辑幻灯片',
             title: '标题',
@@ -15827,7 +15933,9 @@ define([], function() {
             settingsSaved: '设置保存成功',
             settingsSaveFailed: '保存设置失败',
         },
-        'yue': { // Cantonese (zh-HK) - Traditional Chinese
+        'yue': {
+            nextCard: '下一張卡片',
+            startActivities: '開始活動', // Cantonese (zh-HK) - Traditional Chinese
             // Edit Modal
             editSlide: '編輯幻燈片',
             title: '標題',
@@ -16154,7 +16262,9 @@ define([], function() {
             whatCouldGoWrong: '喺繼續閱讀之前：你覺得可能會出咩問題？',
             reflectOnThis: '反思呢個',
         },
-        'fil': { // Filipino
+        'fil': {
+            nextCard: 'Susunod na kard',
+            startActivities: 'Simulan ang mga gawain', // Filipino
             // Edit Modal
             editSlide: 'I-edit ang Slide',
             title: 'Pamagat',

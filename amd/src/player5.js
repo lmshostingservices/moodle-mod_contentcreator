@@ -2761,7 +2761,15 @@ define([
         /**
          * Main render function
          */
-        render: function() {            if (this.currentView === 'topics') {
+        render: function() {
+            // v13.92: render() replaces .cc5-player wholesale, so a live Topics-and-Text
+            // narration sync is left driving detached nodes - the visible cards stop
+            // revealing and the activity block never opens. navigateToSlide() tore it
+            // down, but ~24 other call sites reach render() directly (the activity
+            // "Retry" button and the image apply/remove handlers among them). Tearing it
+            // down here covers all of them; setupVoiceoverSync() re-arms on the next play.
+            this.teardownVoiceoverSync();
+            if (this.currentView === 'topics') {
                 // v12.21: Block the topic page until ALL voiceovers are ready.
                 // If audio is still being generated, show a waiting screen instead.
                 if (this.isVoiceoverGenerationPending()) {
@@ -4040,7 +4048,20 @@ define([
                                 if (front && back) _flipItems.push({ front: front, back: back });
                             });
                         }
-                        if (c.cardType === 'competency-summary') {
+                        // v13.92: Topics-and-Text feeds the same three-activity block as
+                        // every other route, but from its own fields - keyTerms on the
+                        // Key Concepts card become the flip cards, and goodItems/badItems
+                        // on the Key Takeaways card become the category sort.
+                        if (c.keyTerms && c.keyTerms.length &&
+                            /^(key-concepts|foundations)$/.test(c.cardType || '')) {
+                            c.keyTerms.forEach(function(t) {
+                                var front = (typeof t === 'string') ? t : (t.term || t.title || '');
+                                var back  = (typeof t === 'string') ? '' : (t.definition || t.text || '');
+                                if (front && back) _flipItems.push({ front: front, back: back });
+                            });
+                        }
+                        if (c.cardType === 'competency-summary' || c.cardType === 'key-takeaways' ||
+                            c.cardType === 'boundaries') {
                             (c.goodItems || []).forEach(function(gi) {
                                 var t = typeof gi === 'string' ? gi : (gi.text || gi.behaviour || gi.criterion || '');
                                 if (t) _sortItems.push({ text: t, category: 'good' });
@@ -4076,29 +4097,95 @@ define([
                         }
                     }
 
-                    // v13.91: Topics-and-Text renders its five prose sections two across.
-                    // Detected from the cards themselves rather than from a mode flag, so a
-                    // saved manifest renders correctly even if the route metadata is absent.
-                    var _PROSE_TYPES = /^(orientation|foundations|mechanism|in-practice|boundaries)$/;
-                    var _isProsePack = _renderCards.length > 0 && _renderCards.every(function(c) {
+                    // v13.92: Topics-and-Text renders its four prose cards two across, and
+                    // reveals them ONE AT A TIME - each slides gently up into place, is
+                    // narrated, and offers a "Next Card" button. Detected from the cards
+                    // themselves rather than from a mode flag, so a saved manifest renders
+                    // correctly even when its route metadata is absent.
+                    //
+                    // The decision-point is deliberately rendered OUTSIDE the grid: it is
+                    // not a prose card, it is the activity block, and it stays hidden until
+                    // the last card has been revealed.
+                    var _PROSE_TYPES = /^(overview|key-concepts|examples-application|key-takeaways|orientation|foundations|mechanism|in-practice|boundaries)$/;
+                    var _proseCards = _renderCards.filter(function(c) {
                         return c && c.cardType && _PROSE_TYPES.test(c.cardType);
                     });
-                    if (_isProsePack) { html += '<div class="cc5-prose-grid">'; }
+                    var _isProsePack = _proseCards.length > 0 && _renderCards.every(function(c) {
+                        return c && c.cardType && (_PROSE_TYPES.test(c.cardType) || c.cardType === 'decision-point');
+                    });
+                    var _proseHasActivities = _isProsePack && self.activitiesEnabled &&
+                        _renderCards.some(function(c) { return c.cardType === 'decision-point'; });
+                    var _proseSeq = 0;
+                    var _proseGridClosed = false;
+
+                    // v13.92: stamp each rendered card with its index into section.cards,
+                    // so the voiceover sync can find "the card being narrated" without
+                    // every renderer having to be edited. _renderCards is a SORTED copy
+                    // (decision-point pushed last) while the narration is built in
+                    // section.cards order, so the index has to come from the original
+                    // array, not from the render loop counter.
+                    var _origCards = section.cards || [];
+                    var _voIndexOf = function(card) {
+                        for (var i = 0; i < _origCards.length; i++) {
+                            if (_origCards[i] === card) { return i; }
+                        }
+                        return -1;
+                    };
+                    var _stampVoCard = function(cardHtml, voIdx) {
+                        if (voIdx < 0 || !cardHtml) { return cardHtml; }
+                        // Every route-card renderer opens with '<div class="cc5-card ...'.
+                        return cardHtml.replace(/^(\s*<div\b)/, '$1 data-vo-card="' + voIdx + '"');
+                    };
+
+                    if (_isProsePack) {
+                        html += '<div class="cc5-prose-grid" data-prose-seq="1" data-prose-total="'
+                             + _proseCards.length + '" data-section-id="'
+                             + escapeHtml(String(section.slideId || section.id || '')) + '">';
+                    }
 
                     _renderCards.forEach(function(card, cardIdx) {
                         if (card.cardType) {
                             // v11.10: decision-point becomes the 3-activity challenge
                             // v11.11: skip challenge rendering when activities are disabled
                             if (card.cardType === 'decision-point' && self.activitiesEnabled) {
-                                html += CcCardSlots.renderDecisionChallenge(card, _flipItems, _sortItems, _sortLabels, self.quizVoiceEnabled);
+                                // v13.92: close the prose grid first, then wrap the activity
+                                // block so it can be revealed after the final card.
+                                // _proseGridClosed guards against a second decision-point:
+                                // nothing in the pipeline should produce one, but a bare
+                                // extra '</div>' would close the slide container and break
+                                // the whole page, which is too high a price for trusting it.
+                                if (_isProsePack && !_proseGridClosed) {
+                                    html += '</div>';
+                                    _proseGridClosed = true;
+                                    html += '<div class="cc5-prose-activities cc5-prose-hidden" aria-hidden="true">';
+                                    html += CcCardSlots.renderDecisionChallenge(card, _flipItems, _sortItems, _sortLabels, self.quizVoiceEnabled);
+                                    html += '</div>';
+                                } else if (!_isProsePack) {
+                                    html += CcCardSlots.renderDecisionChallenge(card, _flipItems, _sortItems, _sortLabels, self.quizVoiceEnabled);
+                                }
                             } else if (card.cardType === 'decision-point' && !self.activitiesEnabled) {
                                 // Activities disabled  -  skip decision-point card entirely
+                                if (_isProsePack && !_proseGridClosed) {
+                                    html += '</div>';
+                                    _proseGridClosed = true;
+                                }
+                            } else if (_isProsePack) {
+                                html += _stampVoCard(self.renderRouteCard(card, {
+                                    index: _proseSeq,
+                                    total: _proseCards.length,
+                                    hasActivities: _proseHasActivities
+                                }), _voIndexOf(card));
+                                _proseSeq++;
                             } else {
-                                html += self.renderRouteCard(card);
+                                html += _stampVoCard(self.renderRouteCard(card), _voIndexOf(card));
                             }
                         }
                     });
-                    if (_isProsePack) { html += '</div>'; }
+                    // Close the grid when no decision-point closed it for us.
+                    if (_isProsePack && !_proseGridClosed) {
+                        html += '</div>';
+                        _proseGridClosed = true;
+                    }
                 } else if (section.cardType) {
                     html += this.renderRouteCard(section);
                 }
@@ -4159,7 +4246,393 @@ define([
         renderApplicationGuide: function(section) { return CcCardSlots.renderApplicationGuide(section); },
         renderCommonPitfalls: function(section) { return CcCardSlots.renderCommonPitfalls(section); },
         renderPDScenarioCard: function(section) { return CcCardSlots.renderPDScenarioCard(section); },
-        renderRouteCard: function(section) { return CcCardSlots.renderRouteCard(section); },
+
+        // ===================================================================
+        // v13.92: TOPICS-AND-TEXT SEQUENTIAL REVEAL + NARRATION SYNC
+        //
+        // Cards do not all appear at once. Card 1 slides gently up on arrival; when
+        // its narration finishes the next card slides up, and so on, with the
+        // paragraph currently being read lifted slightly to show focus. A "Next Card"
+        // button on each card does the same thing by hand, so the route works
+        // identically with audio off, muted, or blocked by the browser.
+        //
+        // Timing comes from the audio itself. The narration script for these sections
+        // is built by CcState.buildProseVoiceoverSegments() - the fixed heading, then
+        // each paragraph verbatim - so the segment list here is the SAME list that was
+        // sent to TTS, in the same order. Each segment gets a share of the audio
+        // duration proportional to its word count. That is an approximation, but a
+        // close one on speech synthesised at a constant rate, and it degrades
+        // gracefully: if it drifts by a beat, a card reveals a moment early or late
+        // and nothing breaks.
+        //
+        // Deliberately restrained, per the owner: a slow slide up, a soft shadow, a
+        // 3px lift on the focused paragraph. No scaling, no bouncing, no colour flash.
+        // ===================================================================
+
+        /**
+         * Reveal one prose card.
+         *
+         * @param {Object}  $grid    jQuery wrapper for .cc5-prose-grid.
+         * @param {Number}  index    0-based card index to reveal.
+         * @param {Boolean} scrollTo Whether to bring the card into view.
+         * @return {void}
+         */
+        revealProseCard: function($grid, index, scrollTo) {
+            if (!$grid || !$grid.length || isNaN(index)) { return; }
+            var $card = $grid.find('.cc5-prose-card[data-prose-index="' + index + '"]');
+            if (!$card.length) { return; }
+            // Reveal every card up to this one, so a jump forward never leaves a hole.
+            for (var i = 0; i <= index; i++) {
+                var $c = $grid.find('.cc5-prose-card[data-prose-index="' + i + '"]');
+                if ($c.hasClass('cc5-prose-hidden')) {
+                    $c.removeClass('cc5-prose-hidden').removeAttr('aria-hidden');
+                }
+            }
+            $grid.find('.cc5-prose-card').removeClass('cc5-prose-active');
+            $card.addClass('cc5-prose-active');
+            // The button on the card we just left has done its job.
+            $grid.find('.cc5-prose-card[data-prose-index="' + (index - 1) + '"] .cc5-prose-next-btn')
+                .addClass('cc5-prose-btn-used');
+            if (scrollTo && $card[0] && typeof $card[0].scrollIntoView === 'function') {
+                try {
+                    $card[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } catch (e) {
+                    $card[0].scrollIntoView(false);
+                }
+            }
+        },
+
+        /**
+         * Reveal the three-activity block that follows the four prose cards.
+         *
+         * @param {Object} $grid jQuery wrapper for .cc5-prose-grid.
+         * @return {void}
+         */
+        revealProseActivities: function($grid) {
+            // A length-0 set is not a usable anchor: nextAll() on it returns nothing and
+            // a container-wide search would reveal an unrelated block if a slide ever
+            // renders more than one section. Bail instead of guessing.
+            if (!$grid || !$grid.length) { return; }
+            var $block = $grid.nextAll('.cc5-prose-activities').first();
+            if (!$block.length) { return; }
+            $block.removeClass('cc5-prose-hidden').removeAttr('aria-hidden');
+            $grid.find('.cc5-prose-final-btn').addClass('cc5-prose-btn-used');
+            if ($block[0] && typeof $block[0].scrollIntoView === 'function') {
+                try {
+                    $block[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } catch (e) {
+                    $block[0].scrollIntoView(false);
+                }
+            }
+        },
+
+        /**
+         * Lift the paragraph currently being narrated.
+         *
+         * @param {Object} $grid     jQuery wrapper for .cc5-prose-grid.
+         * @param {Number} cardIndex Card holding the paragraph, or -1 to clear.
+         * @param {Number} paraIndex Paragraph within that card, or -1 for none.
+         * @return {void}
+         */
+        focusProseParagraph: function($grid, cardIndex, paraIndex) {
+            if (!$grid || !$grid.length) { return; }
+            $grid.find('.cc5-prose-para.cc5-para-focus').removeClass('cc5-para-focus');
+            if (cardIndex < 0 || paraIndex < 0) { return; }
+            $grid.find('.cc5-prose-card[data-prose-index="' + cardIndex + '"]')
+                 .find('.cc5-prose-para[data-para-index="' + paraIndex + '"]')
+                 .addClass('cc5-para-focus');
+        },
+
+        /**
+         * Clear any running narration sync and its visual state.
+         *
+         * @return {void}
+         */
+        teardownVoiceoverSync: function() {
+            if (this._proseSync && this._proseSync.audio) {
+                try {
+                    this._proseSync.audio.removeEventListener('timeupdate', this._proseSync.onTick);
+                    this._proseSync.audio.removeEventListener('pause', this._proseSync.onPause);
+                    this._proseSync.audio.removeEventListener('play', this._proseSync.onPlay);
+                } catch (e) {
+                    // Audio element already gone; nothing to detach.
+                }
+            }
+            if (this._proseSync && this._proseSync.$grid) {
+                this._proseSync.$grid.find('.cc5-prose-para.cc5-para-focus').removeClass('cc5-para-focus');
+                this._proseSync.$grid.find('.cc5-prose-card').removeClass('cc5-prose-speaking');
+                this._proseSync.$grid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
+                // The card-level sync stores the cards themselves in $grid, so clear the
+                // class on the set as well as inside it.
+                this._proseSync.$grid.removeClass('cc5-vo-speaking');
+                this._proseSync.$grid.find('.cc5-vo-speaking').removeClass('cc5-vo-speaking');
+            }
+            this._proseSync = null;
+        },
+
+        /**
+         * Drive the card reveal and paragraph focus from the section's audio.
+         *
+         * @param {Object} audio   The HTMLAudioElement now playing.
+         * @param {Object} section The manifest section being narrated.
+         * @return {void}
+         */
+        /**
+         * v13.92: the card-level half of the same idea, for the OTHER four routes.
+         *
+         * Topics-and-Text reveals cards and lifts the paragraph being read. The other
+         * routes cannot do the paragraph half honestly - they narrate structural
+         * sub-elements, and timing a five-word step title off a proportional split is
+         * visibly loose - but "which card is being read" is a 60-110 word question, which
+         * the same proportional split answers well. So those routes get the active-card
+         * treatment and the green speaker, and nothing else: no reveal gating, because
+         * their cards are interactive and their sequence is a narrative.
+         *
+         * The speaker chip is injected here rather than added to nine card renderers.
+         * It only exists while a section is being narrated, and it lands in the flow
+         * badge the unified cards already carry, or the card header on the legacy types.
+         *
+         * @param {Object} audio   The HTMLAudioElement now playing.
+         * @param {Object} section The manifest section being narrated.
+         * @return {void}
+         */
+        setupCardVoiceoverSync: function(audio, section) {
+            var self = this;
+            if (!audio || !section || !CcState.buildCardVoiceoverSegments) { return; }
+
+            var segments = CcState.buildCardVoiceoverSegments(section, this.manifest);
+            if (!segments.length) { return; }
+
+            var $cards = this.container.find('[data-vo-card]');
+            if (!$cards.length) { return; }
+
+            // Inject the chip once per card, into whichever header that card type has.
+            var chip = '<span class="cc5-vo-chip" aria-hidden="true">'
+                + '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" '
+                + 'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                + '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>'
+                + '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>'
+                + '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>';
+            $cards.each(function() {
+                var $c = $(this);
+                if ($c.find('.cc5-vo-chip, .cc5-prose-vo-dot').length) { return; }
+                var $host = $c.children('.cc5-flow-badge').first();
+                if (!$host.length) { $host = $c.children('.cc5-card-header').first(); }
+                if ($host.length) { $host.append(chip); } else { $c.prepend(chip); }
+            });
+
+            var weights = segments.map(function(seg) { return Math.max(1, seg.words); });
+            var totalWeight = weights.reduce(function(a, b) { return a + b; }, 0);
+            var FALLBACK_WPS = 2.6;
+
+            var state = {
+                audio: audio,
+                $grid: $cards,
+                segments: segments,
+                bounds: null,
+                estimated: false,
+                lastSeg: -1,
+                onTick: null,
+                onPause: null,
+                onPlay: null
+            };
+
+            var computeBounds = function() {
+                var duration = audio.duration;
+                var usable = !!duration && isFinite(duration) && duration > 0;
+                state.estimated = !usable;
+                if (!usable) { duration = totalWeight / FALLBACK_WPS; }
+                var bounds = [];
+                var acc = 0;
+                for (var i = 0; i < weights.length; i++) {
+                    acc += (weights[i] / totalWeight) * duration;
+                    bounds.push(acc);
+                }
+                return bounds;
+            };
+
+            var mark = function(idx) {
+                var seg = state.segments[idx];
+                $cards.removeClass('cc5-vo-speaking');
+                if (!seg) { return; }
+                $cards.filter('[data-vo-card="' + seg.cardIndex + '"]').addClass('cc5-vo-speaking');
+            };
+
+            state.onTick = function() {
+                if (!state.bounds || state.estimated) {
+                    var recomputed = computeBounds();
+                    if (recomputed) { state.bounds = recomputed; }
+                    if (!state.bounds) { return; }
+                }
+                var t = audio.currentTime;
+                var idx = 0;
+                while (idx < state.bounds.length - 1 && t > state.bounds[idx]) { idx++; }
+                if (idx === state.lastSeg) { return; }
+                state.lastSeg = idx;
+                mark(idx);
+            };
+            state.onPause = function() { $cards.removeClass('cc5-vo-speaking'); };
+            state.onPlay  = function() { mark(state.lastSeg); };
+
+            audio.addEventListener('timeupdate', state.onTick);
+            audio.addEventListener('pause', state.onPause);
+            audio.addEventListener('play', state.onPlay);
+            this._proseSync = state;
+            mark(0);
+            state.lastSeg = 0;
+        },
+
+        /**
+         * Entry point: arm whichever narration sync this section can support.
+         *
+         * Topics-and-Text gets the fine-grained treatment - sequential card reveal plus
+         * the paragraph being read lifted into focus. Every other route gets the
+         * card-level one: which card is being narrated, and nothing else.
+         *
+         * @param {Object} audio   The HTMLAudioElement now playing.
+         * @param {Object} section The manifest section being narrated.
+         * @return {void}
+         */
+        setupVoiceoverSync: function(audio, section) {
+            var self = this;
+            this.teardownVoiceoverSync();
+            if (!audio || !section) { return; }
+            if (!CcState.isProseSection || !CcState.isProseSection(section)) {
+                this.setupCardVoiceoverSync(audio, section);
+                return;
+            }
+
+            // Address by section id when the section has one - the same reason
+            // revealProseActivities() refuses to guess. Only one section renders per
+            // slide today, so .first() is the correct fallback rather than a bug.
+            var _sid = String(section.slideId || section.id || '');
+            var $grid = _sid
+                ? this.container.find('.cc5-prose-grid[data-section-id="' + _sid.replace(/"/g, '') + '"]').first()
+                : $();
+            if (!$grid.length) {
+                $grid = this.container.find('.cc5-prose-grid[data-prose-seq]').first();
+            }
+            if (!$grid.length) { return; }
+
+            var segments = CcState.buildProseVoiceoverSegments(section);
+            if (!segments.length) { return; }
+
+            // Word count per segment, floored at 1 so a one-word heading still gets a
+            // slice of the timeline rather than a zero-length one.
+            var weights = segments.map(function(seg) {
+                return Math.max(1, String(seg.text || '').split(/\s+/).filter(Boolean).length);
+            });
+            var totalWeight = weights.reduce(function(a, b) { return a + b; }, 0);
+
+            var state = {
+                audio: audio,
+                $grid: $grid,
+                segments: segments,
+                weights: weights,
+                totalWeight: totalWeight,
+                bounds: null,
+                estimated: false,
+                lastSeg: -1,
+                onTick: null,
+                onPause: null,
+                onPlay: null
+            };
+
+            // Words per second of synthesised speech. Only used when the audio element
+            // will not tell us its duration - see computeBounds().
+            var FALLBACK_WPS = 2.6;
+
+            // Cumulative end time of each segment.
+            //
+            // audio.duration is NaN until metadata loads, which is why this is computed
+            // lazily on the first usable tick rather than up front. It can also be
+            // Infinity forever: audio is played from a base64 data URL, and an Ogg or
+            // WebM stream served without a duration header reports Infinity in Chrome and
+            // never resolves. Returning null in that case would mean NO card ever
+            // reveals, no paragraph ever lifts and no speaker ever pulses for the whole
+            // section - an all-or-nothing failure, not the graceful drift this is
+            // supposed to degrade into. So an unusable duration falls back to a
+            // words-per-second estimate, which is what the proportional split
+            // approximates anyway.
+            var computeBounds = function() {
+                var duration = audio.duration;
+                var usable = !!duration && isFinite(duration) && duration > 0;
+                state.estimated = !usable;
+                if (!usable) {
+                    duration = totalWeight / FALLBACK_WPS;
+                }
+                var bounds = [];
+                var acc = 0;
+                for (var i = 0; i < weights.length; i++) {
+                    acc += (weights[i] / totalWeight) * duration;
+                    bounds.push(acc);
+                }
+                return bounds;
+            };
+
+            state.onTick = function() {
+                // Recompute while the bounds are only an estimate: Chrome reports
+                // Infinity for a header-less Ogg/WebM data URL at first, and may resolve
+                // a real duration moments later. Caching the guess forever would run the
+                // whole section off a words-per-second approximation even when the exact
+                // figure was available a beat later.
+                if (!state.bounds || state.estimated) {
+                    var recomputed = computeBounds();
+                    if (recomputed) { state.bounds = recomputed; }
+                    if (!state.bounds) { return; }
+                }
+                var t = audio.currentTime;
+                var idx = 0;
+                while (idx < state.bounds.length - 1 && t > state.bounds[idx]) { idx++; }
+                if (idx === state.lastSeg) { return; }
+                state.lastSeg = idx;
+                var seg = state.segments[idx];
+                if (!seg) { return; }
+                self.revealProseCard($grid, seg.cardIndex, false);
+                self.focusProseParagraph($grid, seg.cardIndex, seg.kind === 'para' ? seg.paraIndex : -1);
+                // Green pulsing speaker on the card being read, and only that card.
+                $grid.find('.cc5-prose-card').removeClass('cc5-prose-speaking');
+                var $speaking = $grid.find('.cc5-prose-card[data-prose-index="' + seg.cardIndex + '"]');
+                $speaking.addClass('cc5-prose-speaking');
+                // v13.92: the moment the previous card's narration finished, this card slid
+                // in - so nudge its button too, or a learner listening rather than watching
+                // has no signal that there is something to click.
+                $grid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
+                $speaking.find('.cc5-prose-next-btn:not(.cc5-prose-btn-used)')
+                         .addClass('cc5-prose-btn-ready');
+            };
+
+            // v13.92: while the learner has the audio paused, nothing is being narrated -
+            // so the green speaker must stop pulsing and the button must stop nudging.
+            // Both resume on play. The card stays revealed and the paragraph stays
+            // highlighted, which is the correct reading of "paused here".
+            state.onPause = function() {
+                $grid.find('.cc5-prose-card').removeClass('cc5-prose-speaking');
+                $grid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
+            };
+            state.onPlay = function() {
+                var seg = state.segments[state.lastSeg];
+                if (!seg) { return; }
+                var $card = $grid.find('.cc5-prose-card[data-prose-index="' + seg.cardIndex + '"]');
+                $card.addClass('cc5-prose-speaking');
+                // Restore the button nudge too. onTick only re-applies it when the
+                // segment index CHANGES, so resuming mid-segment would otherwise leave it
+                // off until the next segment boundary - or for good, on the last one.
+                $card.find('.cc5-prose-next-btn:not(.cc5-prose-btn-used)')
+                     .addClass('cc5-prose-btn-ready');
+            };
+
+            audio.addEventListener('timeupdate', state.onTick);
+            audio.addEventListener('pause', state.onPause);
+            audio.addEventListener('play', state.onPlay);
+            this._proseSync = state;
+
+            // Card 1 is on screen from the start; mark it active so it reads as the
+            // one in play rather than as one of four identical cards.
+            this.revealProseCard($grid, 0, false);
+        },
+
+        renderRouteCard: function(section, seqOpts) { return CcCardSlots.renderRouteCard(section, seqOpts); },
         renderBeforeYouStartCard: function(checklistItems) { return CcCardSlots.renderBeforeYouStartCard(checklistItems); },
         renderDocActivity: function(docActivity) { return CcCardSlots.renderDocActivity(docActivity); },
         renderAccentCards: function(section, linkedDocsTracker) { return CcCardSlots.renderAccentCards(section, linkedDocsTracker); },
@@ -4982,6 +5455,26 @@ define([
                         if (!card.cardType) return;
                         lines.push('Card Type: ' + card.cardType);
                         if (card.heading) lines.push('  ' + fixGrammar(card.heading));
+
+                        // v13.92: Topics-and-Text keeps its body in paragraphs[], and
+                        // nothing here read it - so the one route that is nothing BUT
+                        // text exported with no text in it. The fixed heading is written
+                        // out too, since the card does not carry one.
+                        if (CcState.PROSE_CARD_TYPES && CcState.PROSE_CARD_TYPES.indexOf(card.cardType) >= 0) {
+                            var _pHead = (CcState.PROSE_HEADINGS || {})[card.cardType];
+                            if (_pHead) { lines.push('  ' + _pHead); }
+                            CcState.proseParagraphs(card).forEach(function(para) {
+                                lines.push('    ' + fixGrammar(para));
+                                lines.push('');
+                            });
+                            if (card.keyTerms && card.keyTerms.length) {
+                                lines.push('  ' + (getLabel('keyTerms') || 'Key Terms') + ':');
+                                card.keyTerms.forEach(function(t) {
+                                    if (t && t.term) { lines.push('    ' + t.term + ': ' + fixGrammar(t.definition || '')); }
+                                });
+                                lines.push('');
+                            }
+                        }
 
                         // v11.08 FIX: Unified card fields  -  sceneParts (hook/applied), conceptInsights,
                         // items (mistakes), goodItems/badItems (competency-summary), question/options (decision-point)
@@ -8819,6 +9312,26 @@ define([
                 self.render();
             });
             
+            // ===============================================================
+            // v13.92: Topics-and-Text sequential card reveal.
+            //
+            // "Next Card" advances by hand. When voiceover is playing, the reveal
+            // advances itself from the audio timeline (see setupVoiceoverSync) and this
+            // button is the manual path for a learner with audio muted or finished.
+            // ===============================================================
+            this.container.on('click', '.cc5-prose-next-btn', function(e) {
+                e.preventDefault();
+                var $btn = $(this);
+                var target = $btn.attr('data-prose-next');
+                var $grid = $btn.closest('.cc5-prose-grid');
+                $btn.removeClass('cc5-prose-btn-ready');
+                if (target === 'activities') {
+                    self.revealProseActivities($grid);
+                } else {
+                    self.revealProseCard($grid, parseInt(target, 10), true);
+                }
+            });
+
             // Back button click (v6.7.54: Always enabled, no disabled check needed)
             this.container.on('click', '.cc5-back-btn', function(e) {
                 e.preventDefault();
@@ -8830,6 +9343,7 @@ define([
                     self.currentAudio.pause();
                     self.currentAudio = null;
                 }
+                self.teardownVoiceoverSync(); // v13.92
                 self.currentView = 'topics';
                 self.currentTopicId = null;
                 self.saveSessionState(); // v6.6.88: Save state for page reload
@@ -8943,6 +9457,7 @@ define([
                         self.currentAudio.pause();
                         self.currentAudio = null;
                     }
+                    self.teardownVoiceoverSync(); // v13.92
                     self.currentAudioSectionId = null;
                     self.currentView = 'topics';
                     self.currentTopicId = null;
@@ -10327,6 +10842,46 @@ define([
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-card-keyterm-item').remove();
             });
+            // v13.92: Topics-and-Text prose card rows.
+            $(document).on('click', '.cc5-edit-add-prose-para', function(e) {
+                e.preventDefault();
+                var list = $(this).siblings('.cc5-edit-prose-paras');
+                var idx = list.find('.cc5-edit-prose-para').length;
+                list.append('<textarea class="cc5-edit-prose-para" rows="5" data-idx="' + idx +
+                    '" placeholder="Paragraph ' + (idx + 1) + '" style="margin-bottom:8px;"></textarea>');
+            });
+            $(document).on('click', '.cc5-edit-add-prose-term', function(e) {
+                e.preventDefault();
+                var list = $(this).siblings('.cc5-edit-prose-terms-list');
+                var idx = list.find('.cc5-edit-prose-term-item').length;
+                var row = '<div class="cc5-edit-prose-term-item" data-idx="' + idx + '">';
+                row += '<input type="text" class="cc5-edit-prose-term-name" placeholder="Term" value="">';
+                row += '<input type="text" class="cc5-edit-prose-term-def" placeholder="Definition" value="">';
+                row += '<button type="button" class="cc5-edit-remove-prose-term" title="Remove">' + getIcon('x') + '</button>';
+                row += '</div>';
+                list.append(row);
+            });
+            $(document).on('click', '.cc5-edit-remove-prose-term', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                $(this).closest('.cc5-edit-prose-term-item').remove();
+            });
+            ['good', 'bad'].forEach(function(kind) {
+                $(document).on('click', '.cc5-edit-add-prose-' + kind, function(e) {
+                    e.preventDefault();
+                    var list = $(this).siblings('.cc5-edit-prose-' + kind + '-list');
+                    var idx = list.find('.cc5-edit-prose-' + kind + '-item').length;
+                    var row = '<div class="cc5-edit-prose-' + kind + '-item" data-idx="' + idx + '">';
+                    row += '<input type="text" class="cc5-edit-prose-' + kind + '-text" placeholder="Statement" value="">';
+                    row += '<button type="button" class="cc5-edit-remove-prose-item" title="Remove">' + getIcon('x') + '</button>';
+                    row += '</div>';
+                    list.append(row);
+                });
+            });
+            $(document).on('click', '.cc5-edit-remove-prose-item', function(e) {
+                e.preventDefault(); e.stopPropagation();
+                $(this).closest('[class*="cc5-edit-prose-"]').remove();
+            });
+
             // theoretical-framework
             $(document).on('click', '.cc5-edit-add-framework', function(e) {
                 e.preventDefault();
@@ -11461,6 +12016,10 @@ define([
                 this.currentAudio.pause();
                 this.currentAudio = null;
             }
+            // v13.92: drop the Topics-and-Text narration sync with the audio it was
+            // driving. The listener would otherwise outlive the slide, holding a
+            // reference to a grid that render() is about to replace.
+            this.teardownVoiceoverSync();
             // v10.43c FIX-NAV-AUDIO: always clear currentAudioSectionId on navigation.
             // Previously only currentAudio was nulled, leaving a stale sectionId that could
             // confuse the "different-section audio guard" in playVoiceover on subsequent slides.
@@ -12308,7 +12867,27 @@ define([
                     'applied-scenario':  'Card 4  -  On the Job',
                     'mistakes':          'Card 5  -  Watch Out For',
                     'competency-summary':'Card 6  -  You Are Ready When You Can',
-                    'decision-point':    'Card 7  -  Your Decision'
+                    'decision-point':    'Card 7  -  Your Decision',
+                    // v13.92: Topics-and-Text. Its decision-point is card 5, not card 7,
+                    // but the map is keyed by type so the generic label would read
+                    // "Card 7" on a four-card route. Named without a number instead.
+                    'overview':             'Overview',
+                    'key-concepts':         'Key Concepts',
+                    'examples-application': 'Examples & Application',
+                    'key-takeaways':        'Key Takeaways'
+                };
+                // v13.92: the four prose slots (plus the v13.91 names still in saved
+                // modules). Their heading is fixed by the renderer and their narration is
+                // the paragraphs read verbatim, so neither Card Title nor Voiceover Script
+                // applies to them - both are replaced below with an explanation.
+                var _PROSE_EDIT_TYPES = ['overview', 'key-concepts', 'examples-application', 'key-takeaways',
+                    'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'];
+                var _PROSE_EDIT_HEADINGS = {
+                    'overview': 'Overview', 'key-concepts': 'Key Concepts',
+                    'examples-application': 'Examples & Application', 'key-takeaways': 'Key Takeaways',
+                    'orientation': 'Overview', 'foundations': 'Key Concepts',
+                    'mechanism': 'How It Works', 'in-practice': 'Examples & Application',
+                    'boundaries': 'Key Takeaways'
                 };
                 html += '<div class="cc5-edit-field">';
                 html += '<h4 class="cc5-edit-section-title" style="margin:12px 0 4px;font-size:0.95rem;font-weight:700;color:var(--cc5-accent,#6366f1);">Individual Card Content</h4>';
@@ -12332,17 +12911,89 @@ define([
                     html += '</summary>';
                     html += '<div style="padding:0 12px 12px;">';
 
-                    // Card title
-                    html += '<div class="cc5-edit-field">';
-                    html += '<label>Card Title</label>';
-                    html += '<input type="text" class="cc5-edit-card-title" value="' + escapeHtml(card.title || '') + '">';
-                    html += '</div>';
+                    var _isProseCard = _PROSE_EDIT_TYPES.indexOf(ct) !== -1;
 
-                    // Card voiceover
-                    html += '<div class="cc5-edit-field">';
-                    html += '<label>Voiceover Script <small>(read aloud for this card)</small></label>';
-                    html += '<textarea class="cc5-edit-card-voiceover" rows="3">' + escapeHtml(card.voiceoverText || '') + '</textarea>';
-                    html += '</div>';
+                    if (_isProseCard) {
+                        // v13.92: heading is fixed and narration is the paragraphs read
+                        // verbatim. Both inputs are still emitted, hidden and empty, because
+                        // the save collector reads .val() on them unconditionally.
+                        html += '<div class="cc5-edit-field">';
+                        html += '<label>Heading <small>(fixed for this route)</small></label>';
+                        html += '<input type="text" value="' + escapeHtml(_PROSE_EDIT_HEADINGS[ct] || '') + '" disabled>';
+                        html += '<p style="font-size:0.75rem;opacity:0.7;margin:4px 0 0;">The four headings are the same on every topic and never carry the topic name.</p>';
+                        html += '</div>';
+                        html += '<input type="hidden" class="cc5-edit-card-title" value="">';
+                        html += '<textarea class="cc5-edit-card-voiceover" style="display:none;"></textarea>';
+                        html += '<p style="font-size:0.75rem;opacity:0.7;margin:0 0 10px;">Narration reads the paragraphs below word for word, so the card reveal and the highlighted paragraph stay in step with the audio. Edit the paragraphs and the voiceover follows.</p>';
+                    } else {
+                        // Card title
+                        html += '<div class="cc5-edit-field">';
+                        html += '<label>Card Title</label>';
+                        html += '<input type="text" class="cc5-edit-card-title" value="' + escapeHtml(card.title || '') + '">';
+                        html += '</div>';
+
+                        // Card voiceover
+                        html += '<div class="cc5-edit-field">';
+                        html += '<label>Voiceover Script <small>(read aloud for this card)</small></label>';
+                        html += '<textarea class="cc5-edit-card-voiceover" rows="3">' + escapeHtml(card.voiceoverText || '') + '</textarea>';
+                        html += '</div>';
+                    }
+
+                    // -- v13.92 Topics-and-Text: paragraphs, plus the fields that feed
+                    // the flip cards and the category sort ------------------------
+                    if (_isProseCard) {
+                        var _pParas = Array.isArray(card.paragraphs) ? card.paragraphs.slice() : [];
+                        _pParas = _pParas.map(function(p) {
+                            return typeof p === 'string' ? p : ((p && (p.text || p.paragraph || p.body)) || '');
+                        });
+                        while (_pParas.length < 2) { _pParas.push(''); }
+                        html += '<div class="cc5-edit-field">';
+                        html += '<label>Paragraphs <small>(two, 55-70 words each)</small></label>';
+                        html += '<div class="cc5-edit-prose-paras">';
+                        _pParas.forEach(function(para, pIdx) {
+                            html += '<textarea class="cc5-edit-prose-para" rows="5" data-idx="' + pIdx + '" ' +
+                                'placeholder="Paragraph ' + (pIdx + 1) + '" style="margin-bottom:8px;">' +
+                                escapeHtml(para) + '</textarea>';
+                        });
+                        html += '</div>';
+                        html += '<button type="button" class="cc5-edit-add-btn cc5-edit-add-prose-para">' + getIcon('plus') + ' Add Paragraph</button>';
+                        html += '</div>';
+
+                        if (ct === 'key-concepts' || ct === 'foundations') {
+                            html += '<div class="cc5-edit-field">';
+                            html += '<label>Key Terms <small>(become the Flip &amp; Learn cards)</small></label>';
+                            html += '<div class="cc5-edit-prose-terms-list">';
+                            (card.keyTerms || []).forEach(function(t, tIdx) {
+                                html += '<div class="cc5-edit-prose-term-item" data-idx="' + tIdx + '">';
+                                html += '<input type="text" class="cc5-edit-prose-term-name" placeholder="Term" value="' + escapeHtml(t.term || '') + '">';
+                                html += '<input type="text" class="cc5-edit-prose-term-def" placeholder="Definition" value="' + escapeHtml(t.definition || '') + '">';
+                                html += '<button type="button" class="cc5-edit-remove-prose-term" title="Remove">' + getIcon('x') + '</button>';
+                                html += '</div>';
+                            });
+                            html += '</div>';
+                            html += '<button type="button" class="cc5-edit-add-btn cc5-edit-add-prose-term">' + getIcon('plus') + ' Add Term</button>';
+                            html += '</div>';
+                        }
+
+                        if (ct === 'key-takeaways' || ct === 'boundaries') {
+                            [['good', 'Sound Understanding', card.goodItems], ['bad', 'Common Misconceptions', card.badItems]].forEach(function(pair) {
+                                var kind = pair[0];
+                                html += '<div class="cc5-edit-field">';
+                                html += '<label>' + pair[1] + ' <small>(become the Category Sort items)</small></label>';
+                                html += '<div class="cc5-edit-prose-' + kind + '-list">';
+                                (pair[2] || []).forEach(function(it, iIdx) {
+                                    var txt = typeof it === 'string' ? it : ((it && it.text) || '');
+                                    html += '<div class="cc5-edit-prose-' + kind + '-item" data-idx="' + iIdx + '">';
+                                    html += '<input type="text" class="cc5-edit-prose-' + kind + '-text" placeholder="Statement" value="' + escapeHtml(txt) + '">';
+                                    html += '<button type="button" class="cc5-edit-remove-prose-item" title="Remove">' + getIcon('x') + '</button>';
+                                    html += '</div>';
+                                });
+                                html += '</div>';
+                                html += '<button type="button" class="cc5-edit-add-btn cc5-edit-add-prose-' + kind + '">' + getIcon('plus') + ' Add Item</button>';
+                                html += '</div>';
+                            });
+                        }
+                    }
 
                     // -- hook-scenario / applied-scenario ----------------------
                     // v10.47: sceneParts[] (JSON format) takes priority over flat text beats (legacy).
@@ -13064,6 +13715,41 @@ define([
                         title:        _blk.find('.cc5-edit-card-title').val().trim(),
                         voiceoverText:_blk.find('.cc5-edit-card-voiceover').val().trim()
                     });
+                    // v13.92: Topics-and-Text prose cards.
+                    if (['overview','key-concepts','examples-application','key-takeaways',
+                         'orientation','foundations','mechanism','in-practice','boundaries'].indexOf(_ct) !== -1) {
+                        var _pParas = [];
+                        _blk.find('.cc5-edit-prose-para').each(function() {
+                            var t = $(this).val().trim();
+                            if (t) { _pParas.push(t); }
+                        });
+                        // Only overwrite when the author left something behind. An
+                        // accidental clear-all must not silently empty the card.
+                        if (_pParas.length) { _cu.paragraphs = _pParas; }
+                        // The heading is fixed and the narration is the paragraphs, so
+                        // neither of these is authored on this route.
+                        delete _cu.heading;
+                        _cu.title = '';
+                        _cu.voiceoverText = '';
+                        if (_blk.find('.cc5-edit-prose-terms-list').length) {
+                            var _pTerms = [];
+                            _blk.find('.cc5-edit-prose-term-item').each(function() {
+                                var n = $(this).find('.cc5-edit-prose-term-name').val().trim();
+                                var d = $(this).find('.cc5-edit-prose-term-def').val().trim();
+                                if (n && d) { _pTerms.push({ term: n, definition: d }); }
+                            });
+                            _cu.keyTerms = _pTerms;
+                        }
+                        ['good', 'bad'].forEach(function(kind) {
+                            if (!_blk.find('.cc5-edit-prose-' + kind + '-list').length) { return; }
+                            var _items = [];
+                            _blk.find('.cc5-edit-prose-' + kind + '-item').each(function() {
+                                var t = $(this).find('.cc5-edit-prose-' + kind + '-text').val().trim();
+                                if (t) { _items.push({ text: t }); }
+                            });
+                            _cu[kind === 'good' ? 'goodItems' : 'badItems'] = _items;
+                        });
+                    }
                     if (_ct === 'hook-scenario' || _ct === 'applied-scenario') {
                         // v10.47: collect structured sceneParts[] (JSON format) first;
                         // fall back to flat beats for legacy sections without sceneParts[]
@@ -13965,6 +14651,10 @@ define([
             this.currentAudio = new Audio(audioDataUrl);
             this.currentAudioSectionId = sectionId;
             
+            // v13.92: Topics-and-Text - drive the sequential card reveal and the in-focus
+            // paragraph lift from this audio element's timeline.
+            this.setupVoiceoverSync(this.currentAudio, section);
+
             this.currentAudio.onplaying = function() {
                 btn.addClass('cc5-playing').removeClass('cc5-attention');
                 var pauseBtn = self.container.find('.cc5-voiceover-pause-btn[data-section-id="' + sectionId + '"]');
@@ -13976,6 +14666,21 @@ define([
                 btn.removeClass('cc5-playing');
                 var pauseBtn = self.container.find('.cc5-voiceover-pause-btn[data-section-id="' + sectionId + '"]');
                 pauseBtn.hide();
+                // v13.92: narration is over - drop the paragraph focus, open the last
+                // card and its activity block so nothing is left locked behind audio.
+                // Read the grid from the DOM, not from _proseSync: a render() during
+                // playback (the activity Retry button, a settings save, an image
+                // apply/remove) tears the sync down, and reading through it would skip
+                // this recovery entirely - leaving the learner on card 1 with the audio
+                // finished and the activity block shut.
+                var _$proseGrid = self.container.find('.cc5-prose-grid[data-prose-seq]').first();
+                self.teardownVoiceoverSync();
+                if (_$proseGrid && _$proseGrid.length) {
+                    var _lastIdx = parseInt(_$proseGrid.attr('data-prose-total'), 10) - 1;
+                    if (!isNaN(_lastIdx)) { self.revealProseCard(_$proseGrid, _lastIdx, false); }
+                    _$proseGrid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
+                    self.revealProseActivities(_$proseGrid);
+                }
                 self.currentAudio = null;
                 self.currentAudioSectionId = null;
                 self.voiceoverPlayed = true;
