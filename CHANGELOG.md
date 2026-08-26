@@ -1,5 +1,33 @@
 # Changelog
 
+## 13.91.4 - 26 August 2026
+
+### Fixed - non-editing teachers were treated as learners in the player
+
+- **A non-editing teacher was held behind the "Preparing audio..." wait screen and shown
+  "teacher must open this content first" on a disabled voiceover button.** `view.php` set the
+  player's `isTeacher` flag from `mod/contentcreator:manage`, whose archetypes are
+  `editingteacher` and `manager` only. A non-editing teacher (archetype `teacher`) fails that
+  capability, so every one of player5's eight `isTeacher` guards judged them a student: the
+  voiceover wait gate, the `voiceoversComplete` block, the "Reset & retry audio" button and
+  priority pre-generation were all withheld.
+
+  The intent was never authoring. The guards' own comments read "Teachers and editors must
+  never be blocked by the voiceover wait screen" and "teachers must be able to preview
+  voiceovers with Moodle edit mode OFF" — that is a question about being course staff, not
+  about being able to edit.
+
+  The server already agreed: `mod/contentcreator:generateondemand` is `CAP_ALLOW` for the
+  `teacher` archetype, so `generate_voiceover` and `generate_document_example` would have
+  served a non-editing teacher the whole time. Only the front end told them otherwise.
+
+  `isTeacher` is now `mod/contentcreator:manage` OR `mod/contentcreator:review`. `:review`
+  already declares exactly the right archetypes — `teacher`, `editingteacher`, `manager` — and
+  had been defined for the reporting UI without ever being read.
+
+  `mod/contentcreator:manage` is unchanged as the authoring gate: it still decides whether the
+  builder loads and still backs `canEdit`. Only the staff-versus-learner question moved.
+
 ## 13.91.3 - 25 August 2026
 
 ### Fixed - Route 5 blocker

@@ -71,6 +71,26 @@ $PAGE->requires->css(new moodle_url('/mod/contentcreator/styles/player5.css', ['
 
 $canmanage = has_capability('mod/contentcreator:manage', $context);
 
+// FIX-CC-NONEDITING-TEACHER (v13.91.4): "is this person course staff" is a different
+// question from "can this person author content", and only the second one is
+// mod/contentcreator:manage — its archetypes are editingteacher and manager.
+//
+// A non-editing teacher (archetype 'teacher') fails :manage, so isTeacher was false for them
+// and player5 treated them as a learner: held on the "Preparing audio..." wait screen, the
+// voiceover button disabled with "teacher must open this content first", no "Reset & retry
+// audio" control, and no priority pre-generation. The player's own comments say what the
+// flag is meant to mean -- "Teachers and editors must never be blocked by the voiceover wait
+// screen" -- so the intent was staff all along.
+//
+// mod/contentcreator:review already carries exactly the right archetypes (teacher,
+// editingteacher, manager). It was declared for the reporting UI and never used; this is the
+// question it was defined to answer.
+//
+// :manage still gates authoring: the builder below, and $caneditslides. Only the staff-vs-
+// learner question moves.
+$canreview = has_capability('mod/contentcreator:review', $context);
+$isstaff   = $canmanage || $canreview;
+
 // Check whether the manifest exists and is locked (content has been generated).
 // v7.1.3: Added backward compatibility for older manifests without a locked flag.
 $islocked = false;
@@ -130,7 +150,7 @@ if ($canmanage && (!$islocked || $editmode)) {
     $PAGE->requires->js_call_amd('mod_contentcreator/player5', 'init', [[
         'cmid' => $cm->id,
         'canEdit' => $caneditslides,
-        'isTeacher' => (bool)$canmanage,
+        'isTeacher' => (bool)$isstaff,
         'requireFocus' => (bool)$requirefocus,
         'courseUrl' => (new moodle_url('/course/view.php', ['id' => $cm->course]))->out(false),
     ]]);
