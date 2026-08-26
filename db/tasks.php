@@ -15,9 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version details for mod_contentcreator.
- *
- * The full release history is maintained in CHANGELOG.md.
+ * Scheduled task definitions for mod_contentcreator.
  *
  * @package    mod_contentcreator
  * @copyright  2026 LMS-Labs
@@ -26,8 +24,16 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026082506;
-$plugin->requires  = 2023042400;
-$plugin->component = 'mod_contentcreator';
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '13.91.2';
+$tasks = [
+    [
+        'classname' => 'mod_contentcreator\task\prune_voice_cache',
+        'blocking' => 0,
+        // Weekly, early on Sunday morning: the cache is site-wide and large, and
+        // nothing about it is time critical.
+        'minute' => '17',
+        'hour' => '3',
+        'day' => '*',
+        'dayofweek' => '0',
+        'month' => '*',
+    ],
+];

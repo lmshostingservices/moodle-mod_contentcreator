@@ -88,7 +88,10 @@ class backup_restore_test extends advanced_testcase {
      *
      * @return string The pluginfile URL written into the manifest.
      */
-    protected function create_voiceover(): string {
+    /**
+     * @param bool $large Store a manifest large enough to be gzip-compressed (v13.85).
+     */
+    protected function create_voiceover(bool $large = false): string {
         global $DB;
 
         $context = context_module::instance($this->cm->id);
@@ -112,8 +115,20 @@ class backup_restore_test extends advanced_testcase {
             'voiceover_section1.mp3'
         )->out(false);
 
-        $manifest = json_encode(['sections' => [['id' => 'section1', 'voiceoverUrl' => $url]]]);
-        $DB->set_field('contentcreator', 'manifestjson', $manifest, ['id' => $this->contentcreator->id]);
+        $section = ['id' => 'section1', 'voiceoverUrl' => $url];
+        if ($large) {
+            // Push the manifest past manifest_storage::COMPRESS_THRESHOLD so it is stored
+            // in the 'gz:' form that real 6-10 MB packs always use.
+            $section['padding'] = str_repeat('The quick brown fox jumps over the lazy dog. ',
+                (int)ceil(\mod_contentcreator\manifest_storage::COMPRESS_THRESHOLD / 45) + 100);
+        }
+        $manifest = json_encode(['sections' => [$section]]);
+
+        $stored = \mod_contentcreator\manifest_storage::compress($manifest);
+        if ($large) {
+            $this->assertSame('gz:', substr($stored, 0, 3), 'Test fixture must be stored compressed.');
+        }
+        $DB->set_field('contentcreator', 'manifestjson', $stored, ['id' => $this->contentcreator->id]);
 
         return $url;
     }
@@ -236,6 +251,37 @@ class backup_restore_test extends advanced_testcase {
 
         // The manifest URL must have been rewritten to the new context and cmid.
         $manifest = $DB->get_field('contentcreator', 'manifestjson', ['id' => $newcm->instance]);
+        $this->assertStringNotContainsString($oldurl, $manifest);
+        $this->assertStringContainsString(
+            '/pluginfile.php/' . $newcontext->id . '/mod_contentcreator/voiceovers/' . $newcm->id . '/',
+            $manifest
+        );
+    }
+
+    /**
+     * The same must hold for a COMPRESSED manifest.
+     *
+     * v13.85 regression test. The restore step used to apply its URL-rewriting regexes
+     * straight to the 'gz:<base64>' blob, which matched nothing, so the restored manifest
+     * kept the source site's contextid and every voiceover 404'd. Only the small,
+     * uncompressed case above was covered, so the suite passed while every real restore
+     * silently lost its audio.
+     */
+    public function test_voiceover_urls_are_repointed_in_a_compressed_manifest(): void {
+        global $DB;
+
+        $oldurl = $this->create_voiceover(true);
+
+        $newcm = $this->backup_and_restore();
+        $newcontext = context_module::instance($newcm->id);
+
+        $stored = $DB->get_field('contentcreator', 'manifestjson', ['id' => $newcm->instance]);
+        $this->assertSame('gz:', substr($stored, 0, 3), 'A large manifest must stay compressed.');
+
+        $manifest = \mod_contentcreator\manifest_storage::decompress($stored);
+        $this->assertNotSame($stored, $manifest, 'Restored manifest must still decompress.');
+        $this->assertNotNull(json_decode($manifest), 'Restored manifest must still be valid JSON.');
+
         $this->assertStringNotContainsString($oldurl, $manifest);
         $this->assertStringContainsString(
             '/pluginfile.php/' . $newcontext->id . '/mod_contentcreator/voiceovers/' . $newcm->id . '/',

@@ -139,6 +139,16 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
                 { regenerateFailedOnly, existingManifest }
             );
 
+            // v13.84: replace the planned duration with a measured one.
+            // estimatedMinutes was the author's target from the planning step and
+            // was never revisited, so every pack declared 10 minutes while its
+            // narration alone ran 18-23. It now describes the pack that was actually
+            // generated. Note the value is currently written but not read anywhere in
+            // the plugin - it is carried in the manifest for export and reporting, and
+            // it needs to be right before anything starts displaying it.
+            generatedManifest.estimatedMinutes = estimateMinutes(generatedManifest)
+                || generatedManifest.estimatedMinutes || inputs.duration || 10;
+
             generatedManifest.locked = true;
             generatedManifest.lockedAt = new Date().toISOString();
             generatedManifest.inputHash = hashInputs(inputs);
@@ -154,6 +164,80 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
             if (onError) onError(error.message);
             return { success: false, error: error.message };
         }
+    };
+
+    /**
+     * v13.84: measure a generated pack's real running time.
+     *
+     * Narration at 150 words per minute, plus reading time for the visible text
+     * on cards that carry no voiceover (200 wpm), plus 45 seconds for each
+     * interactive card the learner has to answer. Rounded up to the nearest minute.
+     *
+     * @param {Object} manifest A generated manifest.
+     * @return {Number} Estimated minutes, or 0 if nothing could be measured.
+     */
+    const estimateMinutes = (manifest) => {
+        const NARRATION_WPM = 150;
+        const READING_WPM = 200;
+        const INTERACTION_MINUTES = 0.75;
+        // Cards the learner has to act on rather than watch. decision-point is the
+        // interactive card in the unified 7-card sequence; its voiceoverText is
+        // deliberately cleared during generation, so it reaches the reading branch.
+        const INTERACTIVE_CARD_TYPES = /^(decision-point|scenario-decision|spot-issue|sequence-order|requirement-match|behaviour-sort)$/;
+
+        const wordCount = (value) => {
+            if (typeof value !== 'string') { return 0; }
+            const trimmed = value.trim();
+            return trimmed ? trimmed.split(/\s+/).length : 0;
+        };
+
+        // Walk any shape of card object and total its human-readable strings,
+        // skipping the keys that hold markup, ids, urls or the voiceover itself.
+        const SKIP_KEYS = /^(voiceoverText|voiceover|audioUrl|imageUrl|image|icon|id|cardType|type|contrastType|slideHtml|html|url|src|class|className)$/;
+        const visibleWords = (node, depth) => {
+            if (depth > 6 || node === null || node === undefined) { return 0; }
+            if (typeof node === 'string') { return wordCount(node); }
+            if (Array.isArray(node)) {
+                return node.reduce((sum, item) => sum + visibleWords(item, depth + 1), 0);
+            }
+            if (typeof node !== 'object') { return 0; }
+            return Object.keys(node).reduce((sum, key) => {
+                if (SKIP_KEYS.test(key)) { return sum; }
+                return sum + visibleWords(node[key], depth + 1);
+            }, 0);
+        };
+
+        let narrationWords = 0;
+        let readingWords = 0;
+        let interactions = 0;
+
+        const topics = Array.isArray(manifest?.topics) ? manifest.topics : [];
+        topics.forEach((topic) => {
+            const sections = topic.sections || topic.subtopics || [];
+            if (!Array.isArray(sections)) { return; }
+            sections.forEach((section) => {
+                if (section && section.activity) { interactions += 1; }
+                const cards = section && Array.isArray(section.cards) ? section.cards : [];
+                cards.forEach((card) => {
+                    if (card && INTERACTIVE_CARD_TYPES.test(card.cardType || '')) {
+                        interactions += 1;
+                    }
+                    const vo = wordCount(card && (card.voiceoverText || card.voiceover));
+                    if (vo > 0) {
+                        narrationWords += vo;
+                    } else {
+                        readingWords += visibleWords(card, 0);
+                    }
+                });
+            });
+        });
+
+        if (!narrationWords && !readingWords && !interactions) { return 0; }
+
+        const minutes = (narrationWords / NARRATION_WPM)
+            + (readingWords / READING_WPM)
+            + (interactions * INTERACTION_MINUTES);
+        return Math.max(1, Math.ceil(minutes));
     };
 
     const hashInputs = (inputs) => {

@@ -77,6 +77,13 @@ class provider implements
             'timemodified' => 'privacy:metadata:contentcreator_checklist:timemodified',
         ], 'privacy:metadata:contentcreator_checklist');
 
+        // v13.86: the two file areas were never declared. Neither holds personal data -
+        // both store audio generated FROM ACTIVITY CONTENT authored by a teacher, never
+        // from anything a learner wrote - but a provider that omits a stored file area
+        // is incomplete, and a reviewer cannot verify the absence of personal data from
+        // silence.
+        $collection->add_subsystem_link('core_files', [], 'privacy:metadata:files');
+
         $collection->add_external_location_link('lmslabs', [
             'siteid' => 'privacy:metadata:lmslabs:siteid',
             'apikey' => 'privacy:metadata:lmslabs:apikey',

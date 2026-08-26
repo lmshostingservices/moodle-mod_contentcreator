@@ -2236,26 +2236,11 @@ body.dark .cc5-player,
 .cc5-common-pitfalls-card .cc5-card-header svg { color: hsl(0 84% 60%); }
 .cc5-pd-scenario-card .cc5-card-header svg { color: hsl(38 92% 50%); }
 
-/* Border-left accents — retained for identity stripe */
-.cc5-performance-anchor-card .cc5-card-header { border-left: 3px solid hsl(217 91% 60%); }
-.cc5-plain-english-card .cc5-card-header { border-left: 3px solid hsl(142 72% 40%); }
-.cc5-action-breakdown-card .cc5-card-header { border-left: 3px solid hsl(262 83% 58%); }
-.cc5-competence-standard-card .cc5-card-header { border-left: 3px solid hsl(38 92% 50%); }
-.cc5-common-errors-card .cc5-card-header { border-left: 3px solid hsl(0 84% 60%); }
-.cc5-concept-anchor-card .cc5-card-header { border-left: 3px solid hsl(45 100% 51%); }
-.cc5-theoretical-framework-card .cc5-card-header { border-left: 3px solid hsl(262 83% 58%); }
-.cc5-analytical-lens-card .cc5-card-header { border-left: 3px solid hsl(212 96% 52%); }
-.cc5-ethics-considerations-card .cc5-card-header { border-left: 3px solid hsl(350 89% 60%); }
-.cc5-case-study-card .cc5-card-header { border-left: 3px solid hsl(173 80% 40%); }
-.cc5-business-impact-card .cc5-card-header { border-left: 3px solid hsl(142 72% 40%); }
-.cc5-action-framework-card .cc5-card-header { border-left: 3px solid hsl(217 91% 60%); }
-.cc5-risk-card .cc5-card-header { border-left: 3px solid hsl(0 84% 60%); }
-.cc5-policy-alignment-card .cc5-card-header { border-left: 3px solid hsl(38 92% 50%); }
-.cc5-skill-anchor-card .cc5-card-header { border-left: 3px solid hsl(262 83% 58%); }
-.cc5-core-framework-card .cc5-card-header { border-left: 3px solid hsl(212 96% 52%); }
-.cc5-application-guide-card .cc5-card-header { border-left: 3px solid hsl(173 80% 40%); }
-.cc5-common-pitfalls-card .cc5-card-header { border-left: 3px solid hsl(0 84% 60%); }
-.cc5-pd-scenario-card .cc5-card-header { border-left: 3px solid hsl(38 92% 50%); }
+/* v13.84: per-card-type border-left identity stripes removed. They only ever
+   applied to the route-specific card families (University's are the only ones
+   still generated), which is why the University route looked different from
+   VET/Workplace/PD. Card identity is carried by the header icon colour and the
+   tinted header gradient below. */
 
 /* Per-card-type tinted gradient headers — each card type gets its own identity */
 .cc5-performance-anchor-card .cc5-card-header,
@@ -3020,12 +3005,25 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     margin: var(--cc5-space-1) 0 0 var(--cc5-space-4);
 }
 
+/* v13.84: decorative left-accent removed - University components now use the
+   same flat panel treatment as the VET/Workplace/PD routes (subtle background,
+   one hairline border, a single level of boxing). */
 .cc5-framework-item {
     padding: var(--cc5-space-3) var(--cc5-space-4);
     background: var(--cc5-bg-subtle);
     border-radius: var(--cc5-radius-md);
-    border-left: 3px solid hsl(262 83% 58%);
+    border: 1px solid var(--cc5-card-border);
     margin-bottom: var(--cc5-space-3);
+}
+
+/* v13.84 safety net: a nested framework item must never read as a second
+   boxed panel, whatever the renderer or manifest produces. */
+.cc5-framework-item .cc5-framework-item {
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    margin-bottom: 0;
 }
 
 .cc5-framework-item h5 {
@@ -3084,7 +3082,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     font-size: 0.875rem;
     line-height: 1.6;
     color: var(--cc5-text-secondary);
-    border-left: 2px solid hsl(212 96% 52%);
+    border: 1px solid var(--cc5-card-border); /* v13.84: was border-left: 2px accent */
     margin: 0;
 }
 
@@ -3116,7 +3114,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     font-size: 0.875rem;
     line-height: 1.7;
     color: var(--cc5-text);
-    border-left: 3px solid hsl(173 80% 40%);
+    border: 1px solid var(--cc5-card-border); /* v13.84: was border-left: 3px accent */
 }
 
 .cc5-analysis-prompts {
@@ -3141,13 +3139,16 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     gap: var(--cc5-space-2);
 }
 
+/* v13.84: accent removed with the rest of the University set; a plain marker
+   carries the list instead. */
 .cc5-analysis-prompts li {
     font-size: 0.875rem;
     line-height: 1.6;
     color: var(--cc5-text-secondary);
     padding-left: var(--cc5-space-3);
-    border-left: 2px solid hsl(173 80% 40%);
     margin: 0;
+    list-style: disc;
+    margin-left: var(--cc5-space-4);
 }
 
 /* ─── WORKPLACE Route — Missing CSS completions ──────────────────────────── */
@@ -3258,13 +3259,23 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 .cc5-policy-requirement { color: var(--cc5-text-secondary); margin-bottom: var(--cc5-space-1); }
 .cc5-policy-consequence { font-size: var(--cc5-text-sm); color: var(--cc5-text-tertiary); }
 
+/* v13.85: the consequence attached to each "What to Avoid" item. Flat, no accent
+   rail - it reads as a second line of the same item, not a nested panel. */
+.cc5-dont-consequence {
+    display: block;
+    margin-top: var(--cc5-space-1);
+    font-size: var(--cc5-text-sm);
+    line-height: 1.55;
+    color: var(--cc5-text-tertiary);
+}
+
 .cc5-key-insight,
 .cc5-critical-reflection {
     margin-top: var(--cc5-space-3);
     padding: var(--cc5-space-3);
     background: var(--cc5-bg-subtle);
     border-radius: var(--cc5-radius-md);
-    border-left: 3px solid hsl(217 91% 60%);
+    border: 1px solid var(--cc5-card-border); /* v13.84: was border-left: 3px accent */
 }
 .cc5-key-insight h5,
 .cc5-critical-reflection h5 { margin: 0 0 var(--cc5-space-2) 0; font-size: var(--cc5-text-sm); font-weight: 600; }
@@ -10640,6 +10651,27 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Screen reader only text - scoped to prevent conflict with Bootstrap/Moodle .sr-only */
+/* v13.86: keyboard focus across the whole Challenge Mode surface. Only
+   .cc5-dp-option and .cc5-topic-card had a focus state, so a keyboard user was
+   invisible to themselves through the three-activity challenge. */
+.cc5-player .cc5-flip-card:focus-visible,
+.cc5-player .cc5-sort-tap:focus-visible,
+.cc5-player .cc5-challenge-step:focus-visible,
+.cc5-player .cc5-challenge-next-btn:focus-visible,
+.cc5-player .cc5-challenge-finish-btn:focus-visible,
+.cc5-player .cc5-decision-btn:focus-visible,
+.cc5-player .cc5-check-label:focus-within,
+.cc5-player .cc5-dp-try-again-btn:focus-visible {
+    outline: 3px solid hsl(217 91% 45%);
+    outline-offset: 2px;
+    border-radius: var(--cc5-radius-sm);
+}
+
+/* v13.86: a locked option must not look clickable. */
+.cc5-player .cc5-dp-option[aria-disabled="true"] {
+    cursor: default;
+}
+
 .cc5-sr-only {
     position: absolute;
     width: 1px;
@@ -16058,56 +16090,25 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   UNIVERSITY ROUTE — Enhanced Card Headers (purple identity: hsl 262 83% 58%)
+   UNIVERSITY ROUTE — card shell
+   v13.86: the five University card types used to announce themselves with a
+   saturated three-stop gradient header bar, a 2px coloured bottom border and an
+   extra coloured hover lift that no other route has. That is why the route still
+   looked like a different product after v13.84 flattened its inner components:
+   the divergence was in the card SHELL, not only in the panels inside it.
+   They now use the same header and hover as every other card - identity is
+   carried by the header icon colour alone.
    Cards: concept-anchor · theoretical-framework · analytical-lens
           ethics-considerations · case-study
    ─────────────────────────────────────────────────────────────────────────── */
 
-.cc5-player .cc5-concept-anchor-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(45 100% 97%) 0%, hsl(45 100% 91%) 60%, hsl(38 92% 95%) 100%);
-    border-bottom: 2px solid hsl(45 100% 78%);
-}
-
-.cc5-player .cc5-theoretical-framework-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(262 83% 97%) 0%, hsl(262 83% 92%) 60%, hsl(255 70% 96%) 100%);
-    border-bottom: 2px solid hsl(262 83% 82%);
-}
-
-.cc5-player .cc5-analytical-lens-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(212 96% 97%) 0%, hsl(212 96% 92%) 60%, hsl(210 85% 96%) 100%);
-    border-bottom: 2px solid hsl(212 96% 80%);
-}
-
-.cc5-player .cc5-ethics-considerations-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(350 89% 97%) 0%, hsl(350 89% 92%) 60%, hsl(340 70% 96%) 100%);
-    border-bottom: 2px solid hsl(350 89% 82%);
-}
-
+.cc5-player .cc5-concept-anchor-card .cc5-card-header,
+.cc5-player .cc5-theoretical-framework-card .cc5-card-header,
+.cc5-player .cc5-analytical-lens-card .cc5-card-header,
+.cc5-player .cc5-ethics-considerations-card .cc5-card-header,
 .cc5-player .cc5-case-study-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(173 80% 97%) 0%, hsl(173 80% 91%) 60%, hsl(165 65% 95%) 100%);
-    border-bottom: 2px solid hsl(173 80% 78%);
-}
-
-/* UNI card hover — purple shadow lift */
-.cc5-player .cc5-concept-anchor-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px hsla(45, 100%, 51%, 0.16), 0 4px 8px hsla(45, 100%, 51%, 0.08);
-}
-.cc5-player .cc5-theoretical-framework-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px hsla(262, 83%, 58%, 0.16), 0 4px 8px hsla(262, 83%, 58%, 0.08);
-}
-.cc5-player .cc5-analytical-lens-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px hsla(212, 96%, 52%, 0.16), 0 4px 8px hsla(212, 96%, 52%, 0.08);
-}
-.cc5-player .cc5-ethics-considerations-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px hsla(350, 89%, 60%, 0.16), 0 4px 8px hsla(350, 89%, 60%, 0.08);
-}
-.cc5-player .cc5-case-study-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 30px hsla(173, 80%, 40%, 0.16), 0 4px 8px hsla(173, 80%, 40%, 0.08);
+    background: var(--cc5-bg-subtle);
+    border-bottom: 1px solid var(--cc5-card-border);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16207,56 +16208,17 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
-   CARD ICON BADGE — Elevated glow halos per route on card header
+   CARD ICON BADGE
+   v13.86: the scale-and-rotate hover and the per-route coloured glow halos were
+   removed. The halos were keyed to card types, and University's five are the only
+   ones still generated - so in practice they were a University-only flourish that
+   made the route look different from the reference again. A plain colour shift is
+   enough to show the header is interactive.
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-card-header svg {
-    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-                box-shadow  0.25s ease;
+    transition: box-shadow 0.25s ease;
     border-radius: var(--cc5-radius-sm);
-}
-
-.cc5-player .cc5-card:hover .cc5-card-header svg {
-    transform: scale(1.12) rotate(-3deg);
-}
-
-/* Per-route icon glow halos */
-.cc5-player .cc5-performance-anchor-card:hover .cc5-card-header svg,
-.cc5-player .cc5-action-framework-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(217, 91%, 60%, 0.18);
-}
-.cc5-player .cc5-plain-english-card:hover .cc5-card-header svg,
-.cc5-player .cc5-business-impact-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(142, 72%, 40%, 0.18);
-}
-.cc5-player .cc5-action-breakdown-card:hover .cc5-card-header svg,
-.cc5-player .cc5-skill-anchor-card:hover .cc5-card-header svg,
-.cc5-player .cc5-theoretical-framework-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(262, 83%, 58%, 0.18);
-}
-.cc5-player .cc5-competence-standard-card:hover .cc5-card-header svg,
-.cc5-player .cc5-policy-alignment-card:hover .cc5-card-header svg,
-.cc5-player .cc5-pd-scenario-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(38, 92%, 50%, 0.18);
-}
-.cc5-player .cc5-common-errors-card:hover .cc5-card-header svg,
-.cc5-player .cc5-risk-card:hover .cc5-card-header svg,
-.cc5-player .cc5-common-pitfalls-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(0, 84%, 60%, 0.18);
-}
-.cc5-player .cc5-core-framework-card:hover .cc5-card-header svg,
-.cc5-player .cc5-analytical-lens-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(212, 96%, 52%, 0.18);
-}
-.cc5-player .cc5-concept-anchor-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(45, 100%, 51%, 0.18);
-}
-.cc5-player .cc5-ethics-considerations-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(350, 89%, 60%, 0.18);
-}
-.cc5-player .cc5-case-study-card:hover .cc5-card-header svg,
-.cc5-player .cc5-application-guide-card:hover .cc5-card-header svg {
-    box-shadow: 0 0 0 4px hsla(173, 80%, 40%, 0.18);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16662,9 +16624,9 @@ button.cc5-edit-modal-save:disabled {
         background 0.2s ease;
 }
 
+/* v13.84: slide removed; tint only. */
 .cc5-player .cc5-considerations-list li:hover {
-    transform: translateX(4px);
-    background: hsl(212 96% 96%);
+    background: var(--cc5-bg-subtle);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16777,10 +16739,9 @@ button.cc5-edit-modal-save:disabled {
     transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
+/* v13.84: slide + inset accent bar removed; lift only, as on the VET route. */
 .cc5-player .cc5-case-context:hover {
-    transform: translateX(3px);
-    box-shadow: 3px 0 0 0 hsl(173 80% 40%) inset,
-                0 4px 12px hsla(173, 80%, 40%, 0.10);
+    box-shadow: 0 4px 12px hsla(215, 25%, 27%, 0.08);
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -20026,4 +19987,74 @@ body.dark .cc5-lang-pill {
 .cc5-edit-card-move-down:hover {
     background: var(--cc-primary-muted, #eaf1fe) !important;
     color: var(--cc-text, #15171c) !important;
+}
+
+/* ===========================================================================
+   v13.91  -  ROUTE 5: "TOPICS AND TEXT"
+   Five prose sections laid out two across, in the VET route's card styling.
+
+   Design constraints, both standing owner requirements:
+     - NO left accent rail anywhere in this block. Not on the card, not on the
+       paragraphs. Card identity is carried by the header icon alone.
+     - NO nested container. The card IS the container: .cc5-card > header + body,
+       with <p> elements directly in the body. There is deliberately no wrapper
+       div inside .cc5-prose-body, so this route can never produce the
+       container-inside-container-inside-container nesting.
+
+   This block inherits .cc5-card wholesale (border, radius, shadow, hover) so it
+   matches the VET reference route by construction rather than by copied values -
+   if the base card changes, these change with it.
+   =========================================================================== */
+
+.cc5-prose-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--cc5-space-6);
+    align-items: start;
+}
+
+/* Cards in the grid manage their own spacing via the grid gap, so the base
+   2.5rem margin would double it. */
+.cc5-prose-grid > .cc5-prose-card {
+    margin-bottom: 0;
+    height: 100%;
+}
+
+/* The last card on an odd count spans both columns rather than leaving a hole.
+   With five sections this is always the fifth, "boundaries". */
+.cc5-prose-grid > .cc5-prose-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+.cc5-prose-body {
+    padding: var(--cc5-space-5) var(--cc5-space-6);
+}
+
+.cc5-prose-body p {
+    margin: 0 0 var(--cc5-space-4) 0;
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    color: var(--cc5-text-secondary);
+    /* Explicitly no border-left. Stated so a future edit has to be deliberate. */
+    border-left: 0;
+    padding-left: 0;
+}
+
+.cc5-prose-body p:last-child {
+    margin-bottom: 0;
+}
+
+.cc5-prose-empty {
+    color: var(--cc5-text-muted);
+    font-style: italic;
+}
+
+@media (max-width: 900px) {
+    .cc5-prose-grid {
+        grid-template-columns: 1fr;
+        gap: var(--cc5-space-4);
+    }
+    .cc5-prose-grid > .cc5-prose-card:last-child:nth-child(odd) {
+        grid-column: auto;
+    }
 }

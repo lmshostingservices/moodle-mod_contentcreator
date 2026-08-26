@@ -75,8 +75,15 @@ function xmldb_contentcreator_upgrade($oldversion) {
         $table = new xmldb_table('contentcreator_attempts');
 
         // Step 1: remove duplicate rows, keeping the one with the highest id per pair.
+        // v13.90.1: get_records_sql() keys the returned array by the FIRST column, and
+        // contentcreatorid is not unique across a grouped result. One activity with
+        // duplicate attempts for two different users produced two rows with the same key
+        // and the second silently overwrote the first, so only one user's duplicates were
+        // deleted - then add_index() below hit "Duplicate entry" and threw a
+        // dml_exception out of the upgrade, leaving the site stuck in maintenance mode.
+        // keepid is MAX(id) and therefore unique, so it goes first.
         $dupes = $DB->get_records_sql(
-            "SELECT contentcreatorid, userid, MAX(id) AS keepid, COUNT(*) AS cnt
+            "SELECT MAX(id) AS keepid, contentcreatorid, userid, COUNT(*) AS cnt
                FROM {contentcreator_attempts}
            GROUP BY contentcreatorid, userid
              HAVING COUNT(*) > 1"
@@ -148,6 +155,71 @@ function xmldb_contentcreator_upgrade($oldversion) {
             }
         }
         upgrade_mod_savepoint(true, 2026081801, 'contentcreator');
+    }
+
+    // Release 13.86: the moodle/course:manageactivities fallback has been removed from
+    // every authoring endpoint, so mod/contentcreator:manage is now the real gate and a
+    // CAP_PROHIBIT on it denies, as it always should have.
+    //
+    // The fallback existed for a genuine reason: a role cloned from the editingteacher
+    // archetype BEFORE this plugin was installed does not inherit the plugin's
+    // capabilities, so those teachers would lose access the moment the fallback went.
+    // This grants :manage to every role that already holds moodle/course:manageactivities
+    // and does not yet have an explicit setting for :manage, which is exactly the set the
+    // fallback was covering. Roles that were deliberately set to prevent or prohibit are
+    // left alone.
+    if ($oldversion < 2026082402) {
+        $syscontext = context_system::instance();
+        // v13.90 SECURITY FIX: this query used to have no contextid filter, so a role
+        // granted moodle/course:manageactivities as a COURSE-LEVEL OVERRIDE in a single
+        // course was picked up here and then granted mod/contentcreator:manage at SYSTEM
+        // context - site-wide authoring rights from a one-course override. Only roles
+        // that hold the capability as a system-level definition are in the set the old
+        // manageactivities fallback actually covered, so only those are granted.
+        $manageroles = $DB->get_fieldset_sql(
+            "SELECT DISTINCT roleid
+               FROM {role_capabilities}
+              WHERE capability = :cap
+                AND permission = :allow
+                AND contextid = :syscontextid",
+            [
+                'cap' => 'moodle/course:manageactivities',
+                'allow' => CAP_ALLOW,
+                'syscontextid' => $syscontext->id,
+            ]
+        );
+
+        foreach ($manageroles as $roleid) {
+            // v13.90.1: this lookup must be context-scoped too. Without the contextid
+            // condition, a single course-level override of :manage anywhere on the site
+            // counted as "already decided" and suppressed the SYSTEM-level grant - so a
+            // trainer role that was set to Prevent in one course lost authoring rights in
+            // every course, which is the exact population this step exists to protect.
+            // record_exists() also avoids get_record()'s "found more than one record"
+            // error when a role carries :manage overrides in several courses.
+            $existing = $DB->record_exists('role_capabilities', [
+                'roleid' => $roleid,
+                'capability' => 'mod/contentcreator:manage',
+                'contextid' => $syscontext->id,
+            ]);
+            if ($existing) {
+                // The site has already made a deliberate decision for this role.
+                continue;
+            }
+            assign_capability('mod/contentcreator:manage', CAP_ALLOW, $roleid, $syscontext->id, true);
+        }
+
+        if (!empty($manageroles)) {
+            upgrade_log(
+                UPGRADE_LOG_NORMAL,
+                'mod_contentcreator',
+                'Granted mod/contentcreator:manage to ' . count($manageroles) .
+                ' role(s) that already hold moodle/course:manageactivities, replacing the ' .
+                'capability fallback removed in 13.86.'
+            );
+        }
+
+        upgrade_mod_savepoint(true, 2026082402, 'contentcreator');
     }
 
     return true;

@@ -128,10 +128,9 @@ class ajax_test extends advanced_testcase {
     /**
      * Test that the generate_slide action requires authoring rights.
      *
-     * generate_slide is gated on mod/contentcreator:manage, with the deliberate
-     * moodle/course:manageactivities fallback documented in
-     * test_manage_falls_back_to_manageactivities(). Neither a student nor a
-     * non-editing teacher holds either, so neither can generate slides.
+     * generate_slide is gated on mod/contentcreator:manage, and since v13.86 on that
+     * capability alone - see test_manage_prohibit_is_honoured(). Neither a student nor
+     * a non-editing teacher holds it, so neither can generate slides.
      */
     public function test_generate_slide_requires_manage_capability(): void {
         $this->setUser($this->editingteacher);
@@ -168,21 +167,23 @@ class ajax_test extends advanced_testcase {
     }
 
     /**
-     * Test the deliberate moodle/course:manageactivities fallback on the authoring endpoints.
+     * A prohibit on mod/contentcreator:manage must actually deny.
      *
-     * save_manifest, save_manifest_chunk and save_slide_edit accept
-     * moodle/course:manageactivities in the course context as an alternative to
-     * mod/contentcreator:manage. This is INTENTIONAL: custom roles cloned from
-     * editingteacher frequently lack the plugin capability but are genuine course
-     * editors, and without the fallback they lose their work on every save.
+     * v13.86 removed the moodle/course:manageactivities fallback from
+     * contentcreator_require_manage(), save_manifest, save_manifest_chunk and
+     * save_slide_edit. The fallback made the plugin's own capability advisory: an
+     * administrator could prohibit :manage and the endpoints would still admit the
+     * user through the course capability, which Moodle security review treats as a
+     * defect and which the previous version of this test asserted as correct
+     * behaviour.
      *
-     * The documented trade-off is that a CAP_PROHIBIT on mod/contentcreator:manage
-     * alone does NOT block such a user — the prohibit must also be applied to
-     * moodle/course:manageactivities. Do not "fix" this assertion to expect the
-     * prohibit to win; that would reintroduce the data-loss bug the fallback exists
-     * to prevent.
+     * The compatibility the fallback provided - roles cloned from editingteacher
+     * before the plugin was installed never inheriting its capabilities - is now
+     * handled once by the upgrade step in db/upgrade.php, which grants :manage to
+     * every role that already holds moodle/course:manageactivities and has no
+     * explicit setting of its own.
      */
-    public function test_manage_falls_back_to_manageactivities(): void {
+    public function test_manage_prohibit_is_honoured(): void {
         global $DB;
 
         $editingteacherrole = $DB->get_record('role', ['shortname' => 'editingteacher']);
@@ -195,13 +196,46 @@ class ajax_test extends advanced_testcase {
 
         $this->setUser($this->editingteacher);
 
-        // The plugin capability is now prohibited...
+        // The plugin capability is prohibited...
         $this->assertFalse(has_capability('mod/contentcreator:manage', $this->context));
 
-        // ...but the course-level fallback still holds, so the authoring endpoints
-        // deliberately still admit this user.
+        // ...and the course capability, which the removed fallback used to consult,
+        // is still held - proving the denial below comes from the prohibit itself and
+        // not from the user lacking course rights.
         $coursecontext = \context_course::instance($this->course->id);
         $this->assertTrue(has_capability('moodle/course:manageactivities', $coursecontext));
+
+        // The authoring gate must now refuse.
+        $this->expectException(\required_capability_exception::class);
+        require_capability('mod/contentcreator:manage', $this->context);
+    }
+
+    /**
+     * The credit-spending on-demand capability must exist and default to allowing students.
+     *
+     * v13.85 introduced mod/contentcreator:generateondemand so that voiceover and
+     * document-example generation - both of which spend from the site's paid credit
+     * balance - can be prohibited for a role, course or cohort. It is granted to the
+     * student archetype by default so that no existing site changes behaviour on
+     * upgrade; the point is that it is now controllable at all.
+     */
+    public function test_generateondemand_capability_is_controllable(): void {
+        global $DB;
+
+        $this->setUser($this->student);
+        $this->assertTrue(has_capability('mod/contentcreator:generateondemand', $this->context));
+
+        $studentrole = $DB->get_record('role', ['shortname' => 'student']);
+        role_change_permission(
+            $studentrole->id,
+            $this->context,
+            'mod/contentcreator:generateondemand',
+            CAP_PROHIBIT
+        );
+
+        $this->assertFalse(has_capability('mod/contentcreator:generateondemand', $this->context));
+        // Playing already-generated audio is unaffected.
+        $this->assertTrue(has_capability('mod/contentcreator:view', $this->context));
     }
 
     /**

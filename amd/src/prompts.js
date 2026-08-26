@@ -270,6 +270,7 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
     };
 
     const getCardCountForMode = (mode) => {
+        if (mode === 'topicstext') return 5; // v13.91: the Explanatory Spine.
         if (mode === 'university') return 6;
         return 7;
     };
@@ -446,10 +447,120 @@ CARDS (generate in this order):
 `;
 
     // ===========================================================================
+    // v13.91: ROUTE 5  -  "TOPICS AND TEXT"
+    //
+    // A plain explanatory-article route. No scenarios, no quiz, no legislation, no
+    // competency framing  -  just headings and prose that read like a well-made
+    // encyclopedia entry or explanatory article.
+    //
+    // The five sections are "The Explanatory Spine". Each is defined by a RHETORICAL
+    // OPERATION performed on the topic, never by subject matter, which is what lets the
+    // same five slots carry forklift safety, Renaissance art, GST and grief counselling
+    // without any of them feeling forced.
+    //
+    //   1 orientation   what it is + why it matters      (description)
+    //   2 foundations   the 2-4 load-bearing ideas       (description / compare-contrast)
+    //   3 mechanism     the thing WORKING                (cause-effect | sequence | part-whole)
+    //   4 in-practice   same mechanism, different cases  (compare-contrast)
+    //   5 boundaries    refute, bound, connect outward   (problem-solution, then description)
+    //
+    // Sections 4 and 5 are what make this more than intro/body/conclusion: 4 forces
+    // conditionality, 5 forces refutation of the common wrong belief. Both are
+    // evidence-backed rather than stylistic - refutation text produces measurably more
+    // durable conceptual change than the same content written affirmatively.
+    //
+    // Provenance: Meyer's expository text structures (each section bound to exactly one,
+    // which is what makes drift checkable); Reigeluth's elaboration theory (the "epitome"
+    // - section 1 embodies the whole idea in simplest complete form rather than
+    // summarising it); the Diataxis Explanation quadrant (understanding-oriented prose
+    // with NO actionable steps - the line section 3 must not cross); the journalistic
+    // nut graf; and the refutation-text literature.
+    // ===========================================================================
+
+    const TOPICSTEXT_SYSTEM_PROMPT = `You are an expert explanatory writer producing a written learning module on a single topic.
+
+Return ONLY valid JSON: { "cards": [...] }  -  exactly 5 cards. If fewer or more than 5 cards are returned, the output is invalid. No markdown, no code fences.
+
+FIELDS: All fields must be returned exactly as specified. Do not rename, omit, or reorder fields.
+
+WHAT THIS IS: a written article, not a lesson plan and not a course. Prose in paragraphs. No bullet lists, no exercises, no quizzes, no scenarios with characters, no "in this module you will learn", no calls to action, no summary of what you are about to say.
+
+REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve specific details  -  do NOT replace named systems, people, works, figures or terms with generic equivalents.
+
+VOICE: Explain to an intelligent adult who does not yet know this subject. Third person by default. Confident and plain. Define a term the first time you use it. Sentences under 25 words. Never pad, never hedge, never moralise.
+
+PARAGRAPHS: Each card carries 2-4 paragraphs in a paragraphs[] array. Most paragraphs run 60-110 words of continuous prose  -  a real paragraph, not a sentence and not a wall. A framing or transitional paragraph may run as short as 45 words where that is genuinely what it needs; never pad one to reach a count. No paragraph may begin with the same word as the paragraph before it.
+
+HEADINGS: Every card needs a heading written for THIS topic  -  specific, 3-8 words, no colons, no "Introduction", no "Overview", no "Conclusion", no generic slot names. A reader scanning only the five headings should learn something.
+
+CARDS (generate in this order):
+
+1. orientation  -  heading, paragraphs[2-3], voiceoverText
+   Say what the subject IS and why it is worth attention, completely, before any detail.
+   Paragraph 1 MUST open with a definitional sentence: name the subject and place it in its
+   broadest true category, in plain language. No metaphor, no rhetorical question, no anecdote,
+   no statistic. Paragraph 2 states why it matters and what changes for someone who understands
+   it  -  concrete stakes, consequence or usefulness. Optional paragraph 3 sets the frame: what
+   this piece treats the subject as, and what it leaves aside.
+   TEST: sentence one must survive being read alone, out of context, as a true definition.
+
+2. foundations  -  heading, paragraphs[2-3], voiceoverText
+   Install the TWO TO FOUR load-bearing ideas without which the rest is unreadable. No more
+   than four. For each: name it, define it in one sentence, then say what work it does in the
+   subject. Prefer ideas that are DISTINCTIONS (X as against Y) over ideas that are just labels
+   - a distinction is what the reader actually lacks.
+   Give the simplest COMPLETE version of each idea here, never a simplification you must later
+   retract. Do not write a glossary. Do not define a term you never use again. Do not introduce
+   an idea here that only becomes relevant in card 5.
+
+3. mechanism  -  heading, structureType, paragraphs[2-4], voiceoverText
+   Show the subject WORKING  -  the internal structure that makes it behave as it does.
+   Choose ONE structure and commit to it for the whole card. Set structureType to the one you chose:
+     "causal"        something drives something else  -  trace the chain
+     "sequential"    a process or cycle  -  trace it stage by stage, in real order
+     "compositional" constituted rather than caused (an artefact, a body of work, a system of
+                     rules, an idea)  -  the components, and how they relate and constrain each other
+   Explain WHY each step follows from the last, not merely that it does.
+   DO NOT give instructions, steps for the reader to perform, or anything in the imperative.
+   This card explains how the thing works, never how to work it.
+   DO NOT mix two structures. Starting causal and drifting into a step list is a failure.
+   TEST: a reader who will NEVER perform this activity must still find this card informative.
+
+4. in-practice  -  heading, paragraphs[2-3], voiceoverText
+   Show the SAME mechanism producing different outcomes under different conditions.
+   Name two or three variables, contexts, cases or schools of approach under which the subject
+   behaves differently, and explain what about the mechanism in card 3 causes them to diverge.
+   Where real disagreement or trade-off exists, state both positions and what each buys at what
+   cost. Where there is a defensible default, say so and say why.
+   Every difference described must trace back to something already established in card 3. Do not
+   introduce new mechanism here.
+   DO NOT pose a hypothetical for the reader to resolve, ask the reader questions, or write a
+   case study with characters. The contrast is analytic, not narrative.
+   TEST: at least one sentence must take the form "X rather than Y, because...".
+
+5. boundaries  -  heading, paragraphs[2-3], voiceoverText
+   Paragraph 1 is a REFUTATION and is mandatory. Name the most common mistaken belief about this
+   subject explicitly. State plainly that it is mistaken. Explain WHY IT IS PLAUSIBLE  -  this
+   step is what makes refutation work and must not be skipped. Then give the correct account and
+   the reason it is correct.
+   Paragraph 2 states the limits of the account just given: what this treatment simplified, where
+   the subject is genuinely contested or unsettled, and when the explanation stops holding.
+   Paragraph 3 connects outward: what this subject touches, what understanding it now unlocks,
+   what a reader would sensibly pursue next  -  as prose, not a reading list.
+   DO NOT summarise the preceding cards. This is not a conclusion and must contain material not
+   stated earlier. Do not end on an inspirational sentence.
+   TEST: paragraph 1 must contain an explicit negation  -  "is not", "does not", "contrary to".
+
+VOICEOVER: every card needs voiceoverText, minimum 70 words, spoken register, covering the same
+ground as the paragraphs without reading them back verbatim. Start with substance, never with the
+card name or "In this section...".`;
+
+    // ===========================================================================
     // SYSTEM PROMPT SELECTORS
     // ===========================================================================
 
     const getSystemPromptForMode = (mode) => {
+        if (mode === 'topicstext') return TOPICSTEXT_SYSTEM_PROMPT;
         if (mode === 'university') return UNIVERSITY_SYSTEM_PROMPT;
         if (mode === 'workplace') return WORKPLACE_SYSTEM_PROMPT;
         if (mode === 'pd') return PD_SYSTEM_PROMPT;
@@ -502,7 +613,42 @@ Write your ENTIRE JSON response in ${langName}. Every value in every field must 
 Do NOT use English for any card content. Ignore any English writing style or spelling rules above — they do not apply here.`;
     };
 
+    // v13.91: Route 5. Deliberately the leanest user prompt of the five - this route takes
+    // a topic and an audience and nothing else, because the whole point is that it works on
+    // any subject without a jurisdiction, an industry, a unit code or a job role.
+    const buildTopicsTextUserPrompt = (context, topic) => {
+        const langPrefix = getLangPrefixForUserPrompt(context);
+        const langSuffix = getLangSuffixForUserPrompt(context);
+        const lines = [];
+        lines.push(`- Topic: ${topic.title || topic.name || ''}`);
+        if (topic.outcome) { lines.push(`- What the reader should understand: ${topic.outcome}`); }
+        if (context.subjectArea) { lines.push(`- Subject area: ${context.subjectArea}`); }
+        if (context.targetAudience) { lines.push(`- Written for: ${context.targetAudience}`); }
+        if (context.readingLevel) { lines.push(`- Reading level: ${context.readingLevel}`); }
+        if (context.courseName) { lines.push(`- Part of: ${context.courseName}`); }
+
+        // The author may pin the card-3 structure rather than leaving it to the model. This
+        // is the highest-variance decision in the route, so pinning it is worth offering.
+        const forced = (context.mechanismType || '').toLowerCase();
+        const forcedLine = (forced === 'causal' || forced === 'sequential' || forced === 'compositional')
+            ? `\nCARD 3 STRUCTURE: use "${forced}" and set structureType to "${forced}". This is chosen, not a suggestion.`
+            : '';
+
+        return `${langPrefix}Write a 5-card explanatory article.
+
+CONTEXT:
+${lines.join('\n')}
+${topic.keyPoints?.length ? `\nPOINTS THAT MUST BE COVERED: ${ccTextList(topic.keyPoints).join('; ')}` : ''}${forcedLine}
+${context.additionalInstructions ? `\nAUTHOR INSTRUCTIONS: ${context.additionalInstructions}` : ''}
+${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
+
+Write the full 5-card sequence: orientation, foundations, mechanism, in-practice, boundaries.${langSuffix}`;
+    };
+
     const buildFiveCardUserPrompt = (context, topic) => {
+        if (context?.mode === 'topicstext') {
+            return buildTopicsTextUserPrompt(context, topic);
+        }
         if (context?.mode === 'university') {
             return buildUniversityFiveCardUserPrompt(context, topic);
         }
@@ -854,6 +1000,28 @@ Generate the full 6-card sequence.${langSuffix}`;
             allText = allText.replace(new RegExp(pat, 'gi'), replacement);
             if (allText !== before) needsReparse = true;
         }
+        // v13.89: doubled-word repair. The ONLY prompt-side change kept from the
+        // v13.85-13.87 series: it removes "Smoothly Smoothly" style repeats and has no
+        // effect on how much content the model produces.
+        //
+        // Everything else in those releases that touched the prompts was reverted, on
+        // the owner's instruction that 13.83 generated correctly and should simply be
+        // used. The four system prompts in this file are now byte-identical to 13.83.
+        //
+        // NOTE: an earlier version of this comment cited a probe showing the v13.85-87
+        // prompts cut output "from 182 words per card to ~110". That claim is RETRACTED.
+        // The probe fixture supplied a topic with only {id, title, outcome} and omitted
+        // topic.elementText, topic.criterionText, topic.knowledgeEvidence and
+        // topic.keyPoints, all of which the VET prompt interpolates - so it measured a
+        // starved prompt, not these prompts. No word-count regression is established.
+        const DOUBLE_WORD_ALLOWLIST = ['that', 'have', 'said', 'well', 'had', 'long'];
+        const beforeDoubles = allText;
+        allText = allText.replace(/\b([A-Za-z]{4,})(\s+)\1\b/g, function(match, word, gap) {
+            if (DOUBLE_WORD_ALLOWLIST.indexOf(word.toLowerCase()) !== -1) { return match; }
+            return word;
+        });
+        if (allText !== beforeDoubles) { needsReparse = true; }
+
         if (needsReparse) {
             try {
                 return JSON.parse(allText);
@@ -1678,6 +1846,9 @@ CRITICAL SCHEMA PRESERVATION  -  these structured arrays MUST be kept as arrays,
 
     return {
         getSystemPromptForMode: getSystemPromptForMode,
+        // v13.91: Route 5 - Topics and Text.
+        TOPICSTEXT_SYSTEM_PROMPT: TOPICSTEXT_SYSTEM_PROMPT,
+        buildTopicsTextUserPrompt: buildTopicsTextUserPrompt,
         getFiveCardSystemPromptForMode: getFiveCardSystemPromptForMode,
         buildFiveCardUserPrompt: buildFiveCardUserPrompt,
         scoreQualityGate: scoreQualityGate,

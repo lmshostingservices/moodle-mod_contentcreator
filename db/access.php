@@ -58,6 +58,23 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
+    // v13.85: on-demand generation performed by a LEARNER inside the player -
+    // voiceover playback and document examples. Both spend site credits, and both
+    // were previously gated on :view alone, which meant every enrolled student in
+    // every course could spend from the same paid balance with no way for an
+    // administrator to stop them short of disabling the feature site-wide.
+    // Granted to student by default so that nothing changes for existing sites;
+    // the point is that it can now be prohibited for a role, a course or a cohort.
+    'mod/contentcreator:generateondemand' => [
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_MODULE,
+        'archetypes' => [
+            'student' => CAP_ALLOW,
+            'teacher' => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+    ],
     // Review learner attempts and progress. Reserved for the reporting UI; it is
     // deliberately kept defined so that sites can already grant or prohibit it.
     'mod/contentcreator:review' => [

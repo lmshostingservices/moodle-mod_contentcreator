@@ -185,8 +185,29 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
             return;
         }
 
-        $manifest = $DB->get_field('contentcreator', 'manifestjson', ['id' => $instanceid]);
-        if (empty($manifest)) {
+        $stored = $DB->get_field('contentcreator', 'manifestjson', ['id' => $instanceid]);
+        if (empty($stored)) {
+            return;
+        }
+
+        // v13.85 FIX BUG-RESTORE-COMPRESSED: manifests at or above
+        // manifest_storage::COMPRESS_THRESHOLD are held as gzip+base64 behind a 'gz:'
+        // prefix, and real packs reach 6-10 MB. The URL rewrite below was applied
+        // directly to that blob, matched nothing, and wrote it back unchanged - so the
+        // restored manifest kept the SOURCE site's contextid and cmid, which
+        // mod_contentcreator_pluginfile() then refuses. Every restore, duplicate and
+        // course rollover silently lost all of its audio. The existing test only covers
+        // the small uncompressed case, so the suite passed throughout.
+        $wascompressed = (substr($stored, 0, 3) === 'gz:');
+        $manifest = \mod_contentcreator\manifest_storage::decompress($stored);
+        if ($wascompressed && $manifest === $stored) {
+            // decompress() returns the input unchanged when it cannot decode it. Rewriting
+            // an undecodable blob would corrupt it, so stop and say why.
+            debugging(
+                'Content Creator restore: could not decompress manifest for instance ' . $instanceid .
+                '; voiceover URLs were left unchanged.',
+                DEBUG_DEVELOPER
+            );
             return;
         }
 
@@ -207,7 +228,14 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
         );
 
         if ($updated !== null && $updated !== $manifest) {
-            $DB->set_field('contentcreator', 'manifestjson', $updated, ['id' => $instanceid]);
+            // Re-compress on the way back in so the row keeps the storage format the rest
+            // of the plugin expects for a manifest of this size.
+            $DB->set_field(
+                'contentcreator',
+                'manifestjson',
+                \mod_contentcreator\manifest_storage::compress($updated),
+                ['id' => $instanceid]
+            );
         }
     }
 }

@@ -5660,3 +5660,75 @@ body.dark .cc-input-method-btn:hover:not(.active),
     color: var(--cc-primary-foreground) !important;
     font-weight: 600;
 }
+
+/* ===========================================================================
+   v13.91  -  ROUTE PICKER: per-route card manifest.
+   Each route card now spells out exactly which cards it will generate, so the
+   author knows what they are choosing before they choose it.
+
+   NOTE the class names: the OUTER 2-column grid is .cc-mode-cards (pre-existing).
+   This block is .cc-mode-cardlist  -  deliberately different. Naming it
+   .cc-mode-cards would have inherited grid-template-columns: repeat(2, 1fr)
+   and laid the numbered list out in two columns.
+   =========================================================================== */
+
+.cc-mode-cardlist {
+    width: 100%;
+    margin-top: var(--cc-space-4);
+    padding-top: var(--cc-space-4);
+    border-top: 1px solid var(--cc-border);
+    text-align: left;
+}
+
+.cc-mode-cardlist-label {
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cc-text-muted);
+    margin-bottom: var(--cc-space-3);
+}
+
+.cc-mode-cardlist-items {
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--cc-text-secondary);
+}
+
+.cc-mode-cardlist-items li {
+    margin-bottom: var(--cc-space-2);
+    padding-left: 0.125rem;
+}
+
+.cc-mode-cardlist-items li:last-child {
+    margin-bottom: 0;
+}
+
+.cc-mode-cardlist-items strong {
+    color: var(--cc-text);
+    font-weight: 600;
+}
+
+.cc-mode-cardlist-note {
+    display: block;
+    margin-top: var(--cc-space-3);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--cc-text-muted);
+    font-style: italic;
+}
+
+/* With five routes the last card sits alone on the bottom row of a 2-column
+   grid. Let it span so the row is not half empty. */
+.cc-mode-cards > .cc-mode-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+    .cc-mode-cards > .cc-mode-card:last-child:nth-child(odd) {
+        grid-column: auto;
+    }
+}

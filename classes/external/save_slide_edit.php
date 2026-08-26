@@ -297,12 +297,12 @@ class save_slide_edit extends external_api {
             // moodle/course:manageactivities in the course context — every genuine editing
             // teacher has this regardless of whether their cloned role explicitly lists
             // mod/contentcreator capabilities.
-            if (!has_capability('mod/contentcreator:manage', $context)) {
-                $coursecontext = context_course::instance($cm->course);
-                if (!has_capability('moodle/course:manageactivities', $coursecontext)) {
-                    require_capability('mod/contentcreator:manage', $context);
-                }
-            }
+            // v13.86: the moodle/course:manageactivities fallback was removed. It made
+            // mod/contentcreator:manage advisory - a CAP_PROHIBIT on it denied nothing.
+            // Roles that already hold manageactivities are granted :manage by the
+            // upgrade step in db/upgrade.php, so no legitimate editing teacher loses
+            // access.
+            require_capability('mod/contentcreator:manage', $context);
 
             // Version 11.40 FIX (BUG-CC-SSLIDE-SESSION): Release session lock before DB read+write.
             // Holding the session file lock during manifest JSON decode+encode (potentially

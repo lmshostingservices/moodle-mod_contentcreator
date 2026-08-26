@@ -1,5 +1,826 @@
 # Changelog
 
+## 13.91.2 - 25 August 2026
+
+### Fixed
+
+- **Route 5 images had no content to work from.** Topics-and-Text cards carry their prose
+  in `paragraphs[]` and have neither `content` nor `description`, so the image request went
+  out with an empty `scenarioContext` and an empty description - leaving the section title
+  as the only signal the image generator received. It now sends the card heading plus its
+  opening paragraphs.
+
+- **Route 5 images would have been generated with hard hats.** The vendor's image prompt
+  builder had a single branch: `university` got academic wording and every other value,
+  including any unknown one, fell through to the VET/workplace branch that mandates safety
+  helmets, gloves and high-visibility clothing. An article about Renaissance painting would
+  have been illustrated in PPE. v13.91.1 worked around this by sending `university`; the
+  vendor now has a dedicated `topicstext` branch that picks the scene from the subject
+  matter alone, so the workaround has been removed and the true route value is sent.
+
+### Note on the vendor side (lms-labs, not this plugin)
+
+Three fixes were made to the image endpoint this release depends on:
+
+- The primary image model had been retired since 19 August and was returning 404. Every
+  image spent roughly 45 seconds failing three retries before silently falling back to a
+  secondary provider. Now on a supported model.
+- Landscape images were being generated portrait. The endpoint accepted a 16:9 request and
+  hardcoded 9:16; the requested ratio is now honoured, fallback provider included.
+- Professional Development content was being illustrated with PPE and high-vis. It now has
+  its own branch: offices, meeting rooms, business clothing.
+
+## 13.91 - 25 August 2026
+
+### New: fifth route  -  "Topics and Text"
+
+A plain explanatory-article route. Headings and prose, nothing else: no scenarios, no
+quiz, no compliance framing, no jurisdiction legislation. Built to work on any subject
+at all - forklift safety, Renaissance art, GST, grief counselling.
+
+Five sections, the **Explanatory Spine**. Each is defined by a rhetorical operation
+performed on the topic rather than by subject matter, which is what makes the same five
+slots carry any subject without strain:
+
+1. **Orientation** - what it is and why it matters, complete, before any detail
+2. **Foundations** - the two to four load-bearing ideas the rest depends on
+3. **Mechanism** - the subject actually working (causal, sequential or compositional)
+4. **In Practice** - the same mechanism producing different outcomes in different cases
+5. **Boundaries** - the common misunderstanding refuted, limits named, connections outward
+
+Deliberately more than intro/body/conclusion: section 4 forces conditionality and
+section 5 forces refutation, and both are evidence-backed rather than stylistic.
+Grounded in Meyer's expository text structures, Reigeluth's elaboration theory and the
+Diataxis Explanation quadrant. Merrill, Gagne and Kolb were considered and rejected -
+each needs the learner to DO something and receive feedback, which prose cannot deliver.
+
+Presentation: two cards across, in the Vocational route's card styling. **No left accent
+rails, and a maximum div nesting depth of two** - the card is the container. Verified by
+rendering the real output through the real renderer, not by inspection.
+
+Voiceover, top image, and card edit / delete / reorder all work on this route unchanged,
+because they are card-type-agnostic.
+
+Card 3's structure can be pinned by the author via `context.mechanismType`
+(causal | sequential | compositional); left empty, the model chooses. This is the
+highest-variance decision in the route.
+
+### Changed: route picker
+
+Each of the five route cards now lists exactly which cards it generates and what goes in
+each one, so an author knows what they are choosing before they choose it.
+
+### Note
+
+The route reuses the PD step-2 form and its DOM ids rather than introducing a new one, so
+every existing validator, button handler and topic-suggestion path works unchanged. This
+was chosen over a bespoke form specifically to keep the new surface area small.
+
+## 13.90.2 - 25 August 2026
+
+Four confirmed defects from the deep audit of the player, editor and label layer.
+
+### Fixed
+
+- **Blank / raw-key text in the interface.** Nine keys were read by `getLabel()` but
+  defined nowhere - not in `translations.js` and not in `lang/en/contentcreator.php`.
+  `getLabel()` ends `|| key`, and because the key string is truthy every
+  `getLabel('x') || 'Fallback'` call site was dead code, so the raw camelCase key rendered
+  as visible text. Card headings read "tipsForHandling" and "analysisQuestions"; worse,
+  the dialogs a teacher sees when a save fails read "somethingWentWrong",
+  "slideSaveFailed" and "documentSaveFailed". All nine now defined.
+
+- **The card editor destroyed every "What to Avoid" consequence on save.** v13.85 fixed
+  this collapse-to-string in the section-level branch, but the identical code in the
+  v13.22 per-card branch was missed - and that is the branch that actually runs, because
+  competency-summary is Card 6 of the unified 7-card flow and renders as a card block.
+  A teacher who opened a slide editor, changed only the card title and clicked Save lost
+  every consequence in that card, permanently: nothing regenerates them. Consequences are
+  now carried across by index, as the section-level branch already did.
+
+- **New "What to Avoid" rows inherited another item's consequence.** The add handler used
+  the row COUNT as the new index, which collides after a delete: three rows (0,1,2),
+  delete the middle, and the survivors keep 0 and 2 - then the new row also takes 2. Both
+  mapped to the same prior entry. New rows now take max(existing index) + 1.
+
+- **`needsReview` is now wired end to end.** The flag added in 13.90.1 was counted by the
+  builder but ignored by the player's Regenerate button and by the generator's
+  regeneration filter, so a salvaged section showed no retry control and the banner
+  promised more slides than were actually redone. All three now agree.
+
+## 13.90.1 - 25 August 2026
+
+Follow-up audit of 13.90. Six confirmed defects, two of them ship blockers.
+
+### Fixed - blockers
+
+- **Turning off "Include Decision Challenge" produced a pack of placeholders.**
+  `generator.js` required `expectedCount - 1` cards when `activitiesEnabled === false`,
+  but nothing tells the model about that setting - `prompts.js` never references it, and
+  all three unified prompts still demand "exactly 7 cards". The AI correctly returned 7,
+  the validator demanded 6, every section failed both attempts and rendered
+  "AI generation failed", after paying for two AI calls per section. The validator now
+  accepts either count; the decision-point card is dropped at render time as before.
+
+- **db/upgrade.php (2026082402): the 13.90 fix was half-applied.** The role query was
+  context-scoped but the "already decided" lookup beneath it was not, so a single
+  course-level Prevent on `:manage` anywhere on the site suppressed the system-level
+  grant - and that role lost authoring rights in EVERY course, which is precisely the
+  population the step exists to protect. Now scoped to the system context, and switched
+  to `record_exists()` so a role with overrides in several courses no longer triggers
+  "found more than one record" during upgrade.
+
+### Fixed
+
+- **db/upgrade.php (2026032104) could abort an upgrade mid-flight.** `get_records_sql()`
+  keys by the first column, and `contentcreatorid` is not unique in that grouped result,
+  so one activity with duplicate attempts for two users lost a row - then `add_index()`
+  hit "Duplicate entry", threw a `dml_exception` and left the site in maintenance mode.
+  `MAX(id) AS keepid` is now the first column.
+
+- **Exhausted attempts no longer discard generated content.** The loop breaks out saying
+  "checking for best available content" and then no such check existed: `lastScore.cards`
+  was thrown away unconditionally. One soft structural miss on both attempts destroyed
+  roughly 1,500 billed, renderable words per section. Cards carrying 200+ words are now
+  kept and marked `STRUCTURAL_REVIEW`; the placeholder sequence is used only when there
+  is genuinely nothing to keep.
+
+- **"meter" and "license" removed from the spelling map.** Australian and British English
+  spell the measuring instrument "meter" (flow meter, gas meter, multimeter) and only the
+  unit of length "metre" - so "check the flow meter" was shipping to learners as "check
+  the flow metre", in trades and WHS content, this plugin's core use case. Likewise
+  "licence" is the AU noun and "license" the AU verb, both correct: "the regulator will
+  license the operator" was being corrupted. A word-level map cannot resolve part of
+  speech. All other rules are unaffected and verified.
+
+- **generate_voiceover.php: cache lookup now precedes the billed gates.** The
+  `:generateondemand` capability check and both rate limiters ran ahead of the cache read,
+  so a free cache hit still consumed a slot in the shared site bucket - a cohort replaying
+  narrated content could exhaust the site ceiling and stop voiceover generation for
+  everyone, teachers included - and a site that prohibited the capability for students
+  broke playback of audio already generated. Now ordered as `ajax.php` always had it.
+
+### Verified, not changed
+
+- Decision-point answers ARE shuffled. An audit pass reported the correct answer was
+  always option A; `cc-card-slots.js:35` is a Fisher-Yates shuffle called at `:816` and
+  `:1047` before render. The finding was wrong.
+
+## 13.90 - 25 August 2026
+
+### Security
+
+- **db/upgrade.php (2026082402): privilege escalation fixed.** The role query that
+  granted `mod/contentcreator:manage` had no context filter, so a role holding
+  `moodle/course:manageactivities` as a course-level override in a single course was
+  granted `:manage` at SYSTEM context - site-wide authoring rights from a one-course
+  override. The query is now constrained to system-context definitions, which is the
+  set the removed manageactivities fallback actually covered.
+
+### Fixed
+
+- **player5.js getLabel(): non-English packs rendered English chrome.** Moodle serves
+  strings in the SITE language, not the pack language, and the Moodle table was
+  consulted first for every label. A Japanese or Spanish pack on an English Moodle
+  showed translated content inside an English interface. The pack's own label table
+  now wins when the pack is not English; Moodle strings remain authoritative for
+  English packs, where they exist to let a site customise wording.
+
+### Documentation
+
+- Corrected two stale code comments (prompts.js, generator.js) asserting the v13.85-87
+  prompts "cut output from 182 words per card to ~110". That figure came from a probe
+  fixture omitting topic.elementText, topic.criterionText, topic.knowledgeEvidence and
+  topic.keyPoints - all interpolated by the VET prompt. The claim is retracted; no
+  word-count regression is established. The comment at generator.js:1796 also still
+  described the quality checks as driving the repair pass, untrue since 13.88. They
+  are report-only.
+
+## 13.89 (2026-08-25)
+
+**The prompts are reverted to 13.83. The measured checks stay, but only to measure.**
+
+A four-route probe run against the live 13.87 plugin - real production prompts, one section
+per route, first-pass output with no repair pass involved - produced this:
+
+| Route | Words/card | 13.83 baseline | FK grade | Longest sentence |
+|---|---|---|---|---|
+| VET | 118 | 182 | 10.1 | 23 |
+| Workplace | 108 | 177 | 8.9 | 21 |
+| University | 114 | 119 | 15.1 | 28 |
+| PD | 108 | 184 | 10.3 | 20 |
+
+The readability work did what it was asked to: longest sentences fell from 35-43 words to
+20-28, and Workplace and PD came inside their reading-grade targets. It bought that with
+roughly 40% of the content.
+
+**13.83 and 13.64 have no depth floors at all and still produce 182 words per card.**
+v13.87 added explicit floors AND sentence caps AND a plain-words rule, and landed at 110. The
+constraints were overpowering the floors. Told to write 160-240 words in sentences under 18
+words using only short words, the model chose to write less.
+
+### Reverted
+
+`amd/src/prompts.js` is restored from 13.83 wholesale - all four route system prompts, the
+card field specs, and the repair prompts, back to the configuration that produced the content
+you were happy with. Gone with it: the DEPTH block, the sentence-length rule, the PLAIN WORDS
+block, the per-field word bands, the icon additions to the card specs, and the University
+parity blocks.
+
+The destructive field deletes added in v13.86 (`delete card.keyPoints` and friends) are also
+reverted. Keeping both copies wastes a little space, but it is what 13.83 shipped, and
+removing it was implicated in the v13.87 content loss.
+
+One prompt-side change is KEPT: the doubled-word repair in `normalizeCards()`, which removes
+"Smoothly Smoothly" style repeats. It has no bearing on how much the model writes.
+
+### Kept, but demoted to measurement only
+
+The depth, readability and duplicate-sentence checks stay in `validateCards()` and are still
+recorded on every card as `qualityIssues` / `qualityAction`, alongside the `contentWords`
+count added in 13.88. **They no longer trigger anything.** In 13.85-13.87 they drove a repair
+pass; that fired on essentially every section and the repair returned cards with their content
+arrays missing, taking a VET pack from 10,166 learner-facing words to 6,162.
+
+Now they only report. Nothing they find changes what is generated, so they cannot make content
+worse - they exist to tell you when it has drifted, which is the one thing this pipeline has
+never had. A repair pass still runs for genuine structural failure, exactly as in 13.83.
+
+The `mergePreservingContent()` guard from 13.88 is also kept: if any future repair does run and
+comes back with less than it was given, the original content is restored.
+
+### Everything else is unchanged
+
+All the non-prompt fixes from 13.84-13.88 remain: backup/restore of compressed manifests, the
+credit-spending capability and site-wide ceilings, the honest capability check, the two
+unclosed `<details>`, the four statements swallowed into comments, `escapeHtml` quote
+escaping, the Workplace and VET context fields, draft save, route-state reset, dark mode, the
+University card shell, activity ARIA, and the voice-cache prune task.
+
+## 13.88 (2026-08-24)
+
+**Found and fixed by the v13.87 proof run: the repair pass was emptying cards.**
+
+The four-route proof run against 13.87 was stopped after the first route. The VET pack came
+back at 6,162 learner-facing words against the 24 August baseline's 10,166 - a 40% drop - with
+41 of 48 cards under the depth floor and every card stamped `attemptCount: 2`.
+
+The cards had lost their content arrays entirely: `keyPoints` null, and `sceneParts`,
+`conceptInsights` and `items` absent. Only `voiceoverText` survived.
+
+### The chain
+
+Three changes combined into one failure, and none of them is wrong on its own:
+
+1. **v13.87's depth gate fires on nearly every section.** Before v13.85 the repair pass ran
+   only on a structural failure - in practice, almost never. It now runs on essentially 100%
+   of sections.
+2. **The repair pass returns cards without their content arrays.** That fault was always
+   there; it was simply almost never reached.
+3. **v13.86 removed the accident that was hiding it.** Making the field mapping destructive
+   (`delete card.keyPoints` once mapped) was correct in isolation - it stopped repairs being
+   silently discarded - but the duplicate copy it removed had been acting as a safety net. With
+   one copy and a repair that answers in a different shape, there is nothing to fall back to.
+
+Turning the gate up turned a rare latent fault into a total one.
+
+### The fix
+
+Not to guess which field name a repair will answer in - that is the guessing game this
+codebase has lost five times already. Instead, **a repair is now treated as a set of proposed
+edits rather than a replacement.** `mergePreservingContent()` takes the repaired value only
+where it actually carries content, and otherwise keeps what was already there.
+
+A repair can still improve any field. It can no longer empty one. If the card count changes,
+the merge is skipped and the event logged, because a card-for-card merge is then meaningless.
+
+This is a general guard, not a patch for this one shape: any future repair regression, in any
+field, on any route, now degrades to "no improvement" instead of "content destroyed".
+
+### Telemetry
+
+Every card is now stamped with `contentWords`, its measured visible-word count. The v13.87 run
+could not distinguish thin generation from a destructive repair, because nothing recorded the
+size of what had been produced. That gap is closed.
+
+### Still to confirm
+
+Whether first-pass content on 13.87/13.88 is as rich as the 13.83 baseline is NOT yet known -
+the v13.87 run destroyed the evidence before it could be measured. The sentence caps and
+plain-words rules added in 13.85 could plausibly have reduced volume on their own. The
+re-run of this route is what will answer it, and `contentWords` is what will show it.
+
+## 13.87 (2026-08-24)
+
+**Content depth: the floor that was never there.**
+
+This release exists because of one question that the last two did not answer: is the content
+long enough and rich enough? The honest answer was no, and worse than no.
+
+### What was actually wrong
+
+Every remaining "N+ words" floor in `prompts.js` was a **voiceoverText** floor. Since v13.41
+the narration has been rebuilt verbatim from each card's visible text, so on the VET,
+Workplace and PD routes that field is generated, billed and never read. Which means **no
+learner-facing field had a word floor at all**, and `validateCards()` had no minimum-length
+check of any kind. The card specs asked for "2 sentences" and "2-3 sentences" and nothing
+else.
+
+Meanwhile the readability work in 13.85 added a 320-word ceiling, an 18-word sentence cap
+and a plain-words rule. All of that rewards brevity. Without a floor underneath them,
+"readable" and "thin" point the same way - so the previous release improved how the content
+reads while removing the last pressure on how much of it there is.
+
+### Every content field now has a floor and a band
+
+The specs were counts of sentences; they are now counts of words, expressed as ranges so the
+model targets a band rather than a minimum to scrape past. Examples: scenario key points move
+from "2 sentences" to "2-3 sentences, 40-55 words"; mental-model step detail the same;
+mistake consequences from "15+ words" to "20-30 words"; competency standards from "10+ words"
+to "12-20 words"; University concept definitions from "30+ words" to "45-70 words"; case study
+context from "70+ words" to "90-130 words". The theoretical-framework card also regains an
+`application` field, which the renderer has always drawn and the spec had stopped asking for.
+
+Each route gained a DEPTH block, placed deliberately BEFORE the sentence-length rules so it
+is read first:
+
+> The single most common failure of this content is that it is TOO THIN, not too long. A card
+> that is short is a card the learner finishes in four seconds and remembers nothing from.
+> Every word count below is a FLOOR you must reach, not a target to approach from underneath.
+
+It names the working band (160-240 words of visible text per card; 170-260 on University),
+states that below the floor the card has failed whatever else is right about it, and makes
+explicit that the 320-word cap is a ceiling for one screen and never permission to stop at
+100. It also says how to reach a floor honestly: not adjectives, but a named piece of
+equipment, a time of day, a real form or system, a consequence with a number or a timeframe.
+
+### And a gate that measures it
+
+Prompt instructions alone are what the plugin has always relied on, and the 24 August proof
+run is what that produces. `validateCards()` now measures the visible words on every card
+against a per-route floor, and the section average against the working band.
+
+The section check matters as much as the card check: a pack can clear every individual floor
+and still be thin, which is exactly what "it used to be better" looks like once measured.
+
+`decision-point` is exempt - it is a question with four options, and holding it to a prose
+floor would push the model to pad the one card where padding actively hurts.
+
+Depth issues are reported FIRST among the soft issues, ahead of readability and duplication,
+so they survive the repair prompt's five-issue budget. A section where several cards are thin
+is collapsed into one instruction naming every offender, rather than six near-identical
+messages that would crowd everything else out.
+
+Like the readability gate, these are **soft** issues: they drive one repair pass and can never
+be the reason a section falls back to placeholder cards. Real content that reads two grades
+high is always better than a placeholder.
+
+### The repair pass can now actually expand
+
+All four repair prompts opened with "Fix ONLY the structural issues listed. Do NOT rewrite,
+rephrase, or change any content that is not broken" - which would have blocked the expansion
+the depth gate asks for. Depth is now named as the explicit exception: if an issue says a card
+is thin, the model must expand it, by adding new short specific sentences rather than padding
+or lengthening existing ones. Everything not named in an issue still stays exactly as it is.
+
+### Known, and deliberately not changed
+
+The 70-word `voiceoverText` requirement still stands on all four routes. On VET, Workplace and
+PD that text is only read when a card's structural fields come back empty, so it is mostly
+generated for nothing - real credit cost on every card. It is left in place because it is the
+narration fallback, and removing it risks a silent card in exactly the situation where
+something has already gone wrong. Worth revisiting once a proof run confirms how often the
+fallback actually fires.
+
+## 13.86 (2026-08-24)
+
+**Post-13.84 audit remediation, part two.** Closes the remaining eleven findings from the
+26-item board, including the last two ship blockers. Together with 13.85 this clears the
+whole board.
+
+### Security: the capability model is now honest
+
+`contentcreator_require_manage()` and the three authoring web services accepted
+`moodle/course:manageactivities` in the course context as an alternative to
+`mod/contentcreator:manage`. That made the plugin's own capability advisory - a
+CAP_PROHIBIT on it denied nothing - and the test suite asserted that behaviour as correct.
+Moodle security review treats an OR-fallback on a capability check as a defect on sight.
+
+The fallback existed for a real reason: a role cloned from the editingteacher archetype
+BEFORE this plugin was installed never inherits the plugin's capabilities, and those
+teachers would lose access the moment it went. That is now handled once, properly, by an
+upgrade step which grants `:manage` to every role that already holds
+`moodle/course:manageactivities` and has no explicit setting of its own. Roles deliberately
+set to prevent or prohibit are left alone. The test now asserts the prohibit is honoured,
+and a second test covers the `:generateondemand` capability added in 13.85.
+
+`db/install.xml` also carried `VERSION="2026082300"` against a plugin version of
+`2026082400`; the stamp is corrected.
+
+### Language strings
+
+Roughly 5,200 string literals live in JavaScript, and the player's ~347 interface labels
+lived only in `translations.js` - a private 53-language table with its own `getLabel()`.
+No AMD module called `get_string` for any of them, so nothing could be translated through
+AMOS or reworded by an administrator. This is the largest single item on the board and it
+is not finished in one release; what this one does is make it finishable, and migrate the
+two sets that matter most.
+
+- **All 347 player labels** are now declared in `lang/en/contentcreator.php` as
+  `cclabel_<key>`. `getLabel()` prefetches them in one batched `core/str` request and
+  prefers a Moodle string, falling back to the private table. English is therefore fully
+  under Moodle's control today, the other 52 languages keep working unchanged, and adding
+  a key to the lang file is all it takes to bring another label across.
+- **Every user-facing wizard error** is resolved through `core/str`, with English
+  fallbacks held in the module so a failed string fetch can never leave an author looking
+  at a raw key.
+
+### Workplace had the identical empty-context bug fixed on VET in 13.84
+
+`context.jobTitle`, `jobRoles`, `jobTasks` and `equipmentList` were sourced exclusively
+from `CC_WP_AI_CONTEXT`, which is assigned inside a function that returns early because
+`#cc-wp-ai-suggestions-container` is not rendered by any template. All four were therefore
+ALWAYS empty, and the Workplace prompt - which interpolates every one of them - fell back
+to a generic "employee". Job Title, Typical Job Tasks and Equipment & Tools are now
+collected on the Workplace route as they are on VET, all optional, and `taskEquipment` is
+populated rather than posted as `{}`.
+
+### Losing work
+
+- **Nothing was reset when the author changed route.** Confirm six subtopics on University,
+  go back, pick PD, and PD rendered them as "6 subtopics confirmed" and shipped them under
+  a PD title. "Start over" cleared about half the state and missed `storedOutcomes`,
+  `storedTopicHierarchy`, `storedContext`, `workplaceData` and every pasted-content
+  variable. There is now one `resetRouteState()`, called from both places.
+- **There was no draft save of any kind.** Closing the tab lost the mode, the unit code and
+  fetched TGA data, the element selection, the whole workplace context, every pasted
+  reference document, the confirmed subtopics and every credit-costed AI suggestion. The
+  wizard now saves to browser storage on each step transition and after each expensive
+  step, and restores on load. Drafts are per activity, expire after seven days rather than
+  offering a stale unit fetch, and are cleared on route change, on Start over and once a
+  manifest is generated. Storage access is wrapped, because private windows and
+  locked-down browsers throw rather than returning null.
+
+### Escaping
+
+`escapeHtml()` set `textContent` and read back `innerHTML`, which escapes `&`, `<` and `>`
+and never quotes - and it is used in attribute position throughout the player: alt text,
+data attributes, and the slide editor's input values. A quote in vendor or teacher content
+closed the attribute and everything after it parsed as markup. Both quote characters are
+now escaped at that single choke point. Four `<img src>` and six vendor-supplied attribute
+values that bypassed escaping entirely are now escaped.
+
+The one deliberate innerHTML path - the generated workplace document, which is rendered as
+markup because escaping it would show the learner raw tags - is sanitised on both sides:
+`clean_text()` server-side, and a client-side pass that parses the markup inertly and
+strips script, style, iframe, object, every `on*` handler and every `javascript:` URL
+before it reaches the live DOM. Manifests saved before this release are covered by the
+client pass.
+
+### A failed translation no longer reports success
+
+Both translation failure paths logged through a logger that is silent in production, set no
+flag, surfaced nothing to the progress callback and returned no error. A customer building
+a Spanish pack whose sections failed to translate received an English pack and a green
+tick. Failures are now counted, marked on the section (`translationFailed`), reported
+through `onProgress`, and surfaced to the author naming the sections that fell back.
+
+### Dark mode was written but never switched on
+
+`player5.css` carries 335 dark rules across six selector families - `.dark`, `.cc5-dark`,
+`.cc5-container.cc5-dark`, `.cc5-player.dark-mode`, `body.dark` and
+`body[data-bs-theme="dark"]` - and nothing in the plugin ever set any of them. Only the
+Bootstrap attribute could fire, and only on sites whose theme puts it on `<body>` rather
+than `<html>`, so on a dark Moodle the cards kept near-white backgrounds behind light text.
+The player now resolves the theme once - an explicit choice by the site theme wins, then
+the operating system preference - and stamps every class name the stylesheet looks for,
+following changes to either without a reload. Its own stamp is excluded from detection, so
+the player can still follow the OS switching back to light.
+
+### University card shell
+
+13.84 flattened the components inside University's cards, but the divergence was also in
+the card SHELL: a saturated three-stop gradient header bar, a 2px coloured bottom border,
+and a coloured hover lift that no other route has. All five card types now use the same
+header and hover as every other card, with identity carried by the header icon colour. The
+scale-and-rotate icon hover and the per-route glow halos are gone too - they were keyed to
+card types, and University's five are the only ones still generated, so in practice they
+were a University-only flourish.
+
+### Activity accessibility
+
+Quiz correctness was conveyed by a background colour and a CSS `::after` glyph on a
+permanently empty span, on a div with no `aria-pressed`, no `aria-disabled` once locked,
+and feedback in no live region. Options now carry `aria-pressed`, the whole set is marked
+`aria-disabled` when answered, feedback is a polite live region, and the result is
+announced in text as well as painted. Focus styling is added across the entire Challenge
+Mode surface, which had none outside the decision options.
+
+### Voiceover cache
+
+Two caches held the same audio: `ajax.php` in the system context at itemid 0, and
+`generate_voiceover.php` in the module context keyed by cmid. The same text was billed
+twice, once per path, and neither could see the other's copy. Both now share the one
+site-wide cache, which is the correct scope - the audio depends on text, voice and language
+and nothing else.
+
+Nothing had ever pruned it. `contentcreator_delete_instance()` only clears the module
+context, so system-context files survived activity deletion, course deletion and site
+reset, and there was no scheduled task in the plugin at all. There is now a weekly task
+with a configurable retention period (default 180 days; 0 keeps everything). Both file
+areas are also declared in the privacy provider, which had never mentioned them.
+
+## 13.85 (2026-08-24)
+
+**Post-13.84 audit remediation, part one.** Five parallel audits of 13.84 raised ~70 findings;
+26 survived re-verification. This release closes the nine ship blockers and the structural
+cause behind eight of the thirteen major findings. A companion note lists what remains.
+
+### The headline: the quality gate was not connected to the plugin
+
+`scoreQualityGate`, `scoreAuditDefensibility`, all 1,173 lines of `enterprise_qa.js` and all
+651 of `quality_scoring.js` are exported, built and shipped - and called from nowhere since
+v11.73 replaced them with `validateCards()`. That validator checks card count, that
+`cardType` exists, that three card types have a title, that decision-point has two options,
+and that mental-model has three steps. That was the entire live gate.
+
+It is the complete explanation for the 24 August proof run passing 190 of 190 cards while
+shipping doubled words, US spellings, unexpanded acronyms, 43-word sentences, 411-word
+screens and sentences duplicated across cards. Nothing in the pipeline looked for any of them.
+
+`validateCards()` now also measures, per card: Flesch-Kincaid reading grade against a
+per-route target (VET and Workplace 9, PD 11, University 14, with 1.5 grades of tolerance),
+longest sentence against a per-route ceiling, total words on one screen against 320, and
+sentences repeated verbatim across cards in the same section.
+
+These are **soft** issues by design. They drive the existing repair pass on the first attempt
+and are recorded on the card as `qualityIssues` with `qualityAction: 'QUALITY_FLAGGED'` on the
+last. A reading score must never be able to send a section to `getFailedCardSequence()` and
+replace real content with placeholders - that is a far worse outcome than prose two grades
+high. The measurements now also survive into the manifest, instead of existing only in a
+console log that is silent in production.
+
+### Prompts: the rules were aimed at a field nothing reads
+
+Since v13.41 the narration has been rebuilt verbatim from each card's visible text - the
+`voiceoverText` field is generated, billed and then unused for all seven unified card types.
+The acronym rules added in 13.84 went into the VOICEOVER section of the prompt, so they
+governed that dead field and would never have shown up in the next proof run.
+
+Every writing rule now sits in a block that states plainly that the card's own text is what
+gets read aloud. Three further faults in the same instructions:
+
+- **The limits contradicted each other.** VOICE said "sentences under 20 words" while WRITING
+  QUALITY said 25. Given two numbers a model takes the looser one. The VOICE lines no longer
+  carry a limit; there is one rule, with a hard ceiling and a target average.
+- **Nothing addressed word difficulty.** Flesch-Kincaid is half syllables per word, and every
+  instruction constrained sentence length only - the sole lexical guidance in 105 KB of
+  prompt was two examples on the VET route. There is now a PLAIN WORDS block on every route.
+- **The word floors fought the sentence limits.** Every field spec is an `N+ words` floor with
+  nothing saying how to meet it, so the model met a 30-word floor with one 30-word sentence.
+  Each route now says: meet a floor with MORE SENTENCES, never with longer ones.
+
+### University was running on a third of the instruction
+
+Measured: VET 5,345 characters, Workplace 5,172, PD 5,231, University **1,783**. University
+had no icon guidance, no icon consistency rules, no writing-quality block and no acronym
+rules. It was also the only route generated with **no spelling instruction at all** - the
+injection sat inside an `if (mode !== 'university')` block alongside the legislation
+injection - which is why nine US spellings shipped in the University pack alone.
+
+University now has all four blocks, with an icon vocabulary written for academic content
+rather than site work, and a plain-words rule that keeps technical terms but requires each to
+be defined in a separate sentence. Spelling is injected on every route; legislation stays off
+University, which is correct. The teacher's free-text instructions now reach the University
+prompt, which they never had.
+
+### One vocabulary for card data, not two
+
+Eight of the thirteen major findings were the same root cause. The prompts ask for
+`keyPoints` / `errorItems` / `standardItems` / `heading`; the renderers read `sceneParts` /
+`items` / `goodItems` / `question`; `normalizeCardSchema` translated between them with
+`if (!card.X)` guards that were neither idempotent nor total. Consequences that were live:
+
+- **Every manifest stored the same text twice.** `keyPoints` was aliased to `sceneParts` and
+  never deleted, then `sceneParts` was reassigned to a new mapped array, so the two decoupled.
+  A repair pass - prompted in the vendor's vocabulary but shown the derived fields - edited
+  `keyPoints`, and the `if (!card.sceneParts)` guard then skipped, silently discarding the
+  repair. The mapping is now destructive: the source field is deleted once mapped.
+- **The icons restored in 13.84 were severed again one file downstream.** The prompt asked for
+  an icon on every mistake and the renderer read it, but the normaliser rebuilt each item with
+  exactly two keys. `icon` now survives every path.
+- **Half of every competency-summary card was deleted after generation.** The prompt asks for
+  five error items with a 10+ word consequence each; only the label was kept. About fifty
+  words of generated, billed content per section. The consequence is now preserved, rendered
+  beneath its item, narrated, and no longer wiped when a teacher edits the card.
+- **The repair prompts named the wrong fields.** They are shown normalised cards, so they now
+  describe the normalised shape, and say so explicitly.
+
+The changelog records this class of bug in v11.79, v13.53, v13.65, v13.73 and v13.75. Making
+the transform destructive is what stops it recurring.
+
+### A short scenario card rendered the same sentence twice
+
+When a scenario arrived as prose rather than four key points, the generator sliced it into
+exactly four quadrants by index arithmetic with a non-empty floor. With three sentences the
+learner saw sentence 1, sentence 1, sentence 2, sentence 3 - under headings the AI never
+wrote - and `validateCards` passed it because the array was non-empty. It now builds only as
+many panels as there is text for, with no overlap. This was a direct mechanism for the
+duplicated sentences in the proof run.
+
+### Two unclosed `<details>` hid most of every reflection activity
+
+`cc-activities.js` opened `<details>` twice and closed it zero times; there was no
+`</details>` anywhere in the file. Both were inside `forEach` loops, so each disclosure nested
+inside the previous one. Questions 2 and 3, the score summary, the unlock instruction and the
+takeaway all sat inside question 1's collapsed widget and were invisible until a learner
+opened it - the same panel-in-panel-in-panel shape removed from the University route in 13.84.
+Both fixed, along with the compensating surplus `</div>` each carried. Every renderer in the
+file is now verified balanced by execution.
+
+### Four working statements had been swallowed into comments
+
+A line merge had appended four statements to the end of the comment above them:
+
+- the WCAG keyboard guard on topic cards, so every keystroke opened the topic and
+  `preventDefault()` ran unconditionally - **Tab could not move focus off a topic card**;
+- the corrupted-manifest message, so a bad manifest produced a **silent blank page**;
+- a `var html` declaration, so the "Content Coming Soon" screen printed the literal word
+  **`undefined`** with no wrapper - the exact failure the comment above it describes;
+- the voiceover regeneration flag, so an edited section with audio but no stored hash kept its
+  stale narration.
+
+All four restored. A sweep of `amd/src` found no others.
+
+### Security
+
+- **Credit-spending endpoints were gated on `:view`.** `generate_voiceover` (5 credits a call),
+  `generate_document_example` and the `generate_voice` AJAX action were callable by any
+  enrolled learner, with only a per-user hourly limit. A 200-learner cohort was up to 100,000
+  billable calls an hour with no aggregate ceiling and no administrative control short of
+  switching voice off site-wide. There is now a `mod/contentcreator:generateondemand`
+  capability - granted to student by default, so nothing changes until a site chooses to
+  prohibit it - and two new site-wide hourly ceilings (voiceovers 2000, other AI requests
+  1000, 0 to disable) checked before the per-user limit. Playing already-generated audio
+  still needs only `:view`.
+
+### Course backup and restore no longer destroys every voiceover
+
+Manifests at or above 512 KB are stored gzip+base64 behind a `gz:` prefix, and real packs
+reach 6-10 MB. The restore step applied its URL-rewriting regexes straight to that blob,
+matched nothing, and wrote it back unchanged - so the restored manifest kept the source
+site's contextid and cmid, which `mod_contentcreator_pluginfile()` then refuses. **Every
+restore, duplicate and course rollover silently lost all of its audio.** The manifest is now
+decompressed, rewritten and recompressed, and an undecodable blob is left alone with a
+developer-level message rather than corrupted. The existing test only covered the small
+uncompressed case, so the suite passed throughout; there is now a regression test for the
+compressed path.
+
+### Authoring flow
+
+- **The Workplace no-document path was still a dead end.** 13.84 relaxed the gate but not
+  `validateStep2()` one function away, so Suggest Subtopics succeeded, Continue appeared, and
+  clicking it errored with "Please upload a training document first." `generateTopicPlan()`
+  and the criteria builder were gated on the document too, so fixing the validator alone
+  would have dropped the build into the wrong branch with empty outcomes. All three moved
+  together, and the topic panel now survives a Back.
+- **Back from step 3 on the VET route hid the whole route.** `#cc-unit-dependent-sections` was
+  rendered hard-coded hidden and only ever revealed by fetching a unit or uploading a PDF,
+  and the step's forward button was only ever revealed by the handler that suggested the
+  topics. Re-rendering the step - which is what Back does - hid both. The author saw the unit
+  box and nothing else, and the only available action, Fetch Unit, reset job levels, topics
+  and element selection. The section now opens whenever the unit data it depends on is
+  present, and the forward gate is re-evaluated after every re-render.
+- **"Try Again" fired one paid generation per wizard step visited.** The error banner is a
+  sibling of `#cc-wizard-content`, but `bindWizardEvents()` re-runs on every wizard update and
+  added another anonymous listener to the same surviving button each time - typically four by
+  the time a generation failed. One click, four concurrent `generateContent()` runs, four
+  credit charges and four racing `saveManifest()` calls. Bound once now, and re-entry is
+  blocked while a run is in flight. The two delegated listeners on `container`, which is never
+  replaced, had the same defect and are also bound once.
+
+## 13.84 (2026-08-24)
+
+**Route styling unified, University route unblocked, and the VET content regression traced
+and fixed.** Seven defects, all found in the four-route proof run of 24 August.
+
+### 1. The University route looked nothing like the others
+
+Two separate causes, both fixed.
+
+*Box-in-box-in-box.* `renderTheoreticalFramework()` in `cc-card-slots.js` opened a
+`<div class="cc5-framework-item">` for every framework and never closed it, so the second
+framework rendered INSIDE the first, the third inside the second, and so on. That is the
+full-width panel inside an identical full-width panel inside the card. One missing closing
+tag. A CSS safety net now also flattens any nested framework item, so a future renderer or
+manifest change cannot bring the nesting back visually.
+
+*Left-accent bars.* The University card family carried decorative 3px `border-left` accents on
+five components (`cc5-framework-item`, `cc5-case-context`, `cc5-key-insight`,
+`cc5-critical-reflection`, and the per-card-type `cc5-card-header` stripes) - 13 of them on a
+single page, against 3 on the Vocational route, and those three are semantic markers
+(a legislation link, a continuity banner, an activity banner), not decoration. All five now use
+the same flat treatment as the Vocational route: subtle background, one hairline border, one
+level of boxing. The hover effects that slid panels sideways and painted an inset accent bar
+are gone too; they lift only, as on Vocational. The arrow glyph in front of a framework's
+"in practice" line is replaced with a plain bold label.
+
+The per-card-type header stripes were removed wholesale rather than per-route. They only ever
+applied to the route-specific card families, and University's are the only ones still generated,
+so this is the whole of the difference. Card identity is still carried by the header icon colour
+and the tinted header gradient.
+
+University keeps its own academic card types - concept-anchor, theoretical-framework,
+analytical-lens, ethics-considerations, case-study - so the content stays academic. Only the
+look was brought into line.
+
+### 2. VET content stopped using the author's inputs
+
+`prompts.js` interpolates `context.jobTitle`, `context.jobRoles`, `context.jobTasks` and
+`context.equipmentList`. The VET builder stopped collecting them in v6.9.14 on the assumption
+the AI would infer them from Industry + Sector + Job Level, and the context object has been
+posting `jobTitle: ''`, `jobTasks: []` and `taskEquipment: {}` ever since. The prompt asked,
+got nothing, and fell back to generic phrasing - the "it's not including my inputs" symptom.
+
+Job Title, Typical Job Tasks and Equipment & Tools are back in the Workplace Context step, all
+three optional. Leave them blank and the v6.9.14 auto-generate behaviour applies exactly as
+before. Fill them in and they reach both `suggest-topics` and the generation prompt, so the
+subtopics and every scenario speak to the actual role. The Job Title field offers the industry's
+job titles as suggestions but accepts anything typed.
+
+### 3. Contextual icons restored on four of seven card types
+
+The 23 August field-name realignment (`3fa7f67`) renamed `sceneParts` and `conceptInsights` to
+`keyPoints` and `items` to `errorItems`, and dropped the `icon` field while doing so. Every
+`keyPoints` and `errorItems` entry has since come back with `icon: null` and rendered a default
+icon - across a 56-card pack, a uniform flattening of the visual texture, which is a plausible
+part of "it looks completely broken" with nothing actually erroring. The prompt was also left
+internally inconsistent: it still carried its full icon-selection guide for fields it no longer
+asked icons for.
+
+`icon` is restored on `hook-scenario`, `concept-explainer`, `applied-scenario` and `mistakes`.
+The renderer already reads it and the API already returns whatever the prompt asks for, so this
+is a prompt-side change only.
+
+The audit-repair prompt was still written against the OLD field names (`sceneParts`,
+`conceptInsights`, `items`, `goodItems`/`badItems`, `question`/`options`), so any card it
+repaired came back in a shape the current pipeline no longer expects. It is realigned.
+
+The file header comment described four route-specific card sequences retired in March 2026
+(`f41e19d`). It now describes what the file actually implements.
+
+### 4. The University route could not be completed through the UI
+
+Step 2 renders `#cc-next-step` hidden unless subtopics already existed when the step rendered.
+On the University route the only way to create them is `applyBulkPaste()`, which runs after the
+render and never removed the class - so once subtopics were confirmed the step showed nothing
+but "Back". The Workplace route escaped this only because its optional reference-content
+textarea happens to unhide the same button once 50 words are typed. Confirming subtopics now
+reveals the forward button on every route, and a button already earned that way is never
+re-hidden. The University reference textarea's `input` binding was a bare no-op; it now updates
+its word count like every other route's.
+
+### 5. The Workplace route no longer requires a document
+
+"Suggest Subtopics" was disabled until a document was uploaded, and a document was required for
+the step to validate, so a trainer with a topic but no policy file could not use the route at
+all. A typed Training Topic is now a valid source on its own. A document still takes priority
+when one is present, and nothing changes for authors who upload one.
+
+Two things had to be fixed behind that gate for the no-document path to actually work.
+`renderWorkplaceDetails()` dereferenced `data.content` on a null document and threw a TypeError
+that the caller's `catch` swallowed as "Failed to suggest topics" - so the route would have
+reported a vendor failure even when the vendor call succeeded. And `#cc-workplace-content` is
+rendered hidden until a document upload unhides it, so the suggested subtopics would have landed
+in a hidden div. Both handled.
+
+### 6. Declared duration was wrong by two to three times
+
+Every manifest declared `estimatedMinutes: 10` - the author's target from the planning step,
+never revisited - while narration alone ran 18 to 23 minutes. It is now measured from the pack
+that was actually generated: narration at 150 wpm, reading time at 200 wpm for cards with no
+voiceover, plus a minute per interactive activity, rounded up.
+
+### 7. Text-quality guards
+
+Three defects appeared across all four routes in the proof run and nothing in the pipeline
+caught any of them. `normalizeCards()` now repairs them on the assembled JSON before anything is
+rendered or sent to TTS:
+
+- Doubled words ("Smoothly Smoothly", "Feedback Feedback") are collapsed. Only an exact
+  same-case repeat of a word of four or more letters, and never for the handful of English
+  constructions where a genuine repeat is valid ("that that", "had had").
+Spelling is fixed in `generator.js`, which already owned it. `australianSpelling` simply had no
+entries for the forms that leaked - `emphasize`, `organization`, `unauthorized` and the whole
+`-ation` noun family - so `organize` was corrected while `organization` sailed through. Those are
+added. Two further faults in the same code: an ALL-CAPS match came back title-cased, so
+"AUTHORIZED PERSONNEL ONLY" would have become "Authorised PERSONNEL ONLY"; and the gate was
+`language === 'en-AU'` exactly, so en-GB and en-NZ packs got no normalisation at all. Both fixed.
+- The prompts now require every acronym to be expanded the first time it is spoken, so a TTS
+  voice does not read "SBI" letter by letter, plus explicit rules against repeating a word,
+  reusing a sentence across cards, exceeding 320 words on one screen, and writing sentences over
+  25 words (20 spoken).
+
 ## 13.83 (2026-08-23)
 
 Release-pipeline blocker only; no functional change from 13.82. The pipeline scans for the

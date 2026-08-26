@@ -13,13 +13,105 @@
  */
 define([
     'core/ajax',
+    'core/str',
     'core/notification',
     'mod_contentcreator/manifest.builder',
     'mod_contentcreator/planner',
     'mod_contentcreator/cc-state',
     'mod_contentcreator/generator'
-], function(Ajax, Notification, ManifestBuilder, Planner, CcState, Generator) {
+], function(Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator) {
     'use strict';
+
+    // =======================================================================
+    // v13.86: BUILDER MESSAGES THROUGH MOODLE'S STRING API
+    //
+    // The wizard's user-facing errors were literals in this file, so no site
+    // could translate or reword them and none of them reached AMOS. They are
+    // declared in lang/en/contentcreator.php and resolved through core/str.
+    //
+    // showError() is called from synchronous code paths, so the strings are
+    // PREFETCHED in one batched request at init and read synchronously after
+    // that. If the fetch has not landed - or a site has not defined a key -
+    // s() returns the English fallback below, so a message is never blank.
+    // =======================================================================
+
+    /** Message keys prefetched at init. Keep in step with lang/en/contentcreator.php. */
+    const CC_MESSAGE_KEYS = [
+        'errsuggesttopics', 'errexcelvetonly', 'errexcelnotga', 'errexcelnotopics',
+        'errtopicstructure', 'errpastedtext', 'errsavecontent', 'errsaveregenerated',
+        'errfiletoolarge', 'errfiletype', 'errnotopicplan', 'errnotopicssuggested',
+        'errneedcoursetitle', 'errneedtrainingtopic', 'errneedunitcodefirst',
+        'errneedunitcode', 'errneedunittext', 'errselectpdf', 'errselectmode',
+        'erruploadpdf', 'errtgaunavailable', 'errunitevidencemissing'
+    ];
+
+    /**
+     * English fallbacks, used only until the prefetch resolves or if a site has
+     * not defined the string. Keeping them here means a failed string fetch can
+     * never leave the author staring at a raw key.
+     */
+    const CC_MESSAGE_FALLBACKS = {
+        errsuggesttopics: 'Could not suggest topics. Please paste your own topics instead.',
+        errexcelvetonly: 'Excel export is only available for VET mode.',
+        errexcelnotga: 'Excel export requires TGA data to be loaded first.',
+        errexcelnotopics: 'Excel export requires topics to be generated first.',
+        errtopicstructure: 'Failed to generate topic structure. Please try again.',
+        errpastedtext: 'Failed to process pasted text. Please try again or use the PDF upload option.',
+        errsavecontent: 'Failed to save generated content.',
+        errsaveregenerated: 'Failed to save regenerated content.',
+        errfiletoolarge: 'File size exceeds 10MB limit. Please upload a smaller file.',
+        errfiletype: 'Invalid file type. Please upload PDF, DOCX, PPTX, or TXT files only.',
+        errnotopicplan: 'No topic plan available. Please go back and try again.',
+        errnotopicssuggested: 'No topics were suggested. Try a different course title or paste your own topics.',
+        errneedcoursetitle: 'Please enter a course / topic title first.',
+        errneedtrainingtopic: 'Please enter a training topic first, or upload a document.',
+        errneedunitcodefirst: 'Please enter a unit code first.',
+        errneedunitcode: 'Please enter a unit code.',
+        errneedunittext: 'Please paste the unit text before processing.',
+        errselectpdf: 'Please select a PDF file to upload.',
+        errselectmode: 'Please select a learning mode to continue.',
+        erruploadpdf: 'Please upload a PDF file.',
+        errtgaunavailable: 'TGA API unavailable. Please upload the unit PDF instead.',
+        errunitevidencemissing: 'Unit found but Performance/Knowledge Evidence missing. ' +
+            'Upload the complete unit PDF to extract this data.'
+    };
+
+    /** Resolved strings, filled by preloadMessages(). */
+    const ccMessages = {};
+
+    /**
+     * Resolve a builder message.
+     *
+     * @param {String} key A key from CC_MESSAGE_KEYS.
+     * @return {String} The site's string, or the English fallback.
+     */
+    const s = (key) => {
+        return ccMessages[key] || CC_MESSAGE_FALLBACKS[key] || key;
+    };
+
+    /**
+     * Fetch every builder message in one batched request.
+     *
+     * @return {Promise} Resolves when the cache is warm; never rejects.
+     */
+    const preloadMessages = () => {
+        try {
+            return Str.get_strings(CC_MESSAGE_KEYS.map((key) => {
+                return { key: key, component: 'mod_contentcreator' };
+            })).then((values) => {
+                CC_MESSAGE_KEYS.forEach((key, i) => {
+                    const value = values[i];
+                    // Moodle returns '[[key]]' for an undefined string; never cache that.
+                    if (typeof value === 'string' && value && value.indexOf('[[') !== 0) {
+                        ccMessages[key] = value;
+                    }
+                });
+                return true;
+            }).catch(() => false);
+        } catch (e) {
+            return Promise.resolve(false);
+        }
+    };
 
     // v9.83 Phase-1: The gated logger comes from the shared cc-state module,
     // eliminating the duplication that existed between builder.js and player5.js.
@@ -87,6 +179,57 @@ define([
     let storedOutcomes = []; // v6.5.48: Outcomes captured from Step 2 (DOM elements are replaced)
     let storedTopicHierarchy = null; // v9.24: Structured hierarchy from paste {topics: [{title, subtopics: [string]}]}
     let workplacePastedContent = ''; // v8.4.24: Pasted text for Workplace reference content
+
+    /**
+     * v13.86: clear everything that belongs to ONE route.
+     *
+     * None of this was reset when the author changed mode, and "Start over" cleared
+     * only about half of it. The visible consequence: confirm six subtopics on the
+     * University route, go back, pick PD, and PD renders them as "6 subtopics
+     * confirmed" and ships them under a PD title. The same held for VET element
+     * topics carried into a Workplace build, which passed validation because
+     * suggestedMajorTopics and selectedMajorTopicIds were both still populated.
+     *
+     * Everything here is route-scoped. Nothing that belongs to the activity as a
+     * whole - manifest, cmid, credits - is touched.
+     *
+     * @return {void}
+     */
+    const resetRouteState = () => {
+        tgaData = null;
+        topicPlan = null;
+        workplaceData = null;
+        suggestedMajorTopics = [];
+        selectedMajorTopicIds = [];
+        selectedElementIds = [];
+
+        storedContext = null;
+        storedOutcomes = [];
+        storedTopicHierarchy = null;
+
+        vetPastedContent = '';
+        uniPastedContent = '';
+        pdPastedContent = '';
+        workplacePastedContent = '';
+
+        CC_AI_CONTEXT = null;
+        CC_SELECTED_JOB_TITLES = [];
+        CC_SELECTED_TASKS = [];
+        CC_SELECTED_EQUIPMENT = [];
+        CC_SELECTED_JOB_ROLES = [];
+        CC_SELECTED_JOB_LEVELS = [];
+        CC_SELECTED_TASK_CATEGORIES = [];
+        CC_SELECTED_EQUIPMENT_CATEGORIES = [];
+        CC_SELECTED_EQUIPMENT_LEGACY = [];
+        CC_SELECTED_JOB_TASKS = [];
+
+        CC_WP_AI_CONTEXT = null;
+        CC_WP_SELECTED_JOB_TITLES = [];
+        CC_WP_SELECTED_TASKS = [];
+        CC_WP_SELECTED_EQUIPMENT = [];
+        CC_WP_SELECTED_TASK_CATEGORIES = [];
+        CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
+    };
 
 
     /**
@@ -391,6 +534,13 @@ define([
                         sectors.map(s => `<option value="${s}">${s}</option>`).join('');
                 }
                 // Populate Job Titles based on industry
+                // v13.84: fill the restored Job Title field's suggestion list for this industry.
+                const vetJobTitleList = document.getElementById('cc-vet-job-title-options');
+                if (vetJobTitleList) {
+                    vetJobTitleList.innerHTML = getJobTitlesForIndustry(industry)
+                        .map(j => `<option value="${escapeHtml(j)}"></option>`).join('');
+                }
+
                 const jobTitleSelect = document.getElementById('cc-job-title');
                 const jobTitleCustom = document.getElementById('cc-job-title-custom');
                 if (jobTitleSelect) {
@@ -3193,6 +3343,41 @@ define([
     // ===========================================================================
     // NOTE: getJobTitlesForIndustry is defined earlier in the file (around line 1047)
     
+    /**
+     * v13.84: readers for the three optional VET Workplace Context fields
+     * restored in this release. Each returns the empty value when the field is
+     * absent or blank, so callers keep the "let the AI decide" behaviour.
+     *
+     * @return {String} The author-supplied job title, or ''.
+     */
+    const readVetJobTitle = () => {
+        return (document.getElementById('cc-vet-job-title')?.value || '').trim();
+    };
+
+    /**
+     * Split a textarea of one-per-line or comma-separated entries into a clean list.
+     *
+     * @param {String} id The element id to read.
+     * @return {Array} Trimmed, de-duplicated, non-empty entries (max 20).
+     */
+    const readVetList = (id) => {
+        const raw = document.getElementById(id)?.value || '';
+        const parts = raw.split(/[\r\n;,]+/)
+            .map(v => v.trim())
+            .filter(v => v.length > 0);
+        return parts.filter((v, i) => parts.indexOf(v) === i).slice(0, 20);
+    };
+
+    /**
+     * @return {Array} The author-supplied job tasks, or [].
+     */
+    const readVetJobTasks = () => readVetList('cc-vet-job-tasks');
+
+    /**
+     * @return {Array} The author-supplied equipment and tools, or [].
+     */
+    const readVetEquipment = () => readVetList('cc-vet-equipment');
+
     const getTaskCategoriesForJobTitle = (industry, jobTitle) => {
         // Try specific industry + job title first
         if (JOB_TASK_CATEGORIES[industry] && JOB_TASK_CATEGORIES[industry][jobTitle]) {
@@ -3276,6 +3461,10 @@ define([
         cmid = config.cmid;
         container = document.getElementById('contentcreator-app');
         if (!container) return;
+
+        // v13.86: one batched request for every wizard message. showError() reads
+        // them synchronously afterwards; the English fallbacks cover the interval.
+        preloadMessages();
         
         // v6.6.38: Initialize category selection arrays at startup
         CC_SELECTED_TASK_CATEGORIES = CC_SELECTED_TASK_CATEGORIES || [];
@@ -3375,6 +3564,136 @@ define([
     };
 
     // v6.6.15: Added regenerateFailedOnly parameter for auto-regeneration of failed slides
+    // =======================================================================
+    // v13.86: WIZARD DRAFT
+    //
+    // The manifest is only ever saved AFTER a successful generation, and only a
+    // locked manifest is restored on load. Until now there was no browser storage
+    // of any kind, so closing the tab mid-build lost the mode, the unit code and
+    // the fetched TGA data, the element selection, the whole workplace context,
+    // every pasted reference document, the confirmed subtopics, and every
+    // credit-costed AI suggestion. builder.js already acknowledged the risk - the
+    // long-generation notice says authors "assume the page is broken and reload,
+    // losing their work" - but the response was a spinner message.
+    //
+    // The draft is per activity and per user's browser, and is cleared on mode
+    // change, on Start over, and once a manifest is generated. Storage is wrapped
+    // because private windows and locked-down browsers throw on access rather than
+    // returning null.
+    // =======================================================================
+
+    /** Storage key for this activity's wizard draft. */
+    const draftKey = () => 'mod_contentcreator_draft_' + cmid;
+
+    /**
+     * Persist the in-progress wizard state.
+     *
+     * Called on every step transition and after each expensive step, so the work
+     * an author would most hate to lose is the work most recently written down.
+     *
+     * @return {void}
+     */
+    const saveDraft = () => {
+        try {
+            if (manifest) { return; }
+            if (!selectedMode) { return; }
+            window.localStorage.setItem(draftKey(), JSON.stringify({
+                v: 1,
+                savedAt: Date.now(),
+                currentStep: currentStep,
+                selectedMode: selectedMode,
+                tgaData: tgaData,
+                workplaceData: workplaceData,
+                suggestedMajorTopics: suggestedMajorTopics,
+                selectedMajorTopicIds: selectedMajorTopicIds,
+                selectedElementIds: selectedElementIds,
+                storedContext: storedContext,
+                storedOutcomes: storedOutcomes,
+                storedTopicHierarchy: storedTopicHierarchy,
+                vetPastedContent: vetPastedContent,
+                uniPastedContent: uniPastedContent,
+                pdPastedContent: pdPastedContent,
+                workplacePastedContent: workplacePastedContent,
+                CC_SELECTED_JOB_LEVELS: CC_SELECTED_JOB_LEVELS,
+                CC_AI_CONTEXT: CC_AI_CONTEXT,
+                CC_WP_AI_CONTEXT: CC_WP_AI_CONTEXT,
+                CC_WP_SELECTED_JOB_TITLES: CC_WP_SELECTED_JOB_TITLES,
+                CC_WP_SELECTED_TASKS: CC_WP_SELECTED_TASKS,
+                CC_WP_SELECTED_EQUIPMENT: CC_WP_SELECTED_EQUIPMENT
+            }));
+        } catch (e) {
+            // Quota exceeded, private mode, or storage disabled. A draft is a
+            // convenience; never let it interrupt authoring.
+            ccLog('Draft not saved: ' + e.message);
+        }
+    };
+
+    /**
+     * Remove this activity's draft.
+     *
+     * @return {void}
+     */
+    const clearDraft = () => {
+        try {
+            window.localStorage.removeItem(draftKey());
+        } catch (e) {
+            ccLog('Draft not cleared: ' + e.message);
+        }
+    };
+
+    /**
+     * Restore a draft into module state.
+     *
+     * Drafts older than seven days are discarded rather than offered: a stale unit
+     * fetch or a stale credit-costed suggestion is worse than starting again.
+     *
+     * @return {Boolean} True if a draft was restored.
+     */
+    const restoreDraft = () => {
+        let raw;
+        try {
+            raw = window.localStorage.getItem(draftKey());
+        } catch (e) {
+            return false;
+        }
+        if (!raw) { return false; }
+
+        let d;
+        try {
+            d = JSON.parse(raw);
+        } catch (e) {
+            clearDraft();
+            return false;
+        }
+        if (!d || d.v !== 1 || !d.selectedMode) { clearDraft(); return false; }
+        if (!d.savedAt || (Date.now() - d.savedAt) > (7 * 24 * 60 * 60 * 1000)) {
+            clearDraft();
+            return false;
+        }
+
+        currentStep = d.currentStep || 1;
+        selectedMode = d.selectedMode;
+        tgaData = d.tgaData || null;
+        workplaceData = d.workplaceData || null;
+        suggestedMajorTopics = d.suggestedMajorTopics || [];
+        selectedMajorTopicIds = d.selectedMajorTopicIds || [];
+        selectedElementIds = d.selectedElementIds || [];
+        storedContext = d.storedContext || null;
+        storedOutcomes = d.storedOutcomes || [];
+        storedTopicHierarchy = d.storedTopicHierarchy || null;
+        vetPastedContent = d.vetPastedContent || '';
+        uniPastedContent = d.uniPastedContent || '';
+        pdPastedContent = d.pdPastedContent || '';
+        workplacePastedContent = d.workplacePastedContent || '';
+        CC_SELECTED_JOB_LEVELS = d.CC_SELECTED_JOB_LEVELS || [];
+        CC_AI_CONTEXT = d.CC_AI_CONTEXT || null;
+        CC_WP_AI_CONTEXT = d.CC_WP_AI_CONTEXT || null;
+        CC_WP_SELECTED_JOB_TITLES = d.CC_WP_SELECTED_JOB_TITLES || [];
+        CC_WP_SELECTED_TASKS = d.CC_WP_SELECTED_TASKS || [];
+        CC_WP_SELECTED_EQUIPMENT = d.CC_WP_SELECTED_EQUIPMENT || [];
+        return true;
+    };
+
     const loadManifest = (regenerateFailedOnly = false) => {
         Ajax.call([{
             methodname: 'mod_contentcreator_get_manifest',
@@ -3393,10 +3712,13 @@ define([
                     }
                 } else {
                     manifest = null;
+                    // v13.86: pick the author's in-progress build back up.
+                    restoreDraft();
                     renderWizard();
                 }
             } else {
                 manifest = null;
+                restoreDraft();
                 renderWizard();
             }
         }).catch((error) => {
@@ -3448,6 +3770,9 @@ define([
     };
 
     const saveManifest = async (manifestData, callback) => {
+        // v13.86: once the work is on the server the local draft is redundant, and
+        // keeping it would let a stale copy resurrect after a completed build.
+        if (manifestData && manifestData.locked) { clearDraft(); }
         const cleanManifest = stripInlineAudio(manifestData);
         const serialized = ManifestBuilder.serialize(cleanManifest);
         const sizeKB = (serialized.length / 1024).toFixed(1);
@@ -3533,7 +3858,12 @@ define([
         let failedCount = 0;
         existingManifest.topics?.forEach(topic => {
             (topic.sections || []).forEach(section => {
-                if (section.generated === false || (section.cards && section.cards.some(c => c.failed))) failedCount++;
+                // v13.90.1: needsReview is set by generator.js when a section exhausted its
+                // attempts but carried enough real content to keep rather than replace with
+                // placeholders. The content renders, but the section still needs the author's
+                // attention and must stay retryable, so it counts here alongside failed cards.
+                if (section.generated === false
+                    || (section.cards && section.cards.some(c => c.failed || c.needsReview))) failedCount++;
                 if (section.scenario?.generated === false) failedCount++;
                 if (section.outcome?.generated === false) failedCount++;
                 if (section.activity?.generated === false) failedCount++;
@@ -3599,7 +3929,7 @@ define([
                         if (success) {
                             window.location.href = '?id=' + cmid; // Redirect to player
                         } else {
-                            showError('Failed to save regenerated content');
+                            showError(s('errsaveregenerated'));
                         }
                     });
                 },
@@ -3727,9 +4057,21 @@ define([
                         <ul class="cc-mode-features">
                             <li>Auto-imports from training.gov.au</li>
                             <li>Competency-based assessment focus</li>
-                            <li>Element & PC coverage mapping</li>
+                            <li>Element &amp; PC coverage mapping</li>
                             <li>Upload reference documents</li>
                         </ul>
+                        <div class="cc-mode-cardlist">
+                            <span class="cc-mode-cardlist-label">Generates 7 cards per section</span>
+                            <ol class="cc-mode-cardlist-items">
+                                <li><strong>Hook Scenario</strong> &ndash; a real moment on the job that puts the learner in the situation</li>
+                                <li><strong>Concept Explainer</strong> &ndash; the rule or obligation behind it, in plain English</li>
+                                <li><strong>Mental Model</strong> &ndash; the four or five steps, in order, with the reasoning</li>
+                                <li><strong>Applied Scenario</strong> &ndash; the same skill in a different setting and time</li>
+                                <li><strong>Mistakes</strong> &ndash; five things that go wrong, each with its consequence</li>
+                                <li><strong>Competency Summary</strong> &ndash; what they can now do, and what failing looks like</li>
+                                <li><strong>Decision Point</strong> &ndash; one question, four answers, feedback on each</li>
+                            </ol>
+                        </div>
                     </div>
 
                     <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'workplace' ? 'selected' : ''}" 
@@ -3746,9 +4088,21 @@ define([
                         <ul class="cc-mode-features">
                             <li>Upload company documents (PDF, Word)</li>
                             <li>AI extracts topics from your content</li>
-                            <li>Induction, safety & policy training</li>
+                            <li>Induction, safety &amp; policy training</li>
                             <li>Real workplace decision scenarios</li>
                         </ul>
+                        <div class="cc-mode-cardlist">
+                            <span class="cc-mode-cardlist-label">Generates 7 cards per section</span>
+                            <ol class="cc-mode-cardlist-items">
+                                <li><strong>Hook Scenario</strong> &ndash; a moment at work where this matters</li>
+                                <li><strong>Concept Explainer</strong> &ndash; the policy or obligation, in plain English</li>
+                                <li><strong>Mental Model</strong> &ndash; the steps, naming your actual tools, systems and forms</li>
+                                <li><strong>Applied Scenario</strong> &ndash; the same situation somewhere else in the business</li>
+                                <li><strong>Mistakes</strong> &ndash; five errors, each with its business or compliance cost</li>
+                                <li><strong>Competency Summary</strong> &ndash; the standard, and what falling short looks like</li>
+                                <li><strong>Decision Point</strong> &ndash; one question with compliance stakes, four answers</li>
+                            </ol>
+                        </div>
                     </div>
 
                     <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'university' ? 'selected' : ''}" 
@@ -3767,6 +4121,18 @@ define([
                             <li>Critical thinking emphasis</li>
                             <li>Academic tone and terminology</li>
                         </ul>
+                        <div class="cc-mode-cardlist">
+                            <span class="cc-mode-cardlist-label">Generates 6 cards per section</span>
+                            <ol class="cc-mode-cardlist-items">
+                                <li><strong>Concept Anchor</strong> &ndash; the concept defined, why it matters, three key terms</li>
+                                <li><strong>Theoretical Framework</strong> &ndash; two or three frameworks, each with its originator and its limits</li>
+                                <li><strong>Analytical Lens</strong> &ndash; five or more considerations, each with a concrete example</li>
+                                <li><strong>Ethics Considerations</strong> &ndash; five or more dimensions, each explained</li>
+                                <li><strong>Case Study 1</strong> &ndash; a detailed case, three analysis questions, the key insight</li>
+                                <li><strong>Case Study 2</strong> &ndash; a different context, different questions, a critical reflection</li>
+                            </ol>
+                            <span class="cc-mode-cardlist-note">No quiz card and no jurisdiction legislation on this route.</span>
+                        </div>
                     </div>
 
                     <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'pd' ? 'selected' : ''}" 
@@ -3785,8 +4151,51 @@ define([
                             <li>Enter course title, AI suggests topics</li>
                             <li>Or paste your own topics</li>
                             <li>Practical, skills-focused content</li>
-                            <li>Perfect for CPD & micro-credentials</li>
+                            <li>Perfect for CPD &amp; micro-credentials</li>
                         </ul>
+                        <div class="cc-mode-cardlist">
+                            <span class="cc-mode-cardlist-label">Generates 7 cards per section</span>
+                            <ol class="cc-mode-cardlist-items">
+                                <li><strong>Hook Scenario</strong> &ndash; a professional moment where the skill is tested</li>
+                                <li><strong>Concept Explainer</strong> &ndash; the principle underneath, in plain English</li>
+                                <li><strong>Mental Model</strong> &ndash; the steps, as practitioner-level guidance</li>
+                                <li><strong>Applied Scenario</strong> &ndash; the same skill in a different professional setting</li>
+                                <li><strong>Mistakes</strong> &ndash; five errors and their professional or relational cost</li>
+                                <li><strong>Competency Summary</strong> &ndash; the standard, and what falling short looks like</li>
+                                <li><strong>Decision Point</strong> &ndash; one judgement call, four answers, feedback on each</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'topicstext' ? 'selected' : ''}"
+                            data-mode="topicstext" data-testid="button-mode-topicstext">
+                        <div class="cc-mode-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 6h16"/>
+                                <path d="M4 10h10"/>
+                                <path d="M4 14h16"/>
+                                <path d="M4 18h10"/>
+                            </svg>
+                        </div>
+                        <h3 class="cc-mode-title">Topics and Text</h3>
+                        <p class="cc-mode-description">A written explanatory article. Headings and prose, nothing else.</p>
+                        <ul class="cc-mode-features">
+                            <li>Works for any subject at all</li>
+                            <li>No scenarios, no quiz, no compliance framing</li>
+                            <li>Reads like a good article, not a lesson plan</li>
+                            <li>Two cards across, same styling as Vocational</li>
+                        </ul>
+                        <div class="cc-mode-cardlist">
+                            <span class="cc-mode-cardlist-label">Generates 5 cards per section</span>
+                            <ol class="cc-mode-cardlist-items">
+                                <li><strong>Orientation</strong> &ndash; what the subject is and why it is worth knowing, in full, before any detail</li>
+                                <li><strong>Foundations</strong> &ndash; the two to four ideas the rest depends on</li>
+                                <li><strong>Mechanism</strong> &ndash; the subject actually working: what causes what, or what follows what</li>
+                                <li><strong>In Practice</strong> &ndash; how the same thing behaves differently in different cases, and why</li>
+                                <li><strong>Boundaries</strong> &ndash; the common misunderstanding corrected, the limits named, what it connects to</li>
+                            </ol>
+                            <span class="cc-mode-cardlist-note">Every card is a heading and two to four paragraphs. Voiceover, images and full card editing all work as normal.</span>
+                        </div>
                     </div>
                 </div>
 
@@ -3809,7 +4218,9 @@ define([
             return renderStep2VET();
         } else if (selectedMode === 'workplace') {
             return renderStep2Workplace();
-        } else if (selectedMode === 'pd') {
+        } else if (selectedMode === 'pd' || selectedMode === 'topicstext') {
+            // v13.91: Topics-and-Text reuses PD's step-2 form verbatim - same DOM ids, so
+            // every downstream reader, validator and button handler works unchanged.
             return renderStep2PD();
         } else {
             return renderStep2University();
@@ -3925,7 +4336,14 @@ define([
                 </div>
 
                 <!-- v6.8.9: Progressive Disclosure - These sections are hidden until unit is fetched -->
-                <div id="cc-unit-dependent-sections" class="cc-unit-dependent-sections cc-hidden" data-testid="unit-dependent-sections">
+                <!-- v13.85 FIX BUG-VET-BACK-DEADEND: this was hard-coded cc-hidden and was
+                     only ever revealed by fetching a unit or uploading a PDF. updateWizardUI()
+                     re-renders this step from scratch, so pressing Back from step 3 hid the
+                     element list, the context fields, Suggest Subtopics and Continue - leaving
+                     Fetch Unit as the only action, which resets job levels, topics and element
+                     selection and destroys the author's step-2 work. It now stays open whenever
+                     the unit data it depends on is present. -->
+                <div id="cc-unit-dependent-sections" class="cc-unit-dependent-sections ${tgaData && tgaData.elements && tgaData.elements.length > 0 ? '' : 'cc-hidden'}" data-testid="unit-dependent-sections">
 
                 <!-- v8.4.34: Element Selection - User picks ONE element before providing context -->
                 <div class="cc-form-section" id="cc-element-selection-section">
@@ -4045,13 +4463,42 @@ define([
                         <small class="cc-form-hint">AI will create workplace scenarios for all selected levels</small>
                     </div>
                     
+                    <!-- v13.84: restored. These three fields were dropped in v6.9.14 on the
+                         assumption the AI would infer them, but prompts.js still interpolates
+                         context.jobTitle / context.jobTasks / context.equipmentList, so it was
+                         being handed empty strings and falling back to generic phrasing. They
+                         are optional - leave them blank and the old auto-generate behaviour
+                         applies unchanged. -->
+                    <div class="cc-form-group">
+                        <label class="cc-form-label">Job Title <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                        <input type="text" class="cc-input" id="cc-vet-job-title" list="cc-vet-job-title-options"
+                               data-testid="input-vet-job-title" placeholder="e.g. Scaffolder, Site Supervisor" style="width:100%;box-sizing:border-box;">
+                        <datalist id="cc-vet-job-title-options"></datalist>
+                        <small class="cc-form-hint">Naming the role makes every scenario speak to that learner. Leave blank to let the AI choose.</small>
+                    </div>
+
+                    <div class="cc-form-grid cc-form-grid-2">
+                        <div class="cc-form-group">
+                            <label class="cc-form-label">Typical Job Tasks <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                            <textarea class="cc-input" id="cc-vet-job-tasks" rows="3" data-testid="textarea-vet-job-tasks"
+                                      placeholder="One per line, or separated by commas&#10;e.g. Erecting mobile scaffold&#10;Conducting pre-start checks"
+                                      style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+                        </div>
+                        <div class="cc-form-group">
+                            <label class="cc-form-label">Equipment &amp; Tools <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                            <textarea class="cc-input" id="cc-vet-equipment" rows="3" data-testid="textarea-vet-equipment"
+                                      placeholder="One per line, or separated by commas&#10;e.g. Full body harness&#10;Mobile scaffold tower"
+                                      style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+                        </div>
+                    </div>
+
                     <div class="cc-ai-info-banner">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="cc-info-icon">
-                            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1-1.275 1.275L12 3Z"/>
                         </svg>
                         <div class="cc-ai-info-text">
                             <strong>Industry + Sector + Job Level = Realistic Scenarios</strong><br>
-                            AI will automatically generate appropriate job titles, workplace tasks, and equipment examples based on your selections above.
+                            Anything you leave blank above, the AI generates from your industry, sector and job level.
                         </div>
                     </div>
                 </div>
@@ -4173,10 +4620,16 @@ define([
             const hasJobLevel = CC_SELECTED_JOB_LEVELS.length > 0;
             allInputsValid = hasTgaData && hasIndustry && hasJobLevel;
         } else if (selectedMode === 'workplace') {
-            const hasDocument = !!workplaceData;
+            // v13.84: a document is no longer required. It was the only accepted
+            // source of subtopics, so an author with a training topic but no policy
+            // file could not use this route at all. Either a document OR a typed
+            // training topic is now enough; a document still takes priority as the
+            // source when one is present.
+            const hasSource = !!workplaceData
+                || !!document.getElementById('cc-wp-training-topic')?.value?.trim();
             const hasIndustry = !!document.getElementById('cc-wp-industry')?.value;
             const hasTrainingType = !!document.getElementById('cc-training-type')?.value;
-            allInputsValid = hasDocument && hasIndustry && hasTrainingType;
+            allInputsValid = hasSource && hasIndustry && hasTrainingType;
         }
         
         const suggestSection = document.getElementById('cc-suggest-topics-section') || document.getElementById('cc-wp-suggest-section');
@@ -4289,8 +4742,11 @@ define([
                     </div>
                 </div>
 
-                <div id="cc-workplace-content" class="cc-workplace-content ${workplaceData ? '' : 'cc-hidden'}" data-testid="workplace-content">
-                    ${workplaceData ? renderWorkplaceDetails(workplaceData) : ''}
+                <!-- v13.85: also renders when there is no document but topics have been
+                     suggested from the training topic, so returning to this step via Back
+                     no longer hides work the author has already done. -->
+                <div id="cc-workplace-content" class="cc-workplace-content ${workplaceData || suggestedMajorTopics.length ? '' : 'cc-hidden'}" data-testid="workplace-content">
+                    ${workplaceData || suggestedMajorTopics.length ? renderWorkplaceDetails(workplaceData) : ''}
                 </div>
 
                 <div class="cc-form-section">
@@ -4301,7 +4757,7 @@ define([
                         <label class="cc-form-label">Training Topic *</label>
                         <input type="text" class="cc-input" id="cc-wp-training-topic" 
                                placeholder="e.g., Manual Handling Procedures, Fire Evacuation, Chemical Storage" data-testid="input-wp-training-topic">
-                        <small class="cc-form-hint">This is your major topic. AI will suggest sub topics (A, B, C) under it based on your uploaded document.</small>
+                        <small class="cc-form-hint">This is your major topic. AI will suggest sub topics (A, B, C) under it - from your uploaded document if you provided one, otherwise from the topic and context you entered here.</small>
                     </div>
 
                     <div class="cc-form-grid cc-form-grid-2">
@@ -4380,6 +4836,36 @@ define([
                                    placeholder="e.g., Focus on forklift operations" data-testid="input-wp-instructions">
                         </div>
                     </div>
+
+                    <!-- v13.86: the Workplace prompt has always interpolated context.jobTitle,
+                         context.jobRoles, context.jobTasks and context.equipmentList, but the only
+                         source for them was CC_WP_AI_CONTEXT, which is assigned inside a function
+                         that returns early because #cc-wp-ai-suggestions-container is not rendered
+                         by any template. All four were therefore ALWAYS empty and the prompt fell
+                         back to a generic "employee" - the same defect fixed on the VET route in
+                         v13.84. These fields are optional; blank keeps the previous behaviour. -->
+                    <div class="cc-form-group">
+                        <label class="cc-form-label">Job Title <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                        <input type="text" class="cc-input" id="cc-wp-job-title-input" list="cc-wp-job-title-options"
+                               data-testid="input-wp-job-title" placeholder="e.g. Warehouse Operator, Duty Manager" style="width:100%;box-sizing:border-box;">
+                        <datalist id="cc-wp-job-title-options"></datalist>
+                        <small class="cc-form-hint">Naming the role makes every scenario speak to that learner. Leave blank to let the AI choose.</small>
+                    </div>
+
+                    <div class="cc-form-grid cc-form-grid-2">
+                        <div class="cc-form-group">
+                            <label class="cc-form-label">Typical Job Tasks <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                            <textarea class="cc-input" id="cc-wp-job-tasks" rows="3" data-testid="textarea-wp-job-tasks"
+                                      placeholder="One per line, or separated by commas&#10;e.g. Receiving inbound stock&#10;Operating a pallet jack"
+                                      style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+                        </div>
+                        <div class="cc-form-group">
+                            <label class="cc-form-label">Equipment &amp; Tools <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                            <textarea class="cc-input" id="cc-wp-equipment" rows="3" data-testid="textarea-wp-equipment"
+                                      placeholder="One per line, or separated by commas&#10;e.g. Pallet jack&#10;RF scanner"
+                                      style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+                        </div>
+                    </div>
                     
                     <div class="cc-ai-info-banner">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="cc-info-icon">
@@ -4392,9 +4878,11 @@ define([
                     </div>
                 </div>
 
-                <div id="cc-wp-suggest-section" class="cc-suggest-topics-section ${workplaceData ? '' : 'cc-hidden'}">
-                    <button type="button" class="cc-btn cc-btn-primary cc-btn-lg" id="cc-suggest-workplace-topics-btn" data-testid="button-suggest-workplace-topics"
-                            ${!workplaceData ? 'disabled' : ''}>
+                <!-- v13.84: always rendered. A document is no longer the only source of
+                     subtopics, so this can no longer be gated on one; suggestWorkplaceTopics()
+                     asks for a training topic if neither has been provided. -->
+                <div id="cc-wp-suggest-section" class="cc-suggest-topics-section">
+                    <button type="button" class="cc-btn cc-btn-primary cc-btn-lg" id="cc-suggest-workplace-topics-btn" data-testid="button-suggest-workplace-topics">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                             <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
                             <circle cx="7.5" cy="14.5" r="1.5"/>
@@ -4891,25 +5379,32 @@ define([
     };
 
     const renderWorkplaceDetails = (data) => {
-        const wordCount = data.content?.split(/\s+/).length || 0;
+        // v13.84: the document is optional now, so this renders with data === null.
+        // It previously dereferenced data.content directly and threw a TypeError that
+        // the caller's catch swallowed as "Failed to suggest topics" - the no-document
+        // path looked like a vendor failure even when the vendor call had succeeded.
+        const doc = data || null;
+        const wordCount = doc?.content?.split(/\s+/).length || 0;
         const topicCount = suggestedMajorTopics.length;
-        
+        const majorTopic = document.getElementById('cc-wp-training-topic')?.value?.trim() || '';
+
         return `
             <div class="cc-unit-card">
                 <div class="cc-unit-header">
-                    <span class="cc-unit-code">${escapeHtml(data.filename || 'Uploaded Document')}</span>
-                    <span class="cc-unit-status">Content Extracted</span>
+                    <span class="cc-unit-code">${escapeHtml(doc ? (doc.filename || 'Uploaded Document') : (majorTopic || 'Training Topic'))}</span>
+                    <span class="cc-unit-status">${doc ? 'Content Extracted' : 'No document - using your topic and context'}</span>
                 </div>
-                <h4 class="cc-unit-title">${escapeHtml(data.title || 'Training Content')}</h4>
+                <h4 class="cc-unit-title">${escapeHtml(doc ? (doc.title || 'Training Content') : (majorTopic || 'Training Content'))}</h4>
                 <div class="cc-unit-stats">
+                    ${doc ? `
                     <div class="cc-stat">
                         <span class="cc-stat-value">${wordCount.toLocaleString()}</span>
                         <span class="cc-stat-label">Words</span>
                     </div>
                     <div class="cc-stat">
-                        <span class="cc-stat-value">${data.sections?.length || 0}</span>
+                        <span class="cc-stat-value">${doc.sections?.length || 0}</span>
                         <span class="cc-stat-label">Sections</span>
-                    </div>
+                    </div>` : ''}
                     <div class="cc-stat">
                         <span class="cc-stat-value">${topicCount}</span>
                         <span class="cc-stat-label">Topics</span>
@@ -4918,7 +5413,7 @@ define([
                 
                 ${suggestedMajorTopics.length > 0 ? renderMajorTopicSelector() : `
                     <div class="cc-suggest-topics-section">
-                        <p class="cc-suggest-hint">Click below to have AI analyze your document and suggest subtopics for your major topic.</p>
+                        <p class="cc-suggest-hint">${doc ? 'Click below to have AI analyse your document and suggest subtopics for your major topic.' : 'Click below to have AI suggest subtopics for your major topic from the training context you entered.'}</p>
                         <button type="button" class="cc-btn cc-btn-secondary cc-wp-inner-suggest-btn" data-testid="button-suggest-workplace-topics">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                                 <path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1H2a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/>
@@ -5169,11 +5664,19 @@ define([
                         ? CC_SELECTED_JOB_LEVELS.join(', ')
                         : 'worker';
                     
-                    // v6.9.14: jobTitle, jobTasks, taskEquipment left empty
-                    // Server-side AI will auto-generate appropriate scenarios based on
-                    // Industry + Sector + Job Level context
-                    
-                    
+                    // v13.84: these three are collected again in the Workplace Context
+                    // step and are optional. Blank means "AI auto-generates", which is
+                    // the v6.9.14 behaviour; filled means the author's own words reach
+                    // suggest-topics, so the suggested subtopics match the real job.
+                    const vetJobTitle = readVetJobTitle();
+                    const vetJobTasks = readVetJobTasks();
+                    const vetEquipment = readVetEquipment();
+                    const vetTaskEquipment = {};
+                    if (vetEquipment.length) {
+                        const equipStr = vetEquipment.join('; ');
+                        vetJobTasks.forEach(t => { vetTaskEquipment[t] = equipStr; });
+                    }
+
                     return {
                         country: countryCode,
                         state: state,
@@ -5181,9 +5684,10 @@ define([
                         industry: industry,
                         industrySector: industrySector,
                         jobLevel: jobLevel,
-                        jobTitle: '',           // v6.9.14: AI auto-generates
-                        jobTasks: [],           // v6.9.14: AI auto-generates
-                        taskEquipment: {}       // v6.9.14: AI auto-generates
+                        jobTitle: vetJobTitle,
+                        jobTasks: vetJobTasks,
+                        equipmentList: vetEquipment,
+                        taskEquipment: vetTaskEquipment
                     };
                 })()
             };
@@ -5269,6 +5773,7 @@ define([
                     ccLog("suggestMajorTopics: Rendering topics to container");
                 }
                 updateGenerateTopicsButton(); // v6.9.5: Show button after topics suggested
+                saveDraft(); // v13.86: subtopic suggestion costs credits - never lose it
                 hideError();
             } else {
                 showError(data.error || 'Failed to suggest topics. Using default topic structure.');
@@ -5511,7 +6016,7 @@ define([
             const trainingLabel = TRAINING_TYPES.find(t => t.value === storedContext.trainingType)?.label || '';
             if (trainingLabel) parts.push(trainingLabel);
             subtitleText = parts.length > 0 ? `Based on ${parts.join(' * ')}` : 'Based on your workplace document';
-        } else if (selectedMode === 'pd' && storedContext) {
+        } else if ((selectedMode === 'pd' || selectedMode === 'topicstext') && storedContext) {
             const courseTitle = storedContext.courseTitle || storedContext.courseName || '';
             subtitleText = courseTitle
                 ? `Based on ${courseTitle} * ${storedOutcomes.length} subtopic${storedOutcomes.length !== 1 ? 's' : ''}`
@@ -6085,7 +6590,7 @@ define([
     // v6.6.76: Use actual element/PC numbers from data instead of array indices
     const renderTopicItem = (topic, topicIndex) => {
         const cleanTitle = stripNumberPrefix(topic.title);
-        const isUniversity = selectedMode === 'university' || selectedMode === 'pd';
+        const isUniversity = selectedMode === 'university' || selectedMode === 'pd' || selectedMode === 'topicstext';
         let elementNumber;
         if (isUniversity) {
             elementNumber = topic.number || (topicIndex + 1);
@@ -6133,21 +6638,33 @@ define([
             card.addEventListener('click', () => {
                 container.querySelectorAll('.cc-mode-card').forEach(c => c.classList.remove('selected'));
                 card.classList.add('selected');
+                // v13.86: changing route must not carry the previous route's work into
+                // the new one. Re-selecting the SAME card is not a change and discards
+                // nothing.
+                if (selectedMode && selectedMode !== card.dataset.mode) {
+                    resetRouteState();
+                    clearDraft();
+                }
                 selectedMode = card.dataset.mode;
                 const nextBtn = document.getElementById('cc-next-step');
                 if (nextBtn) nextBtn.disabled = false;
+                saveDraft();
             });
         });
 
         // Keyboard support for div[role="button"] mode cards (Enter/Space to activate)
-        container.addEventListener('keydown', (e) => {
-            const card = e.target.closest('.cc-mode-card[role="button"]');
-            if (!card) return;
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                card.click();
-            }
-        });
+        // v13.85: `container` survives every wizard update, so this must bind once.
+        if (!container._ccKeydownBound) {
+            container._ccKeydownBound = true;
+            container.addEventListener('keydown', (e) => {
+                const card = e.target.closest('.cc-mode-card[role="button"]');
+                if (!card) { return; }
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    card.click();
+                }
+            });
+        }
 
         container.querySelector('#cc-next-step')?.addEventListener('click', handleNextStep);
         container.querySelector('#cc-prev-step')?.addEventListener('click', handlePrevStep);
@@ -6280,6 +6797,11 @@ define([
             // v13.33: Reference content is optional — Continue always visible when topics are confirmed
             const nextBtn = document.getElementById('cc-next-step');
             if (nextBtn) nextBtn.classList.remove('cc-hidden');
+        });
+        // v13.84: the training topic is now a valid source on its own, so the
+        // Suggest / Continue gate has to re-evaluate as it is typed.
+        container.querySelector('#cc-wp-training-topic')?.addEventListener('input', () => {
+            updateGenerateTopicsButton();
         });
         container.querySelector('#cc-generate-btn')?.addEventListener('click', generateContent);
         container.querySelector('#cc-export-excel-btn')?.addEventListener('click', exportExcelMapping);
@@ -6485,22 +7007,49 @@ define([
             });
         }
 
-        container.querySelector('[data-action="close-error"]')?.addEventListener('click', hideError);
-        container.querySelector('#cc-error-retry-btn')?.addEventListener('click', () => {
-            hideError();
-            generateContent();
-        });
+        // v13.85 FIX BUG-RETRY-MULTIFIRE: these four listeners attach to elements that
+        // SURVIVE a wizard update - the error banner is a sibling of #cc-wizard-content,
+        // and `container` is never replaced - but bindWizardEvents() re-runs on every
+        // updateWizardUI(). Each step transition therefore added another anonymous
+        // listener to the same Try Again button, so by the time a generation failed the
+        // button typically carried four. One click fired four concurrent
+        // generateContent() runs: four credit charges and four racing saveManifest()
+        // calls, with the stored manifest left in whichever state finished last.
+        // Guarding on the element itself binds each exactly once for the lifetime of
+        // the page.
+        const errorClose = container.querySelector('[data-action="close-error"]');
+        if (errorClose && !errorClose._ccBound) {
+            errorClose._ccBound = true;
+            errorClose.addEventListener('click', hideError);
+        }
+        const errorRetry = container.querySelector('#cc-error-retry-btn');
+        if (errorRetry && !errorRetry._ccBound) {
+            errorRetry._ccBound = true;
+            errorRetry.addEventListener('click', () => {
+                // Belt and braces: a second click while a run is already in flight
+                // would double-charge just as surely as a duplicate listener.
+                if (errorRetry.disabled) { return; }
+                errorRetry.disabled = true;
+                hideError();
+                Promise.resolve(generateContent()).finally(() => {
+                    errorRetry.disabled = false;
+                });
+            });
+        }
 
-        container.addEventListener('click', (e) => {
-            const deleteBtn = e.target.closest('[data-action="delete-outcome"]');
-            if (deleteBtn) {
-                const item = deleteBtn.closest('.cc-outcome-item');
-                if (item) {
-                    item.remove();
-                    updateOutcomeNumbers();
+        if (!container._ccDelegatedBound) {
+            container._ccDelegatedBound = true;
+            container.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('[data-action="delete-outcome"]');
+                if (deleteBtn) {
+                    const item = deleteBtn.closest('.cc-outcome-item');
+                    if (item) {
+                        item.remove();
+                        updateOutcomeNumbers();
+                    }
                 }
-            }
-        });
+            });
+        }
 
         // Workplace mode file upload handlers
         const dropZone = container.querySelector('#cc-drop-zone');
@@ -6569,11 +7118,16 @@ define([
                 vetPastedContent = e.target.value;
                 const countEl = document.getElementById('cc-vet-paste-count');
                 if (countEl) countEl.textContent = countWords(vetPastedContent) + ' words';
+                // v13.84: reference content is optional, so an empty box must not
+                // hide a button the author has already earned. On VET and Workplace
+                // the authority on that button is updateGenerateTopicsButton(), which
+                // checks the route's real prerequisites - defer to it rather than
+                // second-guessing it from here.
                 const nextBtn = document.getElementById('cc-next-step');
                 if (vetPastedContent.trim().length > 50) {
                     if (nextBtn) nextBtn.classList.remove('cc-hidden');
                 } else {
-                    if (nextBtn) nextBtn.classList.add('cc-hidden');
+                    updateGenerateTopicsButton();
                 }
             });
         }
@@ -6595,11 +7149,14 @@ define([
                 workplacePastedContent = e.target.value;
                 const countEl = document.getElementById('cc-wp-paste-count');
                 if (countEl) countEl.textContent = countWords(workplacePastedContent) + ' words';
+                // v13.84: reference content is optional. Reveal on enough pasted
+                // text OR on confirmed subtopics, and never re-hide a button the
+                // author has already earned by confirming subtopics.
                 const nextBtn = document.getElementById('cc-next-step');
                 if (workplacePastedContent.trim().length > 50) {
                     if (nextBtn) nextBtn.classList.remove('cc-hidden');
                 } else {
-                    if (nextBtn) nextBtn.classList.add('cc-hidden');
+                    updateGenerateTopicsButton();
                 }
             });
         }
@@ -6607,6 +7164,15 @@ define([
         const uniPasteTextareaOld = container.querySelector('#cc-uni-paste-text');
         if (uniPasteTextareaOld && !uniPasteTextareaOld._ccBound) {
             uniPasteTextareaOld._ccBound = true;
+            // v13.84: this binding was a bare no-op, so the University route's
+            // reference textarea updated neither its word count nor the forward
+            // button. Both now behave as they do on VET and Workplace.
+            uniPasteTextareaOld.addEventListener('input', (e) => {
+                uniPastedContent = e.target.value;
+                const countEl = document.getElementById('cc-uni-paste-count');
+                if (countEl) countEl.textContent = countWords(uniPastedContent) + ' words';
+                revealNextStepIfTopicsConfirmed();
+            });
         }
         const uniPasteClearBtn = container.querySelector('#cc-uni-paste-clear');
         if (uniPasteClearBtn) {
@@ -6635,13 +7201,22 @@ define([
             if (wpIndustrySelect && !wpIndustrySelect._ccWpBound) {
                 wpIndustrySelect._ccWpBound = true;
                 wpIndustrySelect.addEventListener('change', updateGenerateTopicsButton);
+                // v13.86: fill the Job Title field's suggestion list for the chosen industry.
+                wpIndustrySelect.addEventListener('change', function(e) {
+                    const list = document.getElementById('cc-wp-job-title-options');
+                    if (!list) { return; }
+                    list.innerHTML = getJobTitlesForIndustry(e.target.value)
+                        .map(j => `<option value="${escapeHtml(j)}"></option>`).join('');
+                });
             }
             const trainingTypeSelect = document.getElementById('cc-training-type');
             if (trainingTypeSelect && !trainingTypeSelect._ccWpBound) {
                 trainingTypeSelect._ccWpBound = true;
                 trainingTypeSelect.addEventListener('change', updateGenerateTopicsButton);
             }
-            if (workplaceData) {
+            // v13.85: also bind when topics came from a training topic rather than a
+            // document, otherwise the topic checkboxes are inert after a Back.
+            if (workplaceData || suggestedMajorTopics.length) {
                 bindWorkplaceTopicSelectorEvents();
             }
         }
@@ -6781,7 +7356,7 @@ define([
     const handleNextStep = async () => {
         if (currentStep === 1) {
             if (!selectedMode) {
-                showError('Please select a learning mode to continue.');
+                showError(s('errselectmode'));
                 return;
             }
             currentStep = 2;
@@ -6811,10 +7386,25 @@ define([
     };
 
     const updateWizardUI = () => {
+        // v13.86: every step transition is a natural save point.
+        saveDraft();
         const content = document.getElementById('cc-wizard-content');
         if (content) {
             content.innerHTML = renderCurrentStep();
             bindWizardEvents();
+            // v13.85: the step's forward button is rendered hidden and was only ever
+            // revealed by the handler that suggested the topics. Re-rendering the step -
+            // which is what Back does - therefore hid Continue again even though the
+            // topics were still selected in state. Re-evaluating the gate after every
+            // re-render is what makes Back safe on VET and Workplace.
+            if (currentStep === 2) {
+                if (selectedMode === 'vet' || selectedMode === 'workplace') {
+                    updateGenerateTopicsButton();
+                } else if (selectedMode === 'university') {
+                    // University has no other gate; confirmed subtopics are enough.
+                    revealNextStepIfTopicsConfirmed();
+                }
+            }
         }
 
         container.querySelectorAll('.cc-step').forEach((step, i) => {
@@ -6873,8 +7463,12 @@ define([
             }
             // v13.33: VET reference content is optional — no paste gate
         } else if (selectedMode === 'workplace') {
-            if (!workplaceData) {
-                return { valid: false, error: 'Please upload a training document first.' };
+            // v13.85: a document is one of two valid sources, not a requirement.
+            // v13.84 relaxed updateGenerateTopicsButton() but not this validator, so
+            // the no-document path reached a Continue button that always errored.
+            const wpTopic = document.getElementById('cc-wp-training-topic')?.value?.trim();
+            if (!workplaceData && !wpTopic) {
+                return { valid: false, error: 'Enter a training topic, or upload a training document.' };
             }
             const trainingType = document.getElementById('cc-training-type')?.value;
             if (!trainingType) {
@@ -6891,7 +7485,7 @@ define([
                 return { valid: false, error: 'Please select at least one Major Learning Topic.' };
             }
             // v13.33: Workplace reference content is optional — no paste gate
-        } else if (selectedMode === 'pd') {
+        } else if (selectedMode === 'pd' || selectedMode === 'topicstext') {
             // v9.83 PD-GATE FIX: ChatGPT content is optional for PD mode.
             // Previously, pdPastedContent was a hard validation gate AND the Generate button
             // was hidden until content was pasted  -  teachers saw a dead-end with no path
@@ -6922,7 +7516,7 @@ define([
     };
 
     const gatherOutcomes = () => {
-        if ((selectedMode === 'university' || selectedMode === 'workplace' || selectedMode === 'pd') && storedOutcomes.length > 0) {
+        if ((selectedMode === 'university' || selectedMode === 'workplace' || selectedMode === 'pd' || selectedMode === 'topicstext') && storedOutcomes.length > 0) {
             return [...storedOutcomes];
         }
         const outcomes = [];
@@ -6964,7 +7558,7 @@ define([
     };
 
     const getMajorTopicTitle = () => {
-        if (selectedMode === 'pd') {
+        if (selectedMode === 'pd' || selectedMode === 'topicstext') {
             return document.getElementById('cc-pd-course-title')?.value?.trim() || '';
         } else if (selectedMode === 'university') {
             return document.getElementById('cc-course-name')?.value?.trim() || '';
@@ -7036,6 +7630,25 @@ define([
      *
      * @return {void}
      */
+    /**
+     * v13.84 FIX BUG-UNI-NEXT-HIDDEN: reveal the step's forward button once
+     * subtopics exist.
+     *
+     * Step 2 renders #cc-next-step with cc-hidden unless storedOutcomes was
+     * already populated at render time. On the University route the only way to
+     * populate it is applyBulkPaste(), which ran after the render and never
+     * removed the class - so the step showed nothing but "Back" and the route
+     * could not be completed through the UI at all. The Workplace route only
+     * escaped this because its optional reference-content textarea happens to
+     * unhide the same button once 50 words are typed.
+     *
+     * @return {void}
+     */
+    const revealNextStepIfTopicsConfirmed = () => {
+        if (!Array.isArray(storedOutcomes) || storedOutcomes.length === 0) { return; }
+        document.getElementById('cc-next-step')?.classList.remove('cc-hidden');
+    };
+
     const applyBulkPaste = () => {
         const textarea = document.getElementById('cc-bulk-paste-text');
         if (!textarea) return;
@@ -7063,12 +7676,22 @@ define([
             chatgptSection.classList.remove('cc-hidden');
             chatgptSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+
+        // v13.84: confirmed subtopics alone are enough to move forward on the
+        // University route, which has no other gate. On Workplace the same paste
+        // panel is governed by updateGenerateTopicsButton(), which also checks
+        // industry and training type - do not override it from here.
+        if (selectedMode === 'university') {
+            revealNextStepIfTopicsConfirmed();
+        } else {
+            updateGenerateTopicsButton();
+        }
     };
 
     const suggestPDTopics = async () => {
         const courseTitle = document.getElementById('cc-pd-course-title')?.value?.trim();
         if (!courseTitle) {
-            showError('Please enter a course / topic title first.');
+            showError(s('errneedcoursetitle'));
             return;
         }
         const majorTopic = courseTitle;
@@ -7098,7 +7721,7 @@ define([
 
             const topicsRaw = data.topics || '';
             if (!topicsRaw || topicsRaw.length === 0) {
-                showError('No topics were suggested. Try a different course title or paste your own topics.');
+                showError(s('errnotopicssuggested'));
                 return;
             }
 
@@ -7122,11 +7745,11 @@ define([
                     chatgptSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             } else {
-                showError('No topics were suggested. Try a different course title or paste your own topics.');
+                showError(s('errnotopicssuggested'));
             }
         } catch (err) {
             ccError('CC: Failed to suggest PD topics:', err);
-            showError('Could not suggest topics. Please paste your own topics instead.');
+            showError(s('errsuggesttopics'));
         } finally {
             if (loadingEl) loadingEl.classList.add('cc-hidden');
             if (actionsEl) actionsEl.style.display = '';
@@ -8265,7 +8888,7 @@ The context and task details follow below.
     // v10.25: Force-refresh the current unit from TGA, bypassing cache
     const handleRefreshElements = async () => {
         const unitCode = document.getElementById('cc-unit-code')?.value?.trim().toUpperCase();
-        if (!unitCode) { showError('Please enter a unit code first.'); return; }
+        if (!unitCode) { showError(s('errneedunitcodefirst')); return; }
         const btn = document.getElementById('cc-refresh-elements');
         if (btn) { btn.disabled = true; btn.textContent = 'Refreshing...'; }
         try {
@@ -8301,7 +8924,7 @@ The context and task details follow below.
     const fetchTGAUnit = async () => {
         const unitCode = document.getElementById('cc-unit-code')?.value?.trim().toUpperCase();
         if (!unitCode) {
-            showError('Please enter a unit code.');
+            showError(s('errneedunitcode'));
             return;
         }
 
@@ -8353,6 +8976,7 @@ The context and task details follow below.
                 const unitDepSections = document.getElementById('cc-unit-dependent-sections');
                 if (unitDepSections) {
                     unitDepSections.classList.remove('cc-hidden');
+                    saveDraft(); // v13.86: a unit fetch is a paid round trip - never lose it
                 }
                 // v8.4.34: Render element list for selection
                 const elementListEl = document.getElementById('cc-element-list');
@@ -8388,7 +9012,7 @@ The context and task details follow below.
                 } else {
                     // Show upload option for missing PE/KE
                     pdfUploadSection?.classList.remove('cc-hidden');
-                    showError('Unit found but Performance/Knowledge Evidence missing. Upload the complete unit PDF to extract this data.');
+                    showError(s('errunitevidencemissing'));
                 }
             } else {
                 // Show PDF upload fallback
@@ -8398,7 +9022,7 @@ The context and task details follow below.
             }
         } catch (err) {
             // Show PDF upload fallback on error/timeout
-            showError('TGA API unavailable. Please upload the unit PDF instead.');
+            showError(s('errtgaunavailable'));
             pdfUploadSection?.classList.remove('cc-hidden');
             tgaData = null;
         } finally {
@@ -8413,15 +9037,15 @@ The context and task details follow below.
         const file = fileInput?.files?.[0];
 
         if (!unitCode) {
-            showError('Please enter a unit code first.');
+            showError(s('errneedunitcodefirst'));
             return;
         }
         if (!file) {
-            showError('Please select a PDF file to upload.');
+            showError(s('errselectpdf'));
             return;
         }
         if (file.type !== 'application/pdf') {
-            showError('Please upload a PDF file.');
+            showError(s('erruploadpdf'));
             return;
         }
 
@@ -8455,6 +9079,7 @@ The context and task details follow below.
                 const unitDepSections = document.getElementById('cc-unit-dependent-sections');
                 if (unitDepSections) {
                     unitDepSections.classList.remove('cc-hidden');
+                    saveDraft(); // v13.86: a unit fetch is a paid round trip - never lose it
                 }
                 const elementListEl = document.getElementById('cc-element-list');
                 if (elementListEl) {
@@ -8508,8 +9133,8 @@ The context and task details follow below.
         const textarea = document.getElementById('cc-paste-unit-text');
         const pastedText = textarea?.value?.trim();
 
-        if (!unitCode) { showError('Please enter a unit code first.'); return; }
-        if (!pastedText || pastedText.length < 50) { showError('Please paste the unit text before processing.'); return; }
+        if (!unitCode) { showError(s('errneedunitcodefirst')); return; }
+        if (!pastedText || pastedText.length < 50) { showError(s('errneedunittext')); return; }
 
         const pdfLoadingEl    = document.getElementById('cc-pdf-loading');
         const pdfUploadSection = document.getElementById('cc-pdf-upload-section');
@@ -8541,6 +9166,7 @@ The context and task details follow below.
                 detailsEl?.classList.remove('cc-hidden');
                 const unitDepSections = document.getElementById('cc-unit-dependent-sections');
                 if (unitDepSections) unitDepSections.classList.remove('cc-hidden');
+                saveDraft(); // v13.86
                 const elementListEl = document.getElementById('cc-element-list');
                 if (elementListEl) elementListEl.innerHTML = renderElementList(tgaData);
                 // v10.25: Show element correction bar
@@ -8555,7 +9181,7 @@ The context and task details follow below.
                 showError(data.error || 'Failed to extract data from pasted text.');
             }
         } catch (err) {
-            showError('Failed to process pasted text. Please try again or use the PDF upload option.');
+            showError(s('errpastedtext'));
         } finally {
             pdfLoadingEl?.classList.add('cc-hidden');
             if (pdfLoadingEl) pdfLoadingEl.querySelector('span').textContent = 'Extracting competency data from PDF...';
@@ -8574,7 +9200,7 @@ The context and task details follow below.
 
         const maxSize = 10 * 1024 * 1024; // 10MB
         if (file.size > maxSize) {
-            showError('File size exceeds 10MB limit. Please upload a smaller file.');
+            showError(s('errfiletoolarge'));
             return;
         }
 
@@ -8588,7 +9214,7 @@ The context and task details follow below.
         const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
         
         if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-            showError('Invalid file type. Please upload PDF, DOCX, PPTX, or TXT files only.');
+            showError(s('errfiletype'));
             return;
         }
 
@@ -8628,6 +9254,7 @@ The context and task details follow below.
                 contentEl?.classList.remove('cc-hidden');
                 bindWorkplaceTopicSelectorEvents();
                 hideError();
+                saveDraft(); // v13.86: a document extract costs credits - never lose it
                 
                 // v6.9.1: Trigger AI-powered context suggestions from document
                 if (ccBuilder?.renderWorkplaceAISuggestions) {
@@ -8665,14 +9292,10 @@ The context and task details follow below.
 
 
     const suggestWorkplaceTopics = async () => {
-        if (!workplaceData) {
-            showError('Please upload a document first.');
-            return;
-        }
-
+        // v13.84: the training topic is the required input; the document is optional.
         const majorTopic = document.getElementById('cc-wp-training-topic')?.value?.trim();
         if (!majorTopic) {
-            showError('Please enter a training topic first.');
+            showError(s('errneedtrainingtopic'));
             return;
         }
 
@@ -8694,8 +9317,10 @@ The context and task details follow below.
             const context = gatherContext();
             const data = await CcState.vendorFetch(cmid, 'suggestworkplacetopics', {
                 payload: {
-                    content: workplaceData.content,
-                    title: workplaceData.title,
+                    // v13.84: empty when no document was uploaded - the vendor then
+                    // works from majorTopic + context alone.
+                    content: workplaceData?.content || '',
+                    title: workplaceData?.title || majorTopic,
                     majorTopic: majorTopic,
                     context: context,
                     duration: parseInt(document.querySelector('input[name="duration"]:checked')?.value) || 10
@@ -8719,10 +9344,17 @@ The context and task details follow below.
                 });
                 // Auto-select all by default
                 selectedMajorTopicIds = suggestedMajorTopics.map(t => t.id);
-                contentEl.innerHTML = renderWorkplaceDetails(workplaceData);
+                if (contentEl) {
+                    contentEl.innerHTML = renderWorkplaceDetails(workplaceData);
+                    // v13.84: this panel is hidden until a document is uploaded. With
+                    // no document there is nothing else to unhide it, so the suggested
+                    // subtopics were written into a hidden div.
+                    contentEl.classList.remove('cc-hidden');
+                }
                 bindWorkplaceTopicSelectorEvents();
                 updateGenerateTopicsButton();
                 hideError();
+                saveDraft(); // v13.86
             } else {
                 showError(data.error || 'Failed to suggest topics. Please try again.');
             }
@@ -8794,11 +9426,15 @@ The context and task details follow below.
             const selectedTopics = suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id));
             inputs.selectedMajorTopics = selectedTopics;
             inputs.tgaData = tgaData;
-        } else if (selectedMode === 'workplace' && workplaceData) {
-            // Pass selected Major Topics for workplace mode
+        } else if (selectedMode === 'workplace') {
+            // v13.85: was gated on workplaceData. Workplace keeps its subtopics in
+            // suggestedMajorTopics, never in storedOutcomes, so a no-document build
+            // fell into the else branch below with empty outcomes and no topics.
+            // Planner.planTopics only needs selectedMajorTopics here; workplaceData
+            // is passed through when present and is legitimately null when not.
             const selectedTopics = suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id));
             inputs.selectedMajorTopics = selectedTopics;
-            inputs.workplaceData = workplaceData;
+            inputs.workplaceData = workplaceData || null;
         } else {
             inputs.outcomes = storedOutcomes.length > 0 ? storedOutcomes : gatherOutcomes();
             if (storedTopicHierarchy) {
@@ -8810,7 +9446,7 @@ The context and task details follow below.
             topicPlan = Planner.planTopics(inputs);
             updateWizardUI();
         } catch (err) {
-            showError('Failed to generate topic structure. Please try again.');
+            showError(s('errtopicstructure'));
             currentStep = 2;
             updateWizardUI();
         }
@@ -8834,9 +9470,11 @@ The context and task details follow below.
                 ? CC_SELECTED_JOB_LEVELS.join(', ')
                 : 'worker';
             
-            // v6.9.17: jobLevel is the input - AI dynamically generates job titles in scenarios
-            // No manual job title selection - AI handles this based on industry + sector + level
-            const jobTitle = ''; // AI generates job titles dynamically
+            // v13.84: the Workplace Context step collects these again (all optional).
+            // Blank fields fall through to the v6.9.14 behaviour of letting the AI
+            // invent them; a filled field is passed straight to the prompt, which has
+            // always interpolated context.jobTitle / jobTasks / equipmentList.
+            const jobTitle = readVetJobTitle();
             
             // v6.9.14: No more manual job/task/equipment selection - AI handles this automatically
             const selectedTaskIds = [];
@@ -8853,17 +9491,21 @@ The context and task details follow below.
             
             // Build selected tasks with examples and element mappings
             const selectedTasks = aiTaskCategories.filter(t => selectedTaskIds.includes(t.id));
-            const jobTasks = selectedTasks.map(t => {
-                const examples = (t.examples || []).slice(0, 3).join(', ');
-                return examples ? `${t.title}: ${examples}` : t.title;
-            });
-            
+            const jobTasks = selectedTasks.length
+                ? selectedTasks.map(t => {
+                    const examples = (t.examples || []).slice(0, 3).join(', ');
+                    return examples ? `${t.title}: ${examples}` : t.title;
+                })
+                : readVetJobTasks();
+
             // Build selected equipment with examples and element mappings
             const selectedEquipment = aiEquipmentCategories.filter(e => selectedEquipmentIds.includes(e.id));
-            const equipmentList = selectedEquipment.map(e => {
-                const examples = (e.examples || []).slice(0, 3).join(', ');
-                return examples ? `${e.title}: ${examples}` : e.title;
-            });
+            const equipmentList = selectedEquipment.length
+                ? selectedEquipment.map(e => {
+                    const examples = (e.examples || []).slice(0, 3).join(', ');
+                    return examples ? `${e.title}: ${examples}` : e.title;
+                })
+                : readVetEquipment();
             
             // Map tasks to equipment for prompt binding
             const taskEquipment = {};
@@ -8967,7 +9609,16 @@ The context and task details follow below.
                 return examples ? `${e.title}: ${examples}` : e.title;
             });
             
-            const jobTitle = pickedJobs.length > 0 ? pickedJobs[0] : '';
+            // v13.86: fall back to the author's own words when the AI-suggestion path
+            // produced nothing - which, until the fields above existed, was always.
+            const typedJobTitle = (document.getElementById('cc-wp-job-title-input')?.value || '').trim();
+            const typedTasks = readVetList('cc-wp-job-tasks');
+            const typedEquipment = readVetList('cc-wp-equipment');
+            const finalJobRoles = pickedJobs.length ? pickedJobs : (typedJobTitle ? [typedJobTitle] : []);
+            const finalJobTasks = jobTasks.length ? jobTasks : typedTasks;
+            const finalEquipment = equipmentList.length ? equipmentList : typedEquipment;
+
+            const jobTitle = finalJobRoles.length > 0 ? finalJobRoles[0] : '';
             const learnerRole = jobTitle ? `${jobTitle} (${jobLevel})` : (targetAudience === 'supervisors' ? 'supervisor' : (targetAudience === 'contractors' ? 'contractor' : 'employee'));
             
             return {
@@ -8984,19 +9635,58 @@ The context and task details follow below.
                 targetAudience: targetAudience,
                 jobLevel: jobLevel,
                 jobTitle: jobTitle,
-                jobRoles: pickedJobs,
-                jobTasks: jobTasks,
-                taskEquipment: {},
-                equipmentList: equipmentList,
+                jobRoles: finalJobRoles,
+                jobTasks: finalJobTasks,
+                taskEquipment: (function() {
+                    // v13.86: the prompt binds tasks to equipment; this was always {}.
+                    const map = {};
+                    if (finalEquipment.length) {
+                        const equipStr = finalEquipment.join('; ');
+                        finalJobTasks.forEach(function(t) { map[t] = equipStr; });
+                    }
+                    return map;
+                })(),
+                equipmentList: finalEquipment,
                 additionalInstructions: document.getElementById('cc-wp-instructions')?.value || '',
                 learnerRole: learnerRole,
                 location: state ? `${state}, ${countryCode}` : countryCode,
                 pastedContent: workplacePastedContent || '',
                 priorityContent: workplacePastedContent || null,
-                aiSelectedJobTitles: pickedJobs,
-                aiSelectedTasks: jobTasks,
-                aiSelectedEquipment: equipmentList,
+                aiSelectedJobTitles: finalJobRoles,
+                aiSelectedTasks: finalJobTasks,
+                aiSelectedEquipment: finalEquipment,
                 wpAiContext: wpAiCtx
+            };
+        } else if (selectedMode === 'topicstext') {
+            // v13.91: Topics and Text. Reads PD's step-2 fields because it reuses that
+            // form, but emits a deliberately lean context: this route works on any subject
+            // on earth, so it carries no jurisdiction, no industry framing and no job role.
+            // Sending those would push the model toward workplace-flavoured prose on an
+            // article about, say, Renaissance painting.
+            const ttCountry = document.getElementById('cc-pd-country')?.value || 'AU';
+            const ttTitle = document.getElementById('cc-pd-course-title')?.value || '';
+            const ttAudience = document.getElementById('cc-pd-audience')?.value || '';
+            const ttSubject = document.getElementById('cc-pd-industry')?.value || '';
+            return {
+                mode: 'topicstext',
+                country: ttCountry,
+                language: getCountryLang(ttCountry),
+                state: '',
+                courseName: ttTitle,
+                courseTitle: ttTitle,
+                subjectArea: ttSubject,
+                targetAudience: ttAudience ? ttAudience.replace(/-/g, ' ') : '',
+                // industryContext is read by shared plumbing (image prompts, planner) and
+                // must be non-empty, but it stays neutral rather than industry-flavoured.
+                industryContext: ttSubject || 'General',
+                industry: ttSubject,
+                location: ttCountry,
+                // mechanismType pins card 3's structure. Empty means the model chooses,
+                // which is the default. See TOPICSTEXT_SYSTEM_PROMPT card 3.
+                mechanismType: document.getElementById('cc-tt-mechanism')?.value || '',
+                learningOutcomes: gatherOutcomes() || [],
+                pastedContent: pdPastedContent || '',
+                priorityContent: pdPastedContent || null
             };
         } else if (selectedMode === 'pd') {
             const countryCode = document.getElementById('cc-pd-country')?.value || 'AU';
@@ -9054,15 +9744,15 @@ The context and task details follow below.
     const exportExcelMapping = async () => {
         
         if (selectedMode !== 'vet') {
-            showError('Excel export is only available for VET mode.');
+            showError(s('errexcelvetonly'));
             return;
         }
         if (!tgaData) {
-            showError('Excel export requires TGA data to be loaded first.');
+            showError(s('errexcelnotga'));
             return;
         }
         if (!topicPlan?.topics) {
-            showError('Excel export requires topics to be generated first.');
+            showError(s('errexcelnotopics'));
             return;
         }
 
@@ -9177,7 +9867,7 @@ The context and task details follow below.
     const generateContent = async () => {
         if (!topicPlan) {
             ccError('[CC] generateContent() ABORTED: topicPlan is null/undefined');
-            showError('No topic plan available. Please go back and try again.');
+            showError(s('errnotopicplan'));
             return;
         }
 
@@ -9235,7 +9925,7 @@ The context and task details follow below.
                 mode: selectedMode,
                 context: storedContext || gatherContext(),
                 duration: parseInt(document.querySelector('input[name="duration"]:checked')?.value) || 10,
-                criteria: selectedMode === 'vet' ? tgaData : selectedMode === 'workplace' ? { workplaceDocument: workplaceData, topics: suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id)) } : { outcomes: storedOutcomes.length > 0 ? storedOutcomes : gatherOutcomes() },
+                criteria: selectedMode === 'vet' ? tgaData : selectedMode === 'workplace' ? { workplaceDocument: workplaceData || null, topics: suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id)) } : { outcomes: storedOutcomes.length > 0 ? storedOutcomes : gatherOutcomes() },
                 topicPlan: topicPlan, // Pass the AI-generated topic plan!
                 settings: {
                     progressionMode: progressionMode,
@@ -9526,6 +10216,13 @@ The context and task details follow below.
                             // focused translation task. The AI's entire input is English card content —
                             // there is no competing English reference material, so translation is reliable.
                             var _mlTopics = null;
+                            // v13.86: partial translations used to be invisible - the failure
+                            // paths logged through a production-silent logger and the author
+                            // was shown a success message over an English pack. The generator
+                            // now reports failures through onProgress; they are collected here
+                            // and surfaced when the build finishes.
+                            var _mlFailures = 0;
+                            var _mlFailureTitles = [];
                             try {
                                 _mlTopics = await Generator.translateTopicsForLanguage(
                                     generatedManifest.topics,
@@ -9535,11 +10232,27 @@ The context and task details follow below.
                                         var pct = Math.round((p.current / p.total) * 100);
                                         document.getElementById('cc-gen-progress').style.width = pct + '%';
                                         document.getElementById('cc-gen-status').textContent =
-                                            'Translating ' + _mlLang.label + '  —  ' + (p.itemLabel || '') + ' (' + pct + '%)';
+                                            'Translating ' + _mlLang.label + '  -  ' + (p.itemLabel || '') + ' (' + pct + '%)';
+                                        if (p.translationFailures) {
+                                            _mlFailures = p.translationFailures;
+                                            if (p.translationFailureTitles) {
+                                                _mlFailureTitles = p.translationFailureTitles;
+                                            }
+                                        }
                                     }
                                 );
                             } catch (_mlTransErr) {
                                 ccError('[CC-ML TRANSLATE] translateTopicsForLanguage failed for ' + _mlLang.code + ':', _mlTransErr.message);
+                                showError('Could not translate into ' + _mlLang.label + ': ' + _mlTransErr.message +
+                                    '. That language pack was not created.');
+                            }
+                            if (_mlFailures > 0) {
+                                showError(_mlFailures + ' section' + (_mlFailures === 1 ? '' : 's') +
+                                    ' could not be translated into ' + _mlLang.label +
+                                    ' and were left in English' +
+                                    (_mlFailureTitles.length ? ': ' + _mlFailureTitles.slice(0, 3).join(', ') +
+                                        (_mlFailureTitles.length > 3 ? ', and others' : '') : '') +
+                                    '. Regenerate that language to try again.');
                             }
                             var _mlResult = _mlTopics ? { topics: _mlTopics } : null;
 
@@ -9698,7 +10411,7 @@ The context and task details follow below.
                         if (success) {
                             renderLocked();
                         } else {
-                            showError('Failed to save generated content.');
+                            showError(s('errsavecontent'));
                             progressSection?.classList.add('cc-hidden');
                             if (generateBtn) generateBtn.disabled = false;
                             if (prevBtn) prevBtn.disabled = false;
@@ -9763,7 +10476,7 @@ The context and task details follow below.
         const activityCount = manifest.topics?.reduce((sum, topic) => 
             sum + (topic.sections?.filter(s => s.activity)?.length || 0), 0) || 0;
         
-        const modeLabel = selectedMode === 'vet' ? 'Vocational (RTO)' : selectedMode === 'workplace' ? 'Workplace Training' : selectedMode === 'university' ? 'University' : 'Professional Development';
+        const modeLabel = selectedMode === 'vet' ? 'Vocational (RTO)' : selectedMode === 'workplace' ? 'Workplace Training' : selectedMode === 'university' ? 'University' : selectedMode === 'topicstext' ? 'Topics and Text' : 'Professional Development';
 
         // v11.73: Extract validity gate results per topic from manifest cards (replaces dual scoring)
         let qaResultsHtml = '';
@@ -9850,26 +10563,15 @@ The context and task details follow below.
                 'Start over'
             ).then(() => {
                 manifest = null;
-                tgaData = null;
-                topicPlan = null;
                 selectedMode = null;
-                suggestedMajorTopics = [];
-                selectedMajorTopicIds = [];
-                selectedElementIds = []; // v8.4.34
                 currentStep = 1;
-                
-                // v6.9.1: Clear AI context variables on reset
-                CC_AI_CONTEXT = null;
-                CC_SELECTED_JOB_TITLES = [];
-                CC_SELECTED_TASKS = [];
-                CC_SELECTED_EQUIPMENT = [];
-                
-                // v6.9.1: Also clear legacy context variables
-                CC_SELECTED_JOB_ROLES = [];
-                CC_SELECTED_TASK_CATEGORIES = [];
-                CC_SELECTED_EQUIPMENT_CATEGORIES = [];
-                CC_SELECTED_EQUIPMENT_LEGACY = [];
-                
+                // v13.86: was clearing about half of the route state by hand and missing
+                // storedOutcomes, storedTopicHierarchy, storedContext, workplaceData and
+                // every pasted-content variable - so "Start over" left the next build
+                // carrying the previous one's subtopics.
+                resetRouteState();
+                clearDraft();
+
                 saveManifest({ locked: false, reset: true }, () => {
                     renderWizard();
                 });

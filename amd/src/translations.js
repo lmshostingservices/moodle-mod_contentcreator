@@ -42,6 +42,24 @@ define([], function() {
             predictionPrompt: 'Prediction Prompt',
             predictionOptions: 'Prediction Options',
             voiceoverCredits: 'Regenerate voiceover (5 credits)',
+            // v13.90.1 FIX-BLANK-LABELS: these nine keys were read by getLabel() but
+            // defined NOWHERE - not here, and not in lang/en/contentcreator.php.
+            // getLabel() ends `return labels[key] || UI_LABELS['en'][key] || key;` and the
+            // key string is truthy, so every `getLabel('x') || 'Fallback'` call site was
+            // dead code and the raw camelCase key rendered as visible UI text: card
+            // headings reading "tipsForHandling" and "analysisQuestions", and - worst -
+            // the error dialogs a teacher gets when a save fails reading
+            // "somethingWentWrong", "slideSaveFailed", "documentSaveFailed".
+            noContentYet: 'This section has no content yet. Use Regenerate to try again, or edit the card to add it.',
+            tipsForHandling: 'Tips for Handling This',
+            analysisQuestions: 'Analysis Questions',
+            optimisationTips: 'Optimisation Tips',
+            completed: 'Completed',
+            documentActivity: 'Document Activity',
+            introduction: 'Introduction',
+            slideSaveFailed: 'This slide could not be saved. Your changes are still on screen - please try again.',
+            documentSaveFailed: 'This document could not be saved. Your changes are still on screen - please try again.',
+            somethingWentWrong: 'Something went wrong. Please try again.',
             // Activity Badges
             escalationDecisions: 'Escalation Decisions',
             responseAnalysis: 'Response Analysis',

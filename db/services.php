@@ -65,10 +65,12 @@ $functions = [
         'methodname' => 'execute',
         'description' => 'Generate text-to-speech voiceover',
         'type' => 'write',
-        // Type is 'write' because this stores an audio file and spends vendor credits,
-        // but the capability matches the runtime check in the external class, which is
-        // deliberately ':view' so that non-editing roles can play generated audio.
-        'capabilities' => 'mod/contentcreator:view',
+        // Type is 'write' because this stores an audio file and spends vendor credits.
+        // v13.85: the declared capability matches the runtime check, which is now
+        // ':generateondemand' - granted to student by default so non-editing roles can
+        // still play audio, but prohibitable per role, course or cohort because the call
+        // spends from the site's paid balance.
+        'capabilities' => 'mod/contentcreator:generateondemand',
         'ajax' => true,
     ],
     'mod_contentcreator_save_slide_edit' => [
@@ -84,9 +86,9 @@ $functions = [
         'methodname' => 'execute',
         'description' => 'Generate contextual workplace document example',
         'type' => 'write',
-        // As above: 'write' because it calls the vendor and spends credits, but the
-        // runtime check in the external class is ':view'.
-        'capabilities' => 'mod/contentcreator:view',
+        // As above: 'write' because it calls the vendor and spends credits; the runtime
+        // check in the external class is ':generateondemand' (v13.85).
+        'capabilities' => 'mod/contentcreator:generateondemand',
         'ajax' => true,
     ],
     'mod_contentcreator_save_manifest_chunk' => [

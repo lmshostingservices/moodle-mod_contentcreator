@@ -252,8 +252,14 @@ define([], function() {
                 html += '<div class="cc5-framework-item"><h5>' + escapeHtml(fixGrammar(fw.name || '')) + '</h5>';
                 if (fw.originator)  html += '<p class="cc5-fw-originator"><em>' + escapeHtml(fixGrammar(fw.originator)) + '</em></p>';
                 html += '<p>' + escapeHtml(fixGrammar(fw.principle || fw.description || '')) + '</p>';
-                if (fw.application) html += '<p class="cc5-fw-application">' + getIcon('arrow-right') + ' <span>' + escapeHtml(fixGrammar(fw.application)) + '</span></p>';
+                // v13.84: arrow glyph dropped in favour of a plain label, matching the
+                // VET/Workplace/PD routes.
+                if (fw.application) html += '<p class="cc5-fw-application"><strong>' + escapeHtml(getLabel('application') || 'In practice') + ':</strong> <span>' + escapeHtml(fixGrammar(fw.application)) + '</span></p>';
                 if (fw.limitation)  html += '<p class="cc5-fw-limitation">'  + getIcon('alert-circle')  + ' <span>' + escapeHtml(fixGrammar(fw.limitation)) + '</span></p>';
+                // v13.84 FIX BUG-RENDER-FW-NEST: this closing tag was missing, so every
+                // framework after the first was rendered INSIDE its predecessor —
+                // the panel-in-panel-in-card nesting seen on the University route.
+                html += '</div>';
             });
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -814,13 +820,20 @@ define([], function() {
             opts.forEach(function(opt, idx) {
                 var letter = letters[idx] || String.fromCharCode(65 + idx);
                 var isCorrect = !!(opt.correct || opt.isCorrect);
-                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '" role="button" tabindex="0">';
+                // v13.86: correctness was conveyed by a background colour plus a CSS ::after
+                // glyph on a permanently empty span, on a div with no aria-pressed, no
+                // aria-disabled once locked, and feedback in no live region.
+                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '" role="button" tabindex="0" aria-pressed="false">';
                 html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
                 html += '<div class="cc5-dp-option-body">';
                 html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';
-                if (opt.feedback) html += '<div class="cc5-dp-feedback">' + escapeHtml(fixGrammar(opt.feedback)) + '</div>';
+                if (opt.feedback) {
+                    html += '<div class="cc5-dp-feedback" role="status" aria-live="polite">' +
+                        escapeHtml(fixGrammar(opt.feedback)) + '</div>';
+                }
                 html += '</div>';
-                html += '<span class="cc5-dp-result-icon"></span>';
+                html += '<span class="cc5-dp-result-icon" aria-hidden="true"></span>';
+                html += '<span class="cc5-sr-only cc5-dp-result-text"></span>';
                 html += '</div>';
             });
             html += '</div>';
@@ -924,9 +937,17 @@ define([], function() {
                 html += '<ul class="cc5-donts-list">';
                 badItems.forEach(function(item) {
                     var text = typeof item === 'string' ? item : (item.text || '');
+                    // v13.85: the prompt asks for a 10+ word consequence on every one of
+                    // these, and the normaliser now keeps it. Previously only the label
+                    // reached the page and the consequence was discarded upstream.
+                    var consequence = (typeof item === 'string') ? '' : (item.consequence || '');
                     html += '<li class="cc5-dont-item">';
                     html += '<span class="cc5-list-icon">' + getIcon('x') + '</span>';
-                    html += '<span>' + escapeHtml(fixGrammar(text)) + '</span>';
+                    html += '<span>' + escapeHtml(fixGrammar(text));
+                    if (consequence) {
+                        html += '<span class="cc5-dont-consequence">' + escapeHtml(fixGrammar(consequence)) + '</span>';
+                    }
+                    html += '</span>';
                     html += '</li>';
                 });
                 html += '</ul></div>';
@@ -1030,13 +1051,20 @@ define([], function() {
             opts.forEach(function(opt, idx) {
                 var letter = letters[idx] || String.fromCharCode(65 + idx);
                 var isCorrect = !!(opt.correct || opt.isCorrect);
-                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '" role="button" tabindex="0">';
+                // v13.86: correctness was conveyed by a background colour plus a CSS ::after
+                // glyph on a permanently empty span, on a div with no aria-pressed, no
+                // aria-disabled once locked, and feedback in no live region.
+                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '" role="button" tabindex="0" aria-pressed="false">';
                 html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
                 html += '<div class="cc5-dp-option-body">';
                 html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';
-                if (opt.feedback) html += '<div class="cc5-dp-feedback">' + escapeHtml(fixGrammar(opt.feedback)) + '</div>';
+                if (opt.feedback) {
+                    html += '<div class="cc5-dp-feedback" role="status" aria-live="polite">' +
+                        escapeHtml(fixGrammar(opt.feedback)) + '</div>';
+                }
                 html += '</div>';
-                html += '<span class="cc5-dp-result-icon"></span>';
+                html += '<span class="cc5-dp-result-icon" aria-hidden="true"></span>';
+                html += '<span class="cc5-sr-only cc5-dp-result-text"></span>';
                 html += '</div>';
             });
             html += '</div>';
@@ -1219,9 +1247,73 @@ define([], function() {
     // ===========================================================================
     // 21b. ROUTE CARD (dispatch  -  calls other card renderers by cardType)
     // ===========================================================================
+    // ===========================================================================
+    // v13.91: ROUTE 5 - "TOPICS AND TEXT" prose section card.
+    //
+    // ONE renderer serves all five slots. They differ only in content, never in shape:
+    // a heading and two to four paragraphs. Keeping it to one function is deliberate -
+    // five near-identical renderers is exactly how the other routes drifted apart.
+    //
+    // Two styling requirements, both standing:
+    //   - NO left accent rail, on the card or the paragraphs.
+    //   - NO nested container. The card IS the container: header, body, paragraphs
+    //     directly in the body. No wrapper div inside the body.
+    // ===========================================================================
+    var TOPICSTEXT_ICONS = {
+        // Every value here is verified present in cc-icons.js. Do not add one without
+        // checking: getIcon() on an unknown name yields no glyph, and the header then
+        // renders with a gap where the icon should be. settings / git-branch / compass
+        // were the natural choices and none of the three exist.
+        'orientation': 'book-open',   // what this is
+        'foundations': 'layers',      // the ideas underneath
+        'mechanism':   'puzzle',      // how the parts fit and work
+        'in-practice': 'scale',       // weighing cases against each other
+        'boundaries':  'ruler'        // the limits of the account
+    };
+
+    function renderProseSection(section) {
+        var cardType = section.cardType || '';
+        var paras = section.paragraphs;
+
+        // Tolerate every shape the model or an older manifest might supply: an array of
+        // strings, an array of {text}, or a single string in paragraphs/bodyText/text.
+        if (typeof paras === 'string') { paras = [paras]; }
+        if (!Array.isArray(paras)) {
+            paras = section.bodyText ? [section.bodyText] : (section.text ? [section.text] : []);
+        }
+        paras = paras.map(function(p) {
+            if (typeof p === 'string') { return p; }
+            return (p && (p.text || p.paragraph || p.body)) || '';
+        }).filter(function(p) { return p && p.trim(); });
+
+        var icon = TOPICSTEXT_ICONS[cardType] || 'book-open';
+        var heading = section.heading || section.title || '';
+
+        var html = '<div class="cc5-card cc5-prose-card cc5-' + escapeHtml(cardType || 'prose') + '-card">';
+        html += '<div class="cc5-card-header">' + getIcon(icon)
+             + '<h4>' + escapeHtml(fixGrammar(heading)) + '</h4></div>';
+        html += '<div class="cc5-card-body cc5-prose-body">';
+        if (!paras.length) {
+            // Never render an empty shell - name the problem so the author sees which card.
+            html += '<p class="cc5-prose-empty">' + escapeHtml(getLabel('noContentYet')) + '</p>';
+        } else {
+            paras.forEach(function(p) {
+                html += '<p>' + escapeHtml(fixGrammar(p)) + '</p>';
+            });
+        }
+        html += '</div></div>';
+        return html;
+    }
+
     function renderRouteCard(section) {
         var cardType = section.cardType || '';
         switch (cardType) {
+            // -- v13.91 Topics and Text: five prose slots, one renderer ---------
+            case 'orientation':
+            case 'foundations':
+            case 'mechanism':
+            case 'in-practice':
+            case 'boundaries':          return renderProseSection(section);
             // -- v10.27 unified 7-card types (all routes) ----------------------
             case 'hook-scenario':       return renderHookScenario(section);
             case 'concept-explainer':   return renderConceptExplainer(section);
@@ -1470,6 +1562,7 @@ define([], function() {
         renderApplicationGuide:    renderApplicationGuide,
         renderCommonPitfalls:      renderCommonPitfalls,
         renderPDScenarioCard:      renderPDScenarioCard,
+        renderProseSection:        renderProseSection,
         renderRouteCard:           renderRouteCard,
         renderDecisionChallenge:   renderDecisionChallenge,
         renderBeforeYouStartCard:  renderBeforeYouStartCard,

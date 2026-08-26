@@ -121,10 +121,24 @@ class generate_document_example extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
+        // v13.85: this call SPENDS SITE CREDITS. Gating it on :view alone meant every
+        // enrolled learner in every course could draw on the same paid balance, with no
+        // administrative control beyond disabling the feature site-wide. The new
+        // capability is granted to student by default, so behaviour is unchanged until a
+        // site chooses to prohibit it for a role, course or cohort.
+        require_capability('mod/contentcreator:generateondemand', $context);
+
         // This endpoint spends site credits and is available to any user who can view the
         // activity, so abuse control is enforced by a per-user sliding-window rate limit
         // rather than by the capability gate. Do not remove it without a replacement.
         \mod_contentcreator\ratelimiter::check($USER->id, 'generate', 60, HOURSECS);
+        // v13.85: aggregate ceiling. The per-user limit above cannot bound total spend on
+        // an endpoint every enrolled learner may call; with a large cohort it has no
+        // effective ceiling at all. Configurable, generous by default, 0 disables.
+        $sitemax = get_config('mod_contentcreator', 'sitelimitgenerate');
+        $sitemax = ($sitemax !== false && $sitemax !== '' && is_numeric($sitemax)) ? (int)$sitemax : 1000;
+        \mod_contentcreator\ratelimiter::check_site('generate', $sitemax, HOURSECS);
+
 
         // Central Config integration with fallback.
         $aiconfiglib = $CFG->dirroot . '/local/aiconfig/lib.php';
@@ -221,7 +235,13 @@ class generate_document_example extends external_api {
 
         return [
             'success' => true,
-            'content' => $data['content'] ?? '',
+            // v13.86: this HTML is injected straight into the player's DOM (player5.js
+            // renders it with innerHTML, deliberately, because it is a rendered
+            // workplace document). Everything else in that file is escaped, which makes
+            // this the exception rather than a design decision. clean_text() strips
+            // script, event handlers and anything outside Moodle's allowed tag set
+            // while leaving the document markup intact.
+            'content' => clean_text($data['content'] ?? '', FORMAT_HTML),
             'docId' => $data['docId'] ?? $params['docId'],
             'docName' => $data['docName'] ?? $params['docName'],
             'domain' => $data['domain'] ?? '',

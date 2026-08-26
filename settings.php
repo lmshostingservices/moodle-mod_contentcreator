@@ -278,4 +278,37 @@ if ($hassiteconfig && isset($settings)) {
         100,
         PARAM_INT
     ));
+
+    // v13.85: aggregate ceilings. The per-user limits above are per user, so they
+    // cannot bound total spend on endpoints a learner may call.
+    $settings->add(new admin_setting_heading(
+        'mod_contentcreator/sitelimitheading',
+        get_string('sitelimitheading', 'mod_contentcreator'),
+        get_string('sitelimitheadingdesc', 'mod_contentcreator')
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_contentcreator/sitelimitvoice',
+        get_string('sitelimitvoice', 'mod_contentcreator'),
+        get_string('sitelimitvoicedesc', 'mod_contentcreator'),
+        2000,
+        PARAM_INT
+    ));
+
+    $settings->add(new admin_setting_configtext(
+        'mod_contentcreator/sitelimitgenerate',
+        get_string('sitelimitgenerate', 'mod_contentcreator'),
+        get_string('sitelimitgeneratedesc', 'mod_contentcreator'),
+        1000,
+        PARAM_INT
+    ));
+
+    // v13.86: nothing ever removed cached voiceover audio before this release.
+    $settings->add(new admin_setting_configtext(
+        'mod_contentcreator/voicecacheretention',
+        get_string('voicecacheretention', 'mod_contentcreator'),
+        get_string('voicecacheretentiondesc', 'mod_contentcreator'),
+        180,
+        PARAM_INT
+    ));
 }

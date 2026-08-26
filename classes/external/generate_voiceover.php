@@ -118,11 +118,28 @@ class generate_voiceover extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
-        // This endpoint spends site credits (5 per call) and is available to any user who
-        // can view the activity, so abuse control is enforced here rather than by the
-        // capability gate: a per-user sliding-window limit plus the MAX_TEXT_LENGTH cap
-        // applied to the text below. Do not remove either without replacing them.
-        \mod_contentcreator\ratelimiter::check($USER->id, 'voice', 100, HOURSECS);
+        // v13.85: this call SPENDS SITE CREDITS. Gating it on :view alone meant every
+        // enrolled learner in every course could draw on the same paid balance, with no
+        // administrative control beyond disabling the feature site-wide. The new
+        // capability is granted to student by default, so behaviour is unchanged until a
+        // site chooses to prohibit it for a role, course or cohort.
+        // v13.90.1 FIX-CACHE-ORDER: the :generateondemand capability check and BOTH rate
+        // limiters used to run here, ahead of the cache lookup further down. ajax.php has
+        // always had this the right way round (cache first, gates only on a miss), and
+        // this endpoint - the mobile app and web-service path - had it inverted.
+        //
+        // Two consequences, both real:
+        //   1. A cache HIT costs zero credits but still consumed a slot in the shared
+        //      site:voice bucket. Sixty students replaying a narrated activity could
+        //      exhaust the site ceiling in an hour and stop voiceover generation for
+        //      everyone, teachers in the web builder included.
+        //   2. A site that prohibits :generateondemand for students - which the
+        //      capability's own description invites - broke playback of audio that was
+        //      already generated and free to serve. Web players kept working; the app
+        //      went silent.
+        //
+        // The gates now sit immediately before the billed vendor call, after the cache
+        // lookup. See "BILLED PATH BEGINS" below.
 
         // Version 6.5.51: Default to enabled when setting not configured.
         $enablevoice = get_config('mod_contentcreator', 'enablevoice') ?: 1;
@@ -204,18 +221,24 @@ class generate_voiceover extends external_api {
             ];
         }
 
-        // FIX-CC-EXTVO-CACHE (v12.84): This external API previously had no file cache —
+        // FIX-CC-EXTVO-CACHE (v12.84): This external API previously had no file cache -
         // every call hit the TTS API and charged credits even for identical text+language.
-        // Mirror the MD5 cache from ajax.php generate_voice so repeated calls (e.g. mobile
-        // or third-party integrations) return stored audio at zero credit cost.
-        // Cache key: MD5(text | voiceid | language) — same scheme as ajax.php line ~407.
+        // Cache key: MD5(text | voiceid | language) - same scheme as ajax.php.
+        //
+        // v13.86: this used to cache into the MODULE context under itemid = cm->id while
+        // ajax.php cached identical audio into the SYSTEM context under itemid 0. The
+        // same text was therefore billed twice, once per path, and neither path could see
+        // the other's copy. Both now share the one site-wide cache, which is the correct
+        // scope: the audio depends only on text, voice and language, never on the course
+        // or the activity. Pruning is handled by the scheduled task added in v13.86.
         $cachekey  = md5($text . '|' . $voiceid . '|' . $voicelanguage);
+        $cachectx  = \context_system::instance();
         $fs        = get_file_storage();
         $cachefile = $fs->get_file(
-            $context->id,
+            $cachectx->id,
             'mod_contentcreator',
             'voice_cache',
-            $cm->id,
+            0,
             '/',
             $cachekey . '.ogg'
         );
@@ -227,6 +250,26 @@ class generate_voiceover extends external_api {
                 'error'        => '',
             ];
         }
+
+        // ---------------------------------------------------------------------
+        // BILLED PATH BEGINS. Everything past this point spends site credits, so
+        // the capability gate and the rate limiters live here rather than at the
+        // top of the function - a cache hit above must cost nothing and must not
+        // be blocked. Mirrors ajax.php's ordering. See FIX-CACHE-ORDER above.
+        // ---------------------------------------------------------------------
+        require_capability('mod/contentcreator:generateondemand', $context);
+
+        // This endpoint spends site credits (5 per call) and is available to any user who
+        // can view the activity, so abuse control is enforced here rather than by the
+        // capability gate: a per-user sliding-window limit plus the MAX_TEXT_LENGTH cap
+        // applied to the text above. Do not remove either without replacing them.
+        \mod_contentcreator\ratelimiter::check($USER->id, 'voice', 100, HOURSECS);
+        // v13.85: aggregate ceiling. The per-user limit above cannot bound total spend on
+        // an endpoint every enrolled learner may call; with a large cohort it has no
+        // effective ceiling at all. Configurable, generous by default, 0 disables.
+        $sitemax = get_config('mod_contentcreator', 'sitelimitvoice');
+        $sitemax = ($sitemax !== false && $sitemax !== '' && is_numeric($sitemax)) ? (int)$sitemax : 2000;
+        \mod_contentcreator\ratelimiter::check_site('voice', $sitemax, HOURSECS);
 
         // Release session lock before long-running API call to prevent blocking other requests.
         \core\session\manager::write_close();
@@ -287,11 +330,12 @@ class generate_voiceover extends external_api {
         $audioraw = base64_decode($data['audioContent'] ?? '');
         if ($audioraw && strlen($audioraw) <= self::MAX_CACHE_BYTES) {
             try {
+                // v13.86: writes to the shared site-wide cache, matching the read above.
                 $oldcachefile = $fs->get_file(
-                    $context->id,
+                    $cachectx->id,
                     'mod_contentcreator',
                     'voice_cache',
-                    $cm->id,
+                    0,
                     '/',
                     $cachekey . '.ogg'
                 );
@@ -299,10 +343,10 @@ class generate_voiceover extends external_api {
                     $oldcachefile->delete();
                 }
                 $fs->create_file_from_string([
-                    'contextid' => $context->id,
+                    'contextid' => $cachectx->id,
                     'component' => 'mod_contentcreator',
                     'filearea'  => 'voice_cache',
-                    'itemid'    => $cm->id,
+                    'itemid'    => 0,
                     'filepath'  => '/',
                     'filename'  => $cachekey . '.ogg',
                 ], $audioraw);

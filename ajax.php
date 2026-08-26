@@ -75,31 +75,31 @@ function contentcreator_fail($key, $a = null, array $extra = []) {
 /**
  * Capability check with a broader fallback.
  *
- * The 'mod/contentcreator:manage' capability is the intended gate for AI generation.
- * However, Moodle sites that use custom roles cloned from the editingteacher archetype do
- * not automatically inherit new capabilities when a plugin is installed or upgraded. This
- * means editing teachers on such sites get "permission denied" even though they have full
- * course editing rights.
- *
- * Fix: also accept 'moodle/course:manageactivities' in the course context. Every genuine
- * editing teacher has this capability, regardless of whether their role explicitly lists
- * mod/contentcreator:manage. If neither passes, throw the standard Moodle
- * require_capability exception so the error message is clear and consistent.
+ * The 'mod/contentcreator:manage' capability is the intended gate for AI generation, and
+ * as of v13.86 it is the only one. Sites using custom roles cloned from the editingteacher
+ * archetype do not automatically inherit a plugin's new capabilities, which is why this
+ * check previously also accepted 'moodle/course:manageactivities' in the course context.
+ * That fallback made the plugin's own capability advisory - prohibiting it denied nothing.
+ * The compatibility it provided is now handled once by the role-definition upgrade step in
+ * db/upgrade.php, which grants :manage to every role that already holds
+ * moodle/course:manageactivities.
  *
  * @param context_module $context Module context for the contentcreator instance.
  * @param stdClass $cm Course module record, whose course field gives the course context.
  * @return void
  */
 function contentcreator_require_manage($context, $cm) {
-    if (has_capability('mod/contentcreator:manage', $context)) {
-        return;
-    }
-    $coursecontext = context_course::instance($cm->course);
-    if (has_capability('moodle/course:manageactivities', $coursecontext)) {
-        return;
-    }
-    // Neither passed, so throw Moodle's standard exception. The site admin then sees a
-    // meaningful capability name in any audit log.
+    // v13.86: this used to accept moodle/course:manageactivities in the COURSE context
+    // as an alternative. That made the plugin's own capability advisory: prohibiting
+    // mod/contentcreator:manage for a role did not deny anything, because the fallback
+    // still let the request through. Moodle security review treats an OR-fallback on a
+    // capability check as a defect on sight, and the plugin's own test suite documented
+    // the prohibit being ignored.
+    //
+    // The compatibility the fallback provided - not breaking sites whose roles were
+    // never granted the plugin capability explicitly - is now handled once, properly,
+    // by the upgrade step in db/upgrade.php that grants :manage to every role which
+    // already holds moodle/course:manageactivities.
     require_capability('mod/contentcreator:manage', $context);
 }
 
@@ -474,6 +474,29 @@ function contentcreator_check_ratelimit($bucket, $max, $window) {
         $configured = get_config('mod_contentcreator', $settingmap[$bucket]);
         if ($configured !== false && $configured !== '' && is_numeric($configured)) {
             $max = (int)$configured;
+        }
+    }
+
+    // v13.85: the aggregate ceiling. Checked BEFORE the per-user one so that a site
+    // that has hit its own limit reports that, rather than telling an individual user
+    // they personally made too many requests. Read-only buckets are exempt: they spend
+    // no credits and cost the vendor nothing.
+    $sitemap = [
+        'voice' => ['sitelimitvoice', 2000],
+        'generate' => ['sitelimitgenerate', 1000],
+        'vendor' => ['sitelimitgenerate', 1000],
+    ];
+    if (isset($sitemap[$bucket])) {
+        [$sitesetting, $sitedefault] = $sitemap[$bucket];
+        $sitemax = get_config('mod_contentcreator', $sitesetting);
+        $sitemax = ($sitemax !== false && $sitemax !== '' && is_numeric($sitemax))
+            ? (int)$sitemax
+            : $sitedefault;
+        try {
+            \mod_contentcreator\ratelimiter::check_site($bucket, $sitemax, $window);
+        } catch (\moodle_exception $e) {
+            debugging('mod_contentcreator SITE rate limit hit: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            contentcreator_fail('errorsiteratelimited');
         }
     }
 
@@ -947,10 +970,8 @@ try {
         $cm = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
         require_login($cm->course, false, $cm);
-        // The capability model is unchanged from the original plugin: any user who can view
-        // the activity may request a voiceover. Students rely on this to read audio a teacher
-        // has already generated and cached. Abuse is controlled by the length cap above and
-        // by the voice rate limit applied to the generating branch below.
+        // Any user who can view the activity may PLAY a voiceover a teacher has already
+        // generated - the cache lookup below happens before any capability beyond :view.
         require_capability('mod/contentcreator:view', $context);
 
         if (!$enablevoice) {
@@ -1024,6 +1045,14 @@ try {
 
         // Cache miss, so this request will call the speech service and spend credits. A
         // free cache read never consumes a user's allowance; only generating calls do.
+        //
+        // v13.85: generating - as opposed to replaying - now needs its own capability.
+        // Every enrolled learner holds :view, so gating a credit-spending call on :view
+        // alone gave a large cohort an unbounded claim on the site's paid balance with
+        // no administrative control short of switching voice off entirely. The new
+        // capability is granted to student by default, so nothing changes until a site
+        // chooses to prohibit it.
+        require_capability('mod/contentcreator:generateondemand', $context);
         contentcreator_check_ratelimit('voice', 100, HOURSECS);
 
         if (empty($siteid) || empty($apikey)) {

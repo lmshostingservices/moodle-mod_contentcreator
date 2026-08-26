@@ -27,7 +27,9 @@ namespace mod_contentcreator;
 /**
  * Per-user, per-bucket sliding-window rate limiter backed by the Moodle Cache API.
  *
- * Buckets in use: 'generate' (60/hour), 'voice' (100/hour), 'vendor' (200/hour).
+ * Per-user buckets: 'generate' (60/hour), 'voice' (100/hour), 'vendor' (200/hour),
+ * 'vendorread' (600/hour). Site-wide buckets (v13.85, via check_site): 'voice'
+ * (2000/hour) and 'generate' (1000/hour).
  *
  * @package    mod_contentcreator
  * @copyright  2025 AI Grader
@@ -73,6 +75,52 @@ class ratelimiter {
                 'max' => $max,
                 'minutes' => (int)ceil($window / MINSECS),
             ]);
+        }
+
+        $timestamps[] = $now;
+        $cache->set($key, $timestamps);
+    }
+
+    /**
+     * Throw if the WHOLE SITE has exceeded the allowance for a bucket.
+     *
+     * Added in v13.85. The per-user limits above cannot bound total spend: an
+     * endpoint that any enrolled learner may call, at 100 calls per user per
+     * hour, has no ceiling at all once a cohort is large enough. This is the
+     * aggregate backstop. It is deliberately generous by default so that normal
+     * teaching never meets it - it exists to stop a runaway, not to ration.
+     *
+     * Uses the same sliding-window store as check(), under a reserved key that
+     * cannot collide with a user id.
+     *
+     * @param string $bucket Logical bucket name, e.g. 'voice'.
+     * @param int $max Maximum calls permitted site-wide in the window. 0 disables.
+     * @param int $window Window length in seconds.
+     * @return void
+     * @throws \moodle_exception
+     */
+    public static function check_site(string $bucket, int $max, int $window): void {
+        if ($max <= 0 || $window <= 0) {
+            return;
+        }
+
+        $cache = \cache::make('mod_contentcreator', 'ratelimit');
+        $key = 'site:' . $bucket;
+        $now = time();
+
+        $timestamps = $cache->get($key);
+        if (!is_array($timestamps)) {
+            $timestamps = [];
+        }
+
+        $cutoff = $now - $window;
+        $timestamps = array_values(array_filter($timestamps, function ($timestamp) use ($cutoff) {
+            return (int)$timestamp > $cutoff;
+        }));
+
+        if (count($timestamps) >= $max) {
+            $cache->set($key, $timestamps);
+            throw new \moodle_exception('errorsiteratelimited', 'mod_contentcreator');
         }
 
         $timestamps[] = $now;

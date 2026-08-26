@@ -555,8 +555,66 @@ define([
      * @param {string} key - The label key
      * @returns {string} The translated label
      */
+    /**
+     * v13.86: labels resolved through Moodle first, the private table second.
+     *
+     * The ~347 player labels lived ONLY in translations.js, so no site could translate
+     * them through AMOS or override the wording, and the private table duplicated work
+     * Moodle already does. They are now declared in lang/en/contentcreator.php as
+     * cclabel_<key> and prefetched below, so an administrator's customisation and any
+     * community translation win. The private table remains the fallback and still
+     * serves the other 52 languages, so nothing regresses while the rest migrate.
+     */
+    var _moodleLabels = {};
+
+    /**
+     * Prefetch every player label from Moodle's string API in one request.
+     *
+     * Str.get_strings() batches, so this is a single round trip rather than 347.
+     * Until it resolves - and for any key a site has not defined - getLabel() simply
+     * uses the private table, which is the behaviour that existed before v13.86.
+     *
+     * @param {Array} keys The label keys used by this player.
+     * @return {Promise} Resolves once the labels are cached, and never rejects.
+     */
+    function preloadMoodleLabels(keys) {
+        try {
+            var requests = keys.map(function(k) {
+                return { key: 'cclabel_' + k, component: 'mod_contentcreator' };
+            });
+            return Str.get_strings(requests).then(function(values) {
+                keys.forEach(function(k, i) {
+                    var v = values[i];
+                    // Moodle returns '[[key]]' for an undefined string; never cache that.
+                    if (typeof v === 'string' && v && v.indexOf('[[') !== 0) {
+                        _moodleLabels[k] = v;
+                    }
+                });
+                return true;
+            }).catch(function() {
+                return false;
+            });
+        } catch (e) {
+            return Promise.resolve(false);
+        }
+    }
+
     function getLabel(key) {
         var langCode = currentLang.split('-')[0]; // Extract 'ja' from 'ja-JP'
+
+        // v13.90 FIX: the Moodle string table used to win unconditionally. Moodle serves
+        // strings in the SITE's language, not the pack's, so on an English Moodle every
+        // label defined in the lang file came back English - and a Japanese or Spanish
+        // pack rendered its chrome in English while its content was translated. The
+        // pack's own table wins whenever the pack is not English and a table exists for
+        // it. Moodle strings remain the source for English packs, where they let a site
+        // customise wording - which is what they were added for.
+        if (langCode !== 'en' && UI_LABELS[langCode] && UI_LABELS[langCode][key]) {
+            return UI_LABELS[langCode][key];
+        }
+        if (Object.prototype.hasOwnProperty.call(_moodleLabels, key)) {
+            return _moodleLabels[key];
+        }
         var labels = UI_LABELS[langCode] || UI_LABELS['en'];
         return labels[key] || UI_LABELS['en'][key] || key;
     }
@@ -707,11 +765,149 @@ define([
         return s.trim();
     }
 
+    /**
+     * v13.86: strip anything executable from vendor-supplied document HTML.
+     *
+     * The document example is deliberately rendered as markup rather than escaped -
+     * it is a formatted workplace document, and escaping it would show the learner
+     * raw tags. That makes it the one innerHTML path in this file that does not go
+     * through escapeHtml(), so it gets its own allow-list instead: parse the markup
+     * inertly, then remove script/style/iframe/object and every on* handler and
+     * javascript: URL before it reaches the live DOM.
+     *
+     * @param {String} html Untrusted markup.
+     * @return {String} Markup with executable content removed.
+     */
+    function sanitiseDocumentHtml(html) {
+        if (!html) { return ''; }
+        try {
+            var doc = new DOMParser().parseFromString(String(html), 'text/html');
+            var banned = doc.body.querySelectorAll('script,style,iframe,object,embed,link,meta,form,base');
+            Array.prototype.forEach.call(banned, function(node) { node.parentNode.removeChild(node); });
+            var all = doc.body.querySelectorAll('*');
+            Array.prototype.forEach.call(all, function(node) {
+                Array.prototype.slice.call(node.attributes).forEach(function(attr) {
+                    var name = attr.name.toLowerCase();
+                    var value = String(attr.value || '').replace(/\s+/g, '').toLowerCase();
+                    if (name.indexOf('on') === 0) { node.removeAttribute(attr.name); return; }
+                    if ((name === 'href' || name === 'src' || name === 'xlink:href') &&
+                        (value.indexOf('javascript:') === 0 || value.indexOf('data:text/html') === 0)) {
+                        node.removeAttribute(attr.name);
+                    }
+                });
+            });
+            return doc.body.innerHTML;
+        } catch (e) {
+            // If parsing fails, showing the document as plain text is the safe outcome.
+            return escapeHtml(String(html));
+        }
+    }
+
+    /**
+     * v13.86: decide whether the player should render dark, and stamp the classes.
+     *
+     * Precedence: an explicit choice by the Moodle theme (data-bs-theme or a .dark
+     * class on html/body) wins; otherwise the operating system preference decides.
+     * Re-runs when either changes, so a learner toggling their site theme or their OS
+     * appearance does not have to reload the activity.
+     *
+     * @return {void}
+     */
+    function applyThemeClasses() {
+        var apply = function() {
+            var root = document.documentElement;
+            var body = document.body;
+            var explicit = '';
+            [root, body].forEach(function(el) {
+                if (!el || explicit) { return; }
+                var attr = el.getAttribute('data-bs-theme') || el.getAttribute('data-theme') || '';
+                if (attr === 'dark' || attr === 'light') { explicit = attr; return; }
+                // Skip the `dark` class ON BODY when we are the ones who put it there -
+                // otherwise our own stamp reads back as the site's explicit choice and
+                // the player can never follow the OS switching back to light.
+                var ourOwnStamp = (el === body && applyThemeClasses._stampedBody);
+                if (!ourOwnStamp && (el.classList.contains('dark') || el.classList.contains('theme-dark'))) { explicit = 'dark'; }
+                if (el.classList.contains('light') || el.classList.contains('theme-light')) { explicit = 'light'; }
+            });
+
+            var isDark;
+            if (explicit) {
+                isDark = (explicit === 'dark');
+            } else {
+                isDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            }
+
+            // Every family the stylesheet looks for, so one resolved decision drives
+            // all 335 rules instead of leaving most of them unreachable.
+            if (body) {
+                body.classList.toggle('dark', isDark);
+                applyThemeClasses._stampedBody = isDark;
+            }
+            document.querySelectorAll('.cc5-player').forEach(function(el) {
+                el.classList.toggle('dark', isDark);
+                el.classList.toggle('cc5-dark', isDark);
+                el.classList.toggle('dark-mode', isDark);
+            });
+            document.querySelectorAll('.cc5-container, #contentcreator-app').forEach(function(el) {
+                el.classList.toggle('dark', isDark);
+                el.classList.toggle('cc5-dark', isDark);
+            });
+        };
+
+        apply();
+
+        try {
+            if (window.matchMedia) {
+                var mq = window.matchMedia('(prefers-color-scheme: dark)');
+                if (mq.addEventListener) {
+                    mq.addEventListener('change', apply);
+                } else if (mq.addListener) {
+                    mq.addListener(apply);
+                }
+            }
+            // The site theme can flip at runtime; watch the attributes that carry it.
+            if (window.MutationObserver) {
+                var observer = new MutationObserver(apply);
+                observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ['data-bs-theme', 'data-theme', 'class']
+                });
+                if (document.body) {
+                    observer.observe(document.body, {
+                        attributes: true,
+                        attributeFilter: ['data-bs-theme', 'data-theme', 'class']
+                    });
+                }
+            }
+        } catch (e) {
+            // Theme following is a nicety; never let it stop the player loading.
+        }
+
+        // The player replaces its own container on every navigation, so newly built
+        // elements need stamping too. Watching the app root for child changes is
+        // cheaper and more responsive than polling.
+        try {
+            var app = document.getElementById('contentcreator-app');
+            if (app && window.MutationObserver && !applyThemeClasses._domObserver) {
+                applyThemeClasses._domObserver = new MutationObserver(function() { apply(); });
+                applyThemeClasses._domObserver.observe(app, { childList: true, subtree: true });
+            }
+        } catch (e) {
+            // Non-fatal.
+        }
+    }
+
     function escapeHtml(str) {
         if (!str) return '';
         var div = document.createElement('div');
         div.textContent = str;
-        return div.innerHTML;
+        // v13.86: the HTML serialiser escapes & < > in a text node but NEVER quotes,
+        // and this function is used in attribute position throughout the file - alt
+        // text, data-* attributes, and the slide editor's input values. A quote in
+        // vendor or teacher content closed the attribute and everything after it was
+        // parsed as markup. Escaping both quote characters closes that off at the
+        // one place every call site already goes through.
+        return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
     // FIX v10.43: Strip leaked PC body text from topic titles stored in old manifests.
@@ -3880,6 +4076,15 @@ define([
                         }
                     }
 
+                    // v13.91: Topics-and-Text renders its five prose sections two across.
+                    // Detected from the cards themselves rather than from a mode flag, so a
+                    // saved manifest renders correctly even if the route metadata is absent.
+                    var _PROSE_TYPES = /^(orientation|foundations|mechanism|in-practice|boundaries)$/;
+                    var _isProsePack = _renderCards.length > 0 && _renderCards.every(function(c) {
+                        return c && c.cardType && _PROSE_TYPES.test(c.cardType);
+                    });
+                    if (_isProsePack) { html += '<div class="cc5-prose-grid">'; }
+
                     _renderCards.forEach(function(card, cardIdx) {
                         if (card.cardType) {
                             // v11.10: decision-point becomes the 3-activity challenge
@@ -3893,6 +4098,7 @@ define([
                             }
                         }
                     });
+                    if (_isProsePack) { html += '</div>'; }
                 } else if (section.cardType) {
                     html += this.renderRouteCard(section);
                 }
@@ -4596,7 +4802,14 @@ define([
                 var sections = topic.sections || [];
                 sections.forEach(function(section) {
                     // Check if main section content failed (section-level flag OR any card has failed:true)
-                    if (section.generated === false || (section.cards && section.cards.some(function(c) { return c.failed; }))) {
+                    // v13.90.1: needsReview marks a section whose content was KEPT after
+                    // exhausting its generation attempts rather than replaced with
+                    // placeholders. It renders normally, but it still needs the author's
+                    // attention and must stay retryable, so it counts here too - otherwise
+                    // the Regenerate button never appears for it and the flag is inert.
+                    if (section.generated === false || (section.cards && section.cards.some(function(c) {
+                        return c.failed || c.needsReview;
+                    }))) {
                         failedCount++;
                     }
                     // Check scenario
@@ -6512,7 +6725,13 @@ define([
                 if (card.badItems && card.badItems.length) {
                     parts.push('What to avoid');
                     card.badItems.forEach(function(bi) {
-                        parts.push(fixGrammar(typeof bi === 'string' ? bi : (bi.text || '')));
+                        if (typeof bi === 'string') { parts.push(fixGrammar(bi)); return; }
+                        // v13.85: the consequence is now preserved through normalisation,
+                        // so narrate it too - it is the half that explains why the mistake
+                        // matters, and it was previously generated and then discarded.
+                        var line = fixGrammar(bi.text || '');
+                        if (bi.consequence) { line += '. ' + fixGrammar(bi.consequence); }
+                        parts.push(line);
                     });
                 }
                 // v10.51 FIX-RC2-CTA: competency-summary always ends with "Now, complete the
@@ -7404,7 +7623,7 @@ define([
             html += '<div class="cc5-image-picker-grid">';
             images.forEach(function(imgUrl, index) {
                 html += '<div class="cc5-image-picker-item" data-index="' + index + '" data-section-id="' + escapeHtml(sectionId) + '">';
-                html += '<img src="' + imgUrl + '" alt="Option ' + (index + 1) + '">';
+                html += '<img src="' + escapeHtml(imgUrl) + '" alt="Option ' + (index + 1) + '">'; // v13.86: was raw
                 html += '<div class="cc5-picker-item-overlay">';
                 html += '<span class="cc5-picker-item-number">' + (index + 1) + '</span>';
                 html += '</div>';
@@ -7785,13 +8004,14 @@ define([
                     // BUG-GAL-ZOOM-CLASS FIX: was <div class="cc5-zoom-icon" data-zoom-url="...">
                     // but the click handler listens for .cc5-image-zoom-btn and reads data-image-url.
                     // Changed to a <button> with matching class and attribute.
-                    html += '<button type="button" class="cc5-image-zoom-btn" data-image-url="' + item.url + '" aria-label="' + getLabel('zoomImage') + '">' + getIcon('search') + '</button>';
+                    // v13.86: item.url is vendor-supplied and was interpolated raw.
+                    html += '<button type="button" class="cc5-image-zoom-btn" data-image-url="' + escapeHtml(item.url) + '" aria-label="' + escapeHtml(getLabel('zoomImage')) + '">' + getIcon('search') + '</button>';
                     // v11.10: Download button for gallery images
-                    html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + item.url + '" aria-label="Download image" title="Download image">' + getIcon('download') + '</button>';
+                    html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + escapeHtml(item.url) + '" aria-label="Download image" title="Download image">' + getIcon('download') + '</button>';
                     // v11.61: onerror hides broken thumbnails (e.g. cc-images 404 after server restart)
                     // Improved alt text uses prompt or slide title instead of generic "Gallery image N"
                     var imgAlt = escapeHtml(item.prompt ? item.prompt.substring(0, 80) : (item.sourceSlide || ('Gallery image ' + (index + 1))));
-                    html += '<img src="' + item.url + '" alt="' + imgAlt + '" loading="lazy" onerror="var p=this.closest(\'.cc5-gallery-item\');if(p)p.style.display=\'none\';">';
+                    html += '<img src="' + escapeHtml(item.url) + '" alt="' + escapeHtml(imgAlt) + '" loading="lazy" onerror="var p=this.closest(\'.cc5-gallery-item\');if(p)p.style.display=\'none\';">'; // v13.86: was raw
                     html += '<div class="cc5-gallery-item-overlay">';
                     html += '<span class="cc5-gallery-item-source">' + escapeHtml(item.sourceSlide || 'Saved') + '</span>';
                     html += '</div>';
@@ -8561,8 +8781,13 @@ define([
             
             // Topic card click (v6.5.3: respect lockstep mode)
             this.container.on('click keydown', '.cc5-topic-card', function(e) {
-                // WCAG 2.1 AA: Keyboard support for topic cards                if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
-                if (e.type === 'keydown') e.preventDefault();
+                // WCAG 2.1 AA: Keyboard support for topic cards.
+                // v13.85: this guard had been merged onto the end of the comment line
+                // above, so EVERY keystroke on a focused topic card opened the topic and
+                // preventDefault() ran unconditionally - Tab could not move focus off a
+                // topic card at all.
+                if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') { return; }
+                if (e.type === 'keydown') { e.preventDefault(); }
                 e.preventDefault();
                 
                 // v6.5.3: Check if topic is locked
@@ -8994,10 +9219,16 @@ define([
                 var isCorrect = ($option.attr('data-correct') === 'true');
                 // Mark the chosen option
                 $option.attr('data-selected', isCorrect ? 'correct' : 'incorrect');
+                // v13.86: announce the result in text, and reflect the locked state, so a
+                // screen-reader user gets the same signal the colour and glyph give
+                // everyone else.
+                $option.attr('aria-pressed', 'true');
+                $option.find('.cc5-dp-result-text').text(isCorrect ? 'Correct' : 'Incorrect');
                 // Show its feedback
                 $option.find('.cc5-dp-feedback').show();
                 // Lock the options container
                 $options.attr('data-answered', 'true').data('answered', true);
+                $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
                 // For keyboard: focus the chosen option for accessibility
                 $option.focus();
                 // v10.63: Play audio feedback
@@ -9035,6 +9266,9 @@ define([
                     var $opt = $(this);
                     // Remove selection attribute so CSS colour rules don't apply
                     $opt.removeAttr('data-selected');
+                    // v13.86: clear the announced result and the locked state too.
+                    $opt.attr('aria-pressed', 'false').removeAttr('aria-disabled');
+                    $opt.find('.cc5-dp-result-text').text('');
                     // Clear any inline styles jQuery or previous code may have set
                     $opt.css({ 'border-color': '', background: '', opacity: '', 'pointer-events': '' });
                     // Force-hide feedback (remove inline display:block set by .show())
@@ -9067,8 +9301,12 @@ define([
                 e.preventDefault();
                 var isCorrect = ($opt.attr('data-correct') === 'true');
                 $opt.attr('data-selected', isCorrect ? 'correct' : 'incorrect');
+                // v13.86: same accessibility treatment as the standalone card above.
+                $opt.attr('aria-pressed', 'true');
+                $opt.find('.cc5-dp-result-text').text(isCorrect ? 'Correct' : 'Incorrect');
                 $opt.find('.cc5-dp-feedback').show();
                 $options.attr('data-answered', 'true').data('answered', true);
+                $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
                 $opt.focus();
                 // v13.32: Quiz voiceover — speak feedback text aloud via Web Speech API
                 // FIX-CC-QUIZ-VOICE-DELAY (v13.38): Chrome Web Speech API has a known
@@ -9134,6 +9372,9 @@ define([
                 $options.find('.cc5-dp-option').each(function() {
                     var $opt = $(this);
                     $opt.removeAttr('data-selected');
+                    // v13.86: clear the announced result and the locked state too.
+                    $opt.attr('aria-pressed', 'false').removeAttr('aria-disabled');
+                    $opt.find('.cc5-dp-result-text').text('');
                     $opt.css({ 'border-color': '', background: '', opacity: '', 'pointer-events': '' });
                     var $fb = $opt.find('.cc5-dp-feedback');
                     $fb.hide();
@@ -9885,7 +10126,20 @@ define([
             $(document).on('click', '.cc5-edit-add-bad-item', function(e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-bad-items-list');
-                var idx  = list.find('.cc5-edit-bad-item').length;
+                // v13.90.1 FIX-BADITEM-IDX-COLLISION: this used the row COUNT as the new
+                // index, which collides after a delete. Three rows (idx 0,1,2), delete the
+                // middle one, and the two survivors keep idx 0 and 2 - then a new row also
+                // takes idx 2. On save both map to _priorBad[2], so the brand-new item
+                // silently inherits the other item's consequence and the learner reads a
+                // "what to avoid" bullet explained by an unrelated mistake.
+                // A fresh row has no prior consequence by definition, so give it an index
+                // that cannot match any existing one.
+                var idx = -1;
+                list.find('.cc5-edit-bad-item').each(function() {
+                    var v = parseInt($(this).data('idx'), 10);
+                    if (!isNaN(v) && v > idx) { idx = v; }
+                });
+                idx = idx + 1;
                 var row  = '<div class="cc5-edit-bad-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-bad-item-text" value="">';
                 row += '<button type="button" class="cc5-edit-remove-bad-item" title="Remove">' + getIcon('x') + '</button>';
@@ -12769,10 +13023,18 @@ define([
                         var s = $(this).find('.cc5-edit-good-item-text').val().trim();
                         if (s) goodItems.push(s);
                     });
+                    // v13.85: badItems entries carry {text, consequence}. The editor only
+                    // exposes the text, so carry the existing consequence across by index
+                    // instead of collapsing the item back to a bare string and destroying it.
+                    var _priorBad = Array.isArray(cardData.badItems) ? cardData.badItems : [];
                     var badItems = [];
                     modal.find('.cc5-edit-bad-item').each(function() {
                         var s = $(this).find('.cc5-edit-bad-item-text').val().trim();
-                        if (s) badItems.push(s);
+                        if (!s) { return; }
+                        var idx = parseInt($(this).data('idx'), 10);
+                        var prior = (!isNaN(idx) && _priorBad[idx] && typeof _priorBad[idx] === 'object')
+                            ? _priorBad[idx] : null;
+                        badItems.push({ text: s, consequence: (prior && prior.consequence) || '' });
                     });
                     cardData.goodItems = goodItems;
                     cardData.badItems  = badItems;
@@ -12874,10 +13136,33 @@ define([
                             var s = $(this).find('.cc5-edit-good-item-text').val().trim();
                             if (s) _gi.push(s);
                         });
+                        // v13.90.1 FIX-BADITEMS-CONSEQUENCE-LOSS: this collapsed every
+                        // badItem back to a bare string, permanently destroying its
+                        // consequence.
+                        //
+                        // v13.85 fixed exactly this bug - but in the OTHER copy of the
+                        // code, the section-level branch further up. This is the v13.22
+                        // per-card branch, and it is the one that actually runs for real
+                        // content: competency-summary is Card 6 of the unified 7-card
+                        // flow, so it renders as a .cc5-edit-card-block and is collected
+                        // here, not there. A teacher who opened a slide editor, changed
+                        // only the card title and hit Save lost every "What to Avoid"
+                        // consequence in that card - roughly fifty generated, billed words
+                        // per card, unrecoverable, because nothing regenerates them.
+                        //
+                        // The editor exposes only the item text, so carry the existing
+                        // consequence across by index, exactly as the section-level branch
+                        // does. _priorBadCard is read from the ORIGINAL card data, which
+                        // _cu was deep-copied from above.
+                        var _priorBadCard = Array.isArray(_cu.badItems) ? _cu.badItems : [];
                         var _bi = [];
                         _blk.find('.cc5-edit-bad-item').each(function() {
                             var s = $(this).find('.cc5-edit-bad-item-text').val().trim();
-                            if (s) _bi.push(s);
+                            if (!s) { return; }
+                            var _bidx = parseInt($(this).data('idx'), 10);
+                            var _bprior = (!isNaN(_bidx) && _priorBadCard[_bidx]
+                                && typeof _priorBadCard[_bidx] === 'object') ? _priorBadCard[_bidx] : null;
+                            _bi.push({ text: s, consequence: (_bprior && _bprior.consequence) || '' });
                         });
                         _cu.goodItems = _gi;
                         _cu.badItems  = _bi;
@@ -13008,7 +13293,12 @@ define([
                                 }
                             } else if (sec.voiceoverUrl) {
                                 // No stored hash but voiceover audio exists  -  cannot compare text hashes,
-                                // so flag regeneration unconditionally to ensure edited content is heard.                                regenerateVoiceover = true;
+                                // so flag regeneration unconditionally to ensure edited content is heard.
+                                // v13.85: this assignment had been merged onto the end of the
+                                // comment above, so the branch did nothing and an edited
+                                // section with audio but no stored hash kept its stale
+                                // narration.
+                                regenerateVoiceover = true;
                             }
                         }
 
@@ -13851,7 +14141,10 @@ define([
                 html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
                 html += escapeHtml(context.industry) + ' | ' + escapeHtml(context.jobLevel);
                 html += '</div>';
-                html += '<div class="cc5-doc-content">' + contentToShow + '</div>';
+                // v13.86: defence in depth. The server now runs clean_text() over this,
+                // but a manifest saved before v13.86 can still carry unsanitised markup,
+                // so the client strips scripts and event handlers before rendering.
+                html += '<div class="cc5-doc-content">' + sanitiseDocumentHtml(contentToShow) + '</div>';
                 html += '<div class="cc5-doc-disclaimer">';
                 html += '<strong>' + getLabel('trainingExampleTitle') + '</strong>  -  ' + getLabel('trainingExampleDisclaimer');
                 html += '</div>';
@@ -14356,7 +14649,26 @@ define([
         /**
          * Initialize the Content Creator v6 Player
          */
-        init: function(config) {            $(document).ready(function() {
+        init: function(config) {
+            // v13.86: bring the player's labels under Moodle's string API. One batched
+            // request; the private table serves until it lands, and for any key a site
+            // has not overridden.
+            try {
+                preloadMoodleLabels(Object.keys(UI_LABELS.en || {}));
+            } catch (e) {
+                // Non-fatal - getLabel() falls back to the private table.
+            }
+            // v13.86: apply the dark theme classes the stylesheet has always expected.
+            // player5.css carries 335 dark rules across six selector families -
+            // `.dark`, `.cc5-dark`, `.cc5-container.cc5-dark`, `.cc5-player.dark-mode`,
+            // `body.dark` and `body[data-bs-theme="dark"]` - and NOTHING in the plugin
+            // ever set any of them. Only the Bootstrap attribute could fire, and only if
+            // the site's theme happens to put it on <body> rather than <html>, so on a
+            // dark Moodle the cards kept their near-white backgrounds behind light text.
+            // Rather than rewrite six families of CSS, resolve the theme once and stamp
+            // every class name they look for, then keep it in step with the environment.
+            applyThemeClasses();
+            $(document).ready(function() {
                 var container = $('#contentcreator-app');
 
                 Ajax.call([{
@@ -14380,7 +14692,11 @@ define([
                     try {
                         manifest = JSON.parse(response.manifest);
                     } catch (e) {
-                        // v9.72 FIX: Corrected log message  -  was "Manifest parsed" (wrong, in catch).                        container.html('<div class="cc5-error">Content data is corrupted. Please contact your instructor.</div>');
+                        // v9.72 FIX: Corrected log message  -  was "Manifest parsed" (wrong, in catch).
+                        // v13.85: the container.html() call had been merged onto the end of
+                        // that comment, so a corrupted manifest returned silently and the
+                        // learner got a blank page with no explanation.
+                        container.html('<div class="cc5-error">Content data is corrupted. Please contact your instructor.</div>');
                         return;
                     }
 
@@ -14497,13 +14813,19 @@ define([
                     } else {
                         // v9.72 FIX: manifest.topics.length crashed with TypeError when manifest.topics
                         // is undefined (e.g. manifest = {locked:true} with no topics array).
-                        // That TypeError prevented "Content Coming Soon" from rendering  ->  blank white page.                        var html = '<div class="cc5-no-content">';
-                        html += '<div class="cc5-no-content-icon">' + getIcon('sparkles') + '</div>';
-                        html += '<h2>Content Coming Soon</h2>';
-                        html += '<p>Your instructor is preparing learning content for this activity.</p>';
-                        html += '<p>Please check back later.</p>';
-                        html += '</div>';
-                        container.html(html);
+                        // That TypeError prevented "Content Coming Soon" from rendering  ->  blank white page.
+                        // v13.85: the declaration below had been merged onto the end of that
+                        // comment. `html` was only var-hoisted, so the next line ran
+                        // `undefined += ...` and the screen rendered the literal word
+                        // "undefined" with no wrapper element - the very failure the
+                        // comment above describes, reintroduced by a line merge.
+                        var emptyHtml = '<div class="cc5-no-content">';
+                        emptyHtml += '<div class="cc5-no-content-icon">' + getIcon('sparkles') + '</div>';
+                        emptyHtml += '<h2>Content Coming Soon</h2>';
+                        emptyHtml += '<p>Your instructor is preparing learning content for this activity.</p>';
+                        emptyHtml += '<p>Please check back later.</p>';
+                        emptyHtml += '</div>';
+                        container.html(emptyHtml);
                     }
                 }).fail(function(error) {
                     ccError('Manifest could not be loaded', error);

@@ -71,9 +71,11 @@ define([], function() {
             html += '<div class="cc5-decision-points" data-current-point="1" data-total-points="' + totalPoints + '">';
             activity.decisionPoints.forEach(function(point, idx) {
                 var isActive = idx === 0;
-                html += '<div class="cc5-decision-point' + (isActive ? ' cc5-active' : '') + '" data-point-id="' + point.id + '" data-point-index="' + (idx + 1) + '">';
+                // v13.86: point.id is vendor JSON and was interpolated raw into both an
+                // attribute and a text node.
+                html += '<div class="cc5-decision-point' + (isActive ? ' cc5-active' : '') + '" data-point-id="' + escapeHtml(point.id) + '" data-point-index="' + (idx + 1) + '">';
                 html += '<div class="cc5-point-header">';
-                html += '<div class="cc5-point-number"><span class="cc5-point-step">' + point.id + '</span></div>';
+                html += '<div class="cc5-point-number"><span class="cc5-point-step">' + escapeHtml(point.id) + '</span></div>';
                 html += '<span class="cc5-think-prompt">' + getLabel('thinkCarefully') + '</span>';
                 html += '</div>';
                 html += '<p class="cc5-point-situation">' + escapeHtml(fixGrammar(point.situation)) + '</p>';
@@ -289,7 +291,12 @@ define([], function() {
                 html += '<span>' + getLabel('showModelAnswer') + '</span>';
                 html += '</summary>';
                 html += '<div class="cc5-answer-content"><p>' + escapeHtml(fixGrammar(q.modelAnswer)) + '</p></div>';
-                html += '</div>';
+                // v13.85 FIX BUG-ACT-DETAILS-NEST: this was '</div>', so the <details>
+                // opened above was never closed and every following question nested
+                // inside the previous one's collapsed disclosure. Questions 2+, the
+                // score summary, the unlock instruction and the takeaway were all
+                // invisible until the learner opened question 1.
+                html += '</details>';
                 html += '</div>';
             });
             html += '</div>';
@@ -307,7 +314,9 @@ define([], function() {
         html += '<span>' + getLabel('tryAgain') + '</span>';
         html += '</button>';
         html += '</div>';
-        html += '</div>';
+        // v13.85: a second '</div>' stood here and closed the activity section early.
+        // It was compensating for the mismatched '</details>' above; with that fixed
+        // it is one closing tag too many.
 
         // Instruction
         html += '<div class="cc5-activity-instruction cc5-www-instruction" data-total="' + totalQuestions + '">';
@@ -595,15 +604,17 @@ define([], function() {
                 var focusArea = prompt.focusArea || 'general';
                 var focusIcon = focusIcons[focusArea] || focusIcons.general;
 
-                html += '<div class="cc5-reflection-item" data-focus="' + focusArea + '">';
+                // v13.86: focusArea, prompt.id and the label are vendor values in
+                // attribute position - all three were raw.
+                html += '<div class="cc5-reflection-item" data-focus="' + escapeHtml(focusArea) + '">';
                 html += '<div class="cc5-prompt-header">';
-                html += '<span class="cc5-focus-icon" title="' + focusArea + '">' + focusIcon + '</span>';
+                html += '<span class="cc5-focus-icon" title="' + escapeHtml(focusArea) + '">' + focusIcon + '</span>';
                 html += '<span class="cc5-focus-label">' + getLabel('focus_' + focusArea) + '</span>';
                 html += '</div>';
                 html += '<div class="cc5-prompt-question">';
                 html += '<span class="cc5-prompt-text">' + escapeHtml(fixGrammar(prompt.prompt)) + '</span>';
                 html += '</div>';
-                html += '<textarea class="cc5-reflection-input" placeholder="' + getLabel('shareYourThoughts') + '" rows="4" data-min-words="10" data-prompt-id="' + prompt.id + '"></textarea>';
+                html += '<textarea class="cc5-reflection-input" placeholder="' + getLabel('shareYourThoughts') + '" rows="4" data-min-words="10" data-prompt-id="' + escapeHtml(prompt.id) + '"></textarea>';
                 html += '<div class="cc5-word-counter">';
                 html += '<span class="cc5-word-count">0</span> / ' + getLabel('minTenWords');
                 html += '<span class="cc5-counter-status"></span>';
@@ -617,7 +628,13 @@ define([], function() {
                 html += '<span class="cc5-example-label">' + getLabel('exampleResponse') + '</span>';
                 html += '<p>' + escapeHtml(fixGrammar(prompt.exampleResponse)) + '</p>';
                 html += '</div>';
-                html += '</div>';
+                // v13.85 FIX BUG-ACT-DETAILS-NEST: same defect as the analysis
+                // questions above - '</div>' where '</details>' was needed, nesting
+                // every prompt after the first inside its predecessor.
+                html += '</details>';
+                // v13.85: closes .cc5-reflection-item. A second '</div>' stood here,
+                // compensating for the mismatched '</details>' above; with that fixed
+                // it closed .cc5-reflection-prompts after the first prompt.
                 html += '</div>';
             });
 
