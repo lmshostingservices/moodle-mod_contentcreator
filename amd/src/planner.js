@@ -678,7 +678,16 @@ define([], function() {
         if (mode === 'vet' && tgaData) {
             const result = planVETTopics(tgaData, duration, context, selectedMajorTopics);
             return result;
-        } else if ((mode === 'university' || mode === 'pd') && (outcomes || topicHierarchy)) {
+        // v13.91.3: 'topicstext' plans exactly like 'pd' - a flat list of subtopics under one
+        // major topic, taken from the author's outcomes. This was the ONE place Route 5 was
+        // never wired in. builder.js sends it down the same branch as PD and hands planTopics
+        // an `outcomes` array, but the mode test here did not name it, so every
+        // Topics-and-Text build fell through to the throw below and the author saw
+        // "Failed to generate topic structure. Please try again." before a single AI call was
+        // made. planUniversityTopics is mode-agnostic - it reads only outcomes, duration and
+        // context - so naming the mode here is the whole fix.
+        } else if ((mode === 'university' || mode === 'pd' || mode === 'topicstext')
+                   && (outcomes || topicHierarchy)) {
             return planUniversityTopics(outcomes, duration, context, topicHierarchy);
         } else if (mode === 'workplace' && (selectedMajorTopics || workplaceTopics)) {
             return planWorkplaceTopics(selectedMajorTopics || workplaceTopics, duration, context);

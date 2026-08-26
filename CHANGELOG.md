@@ -1,5 +1,32 @@
 # Changelog
 
+## 13.91.3 - 25 August 2026
+
+### Fixed - Route 5 blocker
+
+- **Topics and Text failed at "Failed to generate topic structure" before any AI call.**
+  `planner.js` decides how to plan a build from the route mode, and its condition named
+  only `university` and `pd`. Route 5 sends its subtopics down that same branch, so every
+  Topics-and-Text build fell through to the "Invalid planning inputs" throw and the author
+  saw the generic failure message. `planner.js` was byte-identical to 13.83 and was the one
+  file Route 5 was never wired into. Naming the mode is the whole fix; `planUniversityTopics`
+  reads only outcomes, duration and context, so nothing else changed.
+
+- **Route 5 repairs used the VET repair prompt.** On a structural failure,
+  `getContentRepairPromptForMode` and `buildContentRepairPromptForMode` fell through to the
+  vocational prompt, which asks for seven cards with scenarios, mistakes and a decision
+  point - a shape a five-card prose article cannot be repaired into. Both now have a
+  `topicstext` branch that reuses the route's own system prompt and states the issues
+  against it, preserving anything the issues do not name.
+
+### Verified
+
+- The exact reported failure reproduced against the 13.83 planner and confirmed fixed.
+- University, PD and Topics-and-Text all plan correctly; an unknown mode is still rejected.
+- Full regression re-run: all five routes assemble, VET pack 2,221 words and idempotent,
+  Route 5 order correct and idempotent, all three Route 5 spec checks pass, zero US
+  spellings, badItems consequences preserved.
+
 ## 13.91.2 - 25 August 2026
 
 ### Fixed

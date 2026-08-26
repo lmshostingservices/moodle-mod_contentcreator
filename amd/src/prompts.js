@@ -1407,7 +1407,34 @@ ${JSON.stringify(cards, null, 2)}
 Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
     };
 
+    // v13.91.3: Route 5 repair. Without these two branches a structural failure on a
+    // Topics-and-Text section was repaired with the VET prompt - which asks for seven
+    // vocational cards with scenarios, mistakes and a decision point. That cannot fix a
+    // five-card prose article; it would ask the model to produce something of the wrong
+    // shape entirely. Reuse the route's own system prompt, which already carries the full
+    // five-slot spec, and state the issues against it.
+    const buildTopicsTextContentRepairSystemPrompt = (context) => {
+        return TOPICSTEXT_SYSTEM_PROMPT
+            + '\n\nYou are REPAIRING an existing 5-card article, not writing a new one.'
+            + '\nKeep every heading and paragraph that is already good. Change ONLY what the'
+            + '\nlisted issues name. Return all 5 cards in the same order: orientation,'
+            + '\nfoundations, mechanism, in-practice, boundaries.';
+    };
+
+    const buildTopicsTextContentRepairPrompt = (cards, issues, topicTitle, context) => {
+        const issueList = (Array.isArray(issues) ? issues : [issues])
+            .filter(Boolean).map((i, n) => (n + 1) + '. ' + i).join('\n');
+        return 'Topic: ' + (topicTitle || '')
+            + '\n\nISSUES TO FIX:\n' + issueList
+            + '\n\nCURRENT CARDS:\n' + JSON.stringify(cards)
+            + '\n\nReturn the corrected { "cards": [...] } with exactly 5 cards, same order,'
+            + ' preserving everything the issues do not mention.';
+    };
+
     const getContentRepairPromptForMode = (mode, context) => {
+        if (mode === 'topicstext') {
+            return buildTopicsTextContentRepairSystemPrompt(context);
+        }
         if (mode === 'university') {
             return buildUniversityContentRepairSystemPrompt(context);
         }
@@ -1422,6 +1449,9 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
 
     const buildContentRepairPromptForMode = (cards, issues, topicTitle, context) => {
         const mode = context?.mode || 'vet';
+        if (mode === 'topicstext') {
+            return buildTopicsTextContentRepairPrompt(cards, issues, topicTitle, context);
+        }
         if (mode === 'university') {
             return buildUniversityContentRepairPrompt(cards, issues, topicTitle, context);
         }
