@@ -983,6 +983,7 @@ body.dark .cc5-player,
     background: rgb(255, 255, 255, 0.3);
     border-color: rgb(255, 255, 255, 0.6);
     transform: scale(1.02);
+    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-voiceover-btn-large.cc5-loading {
@@ -1055,6 +1056,7 @@ body.dark .cc5-player,
 .cc5-voiceover-pause-btn:hover {
     background: rgba(239, 68, 68, 0.5);
     border-color: rgba(239, 68, 68, 0.8);
+    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-pause-icon svg {
@@ -1510,10 +1512,12 @@ body.dark .cc5-player,
 
 .cc5-do-item:hover {
     background: rgb(34, 197, 94, 0.08);
+    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-dont-item:hover {
     background: rgb(239, 68, 68, 0.08);
+    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-do-item .cc5-list-icon {
@@ -1764,6 +1768,7 @@ body.dark .cc5-player,
 .cc5-tutorial-btn:hover {
     background: var(--cc5-primary-hover); /* v13.29: was hsl(220,90%,50%) = 4.29:1 */
     transform: scale(1.02);
+    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -4399,6 +4404,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     border-color: var(--cc5-primary) !important;
     background: var(--cc5-card-bg);
     box-shadow: var(--cc5-card-shadow-hover) !important;
+    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-option.cc5-selected[data-correct="true"] {
@@ -5439,6 +5445,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     background: var(--cc5-primary-dark, #0f766e);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgb(0,0,0,0.15);
+    color: var(--cc5-primary-foreground); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-check-sequence-btn:active {
@@ -6445,6 +6452,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 
 .cc5-example-response summary:hover {
     background: var(--cc5-teal-light) !important;
+    color: var(--cc5-teal); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 /* v6.6.97: Mobile-first - 24px minimum icon */
@@ -6906,6 +6914,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 .cc5-focus-modal-btn:hover {
     background: linear-gradient(135deg, var(--cc5-teal), var(--cc5-green));
     box-shadow: var(--cc5-shadow-sm);
+    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 /* v6.7.37: Active state - subtle color feedback only */
@@ -7138,6 +7147,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 .cc5-edit-slide-btn:hover {
     background: linear-gradient(135deg, var(--cc5-purple), var(--cc5-purple-dark));
     box-shadow: 0 4px 12px rgb(99, 102, 241, 0.4);
+    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-edit-slide-btn .cc5-edit-icon svg {
@@ -7334,6 +7344,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     background: var(--cc5-red);
     transform: scale(1.05);
     box-shadow: 0 2px 6px rgb(220, 38, 38, 0.4);
+    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-edit-delete-item:active {
@@ -7371,6 +7382,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 .cc5-edit-add-btn:hover {
     background: rgb(59, 130, 246, 0.15);
     border-style: solid;
+    color: #93c5fd; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-edit-add-btn svg {
@@ -7585,7 +7597,8 @@ button.cc5-edit-modal-save:disabled {
     
     .cc5-edit-delete-item:hover {
         background: var(--cc5-red);
-    }
+        color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+}
     
     .cc5-edit-add-btn {
         background: rgb(59, 130, 246, 0.1);
@@ -7595,7 +7608,8 @@ button.cc5-edit-modal-save:disabled {
     
     .cc5-edit-add-btn:hover {
         background: rgb(59, 130, 246, 0.2);
-    }
+        color: #93c5fd; /* v13.92.2: pinned - theme button:hover forces #fff */
+}
     
     .cc5-edit-voiceover-option {
         background: linear-gradient(135deg, rgb(245, 158, 11, 0.15), rgb(217, 119, 6, 0.1));
@@ -7619,7 +7633,8 @@ button.cc5-edit-modal-save:disabled {
     
     .cc5-edit-modal-cancel:hover {
         background: #374151;
-    }
+        color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+}
 }
 
 /* Mobile responsiveness */
@@ -7983,6 +7998,7 @@ button.cc5-edit-modal-save:disabled {
 
 .cc5-doc-modal-btn-secondary:hover {
     background: var(--cc5-border);
+    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 /* v6.5.49: Document edit mode styles */
@@ -8004,6 +8020,7 @@ button.cc5-edit-modal-save:disabled {
 
 .cc5-doc-edit-btn.cc5-editing:hover {
     background: hsl(158deg, 64%, 42%);
+    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-doc-edit-container {
@@ -8640,6 +8657,7 @@ button.cc5-edit-modal-save:disabled {
     border-color: var(--cc5-blue); /* Blue border on hover */
     transform: translateY(-2px);
     box-shadow: var(--cc5-shadow-sm);
+    color: #1e293b; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 
@@ -9134,6 +9152,7 @@ button.cc5-edit-modal-save:disabled {
 .cc5-regen-cancel-btn:hover {
     background: var(--cc5-bg);
     border-color: var(--cc5-text-muted);
+    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-regen-confirm-btn {
@@ -9254,6 +9273,7 @@ button.cc5-edit-modal-save:disabled {
     opacity: 1;
     background: rgb(0, 0, 0, 0.8);
     transform: scale(1.1);
+    color: var(--cc5-primary-foreground); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-image-zoom-btn svg {
@@ -9285,6 +9305,7 @@ button.cc5-edit-modal-save:disabled {
     opacity: 1;
     background: rgb(0, 0, 0, 0.8);
     transform: scale(1.1);
+    color: var(--cc5-primary-foreground); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-image-download-btn svg {
@@ -9340,6 +9361,7 @@ button.cc5-edit-modal-save:disabled {
 .cc5-zoom-modal-close:hover {
     background: hsl(0deg 84% 45%);
     transform: scale(1.1);
+    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-zoom-modal-close svg {
@@ -9416,6 +9438,7 @@ button.cc5-edit-modal-save:disabled {
 .cc5-show-community-btn:hover {
     background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
     border-color: #66bb6a;
+    color: #2e7d32; /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 /* Gallery Modal */
@@ -9592,6 +9615,7 @@ button.cc5-edit-modal-save:disabled {
 
 .cc5-community-search-btn:hover {
     background: var(--cc5-primary-hover);
+    color: var(--cc5-primary-foreground); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-community-search-btn svg {
@@ -9716,6 +9740,7 @@ button.cc5-edit-modal-save:disabled {
 .cc5-community-page-btn:hover {
     background: var(--cc5-bg);
     border-color: var(--cc5-primary);
+    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-community-page-btn svg {
@@ -13201,6 +13226,7 @@ button.cc5-edit-modal-save:disabled {
 .cc5-doc-reference:hover {
     background: rgb(var(--cc5-primary-rgb), 0.15);
     transform: translateY(-1px);
+    color: var(--cc5-primary); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-doc-reference svg {
@@ -17457,6 +17483,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 }
 .cc5-player .cc5-dp-try-again-btn:hover {
     background: hsl(22deg 95% 94%);
+    color: hsl(22deg 85% 40%); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 .cc5-player .cc5-dp-try-again-btn:active {
     background: hsl(22deg 85% 88%);
@@ -18539,6 +18566,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 .cc5-player .cc5-summary-item:hover {
     background: hsl(142deg 71% 98%);
     border-color: hsl(142deg 55% 75%);
+    color: var(--cc5-text-secondary); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 .cc5-player .cc5-summary-check {
     flex-shrink: 0;
@@ -19607,6 +19635,7 @@ body.dark .cc5-single-topic-right {
 }
 .cc5-icon-picker-btn:hover {
     background: var(--cc5-accent, rgba(0,0,0,0.10));
+    color: var(--cc5-muted-foreground, #555); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 .cc5-icon-picker-btn svg {
     width: 14px;
@@ -19674,6 +19703,7 @@ body.dark .cc5-single-topic-right {
 }
 .cc5-icon-picker-close:hover {
     background: var(--cc5-muted, rgba(0,0,0,0.08));
+    color: var(--cc5-muted-foreground, #555); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 .cc5-icon-picker-close svg {
     width: 16px;
@@ -20295,6 +20325,7 @@ body.dark .cc5-lang-pill {
     border-color: var(--cc5-prose-accent);
     transform: translateX(2px);
     box-shadow: 0 6px 16px -10px var(--cc5-prose-glow);
+    color: var(--cc5-prose-accent); /* v13.92.2: pinned - theme button:hover forces #fff */
 }
 
 .cc5-prose-next-btn:focus-visible {
@@ -20423,4 +20454,74 @@ body.dark .cc5-lang-pill {
     .cc5-card.cc5-vo-speaking {
         transition: none;
     }
+}
+
+/* ==========================================================================
+   v13.92.2  FIX-CC-HOVER-COLOUR
+   --------------------------------------------------------------------------
+   Moodle's Boost theme ships:
+
+       button:hover, button:focus, button.active, button:active
+           { color: #fff; background: #434343; }
+
+   specificity (0,1,1). Every player button rule beats that on BACKGROUND,
+   because a class plus a pseudo-class is (0,2,0). But an undeclared property
+   is not a contest: wherever a :hover rule set a background and left `color`
+   to inherit, the theme supplied #fff.
+
+   On Topics and Text that produced white text on a white background -
+   "Next Card" and "Start Activities", the two controls the whole sequential
+   reveal depends on, disappeared under the cursor. "Try Again" on the quiz was
+   white on pale peach, near enough invisible.
+
+   31 single-selector :hover rules were pinned in place above. The grouped
+   selectors and the buttons that carried no :hover rule at all are pinned
+   here, each to the colour its own base rule already declares.
+
+   Rule for anything added later: if a :hover rule sets a background, it must
+   set a colour too. Never leave it to inherit.
+   ========================================================================== */
+
+.cc5-check-sequence-btn:hover,
+.cc5-reflection-submit:hover,
+.cc5-submit-btn:hover {
+    color: var(--cc5-primary-foreground);
+}
+
+.cc5-popup-action-btn:hover,
+.cc5-popup-action-btn:focus {
+    color: var(--cc5-text);
+}
+
+.cc5-popup-close-btn:hover,
+.cc5-popup-close-btn:focus {
+    color: white;
+}
+
+.cc5-try-again-btn:hover,
+.cc5-btn-try-again-incorrect:hover {
+    color: var(--cc5-primary);
+}
+
+/* The challenge buttons only ever declared a hover state for .cc5-enabled, so
+   in their idle state the theme took the button whole - dark grey pill, white
+   label - on a route where the activity block is the last thing a learner
+   touches. Pin both states. */
+.cc5-challenge-next-btn:hover,
+.cc5-challenge-finish-btn:hover {
+    color: hsl(22deg 60% 55%);
+    background: hsl(22deg 40% 98%);
+}
+
+.cc5-challenge-next-btn.cc5-enabled:hover,
+.cc5-challenge-finish-btn.cc5-enabled:hover {
+    color: #fff;
+}
+
+/* Focus and active share the theme's selector list, so a button that is
+   correct on hover could still flip white when focused by keyboard. Same
+   pinning, same reason - and this is the path a keyboard-only learner takes. */
+.cc5-prose-next-btn:focus,
+.cc5-prose-next-btn:active {
+    color: var(--cc5-prose-accent);
 }

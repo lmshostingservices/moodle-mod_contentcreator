@@ -1,5 +1,65 @@
 # Changelog
 
+## 13.92.2 - 26 August 2026
+
+### Fixed - white text on white background when hovering the Topics and Text buttons
+
+Moodle's Boost theme ships `button:hover, button:focus, button.active, button:active
+{ color: #fff; background: #434343; }`. Every player button rule beats that on *background*
+- a class plus a pseudo-class is more specific than an element plus a pseudo-class. But an
+undeclared property is not a contest, and `player5.css` never declared `color` inside a
+`:hover` rule. Wherever a hover state set a background and left the text colour to inherit,
+the theme supplied white.
+
+On Topics and Text the hover background is pure white, so **"Next Card" and "Start
+Activities" turned white-on-white and vanished under the cursor** - the two controls the
+whole sequential-reveal flow depends on. "Try Again" on the quiz was white on pale peach.
+Several buttons that carried no hover rule at all took the theme's dark grey pill instead
+of their own styling.
+
+An audit of every `:hover` rule in `player5.css` found 67 that set a background without a
+colour. 31 single-selector rules are now pinned to the colour their own base rule declares;
+the grouped selectors and the buttons with no hover rule are pinned in a new block at the
+end of the file. `:focus` and `:active` on the Topics and Text button are pinned too, since
+the theme's selector list covers those as well and that is the keyboard-only path.
+
+Standing rule recorded in the stylesheet: if a `:hover` rule sets a background, it sets a
+colour. Never left to inherit.
+
+No change to generation, prompts, card contracts or any route.
+
+## 13.92.1 - 26 August 2026
+
+### Fixed - "Reset & Start Over" could not be used, and its failures were silent
+
+On the locked completion screen, Reset & Start Over did nothing. Three separate faults sat
+on top of each other:
+
+1. **The confirmation modal's footer rendered with `display: none`**, so Cancel and
+   "Start over" never appeared. The buttons were present in the DOM with their
+   `data-action` attributes intact — they simply could not be seen or clicked, which left
+   an author with no way to clear a module that had ended up in a bad state. The rule
+   hiding it is not ours: this plugin declares no `.modal-footer` rule in any of its four
+   stylesheets, and no same-origin rule setting `display` on that element could be found,
+   so it arrives from an `@import`-ed sheet belonging to the theme or another plugin on the
+   page. We cannot out-specify an unknown selector, so the footer of *this* modal is now
+   forced visible with an important inline declaration — applied only when the computed
+   display really is `none`, and a no-op everywhere else. Any other Moodle save/cancel
+   modal on those pages is still affected; the stylesheet is worth finding separately.
+
+2. **`.then(reset).catch(cancelled)` swallowed real errors.** A `catch` chained after a
+   `then` also catches anything thrown inside the `then` body, so a genuine failure in the
+   reset was reported as though the user had clicked Cancel. Now the two-argument form of
+   `then()`, so a rejection means cancellation and nothing else.
+
+3. **A failed save re-rendered as though it had succeeded.** `saveManifest()` reports
+   success through its callback and the callback's flag was ignored, so an expired session,
+   a changed capability or a server error left the author looking at a fresh wizard while
+   the old content was still on the server — visible again on the next reload. The flag is
+   now honoured, and a failure raises an explanatory alert instead of pretending.
+
+No change to generation, prompts, card contracts or any route.
+
 ## 13.92.0 - 26 August 2026
 
 ### Changed - "Topics and Text" rebuilt: four fixed-heading cards, colour-coded, read one at a time

@@ -10556,11 +10556,33 @@ The context and task details follow below.
 
         document.getElementById('cc-reset-btn')?.addEventListener('click', () => {
             // v13.66: core/notification replaces the native confirm() dialog.
-            Notification.saveCancelPromise(
+            const resetPromise = Notification.saveCancelPromise(
                 'Start over?',
                 'This will delete all generated content and allow you to create new content.',
                 'Start over'
-            ).then(() => {
+            );
+
+            // v13.92.1 FIX-CC-RESET-FOOTER: on sites whose theme or another plugin ships a
+            // rule hiding .modal-footer, this modal renders with its footer display:none —
+            // Cancel and "Start over" exist in the DOM but cannot be seen or clicked, so
+            // the reset is unreachable and the author cannot clear a bad module. The rule
+            // is not ours and we cannot out-specify an unknown selector, so force the
+            // footer of THIS modal visible with an important inline declaration. Scoped to
+            // the modal just opened, and a no-op wherever the footer already renders.
+            setTimeout(() => {
+                const foot = document.querySelector(
+                    '.modal.show [data-region="footer"], .modal.show .modal-footer');
+                if (foot && window.getComputedStyle(foot).display === 'none') {
+                    foot.style.setProperty('display', 'flex', 'important');
+                    ccWarn('[CC RESET] modal footer hidden by site CSS  -  forced visible');
+                }
+            }, 0);
+
+            // v13.92.1 FIX-CC-RESET-SWALLOW: two-argument then(), NOT .then().catch().
+            // A catch chained after then also caught anything thrown inside the reset body
+            // and reported it as a cancellation, so a real failure was indistinguishable
+            // from the user clicking Cancel.
+            resetPromise.then(() => {
                 manifest = null;
                 selectedMode = null;
                 currentStep = 1;
@@ -10571,12 +10593,27 @@ The context and task details follow below.
                 resetRouteState();
                 clearDraft();
 
-                saveManifest({ locked: false, reset: true }, () => {
-                    renderWizard();
+                // v13.92.1 FIX-CC-RESET-SILENT: honour the callback's success flag. This
+                // re-rendered regardless, so a save that failed (expired session, changed
+                // capability, server error) looked exactly like a successful reset until
+                // the page was reloaded and the old content reappeared.
+                saveManifest({ locked: false, reset: true }, (ok) => {
+                    if (ok) {
+                        renderWizard();
+                        return;
+                    }
+                    ccError('[CC RESET] saveManifest failed  -  content NOT cleared');
+                    Notification.alert(
+                        'Reset failed',
+                        'The generated content could not be cleared. Your session may have '
+                            + 'expired. Reload the page, sign in again if prompted, then try again.',
+                        'OK'
+                    );
                 });
                 return true;
-            }).catch(() => {
-                // User cancelled the reset - nothing to do.
+            }, () => {
+                // Rejection here now means one thing only: the user clicked Cancel or
+                // dismissed the modal. Errors from the body above no longer land here.
                 return false;
             });
         });
