@@ -1636,11 +1636,15 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
 
             let pollData;
             try {
-                const pollResp = await fetch(
+                // v13.93.3: a poll with no deadline can hang forever, and because the
+                // loop awaits it the whole polling sequence stops - no further polls, no
+                // consecutive-error counting, no timeout. 25s is well beyond the 20s
+                // ajax.php allows its own status call.
+                const pollResp = await CcState.fetchWithDeadline(
                     ajaxUrl + '?action=poll_job&jobId=' + encodeURIComponent(jobId) +
                         '&sesskey=' + encodeURIComponent(sesskey) +
                         '&cmid=' + encodeURIComponent(cmid),
-                    { method: 'GET' }
+                    { method: 'GET' }, 'The job status check', 25000
                 );
                 if (!pollResp.ok) { throw new Error('Poll HTTP error: ' + pollResp.status); }
                 pollData = JSON.parse(await pollResp.text());
@@ -1865,10 +1869,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
 
             const imgUrl = M.cfg.wwwroot + '/mod/contentcreator/ajax.php';
             const fetchStart = Date.now();
-            const response = await fetch(imgUrl, {
+            // v13.93.3: image generation runs 100s+ against ajax.php's 180s ceiling and
+            // had no client deadline at all, so a stalled image hung its section forever.
+            const response = await CcState.fetchWithDeadline(imgUrl, {
                 method: 'POST',
                 body: formData
-            });
+            }, 'Image generation', 210000);
             const fetchMs = Date.now() - fetchStart;
 
             ccDiag('generateTopicImage() HTTP response: status=' + response.status + ' | time=' + fetchMs + 'ms');

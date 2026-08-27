@@ -125,6 +125,40 @@ define([
     const ccWarn = _log.warn;
     const ccError = _log.error;
 
+    /**
+     * v13.93.2 FIX-CC-NO-TIMEOUT: POST to ajax.php with a deadline.
+     *
+     * Five of the six fetch call sites in this file had no AbortController. A request
+     * that the server never answers therefore hung forever: the browser has no default
+     * timeout, so the await never settles, no catch runs, and whatever UI state was set
+     * before the call stays set. That is how the builder was seen sitting on
+     * "Preparing... 0%" with the Generate button disabled for 23 minutes - two POSTs in
+     * flight, neither ever returning, no error and no way out but a page reload.
+     *
+     * ajax.php gives the vendor 180s (CURLOPT_TIMEOUT) and the browser must be the
+     * looser of the two, never the tighter, or it abandons work the server is still
+     * doing. 210s matches the deadline the voiceover path already used.
+     *
+     * @param {FormData} body Form payload.
+     * @param {String} label Shown in the abort warning.
+     * @param {Number} ms Deadline, default 210000.
+     * @return {Promise<Response>} The response.
+     */
+    const ccPost = async (body, label, ms) => {
+        const ctrl = new AbortController();
+        const timer = setTimeout(function() {
+            ctrl.abort();
+            ccWarn('[CC NET] ' + label + ' aborted after ' + Math.round((ms || 210000) / 1000)
+                + 's with no response from the server');
+        }, ms || 210000);
+        try {
+            return await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php',
+                { method: 'POST', body: body, signal: ctrl.signal });
+        } finally {
+            clearTimeout(timer);
+        }
+    };
+
 
     let cmid = 0;
     let container = null;
@@ -9291,6 +9325,40 @@ The context and task details follow below.
 
 
 
+    /**
+     * v13.93.1: compose source material for the Workplace route when no document was
+     * uploaded, from the training topic and the context the author already supplied.
+     *
+     * The vendor requires at least 100 characters of `content`. Rather than pad, this
+     * states the brief in full sentences so the model has something real to plan from.
+     *
+     * @param {String} majorTopic The training topic the author typed.
+     * @param {Object} context The gathered builder context.
+     * @return {String} A brief of at least 100 characters.
+     */
+    const buildWorkplaceBrief = (majorTopic, context) => {
+        const c = context || {};
+        const parts = ['Workplace training topic: ' + majorTopic + '.'];
+        const type = document.getElementById('cc-training-type')?.value;
+        if (type) { parts.push('This is ' + type + ' training.'); }
+        if (c.companyName) { parts.push('It is delivered at ' + c.companyName + '.'); }
+        if (c.targetAudience) { parts.push('The audience is ' + c.targetAudience + '.'); }
+        if (c.industryContext || c.industry) {
+            parts.push('The industry is ' + (c.industryContext || c.industry) + '.');
+        }
+        if (c.department) { parts.push('The department is ' + c.department + '.'); }
+        if (c.location || c.country) { parts.push('It applies in ' + (c.location || c.country) + '.'); }
+        parts.push('Produce the subtopics a worker must understand to carry this out '
+            + 'correctly, safely and in line with company policy.');
+        let brief = parts.join(' ');
+        // Belt and braces: never return something the vendor will reject outright.
+        if (brief.length < 100) {
+            brief += ' Cover what the task is, why it matters, how it is done step by step, '
+                + 'and what going wrong looks like.';
+        }
+        return brief;
+    };
+
     const suggestWorkplaceTopics = async () => {
         // v13.84: the training topic is the required input; the document is optional.
         const majorTopic = document.getElementById('cc-wp-training-topic')?.value?.trim();
@@ -9317,9 +9385,19 @@ The context and task details follow below.
             const context = gatherContext();
             const data = await CcState.vendorFetch(cmid, 'suggestworkplacetopics', {
                 payload: {
-                    // v13.84: empty when no document was uploaded - the vendor then
-                    // works from majorTopic + context alone.
-                    content: workplaceData?.content || '',
+                    // v13.93.1 FIX-CC-WP-NODOC: v13.84 sent an empty string here when no
+                    // document was uploaded, on the stated assumption that "the vendor then
+                    // works from majorTopic + context alone". It does not. The endpoint's
+                    // schema requires `content` to be at least 100 characters, so every
+                    // no-document Workplace build failed validation and dumped a raw Zod
+                    // error into the builder. The route was unusable without a file, which
+                    // is exactly what v13.84 set out to fix.
+                    //
+                    // When there is no document, the training topic and the context the
+                    // author already filled in ARE the source material, so compose them into
+                    // a brief and send that. Comfortably clears the minimum and gives the
+                    // model more to work with than a bare topic line.
+                    content: workplaceData?.content || buildWorkplaceBrief(majorTopic, context),
                     title: workplaceData?.title || majorTopic,
                     majorTopic: majorTopic,
                     context: context,
@@ -9879,8 +9957,33 @@ The context and task details follow below.
         if (generateBtn) generateBtn.disabled = true;
         if (prevBtn) prevBtn.disabled = true;
 
+        // v13.93.2 FIX-CC-GEN-STUCK: a watchdog on the start of generation.
+        //
+        // Observed on a live VET build: this handler ran, showed the progress panel and
+        // disabled the button, and then nothing happened for 23 minutes - no status
+        // change, no error, no way back. The button stays disabled, so the author cannot
+        // even retry; only a page reload clears it.
+        //
+        // Everything downstream reports through onStatus, so if onStatus has not fired
+        // within 30 seconds the generation has not started. Rather than leave a dead
+        // screen, hand the controls back and say so. Cleared by the first onStatus.
+        let _genStarted = false;
+        const _genWatchdog = setTimeout(function() {
+            if (_genStarted) { return; }
+            ccError('[CC] generateContent() WATCHDOG: no status after 30s  -  generation never started');
+            showError('Generation did not start. This is usually a dropped connection. '
+                + 'Click Try Again to retry.', true);
+            progressSection?.classList.add('cc-hidden');
+            if (generateBtn) generateBtn.disabled = false;
+            if (prevBtn) prevBtn.disabled = false;
+        }, 30000);
+        const _clearGenWatchdog = function() {
+            _genStarted = true;
+            clearTimeout(_genWatchdog);
+        };
+
         try {
-            
+
             // Gather progression settings
             const progressionMode = document.querySelector('input[name="progressionMode"]:checked')?.value || 'free';
             const slideDuration = parseInt(document.getElementById('cc-slide-duration')?.value) || 10;
@@ -9959,6 +10062,8 @@ The context and task details follow below.
 
             await ManifestBuilder.build(inputs, cmid, {
                 onStatus: (status) => {
+                    // v13.93.2: generation is alive - stand the watchdog down.
+                    _clearGenWatchdog();
                     const statusText = {
                         planning: 'Planning content structure...',
                         generating: 'Generating content with AI...',
@@ -10081,8 +10186,7 @@ The context and task details follow below.
                                     _qFd.append('sectionid', String(section.id) + '_dpfb' + oi);
                                     _qFd.append('language', voiceLanguage);
                                     _qFd.append('voice', voiceName);
-                                    var _qResp = await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php',
-                                        { method: 'POST', body: _qFd });
+                                    var _qResp = await ccPost(_qFd, 'quiz feedback TTS');
                                     if (!_qResp.ok) { throw new Error('TTS returned ' + _qResp.status); }
                                     var _qData = await _qResp.json();
                                     if (!_qData.success || !_qData.audioContent) {
@@ -10097,8 +10201,7 @@ The context and task details follow below.
                                     _qpFd.append('sectionid', String(section.id) + '_dpfb' + oi);
                                     _qpFd.append('audiocontent', _qData.audioContent);
                                     _qpFd.append('audiotype', _qData.audioType || 'audio/ogg');
-                                    var _qpResp = await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php',
-                                        { method: 'POST', body: _qpFd });
+                                    var _qpResp = await ccPost(_qpFd, 'quiz feedback persist');
                                     if (_qpResp.ok) {
                                         var _qpData = await _qpResp.json();
                                         if (_qpData.success && _qpData.url) {
@@ -10186,7 +10289,7 @@ The context and task details follow below.
                                         _ppFd.append('sectionid', String(section.id || ('prim_' + _voWordCount)));
                                         _ppFd.append('audiocontent', data.audioContent);
                                         _ppFd.append('audiotype', data.audioType || 'audio/ogg');
-                                        var _ppResp = await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php', { method: 'POST', body: _ppFd });
+                                        var _ppResp = await ccPost(_ppFd, 'voiceover persist');
                                         if (_ppResp.ok) {
                                             var _ppData = await _ppResp.json();
                                             if (_ppData.success && _ppData.url) {
@@ -10378,7 +10481,7 @@ The context and task details follow below.
                                                 fd.append('sectionid', section.id);
                                                 fd.append('language', langCode);
                                                 fd.append('voice', voiceName);
-                                                var r = await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php', { method: 'POST', body: fd });
+                                                var r = await ccPost(fd, 'multilanguage TTS');
                                                 if (!r.ok) throw new Error(r.status);
                                                 var d = await r.json();
                                                 if (d.success && d.audioContent) {
@@ -10406,7 +10509,7 @@ The context and task details follow below.
                                                     _persistFd.append('sectionid', langCode + '_' + String(section.id || ('mlsec_' + langCode)));
                                                     _persistFd.append('audiocontent', d.audioContent);
                                                     _persistFd.append('audiotype', d.audioType || 'audio/ogg');
-                                                    var _persistResp = await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php', { method: 'POST', body: _persistFd });
+                                                    var _persistResp = await ccPost(_persistFd, 'multilanguage persist');
                                                     if (!_persistResp.ok) throw new Error('persist HTTP ' + _persistResp.status);
                                                     var _persistData = await _persistResp.json();
                                                     if (!_persistData.success || !_persistData.url) throw new Error(_persistData.error || 'persist returned no url');
@@ -10488,6 +10591,7 @@ The context and task details follow below.
                     });
                 },
                 onError: (error) => {
+                    _clearGenWatchdog();
                     ccError('[CC] ManifestBuilder.build() onError callback:', error);
                     const errStr = String(error || '');
                     const friendlyMsg = /invalid request|too long|request.*param|400/i.test(errStr)
@@ -10502,6 +10606,7 @@ The context and task details follow below.
                 }
             });
         } catch (err) {
+            _clearGenWatchdog();
             ccError('[CC] generateContent() CATCH BLOCK:', err.message, err.stack);
             const catchMsg = String(err?.message || '');
             const catchFriendly = /invalid request|too long|request.*param|400/i.test(catchMsg)
@@ -10521,12 +10626,46 @@ The context and task details follow below.
 
 
 
+    /**
+     * v13.93.1 FIX-CC-RAW-ERROR: vendor errors are passed through verbatim (v13.66, so a
+     * teacher out of credits sees the real reason rather than a shrug). That is right for
+     * a sentence and wrong for a serialised validation object: the Workplace route showed
+     * authors a raw Zod array -
+     *
+     *   [ { "code": "too_small", "minimum": 100, "type": "string", ... } ]
+     *
+     * which is not a message, it is a stack trace with a bow on it. Pull the human part
+     * out of the payload when there is one, and fall back to a plain sentence otherwise.
+     * The full text still reaches the console for whoever is debugging.
+     *
+     * @param {String} message Raw message, possibly serialised JSON.
+     * @return {String} Something worth showing a person.
+     */
+    const humaniseError = (message) => {
+        const raw = (message === null || message === undefined) ? '' : String(message);
+        const trimmed = raw.trim();
+        if (!trimmed || (trimmed[0] !== '[' && trimmed[0] !== '{')) { return raw; }
+        try {
+            const parsed = JSON.parse(trimmed);
+            const list = Array.isArray(parsed) ? parsed : [parsed];
+            const msgs = list
+                .map(function(item) { return item && (item.message || item.error); })
+                .filter(Boolean);
+            ccWarn('[BUILDER] vendor returned a structured error: ' + trimmed.slice(0, 400));
+            if (msgs.length) {
+                return msgs.join(' ') + ' (reported by the AI service)';
+            }
+        } catch (e) { /* not JSON after all - show it as it came */ }
+        return 'The AI service rejected this request. Check the console for details, '
+            + 'or try again with more detail in the fields above.';
+    };
+
     const showError = (message, showRetry = false) => {
         const section = document.getElementById('cc-error-section');
         const msgEl = document.getElementById('cc-error-message');
         const retryBtn = document.getElementById('cc-error-retry-btn');
         if (section && msgEl) {
-            msgEl.textContent = message;
+            msgEl.textContent = humaniseError(message);
             section.style.display = 'flex';
         }
         if (retryBtn) retryBtn.style.display = showRetry ? '' : 'none';

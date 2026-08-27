@@ -1489,7 +1489,7 @@ define([
                 checklistData.append('cmid', self.cmid);
                 checklistData.append('topicid', self.currentTopicId || '');
                 checklistData.append('complete', '1');
-                fetch(CcState.ajaxUrl(), {
+                CcState.fetchWithDeadline(CcState.ajaxUrl(), {
                     method: 'POST',
                     body: checklistData
                 }).catch(function(err) {
@@ -1679,7 +1679,7 @@ define([
             var controller = new AbortController();
             var timeoutId = setTimeout(function() { controller.abort(); }, 60000);
             
-            fetch(ajaxUrl, {
+            CcState.fetchWithDeadline(ajaxUrl, {
                 method: 'POST',
                 body: formData,
                 signal: controller.signal
@@ -1785,7 +1785,7 @@ define([
             formData.append('completed', isComplete ? 1 : 0);
             
             var ajaxUrl = CcState.ajaxUrl();
-            fetch(ajaxUrl, {
+            CcState.fetchWithDeadline(ajaxUrl, {
                 method: 'POST',
                 body: formData
             })
@@ -2185,7 +2185,7 @@ define([
                 // any in-flight fetch immediately instead of waiting for it to time out.
                 section._preloadAbortCtrl = _preAbortCtrl;
                 var _preTimeoutId = setTimeout(function() { _preAbortCtrl.abort(); }, 200000);
-                fetch(ajaxUrl, {
+                CcState.fetchWithDeadline(ajaxUrl, {
                     method: 'POST',
                     body: formData,
                     signal: _preAbortCtrl.signal
@@ -2493,7 +2493,7 @@ define([
             formData.append('voice', this.voiceName);
             
             var ajaxUrl = CcState.ajaxUrl();
-            fetch(ajaxUrl, {
+            CcState.fetchWithDeadline(ajaxUrl, {
                 method: 'POST',
                 body: formData
             })
@@ -7313,7 +7313,7 @@ define([
             
             var ajaxUrl = CcState.ajaxUrl();
             
-            fetch(ajaxUrl, {
+            CcState.fetchWithDeadline(ajaxUrl, {
                 method: 'POST',
                 body: formData
             })
@@ -7510,7 +7510,7 @@ define([
             formData.append('audiotype', audioType || 'audio/ogg');
 
             var ajaxUrl = CcState.ajaxUrl();
-            fetch(ajaxUrl, { method: 'POST', body: formData })
+            CcState.fetchWithDeadline(ajaxUrl, { method: 'POST', body: formData })
                 .then(function(r) {
                     if (!r.ok) { throw new Error('HTTP ' + r.status); }
                     return r.json();
@@ -8287,7 +8287,8 @@ define([
          */
         downloadImage: function(url) {
             var filename = 'content-creator-image-' + Date.now() + '.png';
-            fetch(url)
+            // v13.93.3: a download that never answers used to leave no trace at all.
+            CcState.fetchWithDeadline(url, {}, 'The image download', 60000)
                 .then(function(response) { return response.blob(); })
                 .then(function(blob) {
                     var blobUrl = URL.createObjectURL(blob);
@@ -14029,7 +14030,7 @@ define([
                                 voFormData.append('language', (self.activeLang || self.voiceLanguage));
                                 voFormData.append('voice', self.voiceName);
                                 
-                                fetch(CcState.ajaxUrl(), {
+                                CcState.fetchWithDeadline(CcState.ajaxUrl(), {
                                     method: 'POST',
                                     body: voFormData
                                 })
@@ -14556,7 +14557,7 @@ define([
             // take 143-153s; 120s was timing out on-demand fetches before server responded.
             var _odAbortCtrl = new AbortController();
             var _odTimeoutId = setTimeout(function() { _odAbortCtrl.abort(); }, 200000);
-            fetch(ajaxUrl, {
+            CcState.fetchWithDeadline(ajaxUrl, {
                 method: 'POST',
                 body: formData,
                 signal: _odAbortCtrl.signal

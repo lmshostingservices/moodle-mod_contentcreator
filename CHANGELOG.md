@@ -1,5 +1,121 @@
 # Changelog
 
+## 13.93.3 - 26 August 2026
+
+### Fixed - no request the plugin makes had a deadline, so any stall was permanent
+
+13.93.2 put timeouts on the six fetch calls in `builder.js` after the builder was seen
+frozen on "Preparing... 0%" for 23 minutes. That was the symptom, not the disease. A full
+audit of every `fetch()` in the plugin found **sixteen call sites with no
+`AbortController`**, across four files:
+
+| File | Un-timed calls | What they do |
+|---|---|---|
+| `cc-state.js` | 3 | `vendorFetch`, `vendorUpload`, `vendorDownload` - the shared transport for the TGA unit fetch, topic suggestion, document extraction, Excel export, gallery |
+| `player5.js` | 10 | learner-facing: voiceover, slide edits, image actions, downloads |
+| `generator.js` | 2 | the async job poller and image generation |
+| `builder.js` | 1 | remaining after 13.93.2 |
+
+A browser applies no default timeout to `fetch`. If the upstream never answers, the promise
+never settles - no `then`, no `catch`, no `finally`. Every one of these callers disables a
+control or shows a spinner before awaiting, so an unanswered request leaves that state set
+permanently, with no error and no way back but a page reload.
+
+The three in `cc-state.js` are the worst of them, because they are shared: every route's
+step-2 work goes through `vendorFetch`. That is the mechanism behind the frozen builder -
+two POSTs in flight, neither ever returning, nothing to catch.
+
+Two in `generator.js` deserve their own mention. **The job poller had no deadline**, and the
+loop awaits it, so a single hung poll stopped the entire polling sequence - no further
+polls, no consecutive-error counting, no timeout, for a job the server may well have
+finished. And **image generation had none** either, on an endpoint already documented as
+running 100s+ against a 180s ceiling.
+
+All sixteen now go through one helper, `CcState.fetchWithDeadline()`, exported so builder,
+player and generator share it. Deadlines are deliberately looser than the server's own
+(210s against ajax.php's 180s vendor timeout; 25s for the 20s status call) so the browser
+never abandons work the server is still doing. The helper leaves an existing `signal`
+alone, so callers that already manage their own abort keep it. Timeouts reject with a
+message naming the call, so the error a user sees says which step gave up.
+
+### Note on the "Preparing... 0%" freeze
+
+13.93.2 added a watchdog that hands the controls back if generation has not started within
+30 seconds. That stays, as a backstop. With deadlines now on every request the underlying
+stall should surface as a normal error instead - but the watchdog costs nothing and covers
+the case where something fails to start for a reason that is not a network call.
+
+## 13.93.2 - 26 August 2026
+
+### Fixed - the builder could hang forever on "Preparing... 0%"
+
+Seen on a live VET build. Clicking Generate showed the progress panel and disabled the
+button, and then nothing happened for 23 minutes: no status change, no error, no network
+activity that ever completed. Because the button disables itself first, the author cannot
+even retry - only a page reload clears it. A second click on a fresh attempt generated
+normally, so the failure is intermittent.
+
+The mechanism is a request with no deadline. **Five of the six fetch call sites in
+`builder.js` had no `AbortController`.** The browser applies no default timeout, so a POST
+the server never answers hangs indefinitely: the `await` never settles, no `catch` runs, and
+whatever UI state was set before the call stays set forever. Two POSTs were in flight
+throughout; they never returned. (They do not appear in the Performance API either, which is
+what made this look at first like "no request was made at all" - pending requests are not
+recorded there.)
+
+Two changes:
+
+- **Every ajax POST in the builder now has a deadline.** A new `ccPost()` helper wraps the
+  call with an `AbortController` at 210 seconds - deliberately looser than the 180 seconds
+  `ajax.php` allows the vendor, so the browser never abandons work the server is still
+  doing - and logs which call was abandoned. This also covers the two un-timed-out fetches
+  introduced by the quiz-voice work in 13.93.0.
+- **A watchdog on the start of generation.** Everything downstream reports through
+  `onStatus`, so if that has not fired within 30 seconds the generation never started: the
+  controls are handed back with an explanatory message instead of leaving a dead screen. It
+  stands down on the first status, on `onError`, and in the catch block, so it can never
+  fire over the top of a real error.
+
+The underlying trigger for the stall is still not established - it did not reproduce on
+demand. What is fixed is that it can no longer be silent or permanent.
+
+## 13.93.1 - 26 August 2026
+
+Found by the four-route proof run - the run that had been recommended after 13.86 and again
+after 13.87 and never completed. Both defects are on the Workplace route and neither could
+have been caught by reading the code alone.
+
+### Fixed - the Workplace route was unusable without a document
+
+v13.84 removed the requirement for an uploaded document, on the stated basis that "the
+vendor then works from majorTopic + context alone". It does not. `suggestWorkplaceTopics()`
+sent `content: workplaceData?.content || ''`, and the endpoint's schema requires `content`
+to be **at least 100 characters**. So every no-document Workplace build failed server-side
+validation, and the route stayed exactly as unusable as it had been before the fix - which
+was the thing v13.84 set out to repair. Reproduced with a 28-character topic and again with
+a 193-character one: the typed topic was never sent as `content` at all.
+
+When there is no document, the training topic and the context the author already filled in
+are the source material, so they are now composed into a brief and sent as `content` -
+training type, company, audience, industry, department, location, and what the subtopics
+must cover. It clears the minimum comfortably and gives the model more to plan from than a
+bare topic line.
+
+### Fixed - a raw validation object was shown to authors as an error message
+
+The failure above surfaced in the builder as:
+
+    [ { "code": "too_small", "minimum": 100, "type": "string", "inclusive": true,
+        "exact": false, "message": "String must contain at least 100 character(s)",
+        "path": [ "content" ] } ]
+
+Vendor errors are passed through verbatim by design (v13.66, so that a teacher out of
+credits sees the real reason instead of a shrug). That is right for a sentence and wrong for
+a serialised validation object. `showError()` now pulls the human-readable part out of a
+JSON payload when there is one, falls back to a plain sentence when there is not, and logs
+the full text to the console for whoever is debugging. Plain-text vendor errors are
+untouched and still shown exactly as sent.
+
 ## 13.93.0 - 26 August 2026
 
 ### Fixed - the activity block was narrated by a different voice than the cards

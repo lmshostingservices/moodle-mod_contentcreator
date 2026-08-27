@@ -797,6 +797,58 @@ define([], function() {
     }
 
     /**
+     * v13.93.2 FIX-CC-VENDOR-NO-TIMEOUT: fetch with a deadline.
+     *
+     * vendorFetch, vendorUpload and vendorDownload are the shared transport for every
+     * server call that is not generation or TTS - the TGA unit fetch, topic suggestion,
+     * document extraction, the Excel mapping export, the community gallery. None of them
+     * had an AbortController.
+     *
+     * A browser applies no default timeout to fetch. If the upstream never answers, the
+     * promise never settles: no then, no catch, no finally. Every one of these callers
+     * disables a button and shows a spinner before awaiting, so an unanswered request
+     * leaves that UI disabled permanently, with no error and no way back but a page
+     * reload. This is the mechanism behind the builder sitting on "Preparing... 0%" for
+     * 23 minutes with two POSTs in flight that never returned.
+     *
+     * 210s is deliberately looser than the 180s ajax.php allows the vendor
+     * (CURLOPT_TIMEOUT), so the browser never abandons work the server is still doing.
+     *
+     * @param {Object} init Fetch init, merged with the abort signal.
+     * @param {String} label Named in the timeout error so the caller's message is useful.
+     * @param {Number} [ms] Deadline in milliseconds, default 210000.
+     * @return {Promise<Response>} The response, or a rejection naming the timeout.
+     */
+    function fetchWithDeadline(url, init, label, ms) {
+        var limit = ms || 210000;
+        label = label || 'The request';
+        var ctrl = new AbortController();
+        var timer = setTimeout(function() { ctrl.abort(); }, limit);
+        init = init || {};
+        // A caller that already manages its own AbortController keeps it - overwriting
+        // the signal would silently disarm their abort (the player's voiceover path has
+        // its own deadline, for one). Their timer is the deadline in that case.
+        if (init.signal) {
+            clearTimeout(timer);
+            return fetch(url, init);
+        }
+        init.signal = ctrl.signal;
+        return fetch(url, init)
+            .then(function(response) {
+                clearTimeout(timer);
+                return response;
+            })
+            .catch(function(err) {
+                clearTimeout(timer);
+                if (err && err.name === 'AbortError') {
+                    throw new Error(label + ' timed out after '
+                        + Math.round(limit / 1000) + 's with no response from the server');
+                }
+                throw err;
+            });
+    }
+
+    /**
      * Call the vendor API through the Moodle server-side proxy.
      *
      * The site's API credentials never reach the browser. The client names an
@@ -823,7 +875,8 @@ define([], function() {
         if (opts.payload) {
             body.append('payload', JSON.stringify(opts.payload));
         }
-        return fetch(ajaxUrl(), {method: 'POST', body: body, credentials: 'same-origin'})
+        return fetchWithDeadline(ajaxUrl(),
+            {method: 'POST', body: body, credentials: 'same-origin'}, 'The request to ' + endpoint)
             .then(function(response) {
                 return response.json();
             })
@@ -856,7 +909,8 @@ define([], function() {
             body.append('unitcode', opts.unitcode);
         }
         body.append('file', file);
-        return fetch(ajaxUrl(), {method: 'POST', body: body, credentials: 'same-origin'})
+        return fetchWithDeadline(ajaxUrl(),
+            {method: 'POST', body: body, credentials: 'same-origin'}, 'The upload to ' + endpoint)
             .then(function(response) {
                 return response.json();
             })
@@ -887,7 +941,8 @@ define([], function() {
         if (opts.payload) {
             body.append('payload', JSON.stringify(opts.payload));
         }
-        return fetch(ajaxUrl(), {method: 'POST', body: body, credentials: 'same-origin'})
+        return fetchWithDeadline(ajaxUrl(),
+            {method: 'POST', body: body, credentials: 'same-origin'}, 'The download from ' + endpoint)
             .then(function(response) {
                 var type = response.headers.get('Content-Type') || '';
                 if (type.indexOf('application/json') !== -1) {
@@ -902,6 +957,7 @@ define([], function() {
     return {
         CC_VERSION: CC_VERSION,
         createLogger: createLogger,
+        fetchWithDeadline: fetchWithDeadline,
         VOICEOVER_SCHEMA_VERSION: VOICEOVER_SCHEMA_VERSION,
         voiceoverTextHash: voiceoverTextHash,
         buildVoiceoverText: buildVoiceoverText,
