@@ -823,7 +823,11 @@ define([], function() {
                 // v13.86: correctness was conveyed by a background colour plus a CSS ::after
                 // glyph on a permanently empty span, on a div with no aria-pressed, no
                 // aria-disabled once locked, and feedback in no live region.
-                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '" role="button" tabindex="0" aria-pressed="false">';
+                // v13.93: URL of this option's feedback narration, pre-generated at build
+                // time in the author's chosen Chirp 3 HD voice. Carried on the element so
+                // the click handler needs no lookup back into the manifest.
+                var _fbAudio = opt.feedbackAudioUrl ? ' data-feedback-audio="' + escapeHtml(opt.feedbackAudioUrl) + '"' : '';
+                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '"' + _fbAudio + ' role="button" tabindex="0" aria-pressed="false">';
                 html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
                 html += '<div class="cc5-dp-option-body">';
                 html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';
@@ -1054,7 +1058,11 @@ define([], function() {
                 // v13.86: correctness was conveyed by a background colour plus a CSS ::after
                 // glyph on a permanently empty span, on a div with no aria-pressed, no
                 // aria-disabled once locked, and feedback in no live region.
-                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '" role="button" tabindex="0" aria-pressed="false">';
+                // v13.93: URL of this option's feedback narration, pre-generated at build
+                // time in the author's chosen Chirp 3 HD voice. Carried on the element so
+                // the click handler needs no lookup back into the manifest.
+                var _fbAudio = opt.feedbackAudioUrl ? ' data-feedback-audio="' + escapeHtml(opt.feedbackAudioUrl) + '"' : '';
+                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '"' + _fbAudio + ' role="button" tabindex="0" aria-pressed="false">';
                 html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
                 html += '<div class="cc5-dp-option-body">';
                 html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';

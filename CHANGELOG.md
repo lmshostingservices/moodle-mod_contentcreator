@@ -1,5 +1,71 @@
 # Changelog
 
+## 13.93.0 - 26 August 2026
+
+### Fixed - the activity block was narrated by a different voice than the cards
+
+Reported from a live Topics and Text module: the voice reading the quiz feedback was not the
+one chosen before generation. It never could have been.
+
+Card narration is Chirp 3 HD in the author's selected voice. The quiz feedback was spoken by
+the **browser's Web Speech API**, which has no knowledge of that selection and uses whatever
+the learner's operating system provides. The code asked for the right accent (`en-AU`) and
+then searched the installed voices for a match - but on a machine with no Australian voice
+installed there is nothing to match, and Chrome fell through to its default. Captured live,
+under a female Australian selection, the actual narrator was:
+
+    Microsoft George - English (United Kingdom)
+
+The consequence is worse than one wrong voice. The result depends on what each learner has
+installed, so the same module is narrated by different people on different devices, and by
+nobody the author picked. No audio element was involved at all.
+
+**Every voice in this plugin is now Chirp 3 HD in the selected voice, without exception.**
+
+- The builder pre-generates one feedback clip per quiz option at build time, in the chosen
+  voice and language, persisting each to the file store exactly as section narration does.
+  Generated once, billed once, identical for every learner.
+- The player plays that clip. `speechSynthesis` no longer appears anywhere in the codebase.
+- Where no clip exists - an older manifest, or a build where TTS failed - the feedback is
+  **silent rather than spoken by the wrong voice**. Silence is recoverable; the wrong
+  narrator is not. The player logs a warning naming the cause.
+- Clip failures are non-fatal to the build: one silent feedback beats a failed module.
+
+Re-generate an existing module to add its quiz narration.
+
+### Fixed - the "read aloud" labels promised more than the code did
+
+The setting read "Read quiz questions and feedback aloud when students answer" and the
+player notice read "Questions & feedback are read aloud". Only feedback was ever spoken -
+there is no code path that reads a question. Both labels now describe what actually happens,
+and the setting says the narration uses the chosen voice.
+
+## 13.92.3 - 26 August 2026
+
+Found by a full end-to-end run of the Topics and Text route on a live site: two subtopics
+generated, every card checked, all three activities played through to the results screen.
+The route itself passed - four cards, fixed headings, two paragraphs each, 117-131 words a
+card, correct tones, no escape artifacts, sequential reveal, quiz, flip cards and category
+sort all working across both sections. These are the two defects that run surfaced.
+
+### Fixed - the builder's step 2 called Topics and Text "Professional Development"
+
+The two routes share `renderStep2PD()`, and its heading was hardcoded. An author who picked
+Topics and Text was told, at the top of the next screen, that they were configuring
+Professional Development. The heading is now route-aware. The shared `cc-pd-*` element ids
+are left alone deliberately - they are internal and renaming them would be churn.
+
+### Fixed - the completion screen always reported "0 activities"
+
+`renderLocked()` counted sections carrying a `section.activity` field. Nothing in the plugin
+has ever written that field: it is read in three places and set in none. So every build on
+every route reported zero activities however many it had produced - this run built three per
+section and was told it had none.
+
+What actually drives the activity block is a `decision-point` card in the section, so that
+is now what gets counted, with the old field kept as an alternative for any manifest that
+does carry it. Not specific to Topics and Text; the count has been wrong on all five routes.
+
 ## 13.92.2 - 26 August 2026
 
 ### Fixed - white text on white background when hovering the Topics and Text buttons

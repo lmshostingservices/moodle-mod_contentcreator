@@ -9834,26 +9834,42 @@ define([
                 // utterance's residual state. Fix: cancel() to clear any queued/active
                 // utterance, then defer speak() by 50 ms (one event-loop cycle) so the
                 // browser fully settles the synth before queuing the new utterance.
-                if (self.quizVoiceEnabled && 'speechSynthesis' in window) {
-                    var $fb = $opt.find('.cc5-dp-feedback');
-                    var feedbackText = $fb.text().trim();
-                    if (feedbackText) {
-                        window.speechSynthesis.cancel();
-                        setTimeout(function() {
-                            var utter = new window.SpeechSynthesisUtterance(feedbackText);
-                            // FIX-CC-QUIZ-VOICE-ACCENT: match the chosen narration language/accent (e.g. en-AU)
-                            // instead of the browser default voice (usually en-US / American).
-                            var _qlang = self.activeLang || self.voiceLanguage || 'en-AU';
-                            utter.lang = _qlang;
-                            try {
-                                var _qv = window.speechSynthesis.getVoices() || [];
-                                var _qlc = _qlang.toLowerCase().replace('_', '-');
-                                var _qpick = _qv.filter(function (v) { return v.lang && v.lang.toLowerCase().replace('_', '-') === _qlc; })[0]
-                                          || _qv.filter(function (v) { return v.lang && v.lang.toLowerCase().replace('_', '-').indexOf(_qlc.split('-')[0] + '-') === 0; })[0];
-                                if (_qpick) { utter.voice = _qpick; }
-                            } catch (e) { /* getVoices unsupported — utter.lang alone still steers the accent */ }
-                            window.speechSynthesis.speak(utter);
-                        }, 150);
+                // FIX-CC-QUIZ-VOICE-ENGINE (v13.93): this used the browser's Web Speech API.
+                //
+                // That could never honour the author's choice. Card narration is Chirp 3 HD
+                // in the selected voice (self.voiceName - Aoede, Kore, Puck...); Web Speech
+                // knows nothing about it and speaks in whatever the operating system
+                // provides. Worse, the en-AU accent hint only worked if the learner's device
+                // happened to have an en-AU voice installed. On a Windows machine with none,
+                // it fell through to "Microsoft George - English (United Kingdom)": a male UK
+                // voice under a female Australian selection. Two learners on two devices
+                // heard two different narrators, and neither heard the one the author picked.
+                //
+                // Every voice in this plugin is now Chirp 3 HD in the selected voice, without
+                // exception. The feedback clip is pre-generated at build time and its URL is
+                // carried on the option element. If there is no clip - an older manifest, or
+                // a build where TTS failed - the feedback is silent rather than spoken by the
+                // wrong voice. Silence is recoverable; the wrong narrator is not.
+                if (self.quizVoiceEnabled) {
+                    var _fbUrl = $opt.attr('data-feedback-audio');
+                    if (_fbUrl) {
+                        try {
+                            if (self._quizFbAudio) {
+                                self._quizFbAudio.pause();
+                                self._quizFbAudio.currentTime = 0;
+                            }
+                            self._quizFbAudio = new Audio(_fbUrl);
+                            self._quizFbAudio.play().catch(function(e) {
+                                // Autoplay policy, or a missing file. Never fall back to a
+                                // different voice - just log it.
+                                ccWarn('[QUIZ VOICE] feedback clip would not play: ' + e.message);
+                            });
+                        } catch (e) {
+                            ccWarn('[QUIZ VOICE] feedback clip error: ' + e.message);
+                        }
+                    } else {
+                        ccWarn('[QUIZ VOICE] no pre-generated feedback clip on this option  -  '
+                            + 'silent by design. Re-generate the module to add quiz narration.');
                     }
                 }
                 if (isCorrect) {

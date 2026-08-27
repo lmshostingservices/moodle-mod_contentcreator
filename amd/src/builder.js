@@ -5173,7 +5173,8 @@ define([
         const hasOutcomes = storedOutcomes.length > 0;
         return `
             <div class="cc-step-content" data-testid="step-2-pd">
-                <h2 class="cc-section-title">Learning Context - Professional Development</h2>
+                <h2 class="cc-section-title">Learning Context - ${selectedMode === 'topicstext'
+                    ? 'Topics and Text' : 'Professional Development'}</h2>
                 <p class="cc-section-subtitle">Enter your course details, then add topics by letting AI suggest them or paste your own.</p>
 
                 <div class="cc-instruction-card" data-testid="instruction-card-pd">
@@ -10046,6 +10047,73 @@ The context and task details follow below.
                         let completed = 0;
                         let index = 0;
                         
+                        // v13.93 FIX-CC-QUIZ-VOICE-ENGINE: pre-generate the quiz feedback
+                        // narration in the SAME Chirp 3 HD voice as the cards.
+                        //
+                        // The player used to speak this through the browser's Web Speech API,
+                        // which cannot know the author's chosen voice and falls back to
+                        // whatever the learner's operating system provides - so the activity
+                        // block was narrated by a different person than the cards, and by a
+                        // different person again on the next learner's device. One clip per
+                        // option, generated once here, billed once, identical for everyone.
+                        //
+                        // Failures are deliberately non-fatal: a missing clip makes that one
+                        // feedback silent, which is far better than failing the whole build,
+                        // and the player never substitutes another voice.
+                        const pregenQuizFeedback = async (section) => {
+                            if (_voSkipRequested) return;
+                            var dp = (section.cards || []).filter(function(c) {
+                                return c && c.cardType === 'decision-point';
+                            })[0];
+                            if (!dp || !Array.isArray(dp.options) || !dp.options.length) return;
+
+                            for (var oi = 0; oi < dp.options.length; oi++) {
+                                if (_voSkipRequested) return;
+                                var opt = dp.options[oi];
+                                var fbText = (opt && opt.feedback ? String(opt.feedback) : '').trim();
+                                if (!fbText || opt.feedbackAudioUrl) { continue; }
+                                try {
+                                    var _qFd = new FormData();
+                                    _qFd.append('sesskey', M.cfg.sesskey);
+                                    _qFd.append('action', 'generate_voice');
+                                    _qFd.append('cmid', cmid);
+                                    _qFd.append('text', fbText);
+                                    _qFd.append('sectionid', String(section.id) + '_dpfb' + oi);
+                                    _qFd.append('language', voiceLanguage);
+                                    _qFd.append('voice', voiceName);
+                                    var _qResp = await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php',
+                                        { method: 'POST', body: _qFd });
+                                    if (!_qResp.ok) { throw new Error('TTS returned ' + _qResp.status); }
+                                    var _qData = await _qResp.json();
+                                    if (!_qData.success || !_qData.audioContent) {
+                                        throw new Error(_qData.error || 'no audio returned');
+                                    }
+                                    // Persist to the file store, exactly as the section audio
+                                    // does - a data: URL would be stripped by saveManifest.
+                                    var _qpFd = new FormData();
+                                    _qpFd.append('sesskey', M.cfg.sesskey);
+                                    _qpFd.append('action', 'save_voiceover_file');
+                                    _qpFd.append('cmid', cmid);
+                                    _qpFd.append('sectionid', String(section.id) + '_dpfb' + oi);
+                                    _qpFd.append('audiocontent', _qData.audioContent);
+                                    _qpFd.append('audiotype', _qData.audioType || 'audio/ogg');
+                                    var _qpResp = await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php',
+                                        { method: 'POST', body: _qpFd });
+                                    if (_qpResp.ok) {
+                                        var _qpData = await _qpResp.json();
+                                        if (_qpData.success && _qpData.url) {
+                                            opt.feedbackAudioUrl = _qpData.url;
+                                            ccLog('%c[QUIZ VOICE] section ' + section.id + ' option ' + oi
+                                                + ' -> ' + _qpData.url, 'color:#10b981');
+                                        }
+                                    }
+                                } catch (_qErr) {
+                                    ccWarn('[QUIZ VOICE] section ' + section.id + ' option ' + oi
+                                        + ' failed: ' + _qErr.message + '  -  that feedback will be silent');
+                                }
+                            }
+                        };
+
                         const pregenOne = async (section, attempt) => {
                             attempt = attempt || 1;
                             // v12.57: Exit immediately if user clicked "Skip voiceover generation".
@@ -10143,6 +10211,8 @@ The context and task details follow below.
                                     // Player5 compares these on playback  -  match means "fresh, skip TTS".
                                     section.voiceoverSchemaVersion = CcState.VOICEOVER_SCHEMA_VERSION;
                                     section.voiceoverTextHash = CcState.voiceoverTextHash(voText);
+                                    // v13.93: quiz feedback narration, same voice, same build.
+                                    if (activitiesEnabled) { await pregenQuizFeedback(section); }
                                 } else {
                                     throw new Error(data.error || 'No audio returned');
                                 }
@@ -10472,8 +10542,15 @@ The context and task details follow below.
         
         // Calculate topic and activity counts from manifest structure
         const topicCount = manifest.topics?.length || 0;
-        const activityCount = manifest.topics?.reduce((sum, topic) => 
-            sum + (topic.sections?.filter(s => s.activity)?.length || 0), 0) || 0;
+        // v13.92.3 FIX-CC-ACTIVITY-COUNT: this counted sections carrying `section.activity`,
+        // a field nothing in the plugin has ever written - it is read in three places and set
+        // in none. So the completion screen reported "0 activities" on every route, on every
+        // build, however many it had actually produced. What really drives the activity block
+        // is a decision-point card in the section, so count that, and keep the old field as
+        // an alternative for any manifest that does carry it.
+        const activityCount = manifest.topics?.reduce((sum, topic) =>
+            sum + (topic.sections?.filter(s => s.activity
+                || (s.cards || []).some(c => c && c.cardType === 'decision-point'))?.length || 0), 0) || 0;
         
         const modeLabel = selectedMode === 'vet' ? 'Vocational (RTO)' : selectedMode === 'workplace' ? 'Workplace Training' : selectedMode === 'university' ? 'University' : selectedMode === 'topicstext' ? 'Topics and Text' : 'Professional Development';
 
