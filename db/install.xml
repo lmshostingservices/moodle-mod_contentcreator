@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="mod/contentcreator/db" VERSION="2026082617" COMMENT="Content Creator tables">
+<XMLDB PATH="mod/contentcreator/db" VERSION="2026082618" COMMENT="Content Creator tables">
   <TABLES>
     <TABLE NAME="contentcreator" COMMENT="Main activity table">
       <FIELDS>

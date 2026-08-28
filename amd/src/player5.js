@@ -761,11 +761,26 @@ define([
         var t = String(text || '').trim();
         if (!t) { return 1; }
         var words = t.split(/\s+/).filter(Boolean).length;
-        if (words < t.length / 8) {
+        // v13.94.8: detect the script directly rather than inferring it from spacing.
+        //
+        // The first version tested "few words for this many characters", which is true of
+        // CJK but is ALSO true of any long compound token - "Antidiscrimination" scored 9
+        // instead of 1, and German compounds like
+        // "Arbeitsschutzverordnung Gesundheitsschutz" scored 19 instead of 2, taking a
+        // wildly oversized share of the narration timeline. No ratio threshold separates
+        // the two cases: German at 41 chars / 2 words sits right where Japanese does.
+        //
+        // Counting the characters that actually belong to a non-spacing script is exact.
+        // Covers CJK ideographs, kana, Hangul and Thai - every unspaced language the voice
+        // list offers. ~2.2 characters per word-equivalent approximates the speaking-rate
+        // ratio against English at the same wpm.
+        var unspaced = (t.match(/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af\u0e00-\u0e7f]/g) || []).length;
+        if (unspaced > t.length / 2) {
             return Math.max(1, Math.ceil(t.length / 2.2));
         }
         return Math.max(1, words);
     }
+
 
     function fixGrammar(str) {
         if (!str) return str;
@@ -4600,13 +4615,22 @@ define([
          */
         applyProseGate: function ($grid, passedCardIndex) {
             if (!$grid || !$grid.length) { return; }
+            // v13.94.8: :not(.cc5-prose-btn-used) on BOTH selectors. This matched every
+            // button, so in voiceover mode each segment change re-enabled buttons
+            // revealProseCard() had already retired - undoing the v13.94.6 fix that made a
+            // spent button keyboard-inert, not merely pointer-inert. Also restores the
+            // disabled property here, which this branch cleared the class and aria for but
+            // never the property.
             if (this.progressionMode !== PROGRESSION_MODES.VOICEOVER) {
-                $grid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-locked')
-                     .removeAttr('aria-disabled').find('.cc5-prose-btn-lock').remove();
+                $grid.find('.cc5-prose-next-btn:not(.cc5-prose-btn-used)')
+                     .removeClass('cc5-prose-btn-locked')
+                     .removeAttr('aria-disabled')
+                     .prop('disabled', false)
+                     .find('.cc5-prose-btn-lock').remove();
                 return;
             }
             var lockLabel = getLabel('listenToUnlock');
-            $grid.find('.cc5-prose-next-btn').each(function () {
+            $grid.find('.cc5-prose-next-btn:not(.cc5-prose-btn-used)').each(function () {
                 var $b = $(this);
                 var $card = $b.closest('.cc5-prose-card');
                 var srcIdx = parseInt($card.attr('data-prose-index'), 10);
@@ -4717,8 +4741,12 @@ define([
             });
 
             // v13.94.6: same character fallback as the prose branch - see _voWeight().
+            // v13.94.8: was `seg.words > 1 ? seg.words : _voWeight(...)`, so a Japanese
+            // segment containing any whitespace - an embedded Latin acronym, or a
+            // full-width U+3000 space, which \s matches - scored 2 instead of ~200 and
+            // never reached the character fallback. Same weighting as the prose path.
             var weights = segments.map(function (seg) {
-                return Math.max(1, seg.words > 1 ? seg.words : _voWeight(seg.text));
+                return Math.max(1, _voWeight(seg.text));
             });
             var totalWeight = weights.reduce(function (a, b) { return a + b; }, 0);
             var FALLBACK_WPS = 2.6;
@@ -4782,11 +4810,15 @@ define([
             // The reveal gate is a Route 5 concept and these routes have no prose buttons
             // to unlock, so the correct fix is not to pass $cards - it is to not have the
             // handlers at all.
+            //
+            // v13.94.8: the v13.94.6 edit rewrote this comment but left the two
+            // addEventListener lines in place. state.onEnded/onError are undefined in this
+            // function, so they were spec no-ops rather than the ReferenceError the
+            // comment describes - dead cruft that read as working code. Now actually gone.
 
             audio.addEventListener('timeupdate', state.onTick);
             audio.addEventListener('pause', state.onPause);
             audio.addEventListener('play', state.onPlay);
-            audio.addEventListener('error', state.onError);
             this._proseSync = state;
             mark(0);
             state.lastSeg = 0;
@@ -4893,6 +4925,27 @@ define([
             // "Next Card" before that has fired.
             state.computeBounds = computeBounds;
 
+            // v13.94.8: RELEASE THE GATE when the narration cannot play.
+            //
+            // setupVoiceoverSync ends by locking every "Next Card" button with
+            // applyProseGate($grid, -1), and until now the only things that could unlock
+            // them were onTick (needs the audio to advance) and the section's onended.
+            // `state.onError` was REGISTERED at addEventListener but never assigned - so
+            // the listener was undefined, a spec no-op, and dead. A learner in "must
+            // listen" mode whose audio 404s or fails to decode was locked out of cards 2
+            // onward and the whole activity block for the rest of the slide, recoverable
+            // only by navigating away. Audio that cannot play cannot be listened to.
+            state.onError = function () {
+                ccWarn('[CC] section narration failed to load - releasing the reveal gate');
+                self.applyProseGate($grid, state.segments.length);
+            };
+
+            // Once the section has been narrated to the end every card has been read, so
+            // nothing stays gated - and the greyed "listen to unlock" pills go away.
+            state.onEnded = function () {
+                self.applyProseGate($grid, state.segments.length);
+            };
+
             state.onTick = function () {
                 // Recompute while the bounds are only an estimate: Chrome reports
                 // Infinity for a header-less Ogg/WebM data URL at first, and may resolve
@@ -4964,6 +5017,7 @@ define([
             audio.addEventListener('timeupdate', state.onTick);
             audio.addEventListener('pause', state.onPause);
             audio.addEventListener('play', state.onPlay);
+            audio.addEventListener('ended', state.onEnded);
             audio.addEventListener('error', state.onError);
             this._proseSync = state;
 
@@ -9940,7 +9994,7 @@ define([
             this.container.on('click', '.cc5-voiceover-btn-large', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 self.playVoiceover(sectionId);
             });
             
@@ -9948,7 +10002,7 @@ define([
             this.container.on('click', '.cc5-voiceover-pause-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 if (self.currentAudio && !self.currentAudio.paused) {
                     self.currentAudio.pause();
                     var playBtn = self.container.find('.cc5-voiceover-btn-large[data-section-id="' + sectionId + '"]');
@@ -10054,7 +10108,7 @@ define([
             this.container.on('click', '.cc5-add-image-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 var topicId = $(this).data('topic-id');
                 self.showImageModal(sectionId, topicId);
             });
@@ -10099,7 +10153,7 @@ define([
             this.container.on('click', '.cc5-image-regenerate-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 self.showRegenerateModal(sectionId);
             });
 
@@ -10115,7 +10169,7 @@ define([
             $(document).on('click', '.cc5-regen-confirm-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 var customPrompt = $('#cc5-regen-prompt').val() || '';
                 $('.cc5-regenerate-modal-overlay').remove();
                 self.generateSlideImage(sectionId, customPrompt, true);
@@ -10125,7 +10179,7 @@ define([
             this.container.on('click', '.cc5-image-remove-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 self.removeSlideImage(sectionId);
             });
             
@@ -10524,7 +10578,7 @@ define([
             $(document).on('click', '.cc5-image-generate-option', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 $('.cc5-image-modal-overlay').remove();
                 self.generateSlideImage(sectionId);
             });
@@ -10534,14 +10588,14 @@ define([
                 e.preventDefault();
                 e.stopPropagation();
                 var $modal = $(this).closest('.cc5-image-modal');
-                $modal.find('.cc5-image-file-input').data('section-id', $(this).data('section-id')).click();
+                $modal.find('.cc5-image-file-input').data('section-id', $(this).attr('data-section-id')).click();
             });
             
             // v7.2.0: Gallery option click - show gallery modal
             $(document).on('click', '.cc5-image-gallery-option', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 $('.cc5-image-modal-overlay').remove();
                 self.showGalleryModal(sectionId);
             });
@@ -10550,7 +10604,7 @@ define([
             $(document).on('click', '.cc5-image-community-option', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 $('.cc5-image-modal-overlay').remove();
                 self.showCommunityGalleryModal(sectionId);
             });
@@ -10558,7 +10612,7 @@ define([
             // File input change - validate aspect ratio then upload
             $(document).on('change', '.cc5-image-file-input', function (e) {
                 var file = this.files[0];
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 var $input = $(this);
                 if (file && sectionId) {
                     validateImageAspectRatio(file, function (validFile) {
@@ -10635,7 +10689,7 @@ define([
             $(document).on('click', '.cc5-show-gallery-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 $('.cc5-image-modal-overlay').remove();
                 self.showGalleryModal(sectionId);
             });
@@ -10653,7 +10707,7 @@ define([
             $(document).on('click', '.cc5-show-community-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 self.showCommunityGalleryModal(sectionId);
             });
             
@@ -10682,7 +10736,7 @@ define([
                 if (e.which === 13) {
                     e.preventDefault();
                     var search = $(this).val() || '';
-                    var sectionId = $(this).data('section-id');
+                    var sectionId = $(this).attr('data-section-id');
                     $('.cc5-community-loading').show();
                     self.browseCommunityGallery(sectionId, search, 0);
                 }
@@ -10763,7 +10817,7 @@ define([
                 e.preventDefault();
                 e.stopPropagation();
                 var topicId = $(this).data('topic-id');
-                var sectionId = $(this).data('section-id');
+                var sectionId = $(this).attr('data-section-id');
                 
                 // Visual feedback to confirm click registered
                 $(this).css('opacity', '0.5');

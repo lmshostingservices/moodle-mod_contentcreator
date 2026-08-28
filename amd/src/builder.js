@@ -3631,7 +3631,11 @@ define([
             const baseCredits = subtopicCount * creditsPerSubtopic;
             const extraCredits = subtopicCount * creditsPerExtraLang * extraLangs;
             const totalCredits = baseCredits + extraCredits;
-            const audAmount = (totalCredits / 10).toFixed(0);
+            // v13.94.8: was `audAmount` while both template literals below interpolate
+            // `usdAmount` - a const scoped to the OTHER function. Under strict mode this
+            // threw a ReferenceError on every additional-language checkbox change, so the
+            // credit estimate silently froze at its initial value.
+            const usdAmount = (totalCredits / 10).toFixed(0);
 
             if (subtopicCount > 0) {
                 if (extraLangs > 0) {

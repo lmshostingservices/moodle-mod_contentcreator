@@ -1,5 +1,66 @@
 # Changelog
 
+## 13.94.8 - 28 August 2026
+
+A self-review of the 13.94.3-13.94.7 changes, run adversarially on the assumption the author
+was careless. It found five real defects introduced by that work. Two were the same mistake
+as the two the owner had already caught: a change reasoned about in one function and applied
+in another without checking the surrounding scope.
+
+### Fixed - ReferenceError froze the credit estimate
+
+13.94.7 renamed `audAmount` to `usdAmount` when correcting the currency label, but only in
+one of the two functions that render the estimate. `updateCreditEstimation()` kept
+`const audAmount` while both its template literals interpolate `usdAmount` - a const scoped
+to the other function. Under strict mode the handler threw before writing, so ticking an
+additional-language checkbox silently froze the estimate at its initial value: the price
+shown was wrong for exactly the case that changes it.
+
+### Fixed - "must listen" could still lock a learner out of the section
+
+`setupVoiceoverSync` locks every "Next Card" button, and 13.94.4 added a safety valve to
+release them when the audio cannot play. But `state.onError` was REGISTERED at
+`addEventListener` and never assigned - an undefined listener is a spec no-op, so the valve
+was dead code that read as working code. A learner in "must listen" mode whose narration
+404s was locked out of cards 2 onward and the whole activity block for the rest of the
+slide. Now defined, along with an `ended` handler so the greyed "listen to unlock" pills
+clear once the section has been read.
+
+The mirror of this in `setupCardVoiceoverSync` is also finally gone: 13.94.6 rewrote that
+comment to say the handlers had been removed and left the two `addEventListener` lines in
+place.
+
+### Fixed - the gate un-retired spent buttons
+
+`applyProseGate` selected every `.cc5-prose-next-btn`, so in voiceover mode each segment
+change re-enabled buttons `revealProseCard()` had already retired - undoing the 13.94.6 fix
+that made a spent button keyboard-inert rather than merely pointer-inert.
+
+### Fixed - the CJK narration weighting misfired on long single words
+
+13.94.6 weighted segments by characters when the whitespace word-count looked implausibly
+low for the length. That is true of Japanese - and equally true of any long compound token.
+"Antidiscrimination" scored 9 instead of 1; "Arbeitsschutzverordnung Gesundheitsschutz"
+scored 19 instead of 2, taking a wildly oversized share of the timeline and stalling the
+card reveal. No ratio threshold separates the two cases: German at 41 characters over 2
+words sits exactly where Japanese does.
+
+Replaced with a direct script test - count the characters that actually belong to a
+non-spacing script (CJK ideographs, kana, Hangul, Thai). Verified across English prose, long
+English and German compounds, digit strings, Japanese, Chinese, Korean, Thai, and Japanese
+containing a Latin acronym.
+
+The card routes also never got the fix at all: their weighting fell back to characters only
+when the word count was 1, so a Japanese segment containing any whitespace - an embedded
+acronym, or a full-width U+3000 space - scored 2 instead of ~200.
+
+### Fixed - numeric coercion could discard every narration request
+
+The 13.94.6 staleness check compares section ids as strings, but the click handler read the
+id through jQuery's `.data()`, which coerces numeric-looking values to Number. For a legacy
+dotted id, `"1.10"` becomes `1.1`, never matches, and every narration request for that
+section is discarded as stale with only a console warning. Now read through `.attr()`.
+
 ## 13.94.7 - 28 August 2026
 
 ### Fixed - CRITICAL regression: Topics and Text lost its narration after "Next Card"
