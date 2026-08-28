@@ -170,7 +170,7 @@ function xmldb_contentcreator_upgrade($oldversion) {
     // left alone.
     if ($oldversion < 2026082402) {
         $syscontext = context_system::instance();
-        // v13.90 SECURITY FIX: this query used to have no contextid filter, so a role
+        // v13.90 SECURITY FIX: This query used to have no contextid filter, so a role
         // granted moodle/course:manageactivities as a COURSE-LEVEL OVERRIDE in a single
         // course was picked up here and then granted mod/contentcreator:manage at SYSTEM
         // context - site-wide authoring rights from a one-course override. Only roles
@@ -190,18 +190,21 @@ function xmldb_contentcreator_upgrade($oldversion) {
         );
 
         foreach ($manageroles as $roleid) {
-            // v13.90.1: this lookup must be context-scoped too. Without the contextid
+            // v13.90.1: This lookup must be context-scoped too. Without the contextid
             // condition, a single course-level override of :manage anywhere on the site
             // counted as "already decided" and suppressed the SYSTEM-level grant - so a
             // trainer role that was set to Prevent in one course lost authoring rights in
             // every course, which is the exact population this step exists to protect.
             // record_exists() also avoids get_record()'s "found more than one record"
             // error when a role carries :manage overrides in several courses.
-            $existing = $DB->record_exists('role_capabilities', [
-                'roleid' => $roleid,
-                'capability' => 'mod/contentcreator:manage',
-                'contextid' => $syscontext->id,
-            ]);
+            $existing = $DB->record_exists(
+                'role_capabilities',
+                [
+                    'roleid' => $roleid,
+                    'capability' => 'mod/contentcreator:manage',
+                    'contextid' => $syscontext->id,
+                ]
+            );
             if ($existing) {
                 // The site has already made a deliberate decision for this role.
                 continue;

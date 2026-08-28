@@ -45,16 +45,18 @@ class save_attempt extends external_api {
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
-            'cmid' => new external_value(PARAM_INT, 'Course module ID'),
-            'completed' => new external_value(PARAM_INT, 'Completion status (1 = complete)', VALUE_DEFAULT, 0),
-            'responses' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON slide responses',
-                VALUE_DEFAULT,
-                '{}',
-            ),
-        ]);
+        return new external_function_parameters(
+            [
+                'cmid' => new external_value(PARAM_INT, 'Course module ID'),
+                'completed' => new external_value(PARAM_INT, 'Completion status (1 = complete)', VALUE_DEFAULT, 0),
+                'responses' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON slide responses',
+                    VALUE_DEFAULT,
+                    '{}',
+                ),
+            ]
+        );
     }
 
     /**
@@ -68,11 +70,14 @@ class save_attempt extends external_api {
     public static function execute(int $cmid, int $completed = 0, string $responses = '{}'): array {
         global $DB, $USER;
 
-        $params = self::validate_parameters(self::execute_parameters(), [
-            'cmid' => $cmid,
-            'completed' => $completed,
-            'responses' => $responses,
-        ]);
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            [
+                'cmid' => $cmid,
+                'completed' => $completed,
+                'responses' => $responses,
+            ]
+        );
 
         $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
@@ -80,10 +85,13 @@ class save_attempt extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
-        $existing = $DB->get_record('contentcreator_attempts', [
-            'contentcreatorid' => $cm->instance,
-            'userid' => $USER->id,
-        ]);
+        $existing = $DB->get_record(
+            'contentcreator_attempts',
+            [
+                'contentcreatorid' => $cm->instance,
+                'userid' => $USER->id,
+            ]
+        );
 
         $record = new \stdClass();
         $record->contentcreatorid = $cm->instance;
@@ -121,9 +129,11 @@ class save_attempt extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'message' => new external_value(PARAM_TEXT, 'Response message'),
-        ]);
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'message' => new external_value(PARAM_TEXT, 'Response message'),
+            ]
+        );
     }
 }

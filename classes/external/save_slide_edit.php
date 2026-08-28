@@ -46,141 +46,148 @@ class save_slide_edit extends external_api {
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
-            'cmid' => new external_value(PARAM_INT, 'Course module ID'),
-            'topicId' => new external_value(PARAM_TEXT, 'Topic ID'),
-            'sectionId' => new external_value(PARAM_TEXT, 'Section ID'),
-            'title' => new external_value(PARAM_TEXT, 'Section title'),
-            'description' => new external_value(PARAM_TEXT, 'Section description', VALUE_DEFAULT, ''),
-            // Raw.
-            'requirements' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON array of requirements',
-                VALUE_DEFAULT,
-                '[]',
-            ),
-            // Raw.
-            'doList' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON array of do items',
-                VALUE_DEFAULT,
-                '[]',
-            ),
-            // Raw.
-            'dontList' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON array of dont items',
-                VALUE_DEFAULT,
-                '[]',
-            ),
-            // Version 6.6.82: Layer 2 content fields for full slide editing
-            // raw.
-            'scenario' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'Scenario/situation text',
-                VALUE_DEFAULT,
-                '',
-            ),
-            // Raw.
-            'decision' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'Decision point text',
-                VALUE_DEFAULT,
-                '',
-            ),
-            // Raw.
-            'correctResponse' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON object with action, why, communicate',
-                VALUE_DEFAULT,
-                '{}',
-            ),
-            // Version 7.7.9: 5-card feedback and content linking
-            // raw.
-            'feedback' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON object with correctExplanation, incorrectConsequence, keyTakeaway',
-                VALUE_DEFAULT,
-                '{}',
-            ),
-            // Raw.
-            'linkedContent' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON array of linked content items',
-                VALUE_DEFAULT,
-                '[]',
-            ),
-            // Version 9.78 FIX (A-07): 11 fields were collected in the edit modal but never
-            // sent to this external function. Teachers' edits were saved to localStorage
-            // only and reverted to AI-generated values on the next page load from the DB.
-            'scenarioTitle' => new external_value(PARAM_TEXT, 'Scenario slide title', VALUE_DEFAULT, ''),
-            'scenarioRole' => new external_value(PARAM_TEXT, 'Scenario learner role', VALUE_DEFAULT, ''),
-            // Raw.
-            'scenarioContext' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'Scenario context text',
-                VALUE_DEFAULT,
-                '',
-            ),
-            // Raw.
-            'scenarioComplication' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'Scenario complication text',
-                VALUE_DEFAULT,
-                '',
-            ),
-            // Raw.
-            'mentalModel' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON: {name, principle} or null',
-                VALUE_DEFAULT,
-                '',
-            ),
-            // Raw.
-            'predictionPrompt' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON: {question, options[]} or null',
-                VALUE_DEFAULT,
-                '',
-            ),
-            // Raw.
-            'terminology' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON array of {term, definition} objects',
-                VALUE_DEFAULT,
-                '[]',
-            ),
-            'keyTakeaway' => new external_value(PARAM_TEXT, 'Key takeaway accent card text', VALUE_DEFAULT, ''),
-            'proTip' => new external_value(PARAM_TEXT, 'Pro tip accent card text', VALUE_DEFAULT, ''),
-            'keyInfo' => new external_value(PARAM_TEXT, 'Key info accent card text', VALUE_DEFAULT, ''),
-            'expertInsight' => new external_value(PARAM_TEXT, 'Expert insight accent card text', VALUE_DEFAULT, ''),
-            // Version 9.87: voiceoverText (Introduction) was edited locally but never sent to server — edits lost on reload
-            // raw.
-            'voiceoverText' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'Introduction / voiceover text shown above knowledge section',
-                VALUE_DEFAULT,
-                '',
-            ),
-            // Version 9.87: cardData stores all route-card-specific fields (18 card types × multiple fields)
-            // avoids adding dozens of individual parameters for every card type field
-            // raw.
-            'cardData' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON object with route-card-specific fields (heading, bodyText, steps, risks, etc)',
-                VALUE_DEFAULT,
-                '{}',
-            ),
-            // Version 10.42: cardsData — JSON array of per-card updates for 7-card unified sections (section.cards[i])
-            // raw.
-            'cardsData' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON array of per-card updates indexed by card position',
-                VALUE_DEFAULT,
-                '[]',
-            ),
-            'regenerateVoiceover' => new external_value(PARAM_BOOL, 'Regenerate voiceover (costs 5 credits)', VALUE_DEFAULT, false),
-        ]);
+        return new external_function_parameters(
+            [
+                'cmid' => new external_value(PARAM_INT, 'Course module ID'),
+                'topicId' => new external_value(PARAM_TEXT, 'Topic ID'),
+                'sectionId' => new external_value(PARAM_TEXT, 'Section ID'),
+                'title' => new external_value(PARAM_TEXT, 'Section title'),
+                'description' => new external_value(PARAM_TEXT, 'Section description', VALUE_DEFAULT, ''),
+                // Raw.
+                'requirements' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON array of requirements',
+                    VALUE_DEFAULT,
+                    '[]',
+                ),
+                // Raw.
+                'doList' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON array of do items',
+                    VALUE_DEFAULT,
+                    '[]',
+                ),
+                // Raw.
+                'dontList' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON array of dont items',
+                    VALUE_DEFAULT,
+                    '[]',
+                ),
+                // Version 6.6.82: Layer 2 content fields for full slide editing
+                // raw.
+                'scenario' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'Scenario/situation text',
+                    VALUE_DEFAULT,
+                    '',
+                ),
+                // Raw.
+                'decision' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'Decision point text',
+                    VALUE_DEFAULT,
+                    '',
+                ),
+                // Raw.
+                'correctResponse' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON object with action, why, communicate',
+                    VALUE_DEFAULT,
+                    '{}',
+                ),
+                // Version 7.7.9: 5-card feedback and content linking
+                // raw.
+                'feedback' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON object with correctExplanation, incorrectConsequence, keyTakeaway',
+                    VALUE_DEFAULT,
+                    '{}',
+                ),
+                // Raw.
+                'linkedContent' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON array of linked content items',
+                    VALUE_DEFAULT,
+                    '[]',
+                ),
+                // Version 9.78 FIX (A-07): 11 fields were collected in the edit modal but never
+                // sent to this external function. Teachers' edits were saved to localStorage
+                // only and reverted to AI-generated values on the next page load from the DB.
+                'scenarioTitle' => new external_value(PARAM_TEXT, 'Scenario slide title', VALUE_DEFAULT, ''),
+                'scenarioRole' => new external_value(PARAM_TEXT, 'Scenario learner role', VALUE_DEFAULT, ''),
+                // Raw.
+                'scenarioContext' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'Scenario context text',
+                    VALUE_DEFAULT,
+                    '',
+                ),
+                // Raw.
+                'scenarioComplication' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'Scenario complication text',
+                    VALUE_DEFAULT,
+                    '',
+                ),
+                // Raw.
+                'mentalModel' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON: {name, principle} or null',
+                    VALUE_DEFAULT,
+                    '',
+                ),
+                // Raw.
+                'predictionPrompt' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON: {question, options[]} or null',
+                    VALUE_DEFAULT,
+                    '',
+                ),
+                // Raw.
+                'terminology' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON array of {term, definition} objects',
+                    VALUE_DEFAULT,
+                    '[]',
+                ),
+                'keyTakeaway' => new external_value(PARAM_TEXT, 'Key takeaway accent card text', VALUE_DEFAULT, ''),
+                'proTip' => new external_value(PARAM_TEXT, 'Pro tip accent card text', VALUE_DEFAULT, ''),
+                'keyInfo' => new external_value(PARAM_TEXT, 'Key info accent card text', VALUE_DEFAULT, ''),
+                'expertInsight' => new external_value(PARAM_TEXT, 'Expert insight accent card text', VALUE_DEFAULT, ''),
+                // Version 9.87: voiceoverText (Introduction) was edited locally but never sent to server — edits lost on reload
+                // raw.
+                'voiceoverText' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'Introduction / voiceover text shown above knowledge section',
+                    VALUE_DEFAULT,
+                    '',
+                ),
+                // Version 9.87: cardData stores all route-card-specific fields (18 card types × multiple fields)
+                // avoids adding dozens of individual parameters for every card type field
+                // raw.
+                'cardData' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON object with route-card-specific fields (heading, bodyText, steps, risks, etc)',
+                    VALUE_DEFAULT,
+                    '{}',
+                ),
+                // Version 10.42: cardsData — JSON array of per-card updates for 7-card unified sections (section.cards[i])
+                // raw.
+                'cardsData' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON array of per-card updates indexed by card position',
+                    VALUE_DEFAULT,
+                    '[]',
+                ),
+                'regenerateVoiceover' => new external_value(
+                    PARAM_BOOL,
+                    'Regenerate voiceover (costs 5 credits)',
+                    VALUE_DEFAULT,
+                    false
+                ),
+            ]
+        );
     }
 
     /**
@@ -251,8 +258,16 @@ class save_slide_edit extends external_api {
     ): array {
         global $DB;
 
-        try {
-            $params = self::validate_parameters(self::execute_parameters(), [
+        // v13.94.3: Parameter validation, context validation and the capability check used to
+        // sit INSIDE the try below, so a rejected parameter, a bad context or a genuine
+        // permission failure all came back as HTTP 200 with the same "could not be saved"
+        // string. That hides an access-control failure from the caller, from the browser
+        // console and from the site's logs, and it means Moodle's own web-service error
+        // layer - which knows how to report these three properly - never sees them. They now
+        // run outside the try and are allowed to throw.
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            [
                 'cmid' => $cmid,
                 'topicId' => $topicid,
                 'sectionId' => $sectionid,
@@ -281,29 +296,31 @@ class save_slide_edit extends external_api {
                 'cardData' => $carddata,
                 'cardsData' => $cardsdata,
                 'regenerateVoiceover' => $regeneratevoiceover,
-            ]);
+            ]
+        );
 
-            $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
-            $context = context_module::instance($cm->id);
-            self::validate_context($context);
+        $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
 
-            // Version 11.40 FIX (BUG-CC-SSLIDE-PERM): Mirror the flexible capability check from
-            // ajax.php and the other save externals (save_manifest, save_manifest_chunk).
-            // The original require_capability('mod/contentcreator:addinstance', $context)
-            // was too strict — custom roles cloned from editingteacher do not automatically
-            // inherit new plugin capabilities, so legitimate editing teachers received
-            // "Failed to save generated content" on every slide-edit save.
-            // Fix: check mod/contentcreator:manage first (module context), fall back to
-            // moodle/course:manageactivities in the course context — every genuine editing
-            // teacher has this regardless of whether their cloned role explicitly lists
-            // mod/contentcreator capabilities.
-            // v13.86: the moodle/course:manageactivities fallback was removed. It made
-            // mod/contentcreator:manage advisory - a CAP_PROHIBIT on it denied nothing.
-            // Roles that already hold manageactivities are granted :manage by the
-            // upgrade step in db/upgrade.php, so no legitimate editing teacher loses
-            // access.
-            require_capability('mod/contentcreator:manage', $context);
+        // Version 11.40 FIX (BUG-CC-SSLIDE-PERM): Mirror the flexible capability check from
+        // ajax.php and the other save externals (save_manifest, save_manifest_chunk).
+        // The original require_capability('mod/contentcreator:addinstance', $context)
+        // was too strict — custom roles cloned from editingteacher do not automatically
+        // inherit new plugin capabilities, so legitimate editing teachers received
+        // "Failed to save generated content" on every slide-edit save.
+        // Fix: check mod/contentcreator:manage first (module context), fall back to
+        // moodle/course:manageactivities in the course context — every genuine editing
+        // teacher has this regardless of whether their cloned role explicitly lists
+        // mod/contentcreator capabilities.
+        // v13.86: the moodle/course:manageactivities fallback was removed. It made
+        // mod/contentcreator:manage advisory - a CAP_PROHIBIT on it denied nothing.
+        // Roles that already hold manageactivities are granted :manage by the
+        // upgrade step in db/upgrade.php, so no legitimate editing teacher loses
+        // access.
+        require_capability('mod/contentcreator:manage', $context);
 
+        try {
             // Version 11.40 FIX (BUG-CC-SSLIDE-SESSION): Release session lock before DB read+write.
             // Holding the session file lock during manifest JSON decode+encode (potentially
             // several hundred KB) blocks all concurrent requests from the same user session.
@@ -418,7 +435,12 @@ class save_slide_edit extends external_api {
                                         $section[$cdkey] = $cdval;
                                     }
                                     // Also update cards[0] for multi-card sections so renderer reads updated data.
-                                    if (!empty($section['cards']) && is_array($section['cards'])) {
+                                    // v13.94.3: the same string-offset trap as the scenario guard
+                                    // below. cards was checked but cards[0] was not, so a manifest
+                                    // whose first card is a bare string (older generator output)
+                                    // made this a fatal TypeError on PHP 8 and lost the whole save.
+                                    if (!empty($section['cards']) && is_array($section['cards'])
+                                            && isset($section['cards'][0]) && is_array($section['cards'][0])) {
                                         foreach ($carddataarr as $cdkey => $cdval) {
                                             $section['cards'][0][$cdkey] = $cdval;
                                         }
@@ -436,8 +458,21 @@ class save_slide_edit extends external_api {
                                 }
                             }
                             // Scenario sub-fields.
-                            if (!isset($section['scenario'])) {
-                                $section['scenario'] = [];
+                            // v13.94.3: this guard was !isset() only, so it did nothing when
+                            // section.scenario already held a plain string - which happens for
+                            // every legacy manifest that stores scenario as flat text, and also
+                            // whenever the scenario parameter assigned above put the raw string
+                            // there. The sub-field writes below then addressed a string offset
+                            // with a string key, which is a fatal TypeError on PHP 8, so every
+                            // slide edit on that section died inside the catch and the teacher
+                            // was told only "save failed". Treat a non-array value as the legacy
+                            // flat scenario text and promote it into the context sub-field the
+                            // player already renders, rather than discarding the teacher's prose.
+                            if (!isset($section['scenario']) || !is_array($section['scenario'])) {
+                                $legacyscenario = (isset($section['scenario']) && is_scalar($section['scenario']))
+                                    ? trim((string)$section['scenario'])
+                                    : '';
+                                $section['scenario'] = ($legacyscenario !== '') ? ['context' => $legacyscenario] : [];
                             }
                             if (!empty($params['scenarioTitle'])) {
                                 $section['scenario']['title'] = $params['scenarioTitle'];
@@ -505,11 +540,18 @@ class save_slide_edit extends external_api {
         } catch (\Throwable $e) {
             // Version 11.40 FIX (BUG-CC-SSLIDE-NOTRY): Catch PHP 7+ Error objects (type errors,
             // parse errors, etc.) as well as Exceptions.
-            debugging('Content Creator save_slide_edit exception: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            // v13.94.3: this was logged at DEBUG_DEVELOPER only, which no production site
+            // runs, so the one thing that could explain a failed slide save - the scenario
+            // string-offset TypeError fixed above being the obvious example - was thrown away
+            // on exactly the sites where it matters. Report it at DEBUG_NORMAL and hand the
+            // caller a stable errorcode, so a support request can be traced without asking a
+            // client to turn developer debugging on. The visible message is unchanged.
+            debugging('Content Creator save_slide_edit exception: ' . $e->getMessage(), DEBUG_NORMAL);
             return [
                 'success' => false,
                 'message' => get_string('errorsavefailed', 'mod_contentcreator'),
                 'creditsUsed' => 0,
+                'errorcode' => 'saveslideeditfailed',
             ];
         }
     }
@@ -520,10 +562,19 @@ class save_slide_edit extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'message' => new external_value(PARAM_TEXT, 'Response message'),
-            'creditsUsed' => new external_value(PARAM_INT, 'Credits used for voiceover regeneration'),
-        ]);
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'message' => new external_value(PARAM_TEXT, 'Response message'),
+                'creditsUsed' => new external_value(PARAM_INT, 'Credits used for voiceover regeneration'),
+                // v13.94.3: Stable machine-readable cause, present only on the unexpected-failure
+                // path. Optional so the success and validation replies are unchanged.
+                'errorcode' => new external_value(
+                    PARAM_ALPHANUMEXT,
+                    'Stable error identifier when the save failed unexpectedly',
+                    VALUE_OPTIONAL
+                ),
+            ]
+        );
     }
 }

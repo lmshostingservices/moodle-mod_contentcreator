@@ -44,11 +44,13 @@ class record_section_view extends external_api {
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
-            'cmid' => new external_value(PARAM_INT, 'Course module ID'),
-            'topicIndex' => new external_value(PARAM_INT, 'Topic index'),
-            'sectionIndex' => new external_value(PARAM_INT, 'Section index'),
-        ]);
+        return new external_function_parameters(
+            [
+                'cmid' => new external_value(PARAM_INT, 'Course module ID'),
+                'topicIndex' => new external_value(PARAM_INT, 'Topic index'),
+                'sectionIndex' => new external_value(PARAM_INT, 'Section index'),
+            ]
+        );
     }
 
     /**
@@ -60,11 +62,14 @@ class record_section_view extends external_api {
      * @return array Result structure as described by execute_returns().
      */
     public static function execute(int $cmid, int $topicindex, int $sectionindex): array {
-        $params = self::validate_parameters(self::execute_parameters(), [
-            'cmid' => $cmid,
-            'topicIndex' => $topicindex,
-            'sectionIndex' => $sectionindex,
-        ]);
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            [
+                'cmid' => $cmid,
+                'topicIndex' => $topicindex,
+                'sectionIndex' => $sectionindex,
+            ]
+        );
 
         $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
@@ -84,9 +89,11 @@ class record_section_view extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'message' => new external_value(PARAM_TEXT, 'Response message'),
-        ]);
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'message' => new external_value(PARAM_TEXT, 'Response message'),
+            ]
+        );
     }
 }

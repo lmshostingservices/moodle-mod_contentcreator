@@ -11,7 +11,7 @@
  * @module mod_contentcreator/document_generator/documentRegistry
  */
 
-define([], function() {
+define([], function () {
     'use strict';
 
     // Job level ladder (standardised)
@@ -781,8 +781,8 @@ define([], function() {
 
     // Build a lookup map for fast alias matching
     const aliasMap = {};
-    documentRegistry.forEach(function(doc) {
-        doc.aliases.forEach(function(alias) {
+    documentRegistry.forEach(function (doc) {
+        doc.aliases.forEach(function (alias) {
             aliasMap[alias.toLowerCase()] = doc;
         });
     });
@@ -795,22 +795,22 @@ define([], function() {
         /**
          * Find document by alias (case-insensitive)
          */
-        findByAlias: function(alias) {
+        findByAlias: function (alias) {
             return aliasMap[alias.toLowerCase()] || null;
         },
 
         /**
          * Find document by ID
          */
-        findById: function(id) {
-            return documentRegistry.find(function(d) { return d.id === id; }) || null;
+        findById: function (id) {
+            return documentRegistry.find(function (d) { return d.id === id; }) || null;
         },
 
         /**
          * Get all documents for a route
          */
-        getDocumentsForRoute: function(route) {
-            return documentRegistry.filter(function(d) {
+        getDocumentsForRoute: function (route) {
+            return documentRegistry.filter(function (d) {
                 return d.appliesToRoutes.includes(route);
             });
         },
@@ -818,7 +818,7 @@ define([], function() {
         /**
          * Get difficulty level for a document and job level
          */
-        getDifficulty: function(doc, jobLevel) {
+        getDifficulty: function (doc, jobLevel) {
             if (!doc || !doc.difficultyByJobLevel) return 'view_only';
             return doc.difficultyByJobLevel[jobLevel] || 'view_only';
         },
@@ -826,15 +826,15 @@ define([], function() {
         /**
          * Get all aliases as a regex pattern for text scanning
          */
-        getAliasPattern: function() {
+        getAliasPattern: function () {
             var allAliases = [];
-            documentRegistry.forEach(function(doc) {
-                doc.aliases.forEach(function(alias) {
+            documentRegistry.forEach(function (doc) {
+                doc.aliases.forEach(function (alias) {
                     allAliases.push(alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
                 });
             });
             // Sort by length descending to match longer aliases first
-            allAliases.sort(function(a, b) { return b.length - a.length; });
+            allAliases.sort(function (a, b) { return b.length - a.length; });
             return new RegExp('\\b(' + allAliases.join('|') + ')\\b', 'gi');
         }
     };

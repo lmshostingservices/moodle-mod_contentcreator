@@ -99,6 +99,29 @@ button.cc-footer-btn:hover,
     color: hsl(0 0% 100%) !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.94.6  FIX-CC-BUILDER-DARK   -  dark mode was entirely dead on Moodle 4.4+
+   ───────────────────────────────────────────────────────────────────────────────
+   Every dark rule in this file keyed off `.dark`, `.theme-dark`, `body.dark`
+   or `[data-theme="dark"]`. Moodle 4.4 moved to Bootstrap 5 and sets its dark
+   theme with `data-bs-theme="dark"` on <html> - none of the four legacy hooks
+   is present. This file contained ZERO occurrences of `data-bs-theme`, against
+   49 in player5.css, so the topic and section cards kept their light palette -
+   white card, dark text - inside a dark page. Not a contrast slip, a
+   completely unstyled surface.
+
+   `[data-bs-theme="dark"]` is now appended to every dark selector group. The
+   legacy hooks are kept: they cost nothing and they still carry older sites.
+
+   Why not key off `.cc-dark` instead, which tokens.css already honours? Because
+   `.cc-dark` is a class something has to put on the container, and that
+   something is JavaScript this change cannot touch. A hook that depends on code
+   we are not editing is not a hook at all. `data-bs-theme` is set by Moodle
+   itself, before our CSS is evaluated, and needs nothing from us. `.cc-dark`
+   stays where it is in tokens.css as a manual override for anyone who wants to
+   force the dark palette from markup.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
 /* Topic cards hover */
 .cc-topic-card:hover,
 .cc-section-card:hover {
@@ -106,6 +129,7 @@ button.cc-footer-btn:hover,
 }
 
 /* Dark mode overrides */
+
 .dark button.cc-back-btn:hover,
 .dark .cc-back-btn:hover,
 .theme-dark button.cc-back-btn:hover,
@@ -113,7 +137,9 @@ button.cc-footer-btn:hover,
 body.dark button.cc-back-btn:hover,
 body.dark .cc-back-btn:hover,
 [data-theme="dark"] button.cc-back-btn:hover,
-[data-theme="dark"] .cc-back-btn:hover {
+[data-theme="dark"] .cc-back-btn:hover,
+[data-bs-theme="dark"] button.cc-back-btn:hover,
+[data-bs-theme="dark"] .cc-back-btn:hover {
     background: hsl(0 0% 18%) !important;
     background-color: hsl(0 0% 18%) !important;
     color: hsl(0 0% 95%) !important;
@@ -126,7 +152,9 @@ body.dark .cc-back-btn:hover,
 body.dark .cc-topic-card:hover,
 body.dark .cc-section-card:hover,
 [data-theme="dark"] .cc-topic-card:hover,
-[data-theme="dark"] .cc-section-card:hover {
+[data-theme="dark"] .cc-section-card:hover,
+[data-bs-theme="dark"] .cc-topic-card:hover,
+[data-bs-theme="dark"] .cc-section-card:hover {
     background: hsl(0 0% 12%) !important;
 }
 
@@ -189,7 +217,9 @@ body.dark .cc-hero,
 .dark .cc-player-container,
 .theme-dark .cc-player-container,
 body.dark .cc-player-container,
-[data-theme="dark"] .cc-player-container {
+[data-theme="dark"] .cc-player-container,
+[data-bs-theme="dark"] .cc-hero,
+[data-bs-theme="dark"] .cc-player-container {
     /* Adjust light colors for dark mode backgrounds */
     --cc-color-primary-light: hsl(217 50% 18%);
     --cc-color-primary-border: hsl(217 50% 28%);

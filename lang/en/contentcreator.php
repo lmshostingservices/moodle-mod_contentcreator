@@ -189,6 +189,7 @@ $string['voicecacheretention'] = 'Keep cached voiceover audio for (days)';
 $string['voicecacheretentiondesc'] = 'Generated speech is cached site-wide so identical text is never billed twice. A weekly scheduled task deletes cache entries older than this. Deleting one costs only the credits to regenerate that exact text, so the default is deliberately long. Set to 0 to keep cached audio forever - note that nothing else ever removes it.';
 $string['privacy:metadata:files'] = 'Content Creator stores two kinds of audio file. Voiceovers are generated for an activity\'s own content and stored against that activity. Cached speech is stored site-wide, keyed by a hash of the text, voice and language, so identical text is never generated twice. Both are produced from content authored by a teacher, never from anything a learner has written, and neither contains personal data.';
 $string['cachedef_ratelimit'] = 'Rate limit counters for AI generation requests';
+$string['cachedef_jobowner'] = 'Ownership records binding an asynchronous generation job to the user and activity it was issued to';
 
 // =============================================================================
 // v13.86: PLAYER UI LABELS
@@ -553,6 +554,85 @@ $string['cclabel_howToCommunicateVo'] = 'How to communicate:';
 $string['cclabel_commonMistakeVo'] = 'Common mistake';
 $string['cclabel_riskVo'] = 'Risk:';
 
+// v13.90.1 / v13.94.3: Labels that were read by getLabel() but had no admin-overridable
+// string. Without these a site cannot reword the card headings, the activity
+// suite, or the error dialogs a teacher sees when a save fails.
+$string['cclabel_somethingWentWrong'] = 'Something went wrong. Please try again.';
+$string['cclabel_slideSaveFailed'] = 'This slide could not be saved. Your changes are still on screen - please try again.';
+$string['cclabel_documentSaveFailed'] = 'This document could not be saved. Your changes are still on screen - please try again.';
+$string['cclabel_progressNotSaved'] = 'Your progress could not be saved. Please check your connection and revisit the last slide.';
+$string['cclabel_noContentYet'] = 'This section has no content yet. Use Regenerate to try again, or edit the card to add it.';
+$string['cclabel_popupBlockedHtmlFallback'] = 'Your browser blocked the print window, so the content was downloaded as an HTML file instead.';
+$string['cclabel_nextCard'] = 'Next Card';
+$string['cclabel_startActivities'] = 'Start Activities';
+$string['cclabel_introduction'] = 'Introduction';
+$string['cclabel_completed'] = 'Completed';
+$string['cclabel_documentActivity'] = 'Document Activity';
+$string['cclabel_tipsForHandling'] = 'Tips for Handling This';
+$string['cclabel_analysisQuestions'] = 'Analysis Questions';
+$string['cclabel_optimisationTips'] = 'Optimisation Tips';
+$string['cclabel_dos'] = 'Do\'s';
+$string['cclabel_donts'] = 'Don\'ts';
+$string['cclabel_addDont'] = 'Add Don\'t';
+$string['cclabel_dontPlaceholder'] = 'Don\'t do this...';
+$string['cclabel_dos_donts_pos'] = 'Do\'s';
+$string['cclabel_dos_donts_neg'] = 'Don\'ts';
+$string['cclabel_proseOverview'] = 'Overview';
+$string['cclabel_proseKeyConcepts'] = 'Key Concepts';
+$string['cclabel_proseHowItWorks'] = 'How It Works';
+$string['cclabel_proseExamplesApplication'] = 'Examples & Application';
+$string['cclabel_proseKeyTakeaways'] = 'Key Takeaways';
+
+// v13.94.3: Flow headings and TTS sentences (cc-card-slots.js / cc-state.js).
+$string['cclabel_sceneSetting'] = 'Scene Setting';
+$string['cclabel_whatThisMeans'] = 'What This Means';
+$string['cclabel_howToHandleIt'] = 'How to Handle It';
+$string['cclabel_onTheJob'] = 'On the Job';
+$string['cclabel_watchOutFor'] = 'Watch Out For';
+$string['cclabel_youAreReadyWhenYouCan'] = 'You Are Ready When You Can';
+$string['cclabel_whatGoodLooksLike'] = 'What Good Looks Like';
+$string['cclabel_whatToAvoid'] = 'What to Avoid';
+$string['cclabel_continuingTheScenario'] = 'Continuing the scenario…';
+$string['cclabel_nowCompleteActivityBelow'] = 'Now, complete the activity below.';
+$string['cclabel_nowCompleteActivityConfirm'] = 'Now complete the activity below… confirm your answer.';
+$string['cclabel_termMeansDefinition'] = '{term} means {definition}';
+$string['cclabel_youAreRole'] = 'You are {role}';
+
+// v13.94.3: Prose card headings and callouts.
+$string['cclabel_definition'] = 'Definition';
+$string['cclabel_keyInsight'] = 'Key Insight';
+$string['cclabel_criticalReflection'] = 'Critical Reflection';
+$string['cclabel_keyMetrics'] = 'Key Metrics';
+$string['cclabel_whyThisMatters'] = 'Why This Matters';
+$string['cclabel_keyIndicators'] = 'Key Indicators';
+$string['cclabel_whatTheLawSays'] = 'What the law says';
+$string['cclabel_whatThePrincipleRequires'] = 'What the principle requires';
+$string['cclabel_selectContentLanguage'] = 'Select content language';
+$string['cclabel_listenToUnlock'] = 'listen to unlock';
+
+// v13.94.3: The 3-activity Decision Challenge suite.
+$string['cclabel_challengeMode'] = 'Challenge Mode';
+$string['cclabel_completeNActivities'] = 'Complete {count} activities to prove your mastery';
+$string['cclabel_activityNumber'] = 'Activity {number}';
+$string['cclabel_quiz'] = 'Quiz';
+$string['cclabel_flipAndLearn'] = 'Flip & Learn';
+$string['cclabel_categorySort'] = 'Category Sort';
+$string['cclabel_flipInstruction'] = 'Tap each card to reveal the insight behind it. Explore all {count} cards to unlock the next step.';
+$string['cclabel_tapToReveal'] = 'Tap to reveal';
+$string['cclabel_insight'] = 'Insight';
+$string['cclabel_explored'] = 'explored';
+$string['cclabel_allCardsExplored'] = 'All cards explored! You\'re ready for the next step.';
+$string['cclabel_nextActivity'] = 'Next Activity';
+$string['cclabel_seeResults'] = 'See Results';
+$string['cclabel_goodPractice'] = 'Good Practice';
+$string['cclabel_avoidLabel'] = 'Avoid';
+$string['cclabel_sortInstruction'] = 'Read each item carefully and decide: does it belong to {positive} or {negative}?';
+$string['cclabel_itemXofY'] = 'Item {current} of {total}';
+$string['cclabel_scoreLabel'] = 'Score';
+$string['cclabel_nActivitiesComplete'] = '{current} / {total} Activities Complete';
+$string['cclabel_reviewAnswers'] = 'Review Answers';
+$string['cclabel_continueLabel'] = 'Continue';
+
 // =============================================================================
 // v13.86: BUILDER MESSAGES
 // The authoring wizard's user-facing errors were literals in builder.js, so no
@@ -579,5 +659,5 @@ $string['errneedunittext'] = 'Please paste the unit text before processing.';
 $string['errselectpdf'] = 'Please select a PDF file to upload.';
 $string['errselectmode'] = 'Please select a learning mode to continue.';
 $string['erruploadpdf'] = 'Please upload a PDF file.';
-$string['errtgaunavailable'] = 'TGA API unavailable. Please upload the unit PDF instead.';
+$string['errtgaunavailable'] = 'The training.gov.au service is unavailable. Please upload the unit PDF instead.';
 $string['errunitevidencemissing'] = 'Unit found but Performance/Knowledge Evidence missing. Upload the complete unit PDF to extract this data.';

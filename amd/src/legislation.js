@@ -11,7 +11,7 @@
  * @module mod_contentcreator/legislation
  */
 
-define([], function() {
+define([], function () {
     'use strict';
 
     // ===========================================================================

@@ -116,7 +116,22 @@ function contentcreator_delete_instance($id) {
         // The checklist table is also keyed by cmid; it was previously orphaned on delete.
         $DB->delete_records('contentcreator_checklist', ['cmid' => $cm->id]);
 
-        // Remove the module's stored files: pre-generated voiceovers and any cached TTS audio.
+        // Remove the module's stored files: the pre-generated voiceovers, which are the only
+        // audio this activity actually owns.
+        //
+        // v13.94.3: the comment here used to claim this also removed "any cached TTS audio",
+        // which has not been true since v13.86. Both writers - ajax.php and
+        // external\generate_voiceover - now put voice_cache files in the SYSTEM context under
+        // itemid 0, keyed by md5(text|voice|language), because identical narration must be
+        // billed once for the whole site rather than once per activity. That key deliberately
+        // carries no course or activity, so there is nothing here to delete and no way to
+        // attribute a cache entry to this instance without giving up the site-wide sharing
+        // that makes the cache worth having. Reclaiming those files is the job of the
+        // \mod_contentcreator\task\prune_voice_cache scheduled task, which ages them out.
+        //
+        // The voice_cache call below is kept only for sites upgraded from before v13.86,
+        // where generate_voiceover did cache into the module context under itemid = cmid. On
+        // a site installed since, it is a no-op.
         $modulecontext = context_module::instance($cm->id, IGNORE_MISSING);
         if ($modulecontext) {
             $fs->delete_area_files($modulecontext->id, 'mod_contentcreator', 'voiceovers');
@@ -149,10 +164,12 @@ function contentcreator_view($contentcreator, $course, $cm, $context) {
     // correct Moodle pattern, no session writes), and (b) calling update_state()
     // directly in view.php AFTER the header once write_close() has been called
     // explicitly. update_state() has no header-printed check so no warning fires.
-    $event = \mod_contentcreator\event\course_module_viewed::create([
-        'objectid' => $contentcreator->id,
-        'context' => $context,
-    ]);
+    $event = \mod_contentcreator\event\course_module_viewed::create(
+        [
+            'objectid' => $contentcreator->id,
+            'context' => $context,
+        ]
+    );
     $event->add_record_snapshot('course', $course);
     $event->add_record_snapshot('contentcreator', $contentcreator);
     $event->trigger();
@@ -213,6 +230,11 @@ function contentcreator_get_coursemodule_info($coursemodule) {
  *
  * The 'voice_cache' filearea is deliberately NOT served here: cached TTS audio is
  * returned inline (base64) by ajax.php and is never addressed by URL.
+ *
+ * v13.94.3: 'intro' is deliberately not handled here either. Core's file_pluginfile()
+ * serves the activity-description filearea itself, before this callback is reached, for
+ * every module that declares FEATURE_MOD_INTRO - which this one does. Adding a branch for
+ * it would be unreachable code. This note exists because the omission reads like a bug.
  *
  * @param stdClass $course Course record.
  * @param cm_info $cm Course-module record.

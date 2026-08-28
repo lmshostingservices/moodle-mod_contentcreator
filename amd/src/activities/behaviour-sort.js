@@ -7,31 +7,31 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define(['jquery'], function($) {
+define(['jquery'], function ($) {
     'use strict';
 
     /**
      * Behaviour Sort Activity
      * Drag-and-drop or click-to-sort behaviours into correct categories
      */
-    var BehaviourSort = function(container, config) {
+    var BehaviourSort = function (container, config) {
         this.container = $(container);
         this.config = config;
         this.items = this.shuffleArray(config.items || []);
         this.currentIndex = 0;
         this.results = [];
-        this.onComplete = config.onComplete || function() {};
+        this.onComplete = config.onComplete || function () {};
         
         this.init();
     };
 
     BehaviourSort.prototype = {
-        init: function() {
+        init: function () {
             this.render();
             this.bindEvents();
         },
 
-        shuffleArray: function(array) {
+        shuffleArray: function (array) {
             var shuffled = array.slice();
             for (var i = shuffled.length - 1; i > 0; i--) {
                 var j = Math.floor(Math.random() * (i + 1));
@@ -42,7 +42,7 @@ define(['jquery'], function($) {
             return shuffled;
         },
 
-        render: function() {
+        render: function () {
             var html = '<div class="cc5-activity cc5-behaviour-sort">';
             
             // Progress bar
@@ -81,10 +81,10 @@ define(['jquery'], function($) {
             this.container.html(html);
         },
 
-        bindEvents: function() {
+        bindEvents: function () {
             var self = this;
             
-            this.container.on('click', '.cc5-category-btn', function(e) {
+            this.container.on('click', '.cc5-category-btn', function (e) {
                 if (self.currentIndex >= self.items.length) return;
                 
                 var category = $(this).data('category');
@@ -92,7 +92,7 @@ define(['jquery'], function($) {
             });
         },
 
-        sortItem: function(selectedCategory) {
+        sortItem: function (selectedCategory) {
             var self = this;
             var item = this.items[this.currentIndex];
             var isCorrect = item.category === selectedCategory;
@@ -131,7 +131,7 @@ define(['jquery'], function($) {
             this.container.find('.cc5-sort-progress-text').text(this.currentIndex + ' / ' + this.items.length);
             
             // Next item or complete
-            setTimeout(function() {
+            setTimeout(function () {
                 $toast.fadeOut(150);
                 
                 if (self.currentIndex >= self.items.length) {
@@ -142,7 +142,7 @@ define(['jquery'], function($) {
             }, 800);
         },
 
-        showNextItem: function() {
+        showNextItem: function () {
             var item = this.items[this.currentIndex];
             var $itemContainer = this.container.find('.cc5-sort-item-container');
             
@@ -157,8 +157,8 @@ define(['jquery'], function($) {
             $itemContainer.find('.cc5-sort-item').animate({ opacity: 1 }, 200);
         },
 
-        showResults: function() {
-            var correctCount = this.results.filter(function(r) { return r.correct; }).length;
+        showResults: function () {
+            var correctCount = this.results.filter(function (r) { return r.correct; }).length;
             var totalCount = this.results.length;
             var percentage = Math.round((correctCount / totalCount) * 100);
             var isPassing = percentage >= 80;
@@ -170,11 +170,11 @@ define(['jquery'], function($) {
             html += '</div>';
             
             // Show incorrect items
-            var incorrectResults = this.results.filter(function(r) { return !r.correct; });
+            var incorrectResults = this.results.filter(function (r) { return !r.correct; });
             if (incorrectResults.length > 0) {
                 html += '<div class="cc5-results-review">';
                 html += '<p class="cc5-results-review-title">Review these items:</p>';
-                incorrectResults.forEach(function(r) {
+                incorrectResults.forEach(function (r) {
                     html += '<div class="cc5-results-item">';
                     html += '<span class="cc5-results-item-text">' + r.item.text + '</span>';
                     html += '<span class="cc5-results-item-correct">Correct: ' + (r.item.category === 'do' ? 'DO' : 'DON\'T') + '</span>';
@@ -190,12 +190,12 @@ define(['jquery'], function($) {
             this.container.find('.cc5-sort-results').html(html).fadeIn(200);
             
             var self = this;
-            this.container.find('.cc5-continue-btn').on('click', function() {
+            this.container.find('.cc5-continue-btn').on('click', function () {
                 self.onComplete(isPassing);
             });
         },
 
-        escapeHtml: function(str) {
+        escapeHtml: function (str) {
             if (!str) return '';
             var div = document.createElement('div');
             div.textContent = str;
@@ -204,7 +204,7 @@ define(['jquery'], function($) {
     };
 
     return {
-        init: function(container, config) {
+        init: function (container, config) {
             return new BehaviourSort(container, config);
         }
     };

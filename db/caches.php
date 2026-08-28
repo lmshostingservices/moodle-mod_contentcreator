@@ -34,4 +34,21 @@ $definitions = [
         'simpledata' => false,
         'ttl' => 3600,
     ],
+
+    // v13.94.3: Ownership record for an asynchronous generation job. action=poll_job
+    // used to accept any job id from any caller who held :manage on any Content Creator
+    // activity, and returned the vendor's raw job payload for it - so one author could
+    // read another author's generated content simply by guessing or replaying a job id.
+    // The id is now bound to the user and course module it was issued to, and a poll
+    // that does not match is refused. A cache is the right store rather than a table:
+    // the binding is write-once, read-a-handful-of-times and dead within minutes, so it
+    // has no business surviving in the database or needing an install/upgrade step.
+    // Keys are md5(job id), because the vendor's ids contain characters simple keys do not
+    // allow; values are 'userid:cmid'.
+    'jobowner' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => true,
+        'ttl' => 7200,
+    ],
 ];

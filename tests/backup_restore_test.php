@@ -119,8 +119,10 @@ class backup_restore_test extends advanced_testcase {
         if ($large) {
             // Push the manifest past manifest_storage::COMPRESS_THRESHOLD so it is stored
             // in the 'gz:' form that real 6-10 MB packs always use.
-            $section['padding'] = str_repeat('The quick brown fox jumps over the lazy dog. ',
-                (int)ceil(\mod_contentcreator\manifest_storage::COMPRESS_THRESHOLD / 45) + 100);
+            $section['padding'] = str_repeat(
+                'The quick brown fox jumps over the lazy dog. ',
+                (int)ceil(\mod_contentcreator\manifest_storage::COMPRESS_THRESHOLD / 45) + 100
+            );
         }
         $manifest = json_encode(['sections' => [$section]]);
 

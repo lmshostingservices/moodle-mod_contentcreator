@@ -7,6 +7,46 @@
  */
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   v13.94.6  BREAKPOINT CONVENTION  -  read this before adding a media query
+   ───────────────────────────────────────────────────────────────────────────
+   The file had grown four incompatible spellings of the same three
+   breakpoints, and they were mixed within a single component:
+
+       max-width: 480px  +  min-width: 480px   -> BOTH match at exactly 480px
+       max-width: 479px  +  min-width: 481px   -> NEITHER matches at 480px
+       max-width: 640px  +  min-width: 640px   -> both match at 640px
+       max-width: 639px  +  min-width: 641px   -> neither matches at 640px
+       max-width: 768px  +  min-width: 768px   -> both match at 768px
+
+   A double match is resolved by source order, so which layout a learner got at
+   exactly 640px depended on where in a 20,000-line file the two rules happened
+   to sit. A gap leaves the boundary pixel with no rule at all. Both classes of
+   bug are invisible at any width a developer is likely to drag a window to, and
+   both are permanent for anyone whose viewport sits on the boundary - a docked
+   sidebar, a half-screen split, a 768px tablet in portrait.
+
+   The .cc5-dos-donts--single defect (FIX at the min-width:640px block below) is
+   a direct consequence: two rules of equal specificity at the same boundary,
+   settled by order, settling the wrong way.
+
+   ONE convention now, throughout - 65 media queries normalised:
+
+       max-width:  479.98px  |  min-width:  480px
+       max-width:  639.98px  |  min-width:  640px
+       max-width:  767.98px  |  min-width:  768px
+       max-width: 1023.98px  |  min-width: 1024px
+
+   The .98 is Bootstrap's convention and Moodle ships Bootstrap, so this matches
+   the theme the plugin renders inside. It is not cosmetic: with an integer
+   max-width, a fractional viewport (browser zoom, a scaled display, a scrollbar
+   taken out of the width) lands between the two rules and matches neither.
+
+   Breakpoints with no min/max counterpart in this file - 520, 600, 700, 800,
+   900, 960, 1024 as a lone min-width - were left alone. They cannot collide
+   with anything, and rewriting them would have been churn.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
    Default SVG Icon Sizing (v7.2.8)
    All icons default to 24x24, overridable by specific rules
    Includes modals appended to body (not inside .cc5-player)
@@ -980,10 +1020,10 @@ body.dark .cc5-player,
 }
 
 .cc5-voiceover-btn-large:hover {
-    background: rgb(255, 255, 255, 0.3);
-    border-color: rgb(255, 255, 255, 0.6);
+    background: rgb(255, 255, 255, 0.3) !important;
+    border-color: rgb(255, 255, 255, 0.6) !important;
     transform: scale(1.02);
-    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-voiceover-btn-large.cc5-loading {
@@ -1054,9 +1094,9 @@ body.dark .cc5-player,
 }
 
 .cc5-voiceover-pause-btn:hover {
-    background: rgba(239, 68, 68, 0.5);
-    border-color: rgba(239, 68, 68, 0.8);
-    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: rgba(239, 68, 68, 0.5) !important;
+    border-color: rgba(239, 68, 68, 0.8) !important;
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-pause-icon svg {
@@ -1241,7 +1281,7 @@ body.dark .cc5-player,
 }
 
 /* Mobile responsive for Introduction Card */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-introduction-header {
         padding: 10px 14px;
         gap: 8px;
@@ -1437,7 +1477,7 @@ body.dark .cc5-player,
     grid-template-columns: 1fr;
 }
 
-@media (max-width: 639px) {
+@media (max-width: 639.98px) {
     .cc5-dos-donts {
         grid-template-columns: 1fr;
     }
@@ -1511,13 +1551,13 @@ body.dark .cc5-player,
 }
 
 .cc5-do-item:hover {
-    background: rgb(34, 197, 94, 0.08);
-    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: rgb(34, 197, 94, 0.08) !important;
+    color: var(--cc5-text) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-dont-item:hover {
-    background: rgb(239, 68, 68, 0.08);
-    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: rgb(239, 68, 68, 0.08) !important;
+    color: var(--cc5-text) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-do-item .cc5-list-icon {
@@ -1766,9 +1806,9 @@ body.dark .cc5-player,
 }
 
 .cc5-tutorial-btn:hover {
-    background: var(--cc5-primary-hover); /* v13.29: was hsl(220,90%,50%) = 4.29:1 */
+    background: var(--cc5-primary-hover) !important; /* v13.29: was hsl(220,90%,50%) = 4.29:1 */
     transform: scale(1.02);
-    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1864,7 +1904,7 @@ body.dark .cc5-player,
    Mobile Responsive
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
     .cc5-player {
         /* v10.44: mobile keeps lateral at 0 — theme grid still provides gutters */
         padding: 0 0 var(--cc5-space-sm) 0;
@@ -1996,7 +2036,7 @@ body.dark .cc5-player,
 /* ═══════════════════════════════════════════════════════════════════════════
    v6.6.71: Tablet breakpoint - Medium spacing for tablets (481px - 767px)
    ═══════════════════════════════════════════════════════════════════════════ */
-@media (min-width: 481px) and (max-width: 767px) {
+@media (min-width: 480px) and (max-width: 767.98px) {
     .cc5-slide-body {
         padding: var(--cc5-space-6);
     }
@@ -2033,7 +2073,7 @@ body.dark .cc5-player,
 }
 
 /* Landscape mobile */
-@media (max-width: 768px) and (orientation: landscape) {
+@media (max-width: 767.98px) and (orientation: landscape) {
     .cc5-slide-content {
         margin-bottom: var(--cc5-space-sm);
     }
@@ -2416,7 +2456,7 @@ body.dark .cc5-player,
     align-items: start;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-framework-step-content {
         grid-template-columns: 1fr;
     }
@@ -4149,7 +4189,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* Mobile responsive for 3-layer content */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
     .cc5-outcomes-grid {
         grid-template-columns: 1fr;
     }
@@ -4402,9 +4442,9 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 /* v7.2.64: Subtle hover - border only */
 .cc5-option:hover {
     border-color: var(--cc5-primary) !important;
-    background: var(--cc5-card-bg);
+    background: var(--cc5-card-bg) !important;
     box-shadow: var(--cc5-card-shadow-hover) !important;
-    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: var(--cc5-text) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-option.cc5-selected[data-correct="true"] {
@@ -5442,10 +5482,10 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 .cc5-check-sequence-btn:hover {
-    background: var(--cc5-primary-dark, #0f766e);
+    background: var(--cc5-primary-dark, #0f766e) !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgb(0,0,0,0.15);
-    color: var(--cc5-primary-foreground); /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: var(--cc5-primary-foreground) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-check-sequence-btn:active {
@@ -5596,7 +5636,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* Mobile: Hide drag handle, show larger reorder buttons */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
     .cc5-step-drag-handle {
         display: none;
     }
@@ -5699,7 +5739,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* Move the dot inline with label on mobile */
-@media (max-width: 639px) {
+@media (max-width: 639.98px) {
     .cc5-legend-item::before {
         display: none;
     }
@@ -5721,7 +5761,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 /* v7.1.8: Legend description - full width on mobile */
 
 /* On mobile, add left padding to align with label text */
-@media (max-width: 639px) {
+@media (max-width: 639.98px) {
     .cc5-legend-desc {
         padding-left: 20px;
     }
@@ -5823,7 +5863,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* Stack icon above text on narrow screens */
-@media (max-width: 479px) {
+@media (max-width: 479.98px) {
     .cc5-decision-btn {
         flex-direction: column;
         gap: var(--cc5-space-1);
@@ -6452,7 +6492,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 
 .cc5-example-response summary:hover {
     background: var(--cc5-teal-light) !important;
-    color: var(--cc5-teal); /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: var(--cc5-teal) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 /* v6.6.97: Mobile-first - 24px minimum icon */
@@ -6551,7 +6591,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* v6.7.29: Mobile responsive for activities - simplified */
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
     /* Escalation Decision - legend stays flex-wrap on mobile */
     .cc5-decision-legend {
         gap: var(--cc5-space-2);
@@ -6574,7 +6614,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* v7.1.8: Decision button text - minimum 0.875rem (14px) */
-@media (max-width: 479px) {
+@media (max-width: 479.98px) {
     .cc5-decision-label {
         font-size: 0.875rem;
     }
@@ -6775,7 +6815,16 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     }
     
     /* Two columns for Do's/Don'ts on tablet */
-    .cc5-dos-donts {
+    /* v13.94.6: :not(.cc5-dos-donts--single) added. This rule is not redundant -
+       it re-establishes two columns above 640px after the max-width:768px block
+       has collapsed them to one - but it matched .cc5-dos-donts--single too, at
+       the same (0,1,0) specificity as the --single rule and later in the file,
+       so it won. The single-column variant was therefore dead at every viewport
+       from 640px up: on the competency-summary card, whenever badItems is
+       absent, the goodItems list rendered in a half-width column with the right
+       half of the card blank. Only ever visible on desktop and tablet, which is
+       why it survived mobile testing. */
+    .cc5-dos-donts:not(.cc5-dos-donts--single) {
         display: grid;
         grid-template-columns: 1fr 1fr;
     }
@@ -6912,9 +6961,9 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 
 /* v6.7.37: Subtle hover - shadow only */
 .cc5-focus-modal-btn:hover {
-    background: linear-gradient(135deg, var(--cc5-teal), var(--cc5-green));
+    background: linear-gradient(135deg, var(--cc5-teal), var(--cc5-green)) !important;
     box-shadow: var(--cc5-shadow-sm);
-    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 /* v6.7.37: Active state - subtle color feedback only */
@@ -7031,7 +7080,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* Small screen adjustments - maintain minimum 12px (0.75rem) font */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-topic-type-badges {
         gap: 4px;
     }
@@ -7083,26 +7132,41 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* Dark mode support for activity slides */
-@media (prefers-color-scheme: dark) {
-    .cc5-badge-learning {
-        background: rgb(59, 130, 246, 0.2);
-        color: #93c5fd;
-    }
-    
-    .cc5-badge-activity {
-        background: rgb(245, 158, 11, 0.2);
-        color: #fcd34d;
-    }
-    
-    .cc5-slide-indicator.cc5-indicator-activity {
-        background: rgb(245, 158, 11, 0.25);
-        border-color: var(--cc5-amber);
-    }
-    
-    .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num {
-        color: #fcd34d;
-    }
+/* v13.94.6 FIX-CC-OS-DARK: this block was @media (prefers-color-scheme: dark).
+   That keys off the operating system, not off Moodle. Everything else in this
+   file keys off the theme, so a user running OS-dark with Moodle in light mode
+   got the activity badges and indicators rendered dark and floating in an otherwise white page - and the
+   reverse, Moodle-dark on OS-light, left it light. Re-keyed to the same theme
+   selectors the rest of the file uses: Moodle 4.4+/5.x sets data-bs-theme on
+   <html>, and body.dark / .cc5-dark cover the older and the plugin-set cases. */
+
+[data-bs-theme="dark"] .cc5-badge-learning,
+body.dark .cc5-badge-learning,
+.cc5-dark .cc5-badge-learning {
+    background: rgb(59, 130, 246, 0.2);
+    color: #93c5fd;
 }
+
+[data-bs-theme="dark"] .cc5-badge-activity,
+body.dark .cc5-badge-activity,
+.cc5-dark .cc5-badge-activity {
+    background: rgb(245, 158, 11, 0.2);
+    color: #fcd34d;
+}
+
+[data-bs-theme="dark"] .cc5-slide-indicator.cc5-indicator-activity,
+body.dark .cc5-slide-indicator.cc5-indicator-activity,
+.cc5-dark .cc5-slide-indicator.cc5-indicator-activity {
+    background: rgb(245, 158, 11, 0.25);
+    border-color: var(--cc5-amber);
+}
+
+[data-bs-theme="dark"] .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num,
+body.dark .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num,
+.cc5-dark .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num {
+    color: #fcd34d;
+}
+
 
 /* Dark mode for activity intro - class-based */
 .cc5-dark .cc5-activity-intro,
@@ -7145,9 +7209,9 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 
 /* v6.7.37: Subtle hover - shadow only */
 .cc5-edit-slide-btn:hover {
-    background: linear-gradient(135deg, var(--cc5-purple), var(--cc5-purple-dark));
+    background: linear-gradient(135deg, var(--cc5-purple), var(--cc5-purple-dark)) !important;
     box-shadow: 0 4px 12px rgb(99, 102, 241, 0.4);
-    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-edit-slide-btn .cc5-edit-icon svg {
@@ -7341,10 +7405,10 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 .cc5-edit-delete-item:hover {
-    background: var(--cc5-red);
+    background: var(--cc5-red) !important;
     transform: scale(1.05);
     box-shadow: 0 2px 6px rgb(220, 38, 38, 0.4);
-    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-edit-delete-item:active {
@@ -7380,9 +7444,9 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 .cc5-edit-add-btn:hover {
-    background: rgb(59, 130, 246, 0.15);
+    background: rgb(59, 130, 246, 0.15) !important;
     border-style: solid;
-    color: #93c5fd; /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: #93c5fd !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-edit-add-btn svg {
@@ -7547,98 +7611,147 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Dark mode */
-@media (prefers-color-scheme: dark) {
-    .cc5-edit-modal {
-        background: #1e293b;
-    }
-    
-    .cc5-edit-modal-header {
-        background: linear-gradient(135deg, #0f172a, #1e293b);
-        border-color: #334155;
-    }
-    
-    .cc5-edit-modal-header h3 {
-        color: #f1f5f9;
-    }
-    
-    .cc5-edit-modal-close {
-        background: hsl(0deg 84% 55%);
-        color: white !important;
-    }
-    
-    .cc5-edit-modal-close:hover {
-        background: hsl(0deg 84% 45%);
-        color: white !important;
-    }
-    
-    .cc5-edit-field > label {
-        color: #e2e8f0;
-    }
-    
-    .cc5-edit-field input[type="text"],
-    .cc5-edit-field textarea,
-    .cc5-edit-list-item input[type="text"] {
-        background: #0f172a;
-        border-color: #475569;
-        color: #f1f5f9;
-    }
-    
-    .cc5-edit-field input[type="text"]:focus,
-    .cc5-edit-field textarea:focus,
-    .cc5-edit-list-item input[type="text"]:focus {
-        background: #1e293b;
-        border-color: #818cf8;
-    }
-    
-    .cc5-edit-delete-item {
-        background: var(--cc5-red);
-        color: white !important;
-    }
-    
-    .cc5-edit-delete-item:hover {
-        background: var(--cc5-red);
-        color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
-}
-    
-    .cc5-edit-add-btn {
-        background: rgb(59, 130, 246, 0.1);
-        border-color: #60a5fa;
-        color: #93c5fd;
-    }
-    
-    .cc5-edit-add-btn:hover {
-        background: rgb(59, 130, 246, 0.2);
-        color: #93c5fd; /* v13.92.2: pinned - theme button:hover forces #fff */
-}
-    
-    .cc5-edit-voiceover-option {
-        background: linear-gradient(135deg, rgb(245, 158, 11, 0.15), rgb(217, 119, 6, 0.1));
-        border-color: rgb(252, 211, 77, 0.4);
-    }
-    
-    .cc5-edit-checkbox-label {
-        color: #fcd34d;
-    }
-    
-    .cc5-edit-modal-footer {
-        background: #0f172a;
-        border-color: #334155;
-    }
-    
-    .cc5-edit-modal-cancel {
-        background: #4b5563;
-        border: none;
-        color: white !important;
-    }
-    
-    .cc5-edit-modal-cancel:hover {
-        background: #374151;
-        color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
-}
+/* v13.94.6 FIX-CC-OS-DARK: this block was @media (prefers-color-scheme: dark).
+   That keys off the operating system, not off Moodle. Everything else in this
+   file keys off the theme, so a user running OS-dark with Moodle in light mode
+   got the slide edit modal rendered dark and floating in an otherwise white page - and the
+   reverse, Moodle-dark on OS-light, left it light. Re-keyed to the same theme
+   selectors the rest of the file uses: Moodle 4.4+/5.x sets data-bs-theme on
+   <html>, and body.dark / .cc5-dark cover the older and the plugin-set cases. */
+
+[data-bs-theme="dark"] .cc5-edit-modal,
+body.dark .cc5-edit-modal,
+.cc5-dark .cc5-edit-modal {
+    background: #1e293b;
 }
 
+[data-bs-theme="dark"] .cc5-edit-modal-header,
+body.dark .cc5-edit-modal-header,
+.cc5-dark .cc5-edit-modal-header {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    border-color: #334155;
+}
+
+[data-bs-theme="dark"] .cc5-edit-modal-header h3,
+body.dark .cc5-edit-modal-header h3,
+.cc5-dark .cc5-edit-modal-header h3 {
+    color: #f1f5f9;
+}
+
+[data-bs-theme="dark"] .cc5-edit-modal-close,
+body.dark .cc5-edit-modal-close,
+.cc5-dark .cc5-edit-modal-close {
+    background: hsl(0deg 84% 55%);
+    color: white !important;
+}
+
+[data-bs-theme="dark"] .cc5-edit-modal-close:hover,
+body.dark .cc5-edit-modal-close:hover,
+.cc5-dark .cc5-edit-modal-close:hover {
+    background: hsl(0deg 84% 45%);
+    color: white !important;
+}
+
+[data-bs-theme="dark"] .cc5-edit-field > label,
+body.dark .cc5-edit-field > label,
+.cc5-dark .cc5-edit-field > label {
+    color: #e2e8f0;
+}
+
+[data-bs-theme="dark"] .cc5-edit-field input[type="text"],
+body.dark .cc5-edit-field input[type="text"],
+.cc5-dark .cc5-edit-field input[type="text"],
+[data-bs-theme="dark"] .cc5-edit-field textarea,
+body.dark .cc5-edit-field textarea,
+.cc5-dark .cc5-edit-field textarea,
+[data-bs-theme="dark"] .cc5-edit-list-item input[type="text"],
+body.dark .cc5-edit-list-item input[type="text"],
+.cc5-dark .cc5-edit-list-item input[type="text"] {
+    background: #0f172a;
+    border-color: #475569;
+    color: #f1f5f9;
+}
+
+[data-bs-theme="dark"] .cc5-edit-field input[type="text"]:focus,
+body.dark .cc5-edit-field input[type="text"]:focus,
+.cc5-dark .cc5-edit-field input[type="text"]:focus,
+[data-bs-theme="dark"] .cc5-edit-field textarea:focus,
+body.dark .cc5-edit-field textarea:focus,
+.cc5-dark .cc5-edit-field textarea:focus,
+[data-bs-theme="dark"] .cc5-edit-list-item input[type="text"]:focus,
+body.dark .cc5-edit-list-item input[type="text"]:focus,
+.cc5-dark .cc5-edit-list-item input[type="text"]:focus {
+    background: #1e293b;
+    border-color: #818cf8;
+}
+
+[data-bs-theme="dark"] .cc5-edit-delete-item,
+body.dark .cc5-edit-delete-item,
+.cc5-dark .cc5-edit-delete-item {
+    background: var(--cc5-red);
+    color: white !important;
+}
+
+[data-bs-theme="dark"] .cc5-edit-delete-item:hover,
+body.dark .cc5-edit-delete-item:hover,
+.cc5-dark .cc5-edit-delete-item:hover {
+    background: var(--cc5-red) !important;
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
+}
+
+[data-bs-theme="dark"] .cc5-edit-add-btn,
+body.dark .cc5-edit-add-btn,
+.cc5-dark .cc5-edit-add-btn {
+    background: rgb(59, 130, 246, 0.1);
+    border-color: #60a5fa;
+    color: #93c5fd;
+}
+
+[data-bs-theme="dark"] .cc5-edit-add-btn:hover,
+body.dark .cc5-edit-add-btn:hover,
+.cc5-dark .cc5-edit-add-btn:hover {
+    background: rgb(59, 130, 246, 0.2) !important;
+    color: #93c5fd !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
+}
+
+[data-bs-theme="dark"] .cc5-edit-voiceover-option,
+body.dark .cc5-edit-voiceover-option,
+.cc5-dark .cc5-edit-voiceover-option {
+    background: linear-gradient(135deg, rgb(245, 158, 11, 0.15), rgb(217, 119, 6, 0.1));
+    border-color: rgb(252, 211, 77, 0.4);
+}
+
+[data-bs-theme="dark"] .cc5-edit-checkbox-label,
+body.dark .cc5-edit-checkbox-label,
+.cc5-dark .cc5-edit-checkbox-label {
+    color: #fcd34d;
+}
+
+[data-bs-theme="dark"] .cc5-edit-modal-footer,
+body.dark .cc5-edit-modal-footer,
+.cc5-dark .cc5-edit-modal-footer {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+[data-bs-theme="dark"] .cc5-edit-modal-cancel,
+body.dark .cc5-edit-modal-cancel,
+.cc5-dark .cc5-edit-modal-cancel {
+    background: #4b5563;
+    border: none;
+    color: white !important;
+}
+
+[data-bs-theme="dark"] .cc5-edit-modal-cancel:hover,
+body.dark .cc5-edit-modal-cancel:hover,
+.cc5-dark .cc5-edit-modal-cancel:hover {
+    background: #374151 !important;
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
+}
+
+
 /* Mobile responsiveness */
-@media screen and (max-width: 640px) {
+@media screen and (max-width: 639.98px) {
     .cc5-edit-modal-overlay {
         padding: 12px;
     }
@@ -7997,8 +8110,8 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-doc-modal-btn-secondary:hover {
-    background: var(--cc5-border);
-    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: var(--cc5-border) !important;
+    color: var(--cc5-text) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 /* v6.5.49: Document edit mode styles */
@@ -8019,8 +8132,8 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-doc-edit-btn.cc5-editing:hover {
-    background: hsl(158deg, 64%, 42%);
-    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: hsl(158deg, 64%, 42%) !important;
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-doc-edit-container {
@@ -8371,7 +8484,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Mobile responsiveness for doc modal - mobile-first design */
-@media screen and (max-width: 640px) {
+@media screen and (max-width: 639.98px) {
     .cc5-doc-modal-overlay {
         padding: 0;
         align-items: flex-end;
@@ -8413,11 +8526,10 @@ button.cc5-edit-modal-save:disabled {
         min-height: 36px; /* v7.9.83: Smaller */
     }
     
+    /* v13.94.6: display:block / overflow-x:auto moved OUT of this media query -
+       see below. Only the type-size reduction is mobile-specific. */
     .cc5-doc-content table {
         font-size: 0.8rem;
-        display: block;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
     }
     
     .cc5-doc-content th,
@@ -8597,14 +8709,14 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Tablet */
-@media (min-width: 768px) and (max-width: 1023px) {
+@media (min-width: 768px) and (max-width: 1023.98px) {
     .cc5-slide-image {
         max-height: 360px;
     }
 }
 
 /* Mobile vertical */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
     .cc5-slide-image {
         max-height: 280px;
     }
@@ -8652,12 +8764,12 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-image-action-btn:hover {
-    background: #f8fafc; /* v7.1.7: Light gray instead of pure white */
-    color: #1e293b;
-    border-color: var(--cc5-blue); /* Blue border on hover */
+    background: #f8fafc !important; /* v7.1.7: Light gray instead of pure white */
+    color: #1e293b !important;
+    border-color: var(--cc5-blue) !important; /* Blue border on hover */
     transform: translateY(-2px);
     box-shadow: var(--cc5-shadow-sm);
-    color: #1e293b; /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: #1e293b !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 
@@ -9011,7 +9123,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Tablet and Mobile: Touch-friendly controls (v6.6.70 fix) */
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
     .cc5-slide-image-controls {
         flex-wrap: wrap;
         opacity: 1; /* Always visible on touch devices - no hover */
@@ -9024,7 +9136,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Small mobile adjustments */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-image-modal {
         max-width: 100%;
         margin: var(--cc5-space-sm);
@@ -9150,9 +9262,9 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-regen-cancel-btn:hover {
-    background: var(--cc5-bg);
-    border-color: var(--cc5-text-muted);
-    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: var(--cc5-bg) !important;
+    border-color: var(--cc5-text-muted) !important;
+    color: var(--cc5-text) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-regen-confirm-btn {
@@ -9271,9 +9383,9 @@ button.cc5-edit-modal-save:disabled {
 
 .cc5-image-zoom-btn:hover {
     opacity: 1;
-    background: rgb(0, 0, 0, 0.8);
+    background: rgb(0, 0, 0, 0.8) !important;
     transform: scale(1.1);
-    color: var(--cc5-primary-foreground); /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: var(--cc5-primary-foreground) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-image-zoom-btn svg {
@@ -9303,9 +9415,9 @@ button.cc5-edit-modal-save:disabled {
 
 .cc5-image-download-btn:hover {
     opacity: 1;
-    background: rgb(0, 0, 0, 0.8);
+    background: rgb(0, 0, 0, 0.8) !important;
     transform: scale(1.1);
-    color: var(--cc5-primary-foreground); /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: var(--cc5-primary-foreground) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-image-download-btn svg {
@@ -9359,9 +9471,9 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-zoom-modal-close:hover {
-    background: hsl(0deg 84% 45%);
+    background: hsl(0deg 84% 45%) !important;
     transform: scale(1.1);
-    color: white; /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-zoom-modal-close svg {
@@ -9436,9 +9548,9 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-show-community-btn:hover {
-    background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
-    border-color: #66bb6a;
-    color: #2e7d32; /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%) !important;
+    border-color: #66bb6a !important;
+    color: #2e7d32 !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 /* Gallery Modal */
@@ -9614,8 +9726,8 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-community-search-btn:hover {
-    background: var(--cc5-primary-hover);
-    color: var(--cc5-primary-foreground); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: var(--cc5-primary-hover) !important;
+    color: var(--cc5-primary-foreground) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-community-search-btn svg {
@@ -9738,9 +9850,9 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-community-page-btn:hover {
-    background: var(--cc5-bg);
-    border-color: var(--cc5-primary);
-    color: var(--cc5-text); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: var(--cc5-bg) !important;
+    border-color: var(--cc5-primary) !important;
+    color: var(--cc5-text) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-community-page-btn svg {
@@ -9980,7 +10092,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* v6.6.73: Responsive colorful requirement cards - mobile adjustments */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-requirements-grid {
         grid-template-columns: 1fr;
         gap: var(--cc5-space-3);
@@ -10011,7 +10123,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* v6.6.71: Responsive accent cards - mobile adjustments */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-accent-card {
         padding: var(--cc5-space-4);
         gap: var(--cc5-space-3);
@@ -10554,7 +10666,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Mobile responsiveness */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-settings-modal-overlay {
         padding: 16px;
     }
@@ -10622,29 +10734,41 @@ button.cc5-edit-modal-save:disabled {
    until focused, so removing the suppression changes nothing for mouse users. */
 
 /* Enhanced focus styles for better visibility */
-.cc5-player *:focus {
+/* v13.94.6 FIX-CC-FOCUS-HALO: both of these were :focus, on selectors that
+   match effectively every interactive element in the player. A pointer click
+   leaves focus behind, so the outline stayed on the clicked control - and Boost
+   stacks its own `button:focus { box-shadow: 0 0 0 0.2rem }` on top of it, so
+   every click left a ringed, haloed button that looked stuck selected.
+   :focus-visible confines the ring to keyboard navigation, which is the case
+   that needs it. The ring itself is unchanged; see the FIX-CC-FOCUS-HALO block
+   at the end of the file for the matching halo suppression. */
+.cc5-player *:focus-visible {
     outline: 2px solid var(--cc5-primary);
     outline-offset: 2px;
 }
 
-.cc5-player button:focus,
-.cc5-player a:focus,
-.cc5-player [tabindex="0"]:focus {
+.cc5-player button:focus-visible,
+.cc5-player a:focus-visible,
+.cc5-player [tabindex="0"]:focus-visible {
     outline: 2px solid var(--cc5-primary);
     outline-offset: 2px;
 }
 
 /* High contrast focus for navigation buttons */
-.cc5-nav-chevron:focus,
-.cc5-back-btn:focus,
-.cc5-slide-indicator:focus {
+/* v13.94.6: :focus-visible for the same reason as the block above - these three
+   are the most-clicked controls in the player, so a pointer-triggered 4px halo
+   was the state a learner saw most of the time. */
+.cc5-nav-chevron:focus-visible,
+.cc5-back-btn:focus-visible,
+.cc5-slide-indicator:focus-visible {
     outline: 3px solid var(--cc5-primary);
     outline-offset: 3px;
     box-shadow: 0 0 0 4px rgb(0, 123, 255, 0.25);
 }
 
 /* Focus ring for topic cards */
-.cc5-topic-card:focus {
+/* v13.94.6: :focus-visible - see above. */
+.cc5-topic-card:focus-visible {
     outline: 3px solid var(--cc5-primary);
     outline-offset: 4px;
     box-shadow: 0 0 0 6px rgb(0, 123, 255, 0.15);
@@ -10864,7 +10988,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Mobile-first responsive adjustments */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-mental-model-card {
         padding: var(--cc5-space-sm) var(--cc5-space-md);
     }
@@ -10980,7 +11104,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Mobile */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-reflection-prompt {
         padding: var(--cc5-space-sm) var(--cc5-space-md);
     }
@@ -11009,7 +11133,7 @@ button.cc5-edit-modal-save:disabled {
 /* Dark mode - matches mental model dark mode pattern */
 
 /* Mobile-first - matches mental model mobile pattern */
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-reflection-prompt {
         padding: var(--cc5-space-sm) var(--cc5-space-md);
     }
@@ -11043,7 +11167,7 @@ button.cc5-edit-modal-save:disabled {
    2. SCENARIO BRANCHING ACTIVITY
    Options stack vertically on mobile
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-options-container {
         display: flex;
         flex-direction: column;
@@ -11084,7 +11208,7 @@ button.cc5-edit-modal-save:disabled {
    3. BEST RESPONSE ACTIVITY
    Requirement cards stack, classification reveals full-width
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-requirements-grid {
         grid-template-columns: 1fr;
         gap: var(--cc5-space-4);
@@ -11154,7 +11278,7 @@ button.cc5-edit-modal-save:disabled {
    4. CASE ANALYSIS (WHAT WENT WRONG) ACTIVITY
    Questions and model answers mobile-optimized
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Think first prompt */
     .cc5-think-first-prompt {
         padding: var(--cc5-space-3) var(--cc5-space-4);
@@ -11256,7 +11380,7 @@ button.cc5-edit-modal-save:disabled {
    5. SEQUENCING ACTIVITY
    Steps with reorder buttons, drag handle hidden on mobile
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-sequencing-steps {
         gap: var(--cc5-space-3);
     }
@@ -11320,7 +11444,7 @@ button.cc5-edit-modal-save:disabled {
    6. ESCALATION DECISION ACTIVITY
    Decision buttons full-width, legend wraps
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Escalation intro */
     .cc5-escalation-intro {
         padding: var(--cc5-space-3) var(--cc5-space-4);
@@ -11401,7 +11525,7 @@ button.cc5-edit-modal-save:disabled {
    7. REFLECTION ACTIVITY
    Text areas full-width, prompts mobile-friendly
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Reflection intro */
     .cc5-reflection-intro {
         padding: var(--cc5-space-3) var(--cc5-space-4);
@@ -11490,7 +11614,7 @@ button.cc5-edit-modal-save:disabled {
     stroke-width: 2 ;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-activity-instruction {
         flex-direction: column;
         padding: var(--cc5-space-3);
@@ -11503,7 +11627,7 @@ button.cc5-edit-modal-save:disabled {
    9. TABLET ENHANCEMENTS (641px - 1024px)
    2-column layouts where appropriate
    ───────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 641px) {
+@media (min-width: 640px) {
     .cc5-activity-section {
         padding: var(--cc5-space-5);
     }
@@ -11543,7 +11667,7 @@ button.cc5-edit-modal-save:disabled {
    10. DESKTOP ENHANCEMENTS (1025px+)
    Maximum content width, optimal reading experience
    ───────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 1025px) {
+@media (min-width: 1024px) {
     .cc5-activity-section {
         padding: var(--cc5-space-6);
     }
@@ -11909,7 +12033,7 @@ button.cc5-edit-modal-save:disabled {
    A. SLIDE HEADER MOBILE FIXES
    Ensure header displays correctly on all devices
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-slide-header {
         padding: var(--cc5-space-4) !important;
         padding-top: 32px !important;
@@ -11947,7 +12071,7 @@ button.cc5-edit-modal-save:disabled {
    B. SCENARIO BRANCHING - ENHANCED MOBILE
    Intro section, decision points, outcome paths
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Scenario intro - stacks on mobile */
     .cc5-scenario-intro {
         flex-direction: column !important;
@@ -12032,7 +12156,7 @@ button.cc5-edit-modal-save:disabled {
    C. BEST RESPONSE - ENHANCED MOBILE
    Classification legend, response headers
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Response situation context */
     .cc5-response-situation {
         padding: var(--cc5-space-4) !important;
@@ -12109,7 +12233,7 @@ button.cc5-edit-modal-save:disabled {
    D. CASE ANALYSIS - ENHANCED MOBILE
    Final outcome, common mistakes, learning takeaways
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Case header with amber styling */
     .cc5-case-header svg {
         width: 24px !important;
@@ -12159,7 +12283,7 @@ button.cc5-edit-modal-save:disabled {
    E. SEQUENCING - ENHANCED MOBILE
    Context intro, step numbers, feedback states
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Sequence context intro */
     .cc5-sequence-context {
         padding: var(--cc5-space-4) !important;
@@ -12221,7 +12345,7 @@ button.cc5-edit-modal-save:disabled {
    F. ESCALATION DECISION - ENHANCED MOBILE
    Legend items 48px, decision buttons, feedback
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Legend items - 48px touch targets (WCAG 2.2 AA) */
     .cc5-legend-item {
         min-height: 48px !important;
@@ -12263,7 +12387,7 @@ button.cc5-edit-modal-save:disabled {
    G. REFLECTION - ENHANCED MOBILE
    Focus icons 40px, word counter, example responses
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Focus icon - maintain 40px for touch accessibility */
     .cc5-focus-icon {
         width: 40px !important;
@@ -12328,7 +12452,7 @@ button.cc5-edit-modal-save:disabled {
    H. LEGACY ACTIVITY - MOBILE FIXES
    Older style activities with Q&A format
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Legacy option buttons */
     .cc5-option {
         min-height: 52px !important;
@@ -12355,7 +12479,7 @@ button.cc5-edit-modal-save:disabled {
    I. LEARNING SLIDE MOBILE FIXES
    Content blocks, key points, images
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* Content container */
     .cc5-learning-content {
         padding: var(--cc5-space-4) !important;
@@ -12408,7 +12532,7 @@ button.cc5-edit-modal-save:disabled {
    J. TOUCH TARGET ENFORCEMENT (WCAG 2.2 AA)
    Minimum 48px for all interactive elements
    ───────────────────────────────────────────────────────────────────────────── */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     /* All buttons minimum 48px - scoped to plugin container */
     .cc5-player button,
     .cc5-player [role="button"],
@@ -12430,7 +12554,7 @@ button.cc5-edit-modal-save:disabled {
    K. TABLET ENHANCEMENTS (641px - 1024px)
    2-column grids, optimal spacing
    ───────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 641px) and (max-width: 1024px) {
+@media (min-width: 640px) and (max-width: 1023.98px) {
     /* Scenario cards - 2 column on tablet */
     .cc5-scenario-cards {
         display: grid !important;
@@ -12469,7 +12593,7 @@ button.cc5-edit-modal-save:disabled {
    L. DESKTOP ENHANCEMENTS (1025px+)
    Maximum readability, optimal spacing
    ───────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 1025px) {
+@media (min-width: 1024px) {
     /* Scenario intro - centered with max width */
     .cc5-scenario-intro {
         max-width: 800px !important;
@@ -12795,7 +12919,7 @@ button.cc5-edit-modal-save:disabled {
    Mobile-first responsive adjustments with 48px touch targets
    ───────────────────────────────────────────────────────────────────────────── */
 
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-pdf-modal-overlay {
         padding: 0 !important;
     }
@@ -12848,7 +12972,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Tablet adjustments */
-@media (min-width: 641px) and (max-width: 1024px) {
+@media (min-width: 640px) and (max-width: 1023.98px) {
     .cc5-pdf-modal {
         max-width: 90% !important;
     }
@@ -13104,18 +13228,28 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
-    .cc5-docactivity-section {
-        background: rgb(124, 58, 237, 0.05);
-        border-color: rgb(255, 255, 255, 0.1);
-    }
-    
-    .cc5-docactivity-question {
-        background: rgb(255, 255, 255, 0.03);
-        border-color: rgb(255, 255, 255, 0.08);
-    }
-    
+/* v13.94.6 FIX-CC-OS-DARK: this block was @media (prefers-color-scheme: dark).
+   That keys off the operating system, not off Moodle. Everything else in this
+   file keys off the theme, so a user running OS-dark with Moodle in light mode
+   got the document-activity panels rendered dark and floating in an otherwise white page - and the
+   reverse, Moodle-dark on OS-light, left it light. Re-keyed to the same theme
+   selectors the rest of the file uses: Moodle 4.4+/5.x sets data-bs-theme on
+   <html>, and body.dark / .cc5-dark cover the older and the plugin-set cases. */
+
+[data-bs-theme="dark"] .cc5-docactivity-section,
+body.dark .cc5-docactivity-section,
+.cc5-dark .cc5-docactivity-section {
+    background: rgb(124, 58, 237, 0.05);
+    border-color: rgb(255, 255, 255, 0.1);
 }
+
+[data-bs-theme="dark"] .cc5-docactivity-question,
+body.dark .cc5-docactivity-question,
+.cc5-dark .cc5-docactivity-question {
+    background: rgb(255, 255, 255, 0.03);
+    border-color: rgb(255, 255, 255, 0.08);
+}
+
 
 .cc5-badge-scenario {
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
@@ -13224,9 +13358,9 @@ button.cc5-edit-modal-save:disabled {
 }
 
 .cc5-doc-reference:hover {
-    background: rgb(var(--cc5-primary-rgb), 0.15);
+    background: rgb(var(--cc5-primary-rgb), 0.15) !important;
     transform: translateY(-1px);
-    color: var(--cc5-primary); /* v13.92.2: pinned - theme button:hover forces #fff */
+    color: var(--cc5-primary) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
 .cc5-doc-reference svg {
@@ -13501,8 +13635,12 @@ button.cc5-edit-modal-save:disabled {
     transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
+/* v13.94.6: was var(--cc5-bg-hover, rgb(0,0,0,0.02)). --cc5-bg-hover does not
+   exist in this plugin, so the 2% black fallback was always what rendered:
+   invisible in light mode, and the wrong direction in dark. See
+   FIX-CC-UNDEFINED-HOVER-TOKEN at the end of the file. */
 .cc5-checklist-interactive:hover {
-    background-color: var(--cc5-bg-hover, rgb(0,0,0,0.02));
+    background-color: var(--cc5-bg-subtle);
 }
 
 .cc5-check-label {
@@ -13620,7 +13758,7 @@ button.cc5-edit-modal-save:disabled {
     margin-bottom: var(--cc5-space-4, 16px) !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-link-toolbar {
         flex-direction: row !important;
         flex-wrap: wrap ;
@@ -13822,7 +13960,7 @@ button.cc5-edit-modal-save:disabled {
     padding: 0 !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-link-dialog-overlay {
         align-items: center ;
         padding: 20px !important;
@@ -13839,7 +13977,7 @@ button.cc5-edit-modal-save:disabled {
     box-shadow: 0 -4px 24px rgb(0, 0, 0, 0.25) !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-link-dialog {
         border-radius: var(--cc5-radius-2xl) !important;
         max-width: 500px !important;
@@ -13910,7 +14048,7 @@ button.cc5-edit-modal-save:disabled {
     -webkit-overflow-scrolling: touch !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-link-dialog-body {
         max-height: 60vh !important;
     }
@@ -14038,7 +14176,7 @@ button.cc5-edit-modal-save:disabled {
     background: var(--cc5-bg) !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-link-dialog-footer {
         flex-direction: row !important;
         justify-content: flex-end ;
@@ -14066,7 +14204,7 @@ button.cc5-edit-modal-save:disabled {
     order: 2 !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-link-dialog-cancel {
         order: 1 !important;
     }
@@ -14089,7 +14227,7 @@ button.cc5-edit-modal-save:disabled {
     order: 1 !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-link-dialog-save {
         order: 2 !important;
     }
@@ -14155,7 +14293,7 @@ button.cc5-edit-modal-save:disabled {
     padding: 0 !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-content-popup-overlay {
         align-items: center ;
         padding: 20px !important;
@@ -14174,7 +14312,7 @@ button.cc5-edit-modal-save:disabled {
     flex-direction: column !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-content-popup {
         border-radius: var(--cc5-radius-2xl) !important;
         max-width: 800px !important;
@@ -14192,7 +14330,7 @@ button.cc5-edit-modal-save:disabled {
     background: var(--cc5-bg) !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-content-popup-header {
         flex-direction: row !important;
         align-items: center ;
@@ -14237,7 +14375,7 @@ button.cc5-edit-modal-save:disabled {
     flex: 1 !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-popup-action-btn {
         flex: 0 0 auto !important;
     }
@@ -14284,7 +14422,7 @@ button.cc5-edit-modal-save:disabled {
     background: white !important;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 480px) {
     .cc5-pdf-viewer {
         min-height: 500px !important;
     }
@@ -14444,7 +14582,7 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Mobile responsive */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-edit-term-item {
         grid-template-columns: 1fr;
     }
@@ -15851,7 +15989,7 @@ button.cc5-edit-modal-save:disabled {
    v8.0.5: MOBILE RESPONSIVE — Rebuilt sections
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-decision-section,
     .cc5-quickcheck-section,
     .cc5-situation-card-simple {
@@ -16001,8 +16139,20 @@ button.cc5-edit-modal-save:disabled {
 .cc5-player .cc5-mistake-card,
 .cc5-player .cc5-analysis-item,
 .cc5-player .cc5-activity-section,
+
+/* v13.94.4: cc5-card-enter uses `backwards`, NOT `both`.
+   `both` retains the final keyframe indefinitely, and animation declarations outrank
+   normal author declarations in the cascade - so this animation's
+   `to { transform: translateY(0) scale(1) }` permanently beat every :hover transform on
+   the elements below, making .cc5-card:hover (translateY(-2px)) and
+   .cc5-topic-card:hover (translateY(-4px) scale(1.01)) dead code on all five routes.
+   A retained transform also establishes a containing block and a stacking context on
+   every card, which re-anchors any position:fixed descendant - the doc and content
+   popups open from inside card body text.
+   This is the same hazard already documented for .cc5-prose-card in v13.92; that fix
+   was applied to Route 5's grid only and never swept back through the base rules. */
 .cc5-player .cc5-situation-item {
-    animation: cc5-card-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: cc5-card-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 /* Stagger card entries in sequence using delay multipliers */
@@ -16015,12 +16165,12 @@ button.cc5-edit-modal-save:disabled {
 
 /* Introduction card — fade in from left */
 .cc5-player .cc5-introduction-card {
-    animation: cc5-fade-in-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.06s both;
+    animation: cc5-fade-in-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.06s backwards;
 }
 
 /* Slide description — fade in from below */
 .cc5-player .cc5-slide-description {
-    animation: cc5-fade-in-up 0.36s ease-out 0.08s both;
+    animation: cc5-fade-in-up 0.36s ease-out 0.08s backwards;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16112,7 +16262,7 @@ button.cc5-edit-modal-save:disabled {
 
 /* VET anchor card — subtle float animation */
 .cc5-player .cc5-performance-anchor-card {
-    animation: cc5-card-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.04s both;
+    animation: cc5-card-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.04s backwards;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16264,7 +16414,7 @@ button.cc5-edit-modal-save:disabled {
 .cc5-player .cc5-policy-items .cc5-policy-item,
 .cc5-player .cc5-pitfall-items .cc5-pitfall-item,
 .cc5-player .cc5-application-items .cc5-application-item {
-    animation: cc5-stagger-item 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: cc5-stagger-item 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
     will-change: opacity, transform;
 }
 
@@ -16369,12 +16519,12 @@ button.cc5-edit-modal-save:disabled {
 }
 
 /* Topic grid entrance — stagger by column */
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(1) { animation: cc5-card-enter 0.38s ease 0.06s both; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(2) { animation: cc5-card-enter 0.38s ease 0.12s both; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(3) { animation: cc5-card-enter 0.38s ease 0.18s both; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(4) { animation: cc5-card-enter 0.38s ease 0.24s both; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(5) { animation: cc5-card-enter 0.38s ease 0.30s both; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(n+6) { animation: cc5-card-enter 0.38s ease 0.36s both; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(1) { animation: cc5-card-enter 0.38s ease 0.06s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(2) { animation: cc5-card-enter 0.38s ease 0.12s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(3) { animation: cc5-card-enter 0.38s ease 0.18s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(4) { animation: cc5-card-enter 0.38s ease 0.24s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(5) { animation: cc5-card-enter 0.38s ease 0.30s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(n+6) { animation: cc5-card-enter 0.38s ease 0.36s backwards; }
 
 /* ───────────────────────────────────────────────────────────────────────────
    VOICEOVER BUTTON — Breathing glow while actively playing
@@ -16447,7 +16597,7 @@ button.cc5-edit-modal-save:disabled {
 .cc5-player .cc5-slide-dot.cc5-active,
 .cc5-player .cc5-slide-dot[data-active="true"],
 .cc5-player .cc5-slide-dot:not(.cc5-inactive):nth-child(1) {
-    animation: cc5-slide-badge-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: cc5-slide-badge-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .cc5-player .cc5-slide-dot:hover {
@@ -16471,13 +16621,13 @@ button.cc5-edit-modal-save:disabled {
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-response-cards-3 .cc5-response-card:nth-child(1) {
-    animation: cc5-fade-in-up 0.36s ease 0.10s both;
+    animation: cc5-fade-in-up 0.36s ease 0.10s backwards;
 }
 .cc5-player .cc5-response-cards-3 .cc5-response-card:nth-child(2) {
-    animation: cc5-fade-in-up 0.36s ease 0.18s both;
+    animation: cc5-fade-in-up 0.36s ease 0.18s backwards;
 }
 .cc5-player .cc5-response-cards-3 .cc5-response-card:nth-child(3) {
-    animation: cc5-fade-in-up 0.36s ease 0.26s both;
+    animation: cc5-fade-in-up 0.36s ease 0.26s backwards;
 }
 
 .cc5-player .cc5-response-card {
@@ -16495,13 +16645,13 @@ button.cc5-edit-modal-save:disabled {
 
 /* Mistake cards — staggered grid entrance */
 .cc5-player .cc5-mistakes-cards .cc5-mistake-card:nth-child(1) {
-    animation: cc5-fade-in-left 0.36s ease 0.12s both;
+    animation: cc5-fade-in-left 0.36s ease 0.12s backwards;
 }
 .cc5-player .cc5-mistakes-cards .cc5-mistake-card:nth-child(2) {
-    animation: cc5-fade-in-right 0.36s ease 0.20s both;
+    animation: cc5-fade-in-right 0.36s ease 0.20s backwards;
 }
 .cc5-player .cc5-mistakes-cards .cc5-mistake-card:nth-child(n+3) {
-    animation: cc5-fade-in-up 0.36s ease 0.28s both;
+    animation: cc5-fade-in-up 0.36s ease 0.28s backwards;
 }
 
 .cc5-player .cc5-mistake-card {
@@ -16554,7 +16704,7 @@ button.cc5-edit-modal-save:disabled {
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-activity-section {
-    animation: cc5-card-enter 0.44s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+    animation: cc5-card-enter 0.44s cubic-bezier(0.22, 1, 0.36, 1) 0.15s backwards;
     transition:
         transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
         box-shadow 0.28s ease;
@@ -16592,7 +16742,7 @@ button.cc5-edit-modal-save:disabled {
 .cc5-player .cc5-option.cc5-correct,
 .cc5-player .cc5-option.cc5-incorrect,
 .cc5-player .cc5-option.cc5-show-correct {
-    animation: cc5-card-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: cc5-card-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16682,7 +16832,7 @@ button.cc5-edit-modal-save:disabled {
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-slide-header {
-    animation: cc5-fade-in-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) 0.02s both;
+    animation: cc5-fade-in-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) 0.02s backwards;
 }
 
 .cc5-player .cc5-slide-title {
@@ -16695,7 +16845,7 @@ button.cc5-edit-modal-save:disabled {
 
 .cc5-player .cc5-response-header-bar,
 .cc5-player .cc5-mistakes-header-bar {
-    animation: cc5-slide-badge-pop 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+    animation: cc5-slide-badge-pop 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.08s backwards;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -16732,7 +16882,7 @@ button.cc5-edit-modal-save:disabled {
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-skill-statement {
-    animation: cc5-fade-in-left 0.40s cubic-bezier(0.22, 1, 0.36, 1) 0.18s both;
+    animation: cc5-fade-in-left 0.40s cubic-bezier(0.22, 1, 0.36, 1) 0.18s backwards;
     transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 
@@ -16747,13 +16897,13 @@ button.cc5-edit-modal-save:disabled {
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-scenario-turning-point {
-    animation: cc5-fade-in-up 0.34s ease 0.14s both;
+    animation: cc5-fade-in-up 0.34s ease 0.14s backwards;
 }
 .cc5-player .cc5-scenario-consequence {
-    animation: cc5-fade-in-up 0.34s ease 0.22s both;
+    animation: cc5-fade-in-up 0.34s ease 0.22s backwards;
 }
 .cc5-player .cc5-scenario-reflection {
-    animation: cc5-fade-in-up 0.34s ease 0.30s both;
+    animation: cc5-fade-in-up 0.34s ease 0.30s backwards;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16761,7 +16911,7 @@ button.cc5-edit-modal-save:disabled {
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-case-context {
-    animation: cc5-fade-in-left 0.36s ease 0.12s both;
+    animation: cc5-fade-in-left 0.36s ease 0.12s backwards;
     transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
 
@@ -16798,7 +16948,7 @@ button.cc5-edit-modal-save:disabled {
 
 .cc5-player .cc5-final-outcome.cc5-visible,
 .cc5-player .cc5-final-outcome[class*="visible"] {
-    animation: cc5-card-enter 0.40s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: cc5-card-enter 0.40s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .cc5-player .cc5-feedback-correct-result {
@@ -17482,8 +17632,8 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     transition: background 0.15s, color 0.15s;
 }
 .cc5-player .cc5-dp-try-again-btn:hover {
-    background: hsl(22deg 95% 94%);
-    color: hsl(22deg 85% 40%); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: hsl(22deg 95% 94%) !important;
+    color: hsl(22deg 85% 40%) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 .cc5-player .cc5-dp-try-again-btn:active {
     background: hsl(22deg 85% 88%);
@@ -17652,7 +17802,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 }
 /* Slide in from the RIGHT (new activity enters) */
 .cc5-challenge-panel.cc5-panel-slide-in-right {
-    animation: cc5-slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: cc5-slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 @keyframes cc5-slide-out-left {
     0%   { opacity: 1; transform: translateX(0); }
@@ -17664,7 +17814,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 }
 /* Completion screen slide transitions */
 .cc5-challenge-complete.cc5-complete-slide-in-right {
-    animation: cc5-slide-in-right 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: cc5-slide-in-right 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 .cc5-challenge-complete.cc5-complete-slide-out-left {
     animation: cc5-slide-out-left 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
@@ -17754,7 +17904,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
        min-height: 220px preserves the v11.37 minimum size guarantee. */
     height: auto;
     min-height: 220px;
-    animation: cc5-flip-card-enter 0.4s ease both;
+    animation: cc5-flip-card-enter 0.4s ease backwards;
     outline: none;
 }
 @keyframes cc5-flip-card-enter {
@@ -18182,7 +18332,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 .cc5-complete-trophy {
     margin-bottom: 8px;
     color: hsl(40 95% 52%);
-    animation: cc5-trophy-bounce 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+    animation: cc5-trophy-bounce 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s backwards;
 }
 .cc5-complete-trophy svg {
     width: 48px;
@@ -18412,7 +18562,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 @media (max-width: 700px) {
     .cc5-flip-grid { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 480px) {
+@media (max-width: 479.98px) {
     .cc5-sort-columns { grid-template-columns: 1fr; }
     .cc5-flip-grid { grid-template-columns: 1fr; }
     .cc5-challenge-progress { flex-wrap: wrap; justify-content: center; gap: 6px; }
@@ -18564,9 +18714,9 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     transition: background 0.15s, border-color 0.15s;
 }
 .cc5-player .cc5-summary-item:hover {
-    background: hsl(142deg 71% 98%);
-    border-color: hsl(142deg 55% 75%);
-    color: var(--cc5-text-secondary); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: hsl(142deg 71% 98%) !important;
+    border-color: hsl(142deg 55% 75%) !important;
+    color: var(--cc5-text-secondary) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 .cc5-player .cc5-summary-check {
     flex-shrink: 0;
@@ -19304,7 +19454,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     }
 
     .cc5-player .cc5-rise-in {
-        animation: cc5-rise-in 0.48s cubic-bezier(0.22, 0.68, 0, 1.15) both;
+        animation: cc5-rise-in 0.48s cubic-bezier(0.22, 0.68, 0, 1.15) backwards;
     }
 }
 /* END v10.92 scroll-reveal */
@@ -19575,7 +19725,7 @@ body.dark .cc5-single-topic-right {
 }
 
 /* Responsive: stack vertically on narrow screens */
-@media (max-width: 640px) {
+@media (max-width: 639.98px) {
     .cc5-single-topic-hero {
         flex-direction: column;
     }
@@ -19634,8 +19784,8 @@ body.dark .cc5-single-topic-right {
     transition: background 0.15s;
 }
 .cc5-icon-picker-btn:hover {
-    background: var(--cc5-accent, rgba(0,0,0,0.10));
-    color: var(--cc5-muted-foreground, #555); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: var(--cc5-accent, rgba(0,0,0,0.10)) !important;
+    color: var(--cc5-muted-foreground, #555) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 .cc5-icon-picker-btn svg {
     width: 14px;
@@ -19702,8 +19852,8 @@ body.dark .cc5-single-topic-right {
     transition: background 0.12s;
 }
 .cc5-icon-picker-close:hover {
-    background: var(--cc5-muted, rgba(0,0,0,0.08));
-    color: var(--cc5-muted-foreground, #555); /* v13.92.2: pinned - theme button:hover forces #fff */
+    background: var(--cc5-muted, rgba(0,0,0,0.08)) !important;
+    color: var(--cc5-muted-foreground, #555) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 .cc5-icon-picker-close svg {
     width: 16px;
@@ -20271,6 +20421,18 @@ body.dark .cc5-lang-pill {
     display: none;
 }
 
+/* v13.94.4: separate the Challenge Mode block from the cards above it.
+   On the other four routes the decision-challenge is a .cc5-card sibling and inherits
+   the 2.5rem margin-bottom that spaces every card (see .cc5-card). Route 5 deliberately
+   zeroes that on its grid children, because the grid gap handles spacing BETWEEN cards -
+   but nothing then replaced it ABOVE the activity block, so the orange Challenge Mode
+   panel butted straight against the bottom of the last prose card with its 3px top
+   border reading as a divider rather than as the start of a new section.
+   2.5rem matches what the other four routes get, so the routes are consistent. */
+.cc5-prose-activities {
+    margin-top: 2.5rem;
+}
+
 /* `backwards`, NOT `both`. animation-fill-mode: both retains the final keyframe
    indefinitely, and animation declarations outrank normal author declarations in the
    cascade - so `to { transform: translateY(0) }` permanently overrode the hover lift on
@@ -20302,6 +20464,14 @@ body.dark .cc5-lang-pill {
 
 /* -- Next Card button ----------------------------------------------------- */
 
+/* v13.94.4: colour and background are pinned with !important on BOTH states.
+   The v13.92.2 fix pinned the hover colour but without !important, which does not
+   actually win: `.cc5-prose-next-btn:hover` scores (0,2,0), while a theme rule such as
+   Boost's `#region-main button:hover` scores (1,1,1) and takes it. The result was the
+   theme's white hover text on this button's white hover background - the button
+   effectively disappearing under the cursor. Anything a theme can plausibly repaint on a
+   bare <button> is now pinned; layout and motion are left unpinned so the theme can
+   still contribute where it does no harm. */
 .cc5-prose-next-btn {
     display: inline-flex;
     align-items: center;
@@ -20311,26 +20481,83 @@ body.dark .cc5-lang-pill {
     font-size: 0.8125rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--cc5-prose-accent);
-    background: rgba(255, 255, 255, 0.75);
-    border: 1px solid var(--cc5-prose-border);
+    text-decoration: none !important;
+    color: var(--cc5-prose-accent) !important;
+    background: rgba(255, 255, 255, 0.75) !important;
+    border: 1px solid var(--cc5-prose-border) !important;
     border-radius: 999px;
     cursor: pointer;
     transition: background-color 200ms ease, border-color 200ms ease,
                 transform 200ms ease, box-shadow 200ms ease;
 }
 
+.cc5-prose-next-btn:hover,
+.cc5-prose-next-btn:focus,
+.cc5-prose-next-btn:active,
+.cc5-prose-next-btn:focus:active {
+    background: #fff !important;
+    border-color: var(--cc5-prose-accent) !important;
+    color: var(--cc5-prose-accent) !important;
+    text-decoration: none !important;
+}
+
 .cc5-prose-next-btn:hover {
-    background: #fff;
-    border-color: var(--cc5-prose-accent);
     transform: translateX(2px);
     box-shadow: 0 6px 16px -10px var(--cc5-prose-glow);
-    color: var(--cc5-prose-accent); /* v13.92.2: pinned - theme button:hover forces #fff */
+}
+
+/* v13.94.4: the clicked/selected state.
+   Moodle's Boost theme puts `box-shadow: 0 0 0 0.2rem rgba(...)` on button:focus, which
+   on a pill this small reads as a thick halo stuck to the button after every click - the
+   button looks selected long after the learner has moved on. A pointer click gets no ring
+   at all here; it gets a brief inset press instead. The visible ring is reserved for
+   :focus-visible, i.e. keyboard navigation, which is the case that actually needs it. */
+.cc5-prose-next-btn:focus,
+.cc5-prose-next-btn:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.cc5-prose-next-btn:active {
+    transform: translateX(1px) scale(0.985);
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: inset 0 1px 3px -1px var(--cc5-prose-glow) !important;
+}
+
+/* The icon inherits currentColor, so pinning the text colour carries it - but a theme
+   that sets `button:hover svg { fill }` would still bleed through. */
+.cc5-prose-next-btn svg,
+.cc5-prose-next-btn:hover svg {
+    color: inherit !important;
+    fill: none !important;
+    stroke: currentColor !important;
 }
 
 .cc5-prose-next-btn:focus-visible {
-    outline: 2px solid var(--cc5-prose-accent);
+    outline: 2px solid var(--cc5-prose-accent) !important;
     outline-offset: 2px;
+    box-shadow: none !important;
+}
+
+/* v13.94.4: "Must listen to voiceover" progression. The card cannot be advanced by hand
+   until the narration has finished reading it. Kept visible and in the layout rather than
+   hidden, so the learner can see the control exists and understands it is waiting. */
+.cc5-prose-next-btn.cc5-prose-btn-locked {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.cc5-prose-next-btn.cc5-prose-btn-locked:hover {
+    background: rgba(255, 255, 255, 0.75) !important;
+    border-color: var(--cc5-prose-border) !important;
+    transform: none !important;
+}
+
+.cc5-prose-next-btn.cc5-prose-btn-locked .cc5-prose-btn-lock {
+    font-weight: 500;
+    opacity: 0.85;
 }
 
 .cc5-prose-next-btn svg {
@@ -20355,10 +20582,22 @@ body.dark .cc5-lang-pill {
 }
 
 /* Once its card has been passed, the button steps back rather than vanishing -
-   removing it would reflow the card the learner is still reading. */
+   removing it would reflow the card the learner is still reading.
+
+   v13.94.4: opacity 0.35 dropped. Fading the whole control took the border and the label
+   down with it, leaving a smudge that read as a rendering fault rather than as a finished
+   step - and at that opacity the label fell under 3:1 against the card. It now resolves
+   to a flat, quiet "done" pill: full-strength but muted colours, no shadow, no motion. */
 .cc5-prose-next-btn.cc5-prose-btn-used {
-    opacity: 0.35;
+    opacity: 1;
     pointer-events: none;
+    color: var(--cc5-text-muted, #6b7280) !important;
+    background: transparent !important;
+    border-color: var(--cc5-prose-border) !important;
+    border-style: dashed !important;
+    box-shadow: none !important;
+    transform: none !important;
+    animation: none !important;
 }
 
 .cc5-prose-final-btn {
@@ -20458,28 +20697,58 @@ body.dark .cc5-lang-pill {
 
 /* ==========================================================================
    v13.92.2  FIX-CC-HOVER-COLOUR
+   v13.94.6  CORRECTED - the v13.92.2 specificity analysis below was WRONG
    --------------------------------------------------------------------------
    Moodle's Boost theme ships:
 
        button:hover, button:focus, button.active, button:active
            { color: #fff; background: #434343; }
 
-   specificity (0,1,1). Every player button rule beats that on BACKGROUND,
-   because a class plus a pseudo-class is (0,2,0). But an undeclared property
-   is not a contest: wherever a :hover rule set a background and left `color`
-   to inherit, the theme supplied #fff.
+   specificity (0,1,1).
+
+   v13.92.2 concluded from that: "Every player button rule beats that on
+   BACKGROUND, because a class plus a pseudo-class is (0,2,0)." That sentence
+   is the reason 30 sites above were pinned WITHOUT `!important`, and it is
+   false. It is true only against the bare `button:hover` rule quoted above.
+   Boost and its derivatives also ship ID-scoped copies of the same
+   declarations - the one that matters here is
+
+       #region-main button:hover { color: #fff; background: #434343; }
+
+   which scores (1,1,1). An ID beats any number of classes, so `.cc5-x:hover`
+   at (0,2,0) LOSES to it outright, on colour and on background alike. Every
+   player is rendered inside #region-main. The v13.92.2 pins therefore did
+   nothing on any Boost-derived theme, and the controls they were meant to
+   rescue went on turning dark-grey-on-white under the cursor.
+
+   The only reliable answer against an ID-bearing theme selector, short of
+   scoping every plugin rule under an ID we do not own, is `!important`. As of
+   v13.94.6 all 30 sites above carry it on `color`, on `background` /
+   `background-color`, and on `border-color` where the rule sets one - 67
+   declarations in total. Nothing else is pinned: layout, transform, shadow and
+   motion are left unpinned so the theme can still contribute where it cannot
+   make a control invisible.
+
+   The original symptom stands, and is worth keeping: an undeclared property is
+   not a contest at all. Wherever a :hover rule set a background and left
+   `color` to inherit, the theme supplied #fff regardless of specificity.
 
    On Topics and Text that produced white text on a white background -
    "Next Card" and "Start Activities", the two controls the whole sequential
    reveal depends on, disappeared under the cursor. "Try Again" on the quiz was
    white on pale peach, near enough invisible.
 
-   31 single-selector :hover rules were pinned in place above. The grouped
-   selectors and the buttons that carried no :hover rule at all are pinned
-   here, each to the colour its own base rule already declares.
+   The grouped selectors and the buttons that carried no :hover rule at all are
+   pinned here, each to the colour its own base rule already declares.
 
-   Rule for anything added later: if a :hover rule sets a background, it must
-   set a colour too. Never leave it to inherit.
+   Rules for anything added later:
+     1. If a :hover rule sets a background, it must set a colour too. Never
+        leave it to inherit.
+     2. Both must carry `!important`. A class + pseudo-class does NOT beat a
+        themed `#region-main button:hover`.
+     3. Boost styles :focus and :active in the same declaration block as
+        :hover. Pin all three, or the control flips after the first click and
+        stays flipped until blur. See the v13.94.6 :focus/:active block below.
    ========================================================================== */
 
 .cc5-check-sequence-btn:hover,
@@ -20524,4 +20793,666 @@ body.dark .cc5-lang-pill {
 .cc5-prose-next-btn:focus,
 .cc5-prose-next-btn:active {
     color: var(--cc5-prose-accent);
+}
+
+
+/* ==========================================================================
+   v13.94.6  FIX-CC-FOCUS-ACTIVE-COLOUR
+   --------------------------------------------------------------------------
+   The v13.92.2 work read Boost's declaration block as if it were a :hover rule.
+   It is not. The selector list is:
+
+       button:hover, button:focus, button.active, button:active
+           { color: #fff; background: #434343; }
+
+   :focus and :active are in that list, at (0,1,1) - and a plugin base rule such
+   as `.cc5-back-btn { color: ... }` is (0,1,0). No #region-main is needed for
+   the theme to win that one; a plain `button:focus` already beats it.
+
+   The consequence is worse than the hover bug it accompanied. A mouse click
+   leaves focus on the button. So the control turns #434343/white the moment it
+   is clicked and STAYS there until something else takes focus - not a flicker,
+   a persistent wrong state on the control the learner just used. 69 button-
+   bearing classes had no :focus or :active colour rule of any kind.
+
+   Every group below pins :hover, :focus and :active together, to the colour and
+   background the control's own rules already declare, with `!important` because
+   a themed `#region-main button:focus` scores (1,1,1). `.cc5-prose-next-btn`
+   (v13.94.4, above) is the reference implementation; these follow its shape.
+
+   Only properties a theme plausibly repaints are pinned - colour, background,
+   border-colour. Transform, shadow and layout are left alone: a theme cannot
+   make a control invisible with those, and pinning them would break motion the
+   plugin sets elsewhere on the same selectors.
+
+   Focus INDICATION is not removed anywhere here. It moves to :focus-visible in
+   the FIX-CC-FOCUS-HALO block below, which is where it belongs.
+   ========================================================================== */
+
+/* -- Sticky top bar: on every slide of every route ------------------------- */
+.cc5-back-btn:hover:not(.cc5-disabled),
+.cc5-back-btn:focus:not(.cc5-disabled),
+.cc5-back-btn:active:not(.cc5-disabled) {
+    color: var(--cc5-text) !important;
+    background: var(--cc5-bg-subtle) !important;
+    border-color: var(--cc5-primary) !important;
+}
+
+/* Idle state pinned too: the theme's `button.active` matches any button the
+   page has marked active, and the back button is inside a sticky bar the theme
+   also styles. */
+.cc5-back-btn {
+    color: var(--cc5-text-secondary) !important;
+    background: var(--cc5-bg) !important;
+    border-color: var(--cc5-border) !important;
+}
+
+/* -- The most-clicked control in the player -------------------------------- */
+/* Its v13.92.2 hover pinned `color` but left `background` unpinned, so on a
+   Boost derivative the chevron went #434343 on hover with white text that the
+   plugin had pinned - legible, but the wrong button entirely. Both pinned now,
+   and :focus/:active added: a learner clicks this control on every card, and
+   it kept the theme's dark fill until they clicked somewhere else. */
+.cc5-nav-chevron {
+    color: var(--cc5-text) !important;
+    background: var(--cc5-bg) !important;
+    border-color: var(--cc5-border) !important;
+}
+
+.cc5-nav-chevron:hover:not(.cc5-disabled),
+.cc5-nav-chevron:focus:not(.cc5-disabled),
+.cc5-nav-chevron:active:not(.cc5-disabled) {
+    background: var(--cc5-primary) !important;
+    border-color: var(--cc5-primary) !important;
+    color: white !important;
+}
+
+/* -- Sort activity: good / bad ------------------------------------------- */
+/* The single worst case in the file. Neither tap button declared :focus or
+   :active, so the first tap turned BOTH of them the same #434343 with white
+   text. The entire good/bad colour coding - the only thing distinguishing the
+   two choices - collapsed the moment a learner used the activity, and stayed
+   collapsed. Base, hover, focus and active are all pinned. */
+.cc5-sort-tap-good {
+    background: hsl(142 50% 95%) !important;
+    color: hsl(142 65% 28%) !important;
+    border-color: hsl(142 50% 78%) !important;
+}
+
+.cc5-sort-tap-good:hover,
+.cc5-sort-tap-good:focus,
+.cc5-sort-tap-good:active {
+    background: hsl(142 55% 90%) !important;
+    color: hsl(142 65% 28%) !important;
+    border-color: hsl(142 50% 78%) !important;
+}
+
+.cc5-sort-tap-bad {
+    background: hsl(0 55% 96%) !important;
+    color: hsl(0 65% 33%) !important;
+    border-color: hsl(0 50% 82%) !important;
+}
+
+.cc5-sort-tap-bad:hover,
+.cc5-sort-tap-bad:focus,
+.cc5-sort-tap-bad:active {
+    background: hsl(0 60% 92%) !important;
+    color: hsl(0 65% 33%) !important;
+    border-color: hsl(0 50% 82%) !important;
+}
+
+/* -- Language switcher pills ---------------------------------------------- */
+/* .cc5-lang-pill-active:hover declared `opacity` and NO colour at all, so it
+   lost to plain `button:hover` (0,1,1) against its own (0,2,0) - the one case
+   in the file where even the bare theme rule wins, because there was nothing
+   to contest. The active pill turned grey on hover and looked deselected. */
+.cc5-lang-pill {
+    background: transparent !important;
+    color: var(--cc5-foreground, #1e293b) !important;
+    border-color: var(--cc5-border, #cbd5e1) !important;
+}
+
+.cc5-lang-pill:hover,
+.cc5-lang-pill:focus,
+.cc5-lang-pill:active {
+    border-color: var(--cc5-primary, #6366f1) !important;
+    background: var(--cc5-primary, #6366f1) !important;
+    color: #fff !important;
+}
+
+.cc5-lang-pill-active,
+.cc5-lang-pill-active:hover,
+.cc5-lang-pill-active:focus,
+.cc5-lang-pill-active:active {
+    background: var(--cc5-primary, #6366f1) !important;
+    border-color: var(--cc5-primary, #6366f1) !important;
+    color: #fff !important;
+}
+
+/* -- Teacher toolbar ------------------------------------------------------ */
+.cc5-teacher-btn-primary {
+    background: var(--cc5-primary) !important;
+    color: var(--cc5-primary-foreground) !important;
+    border-color: var(--cc5-primary) !important;
+}
+
+.cc5-teacher-btn-primary:hover,
+.cc5-teacher-btn-primary:focus,
+.cc5-teacher-btn-primary:active {
+    background: var(--cc5-primary-hover) !important;
+    color: var(--cc5-primary-foreground) !important;
+    border-color: var(--cc5-primary-hover) !important;
+}
+
+.cc5-teacher-btn-secondary {
+    background: var(--cc5-bg) !important;
+    color: var(--cc5-text) !important;
+    border-color: var(--cc5-border) !important;
+}
+
+.cc5-teacher-btn-secondary:hover,
+.cc5-teacher-btn-secondary:focus,
+.cc5-teacher-btn-secondary:active {
+    background: var(--cc5-bg-subtle) !important;
+    border-color: var(--cc5-border-hover) !important;
+    color: var(--cc5-text) !important;
+}
+
+/* Amber at 2.13:1 with white is why this button carries dark text. Losing that
+   to the theme's #fff on focus was a contrast failure, not just a colour slip. */
+.cc5-teacher-btn-warning {
+    background: var(--cc5-amber) !important;
+    color: hsl(38deg 95% 12%) !important;
+    border-color: var(--cc5-amber) !important;
+}
+
+.cc5-teacher-btn-warning:hover,
+.cc5-teacher-btn-warning:focus,
+.cc5-teacher-btn-warning:active {
+    background: hsl(38deg 92% 42%) !important;
+    color: hsl(38deg 95% 10%) !important;
+    border-color: hsl(38deg 92% 42%) !important;
+}
+
+/* -- Settings modal save --------------------------------------------------- */
+/* Its :hover rule set only transform and shadow, so hover/focus/active handed
+   the whole gradient pill to the theme: a flat grey rectangle where the primary
+   action of the modal used to be. */
+.cc5-settings-save-btn,
+.cc5-settings-save-btn:hover,
+.cc5-settings-save-btn:focus,
+.cc5-settings-save-btn:active {
+    background: linear-gradient(135deg, #7c22ce, #be185d) !important;
+    color: white !important;
+    border-color: transparent !important;
+}
+
+.cc5-settings-cancel-btn:hover,
+.cc5-settings-cancel-btn:focus,
+.cc5-settings-cancel-btn:active {
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+    color: var(--cc5-text) !important;
+}
+
+/* -- Image source picker --------------------------------------------------- */
+/* These two set a near-white hover background and declared no colour, so the
+   theme supplied #fff: white label on a white row, an unreadable menu. */
+.cc5-image-option {
+    background: var(--cc5-bg) !important;
+    color: var(--cc5-text) !important;
+    border-color: var(--cc5-border) !important;
+}
+
+.cc5-image-option:hover,
+.cc5-image-option:focus,
+.cc5-image-option:active {
+    border-color: var(--cc5-primary) !important;
+    background: var(--cc5-bg-subtle) !important;
+    color: var(--cc5-text) !important;
+}
+
+.cc5-image-generate-option:hover,
+.cc5-image-generate-option:focus,
+.cc5-image-generate-option:active {
+    border-color: var(--cc5-purple) !important;
+    background: var(--cc5-purple-light) !important;
+    color: var(--cc5-text) !important;
+}
+
+/* -- Escalation decision buttons ------------------------------------------ */
+/* v13.92.2 pinned every one of these colours and not one of the backgrounds,
+   which is the exact inversion of what was needed: the label stayed white and
+   the fill went to the theme, so all four decisions rendered as the same dark
+   grey pill and the colour coding that tells handle from escalate was gone. */
+.cc5-decision-btn {
+    background: var(--cc5-card-bg) !important;
+    color: var(--cc5-text) !important;
+}
+
+.cc5-decision-btn:focus,
+.cc5-decision-btn:active {
+    background: var(--cc5-card-bg) !important;
+    color: var(--cc5-text) !important;
+}
+
+.cc5-decision-btn.cc5-decision-handle:hover,
+.cc5-decision-btn.cc5-decision-handle:focus,
+.cc5-decision-btn.cc5-decision-handle:active,
+.cc5-decision-btn.cc5-decision-handle:hover .cc5-decision-label,
+.cc5-decision-btn.cc5-decision-handle:focus .cc5-decision-label,
+.cc5-decision-btn.cc5-decision-handle:active .cc5-decision-label {
+    background: var(--cc5-green) !important;
+    border-color: var(--cc5-green) !important;
+    color: white !important;
+}
+
+.cc5-decision-btn.cc5-decision-clarify:hover,
+.cc5-decision-btn.cc5-decision-clarify:focus,
+.cc5-decision-btn.cc5-decision-clarify:active,
+.cc5-decision-btn.cc5-decision-clarify:hover .cc5-decision-label,
+.cc5-decision-btn.cc5-decision-clarify:focus .cc5-decision-label,
+.cc5-decision-btn.cc5-decision-clarify:active .cc5-decision-label {
+    background: var(--cc5-blue) !important;
+    border-color: var(--cc5-blue) !important;
+    color: white !important;
+}
+
+.cc5-decision-btn.cc5-decision-escalate:hover,
+.cc5-decision-btn.cc5-decision-escalate:focus,
+.cc5-decision-btn.cc5-decision-escalate:active,
+.cc5-decision-btn.cc5-decision-escalate:hover .cc5-decision-label,
+.cc5-decision-btn.cc5-decision-escalate:focus .cc5-decision-label,
+.cc5-decision-btn.cc5-decision-escalate:active .cc5-decision-label {
+    background: var(--cc5-red) !important;
+    border-color: var(--cc5-red) !important;
+    color: white !important;
+}
+
+.cc5-decision-btn.cc5-decision-document:hover,
+.cc5-decision-btn.cc5-decision-document:focus,
+.cc5-decision-btn.cc5-decision-document:active,
+.cc5-decision-btn.cc5-decision-document:hover .cc5-decision-label,
+.cc5-decision-btn.cc5-decision-document:focus .cc5-decision-label,
+.cc5-decision-btn.cc5-decision-document:active .cc5-decision-label {
+    background: var(--cc5-purple) !important;
+    border-color: var(--cc5-purple) !important;
+    color: white !important;
+}
+
+/* -- Challenge activity: the last thing a learner touches on the route ----- */
+.cc5-challenge-next-btn:hover,
+.cc5-challenge-next-btn:focus,
+.cc5-challenge-next-btn:active,
+.cc5-challenge-finish-btn:hover,
+.cc5-challenge-finish-btn:focus,
+.cc5-challenge-finish-btn:active {
+    color: hsl(22deg 60% 55%) !important;
+    background: hsl(22deg 40% 98%) !important;
+}
+
+.cc5-challenge-next-btn.cc5-enabled:hover,
+.cc5-challenge-next-btn.cc5-enabled:focus,
+.cc5-challenge-next-btn.cc5-enabled:active,
+.cc5-challenge-finish-btn.cc5-enabled:hover,
+.cc5-challenge-finish-btn.cc5-enabled:focus,
+.cc5-challenge-finish-btn.cc5-enabled:active {
+    color: #fff !important;
+}
+
+.cc5-challenge-retry-btn {
+    background: transparent !important;
+    border-color: hsl(22 75% 60%) !important;
+    color: hsl(22 80% 38%) !important;
+}
+
+.cc5-challenge-retry-btn:hover,
+.cc5-challenge-retry-btn:focus,
+.cc5-challenge-retry-btn:active {
+    background: hsl(22 90% 95%) !important;
+    border-color: hsl(22 75% 60%) !important;
+    color: hsl(22 80% 32%) !important;
+}
+
+.cc5-challenge-review-btn {
+    background: linear-gradient(135deg, hsl(22 90% 55%) 0%, hsl(22 85% 48%) 100%) !important;
+    border-color: hsl(22 90% 50%) !important;
+    color: #fff !important;
+}
+
+.cc5-challenge-review-btn:hover,
+.cc5-challenge-review-btn:focus,
+.cc5-challenge-review-btn:active {
+    background: linear-gradient(135deg, hsl(22 90% 50%) 0%, hsl(22 85% 42%) 100%) !important;
+    border-color: hsl(22 90% 50%) !important;
+    color: #fff !important;
+}
+
+.cc5-challenge-continue-btn {
+    background: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 65% 38%) 100%) !important;
+    border-color: hsl(142 65% 40%) !important;
+    color: #fff !important;
+}
+
+.cc5-challenge-continue-btn:hover,
+.cc5-challenge-continue-btn:focus,
+.cc5-challenge-continue-btn:active {
+    background: linear-gradient(135deg, hsl(142 71% 40%) 0%, hsl(142 65% 32%) 100%) !important;
+    border-color: hsl(142 65% 40%) !important;
+    color: #fff !important;
+}
+
+
+/* ==========================================================================
+   v13.94.6  FIX-CC-FOCUS-HALO   (plugin-wide)
+   --------------------------------------------------------------------------
+   Two near-universal rules earlier in this file used :focus rather than
+   :focus-visible:
+
+       .cc5-player *:focus                       { outline: 2px solid ... }
+       .cc5-player button:focus, a:focus, ...    { outline: 2px solid ... }
+
+   A mouse click leaves focus on the element it clicked, so every button in the
+   player kept a 2px plugin outline after every click, for as long as focus
+   stayed there. Boost adds its own `button:focus { box-shadow: 0 0 0 0.2rem }`
+   on top, so the learner sees an outline AND a halo on the control they just
+   used, on every click, everywhere - which reads as "this is stuck selected".
+
+   Both rules are now :focus-visible, so the ring appears for keyboard
+   navigation and not for pointer clicks. That is a strengthening of focus
+   indication, not a removal: keyboard users get the same ring they always had,
+   and the mouse-only noise that made the real ring hard to notice is gone.
+
+   The rule below suppresses Boost's halo in the pointer case only. It is
+   deliberately scoped to `:focus:not(:focus-visible)` so that a keyboard focus
+   never matches it and never loses its ring.
+   ========================================================================== */
+
+.cc5-player button:focus:not(:focus-visible),
+.cc5-player a:focus:not(:focus-visible),
+.cc5-player [tabindex="0"]:focus:not(:focus-visible) {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+/* And the keyboard ring, restated at the end of the cascade so nothing added
+   later quietly wins it. */
+.cc5-player button:focus-visible,
+.cc5-player a:focus-visible,
+.cc5-player [tabindex="0"]:focus-visible {
+    outline: 2px solid var(--cc5-primary) !important;
+    outline-offset: 2px;
+}
+
+/* ==========================================================================
+   v13.94.6  FIX-CC-MODAL-FOCUS-RING
+   --------------------------------------------------------------------------
+   These five controls live in the link dialog and the popup - modals that trap
+   focus - and every one of them grouped `:hover, :focus` and set
+   `outline: none !important` with no :focus-visible replacement anywhere in the
+   file. Inside a focus trap, with no ring, a keyboard user has no way to tell
+   which control is focused: WCAG 2.4.7 (Focus Visible), on the one surface
+   where it matters most.
+
+   The outline:none stays for the pointer case - that is what it was for - and a
+   real ring comes back for :focus-visible.
+   ========================================================================== */
+
+.cc5-linked-item-actions button:focus-visible,
+.cc5-link-dialog-close:focus-visible,
+.cc5-link-dialog-cancel:focus-visible,
+.cc5-link-dialog-save:focus-visible,
+.cc5-popup-action-btn:focus-visible {
+    outline: 3px solid var(--cc5-primary) !important;
+    outline-offset: 2px !important;
+    box-shadow: 0 0 0 5px rgb(0, 123, 255, 0.2) !important;
+}
+
+/* -- and their :active colours, same reasoning as FIX-CC-FOCUS-ACTIVE-COLOUR */
+.cc5-linked-item-actions button:active {
+    background: var(--cc5-border) !important;
+    color: var(--cc5-text) !important;
+}
+
+.cc5-link-dialog-close:active {
+    background: var(--cc5-border) !important;
+    color: var(--cc5-text) !important;
+}
+
+.cc5-link-dialog-cancel:active {
+    background: var(--cc5-border) !important;
+}
+
+.cc5-link-dialog-save:active {
+    background: var(--cc5-primary-hover) !important;
+    color: white !important;
+}
+
+.cc5-popup-action-btn:active {
+    background: var(--cc5-border) !important;
+    color: var(--cc5-text) !important;
+}
+
+
+/* ==========================================================================
+   v13.94.6  FIX-CC-WIDE-TABLE-CLIP
+   --------------------------------------------------------------------------
+   `.cc5-doc-content table { display:block; overflow-x:auto }` lived inside
+   `@media screen and (max-width: 640px)`. Below 640px a wide table scrolled;
+   at 641px and above it had no scroll container at all, and
+   `.cc5-slide-content { overflow: hidden }` clipped whatever ran past the
+   column - with no scrollbar to say anything was missing. A reference table
+   with six or seven columns simply lost its right-hand columns on desktop,
+   which is the viewport most teachers author on and most learners read on.
+
+   The scroll container belongs at every width. Only the type-size reduction was
+   ever mobile-specific, and that stays in the media query.
+   ========================================================================== */
+
+.cc5-doc-content table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ==========================================================================
+   v13.94.6  FIX-CC-UNBREAKABLE-TOKEN
+   --------------------------------------------------------------------------
+   No learner-facing body text in this file carried `overflow-wrap`. A single
+   unbroken token longer than its column - a URL, an IUPAC chemical name, a
+   legislation citation, a CamelCaseIdentifier - has no break opportunity, so it
+   overflows its box rather than wrapping.
+
+   What happens next depends on the route:
+
+     - on the 7-card routes, `.cc5-card { overflow: hidden }` clips it. The text
+       is not truncated with an ellipsis and there is no scrollbar; it is simply
+       gone. Silent data loss on the learner's screen, from content the teacher
+       entered correctly and can still see in the builder.
+
+     - on Route 5, the prose grid track has no `min-width`, so a grid item's
+       automatic minimum size is its content's minimum size. One long token
+       therefore widens its own column, squeezes the neighbouring card and
+       clips THAT one too - the visible fault appears on a card that has
+       nothing wrong with it.
+
+   `overflow-wrap: anywhere` (rather than `break-word`) is deliberate: it lets
+   the token contribute its post-break size to intrinsic sizing, so the grid
+   track stops being sized by the unbroken run in the first place.
+
+   The key-terms <dl> is the highest-risk element in the plugin - a definition
+   list of technical terms is exactly where unbroken technical strings live - so
+   both dt and dd are covered.
+   ========================================================================== */
+
+.cc5-card-body,
+.cc5-prose-para,
+.cc5-prose-body p.cc5-prose-para,
+.cc5-concept-terms dt,
+.cc5-concept-terms dd {
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+/* The grid item's automatic minimum size, not a cosmetic width. Without this a
+   single long token in one card resizes the track and clips its neighbour. */
+.cc5-prose-grid > .cc5-prose-card {
+    min-width: 0;
+}
+
+/* ==========================================================================
+   v13.94.6  FIX-CC-FALSE-DISABLED
+   --------------------------------------------------------------------------
+   Two "locked" states in the player were pointer-only:
+
+       .cc5-option.cc5-disabled            { pointer-events: none; opacity: .7 }
+       .cc5-decision-option.cc5-option-disabled
+                                           { pointer-events: none; opacity: .6 }
+
+   `pointer-events: none` stops the mouse and nothing else. The element keeps
+   its place in the tab order and still fires on Enter or Space, so after
+   submitting a quiz a keyboard learner can Tab onto a locked option and answer
+   it again. CSS cannot fix that - see the JS note below.
+
+   What CSS can fix is the appearance. Both now use a muted foreground token
+   rather than transparency, so the locked state reads as locked without
+   dragging the text under the contrast floor, and the disabled cursor is
+   restated.
+
+   `.cc5-nav-chevron.cc5-disabled` was `opacity: 0.3`. A UI component's visual
+   boundary must reach 3:1 against its background (WCAG 1.4.11); the chevron's
+   border at 30% opacity is nowhere near it, and the chevron is not merely
+   decorative - it is how a learner tells "no next slide" from "the control has
+   not loaded". Raised to a legible muted treatment with a real border.
+   ========================================================================== */
+
+.cc5-option.cc5-disabled {
+    opacity: 1;
+    color: var(--cc5-text-muted) !important;
+    background: var(--cc5-bg-subtle) !important;
+    border-color: var(--cc5-border) !important;
+    cursor: not-allowed;
+}
+
+.cc5-decision-option.cc5-option-disabled {
+    opacity: 1 !important;
+    color: var(--cc5-text-muted) !important;
+    background: var(--cc5-bg-subtle) !important;
+    border-color: var(--cc5-border) !important;
+    cursor: not-allowed !important;
+}
+
+/* The correct/incorrect marking survives the muting - it is the feedback the
+   learner is meant to read once the question is locked. */
+.cc5-option.cc5-disabled.cc5-correct,
+.cc5-option.cc5-disabled.cc5-incorrect,
+.cc5-decision-option.cc5-option-disabled.cc5-option-correct,
+.cc5-decision-option.cc5-option-disabled.cc5-option-incorrect {
+    color: var(--cc5-text) !important;
+}
+
+.cc5-nav-chevron.cc5-disabled {
+    opacity: 1;
+    color: var(--cc5-text-muted) !important;
+    background: var(--cc5-bg-subtle) !important;
+    border-color: var(--cc5-border) !important;
+    cursor: not-allowed;
+}
+
+.cc5-nav-chevron.cc5-disabled:hover,
+.cc5-nav-chevron.cc5-disabled:focus,
+.cc5-nav-chevron.cc5-disabled:active {
+    color: var(--cc5-text-muted) !important;
+    background: var(--cc5-bg-subtle) !important;
+    border-color: var(--cc5-border) !important;
+    transform: none;
+}
+
+/* ==========================================================================
+   v13.94.6  FIX-CC-UNDEFINED-HOVER-TOKEN
+   --------------------------------------------------------------------------
+   `.cc5-checklist-interactive:hover` asked for `var(--cc5-bg-hover, ...)`.
+   `--cc5-bg-hover` is defined nowhere in this plugin, so the fallback was
+   always what rendered: `rgb(0,0,0,0.02)`, a 2% black wash. In light mode that
+   is below the threshold of visibility - the checklist rows had no hover
+   affordance at all, on a control whose whole job is to look clickable. In dark
+   mode a black wash is the wrong direction entirely: it darkens an already dark
+   surface. `--cc5-bg-subtle` is defined in both themes and moves the right way
+   in each.
+   ========================================================================== */
+
+.cc5-checklist-interactive:hover {
+    background-color: var(--cc5-bg-subtle) !important;
+}
+
+
+/* ==========================================================================
+   v13.94.6  DARK-MODE COMPANIONS FOR THE PINNED CONTROLS
+   --------------------------------------------------------------------------
+   Most of the pins above resolve through --cc5-* tokens, which already flip in
+   dark mode, so they need nothing here. Three controls had literal-valued dark
+   overrides earlier in the file that an unqualified `!important` pin would have
+   clobbered, forcing a light surface into a dark page. Their dark values are
+   restated at the same weight, and - since these are exactly the rules
+   FIX-CC-OS-DARK was about - with the data-bs-theme hook that Moodle 4.4+ and
+   5.x actually set, alongside the legacy ones.
+   ========================================================================== */
+
+[data-bs-theme="dark"] .cc5-image-option,
+body.dark .cc5-image-option,
+.cc5-dark .cc5-image-option,
+.dark .cc5-image-option {
+    background: var(--cc5-bg-subtle) !important;
+}
+
+[data-bs-theme="dark"] .cc5-image-option:hover,
+[data-bs-theme="dark"] .cc5-image-option:focus,
+[data-bs-theme="dark"] .cc5-image-option:active,
+body.dark .cc5-image-option:hover,
+body.dark .cc5-image-option:focus,
+body.dark .cc5-image-option:active,
+.cc5-dark .cc5-image-option:hover,
+.cc5-dark .cc5-image-option:focus,
+.cc5-dark .cc5-image-option:active,
+.dark .cc5-image-option:hover,
+.dark .cc5-image-option:focus,
+.dark .cc5-image-option:active {
+    background: var(--cc5-bg) !important;
+}
+
+[data-bs-theme="dark"] .cc5-settings-cancel-btn,
+body.dark .cc5-settings-cancel-btn,
+.cc5-dark .cc5-settings-cancel-btn,
+.dark .cc5-settings-cancel-btn {
+    background: #374151 !important;
+    border-color: #4b5563 !important;
+    color: #d1d5db !important;
+}
+
+[data-bs-theme="dark"] .cc5-settings-cancel-btn:hover,
+[data-bs-theme="dark"] .cc5-settings-cancel-btn:focus,
+[data-bs-theme="dark"] .cc5-settings-cancel-btn:active,
+body.dark .cc5-settings-cancel-btn:hover,
+body.dark .cc5-settings-cancel-btn:focus,
+body.dark .cc5-settings-cancel-btn:active,
+.cc5-dark .cc5-settings-cancel-btn:hover,
+.cc5-dark .cc5-settings-cancel-btn:focus,
+.cc5-dark .cc5-settings-cancel-btn:active,
+.dark .cc5-settings-cancel-btn:hover,
+.dark .cc5-settings-cancel-btn:focus,
+.dark .cc5-settings-cancel-btn:active {
+    background: #4b5563 !important;
+    border-color: #4b5563 !important;
+    color: #f3f4f6 !important;
+}
+
+/* The inactive pill only. The active pill is a solid primary fill in both
+   themes and is pinned as such above. */
+[data-bs-theme="dark"] .cc5-lang-pill:not(.cc5-lang-pill-active),
+body[data-bs-theme="dark"] .cc5-lang-pill:not(.cc5-lang-pill-active),
+body.dark .cc5-lang-pill:not(.cc5-lang-pill-active),
+.cc5-dark .cc5-lang-pill:not(.cc5-lang-pill-active) {
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #e2e8f0 !important;
 }

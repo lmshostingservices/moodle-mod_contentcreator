@@ -37,6 +37,64 @@ namespace mod_contentcreator;
  */
 class ratelimiter {
     /**
+     * Enforce both the site-wide and the per-user allowance for a bucket.
+     *
+     * v13.94.3: the admin settings ratelimitgenerate / ratelimitvoice / ratelimitvendor and
+     * the site ceilings were read only by contentcreator_check_ratelimit() in ajax.php. The
+     * two web-service entry points, external\generate_voiceover and
+     * external\generate_document_example, passed hardcoded 100 and 60 straight to check()
+     * instead, so an administrator who raised or lowered a limit changed only one of the two
+     * ways the same work reaches the vendor - and a bucket set to 0 to disable it kept
+     * running on the web-service path. Resolving the settings here means every caller gets
+     * the configured value, and the site ceiling can no longer be skipped by accident.
+     *
+     * @param int $userid User id.
+     * @param string $bucket Logical bucket name, e.g. 'generate'.
+     * @param int $default Per-user ceiling to use when the site has not configured one.
+     * @param int $window Window length in seconds.
+     * @return void
+     * @throws \moodle_exception
+     */
+    public static function enforce(int $userid, string $bucket, int $default, int $window): void {
+        // The per-user ceiling is admin-configurable so a site doing bulk authoring can raise
+        // it without a code change, and an author who trips it can be unblocked from the
+        // settings page. A configured value of 0 disables that bucket. Unknown buckets keep
+        // the caller's default.
+        $settingmap = [
+            'generate' => 'ratelimitgenerate',
+            'vendor' => 'ratelimitvendor',
+            'voice' => 'ratelimitvoice',
+        ];
+        $max = $default;
+        if (isset($settingmap[$bucket])) {
+            $configured = get_config('mod_contentcreator', $settingmap[$bucket]);
+            if ($configured !== false && $configured !== '' && is_numeric($configured)) {
+                $max = (int)$configured;
+            }
+        }
+
+        // The aggregate ceiling (v13.85) is checked BEFORE the per-user one, so a site that
+        // has hit its own limit reports that rather than telling an individual user they
+        // personally made too many requests. Read-only buckets are exempt: they spend no
+        // credits and cost the vendor nothing.
+        $sitemap = [
+            'voice' => ['sitelimitvoice', 2000],
+            'generate' => ['sitelimitgenerate', 1000],
+            'vendor' => ['sitelimitgenerate', 1000],
+        ];
+        if (isset($sitemap[$bucket])) {
+            [$sitesetting, $sitedefault] = $sitemap[$bucket];
+            $sitemax = get_config('mod_contentcreator', $sitesetting);
+            $sitemax = ($sitemax !== false && $sitemax !== '' && is_numeric($sitemax))
+                ? (int)$sitemax
+                : $sitedefault;
+            self::check_site($bucket, $sitemax, $window);
+        }
+
+        self::check($userid, $bucket, $max, $window);
+    }
+
+    /**
      * Throw if the user has exceeded the allowance for a bucket.
      *
      * Records the current call when it is permitted, so each successful call
@@ -65,9 +123,14 @@ class ratelimiter {
 
         // Prune anything that has fallen out of the sliding window.
         $cutoff = $now - $window;
-        $timestamps = array_values(array_filter($timestamps, function ($timestamp) use ($cutoff) {
-            return (int)$timestamp > $cutoff;
-        }));
+        $timestamps = array_values(
+            array_filter(
+                $timestamps,
+                function ($timestamp) use ($cutoff) {
+                    return (int)$timestamp > $cutoff;
+                }
+            )
+        );
 
         if (count($timestamps) >= $max) {
             $cache->set($key, $timestamps);
@@ -114,9 +177,14 @@ class ratelimiter {
         }
 
         $cutoff = $now - $window;
-        $timestamps = array_values(array_filter($timestamps, function ($timestamp) use ($cutoff) {
-            return (int)$timestamp > $cutoff;
-        }));
+        $timestamps = array_values(
+            array_filter(
+                $timestamps,
+                function ($timestamp) use ($cutoff) {
+                    return (int)$timestamp > $cutoff;
+                }
+            )
+        );
 
         if (count($timestamps) >= $max) {
             $cache->set($key, $timestamps);

@@ -8,7 +8,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_contentcreator/cc-state'], function(Planner, Generator, CcState) {
+define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_contentcreator/cc-state'], function (Planner, Generator, CcState) {
     'use strict';
 
     // Gated diagnostics  -  silent in production, enabled by flipping the flag in cc-state.js.
@@ -154,7 +154,12 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
             generatedManifest.inputHash = hashInputs(inputs);
 
             if (onStatus) onStatus(STATUS.COMPLETE);
-            if (onComplete) onComplete(generatedManifest);
+            // v13.94.3: onComplete is the ~500-line post-generation stage in builder.js
+            // (voiceover pre-generation, then saveManifest). It is async. Calling it
+            // without awaiting meant build() resolved success while that work was still
+            // in flight, and any rejection inside it surfaced as an unhandled rejection
+            // rather than reaching the catch below.
+            if (onComplete) { await onComplete(generatedManifest); }
 
             return { success: true, manifest: generatedManifest };
 

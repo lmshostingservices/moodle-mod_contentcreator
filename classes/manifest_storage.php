@@ -66,8 +66,11 @@ class manifest_storage {
             return $json;
         }
         $stored = 'gz:' . base64_encode($gz);
-        debugging('Content Creator compressed manifest ' . round(strlen($json) / 1024) . ' KB to ' .
-            round(strlen($stored) / 1024) . ' KB.', DEBUG_DEVELOPER);
+        debugging(
+            'Content Creator compressed manifest ' . round(strlen($json) / 1024) . ' KB to ' .
+                round(strlen($stored) / 1024) . ' KB.',
+            DEBUG_DEVELOPER
+        );
         return $stored;
     }
 

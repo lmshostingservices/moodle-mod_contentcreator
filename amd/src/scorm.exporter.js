@@ -8,7 +8,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function() {
+define([], function () {
     /**
      * v13.77 FIX-OBJECT-TEXT: entries in the card content arrays arrive as EITHER
      * plain strings or objects, depending on what the vendor API returns for that
@@ -19,7 +19,7 @@ define([], function() {
      * @param {*} entry A string, or an object such as {title, text} / {error, consequence}.
      * @return {String} Readable text for the entry, or an empty string.
      */
-    var ccEntryText = function(entry) {
+    var ccEntryText = function (entry) {
         if (entry === null || entry === undefined) { return ''; }
         if (typeof entry === 'string') { return entry; }
         if (typeof entry !== 'object') { return String(entry); }
@@ -39,9 +39,9 @@ define([], function() {
      * @param {Array} arr The array to flatten; anything non-array yields [].
      * @return {Array} Array of readable strings.
      */
-    var ccTextList = function(arr) {
+    var ccTextList = function (arr) {
         if (!Array.isArray(arr)) { return []; }
-        return arr.map(ccEntryText).filter(function(s) { return s; });
+        return arr.map(ccEntryText).filter(function (s) { return s; });
     };
 
     'use strict';
@@ -71,7 +71,13 @@ define([], function() {
                     scormAPI.LMSInitialize('');
                     scormAPI.LMSSetValue('cmi.core.lesson_status', 'incomplete');
                     scormAPI.LMSCommit('');
-                } catch (e) {}
+                } catch (e) {
+                    // v13.94.3: was a silent catch shipped into the customer's LMS. A
+                    // failure here means the package never registered as started.
+                    if (window.console && console.warn) {
+                        console.warn('[ContentCreator SCORM] LMSInitialize failed: ' + (e && e.message ? e.message : e));
+                    }
+                }
             }
         }
 
@@ -81,7 +87,13 @@ define([], function() {
                     scormAPI.LMSSetValue('cmi.core.lesson_status', 'completed');
                     scormAPI.LMSCommit('');
                     scormAPI.LMSFinish('');
-                } catch (e) {}
+                } catch (e) {
+                    // v13.94.3: was a silent catch. A failure here loses the learner's
+                    // completion in the host LMS with no trace at all.
+                    if (window.console && console.warn) {
+                        console.warn('[ContentCreator SCORM] completion write failed: ' + (e && e.message ? e.message : e));
+                    }
+                }
             }
         }
 
@@ -167,7 +179,7 @@ function initPlayer(manifest) {
     }
 
     function renderContent(c) {
-        var paras = (c.paragraphs || []).map(function(p) {
+        var paras = (c.paragraphs || []).map(function (p) {
             return '<p class="cc-para">' + esc(p) + '</p>';
         }).join('');
         return '<div class="cc-slide-header cc-hdr-content">' +
@@ -189,7 +201,7 @@ function initPlayer(manifest) {
     }
 
     function renderSummary(c) {
-        var items = (c.keyTakeaways || []).map(function(t) {
+        var items = (c.keyTakeaways || []).map(function (t) {
             return '<div class="cc-takeaway">' +
                 '<div class="cc-tick"></div>' +
                 '<span class="cc-takeaway-text">' + esc(t) + '</span>' +
@@ -208,7 +220,7 @@ function initPlayer(manifest) {
         var resp = responses[slide.id];
         var answered = resp !== undefined;
 
-        var optHtml = opts.map(function(opt, i) {
+        var optHtml = opts.map(function (opt, i) {
             var letter = String.fromCharCode(65 + i);
             var isSelected = resp && resp.selected === i;
             var cls = 'cc-opt';
@@ -265,11 +277,11 @@ function initPlayer(manifest) {
         var prevBtn = document.getElementById('btn-prev');
         var nextBtn = document.getElementById('btn-next');
 
-        prevBtn && prevBtn.addEventListener('click', function() {
+        prevBtn && prevBtn.addEventListener('click', function () {
             if (currentSlide > 0) { currentSlide--; render(); }
         });
 
-        nextBtn && nextBtn.addEventListener('click', function() {
+        nextBtn && nextBtn.addEventListener('click', function () {
             if (!isComplete(slide)) return;
             if (currentSlide === manifest.slides.length - 1) {
                 if (!completed) { completed = true; setComplete(); }
@@ -281,8 +293,8 @@ function initPlayer(manifest) {
         });
 
         if (slide.type === 'activity') {
-            container.querySelectorAll('.cc-opt:not([disabled])').forEach(function(btn) {
-                btn.addEventListener('click', function() {
+            container.querySelectorAll('.cc-opt:not([disabled])').forEach(function (btn) {
+                btn.addEventListener('click', function () {
                     var optIdx = parseInt(btn.dataset.option, 10);
                     var isCorrect = btn.dataset.correct === 'true';
                     responses[slide.id] = { selected: optIdx, isCorrect: isCorrect };
@@ -500,21 +512,21 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
             if (obj.consequence) paras.push(obj.consequence);
 
             if (obj.sceneParts && obj.sceneParts.length) {
-                obj.sceneParts.forEach(function(part) {
+                obj.sceneParts.forEach(function (part) {
                     if (!part) return;
                     var t = part.text || part.content || part.description || '';
                     if (t) paras.push(t);
                 });
             }
             if (obj.conceptInsights && obj.conceptInsights.length) {
-                obj.conceptInsights.forEach(function(insight) {
+                obj.conceptInsights.forEach(function (insight) {
                     if (!insight) return;
                     var t = insight.text || insight.content || insight.description || '';
                     if (t) paras.push(t);
                 });
             }
             if (obj.steps && obj.steps.length && (obj.cardType === 'mental-model' || obj.cardType === 'action-framework')) {
-                obj.steps.forEach(function(s) {
+                obj.steps.forEach(function (s) {
                     if (!s) return;
                     var heading = s.step || s.action || s.title || '';
                     var detail  = s.detail || s.description || s.explanation || '';
@@ -524,7 +536,7 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                 });
             }
             if (obj.items && obj.items.length) {
-                obj.items.forEach(function(item) {
+                obj.items.forEach(function (item) {
                     if (!item) return;
                     if (typeof item === 'string') { paras.push(item); return; }
                     var m = item.mistake || item.error || item.pitfall || '';
@@ -534,13 +546,13 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                 });
             }
             if (obj.goodItems && obj.goodItems.length) {
-                var goodTexts = obj.goodItems.map(function(item) {
+                var goodTexts = obj.goodItems.map(function (item) {
                     return typeof item === 'string' ? item : (item.text || item.behaviour || item.criterion || '');
                 }).filter(Boolean);
                 if (goodTexts.length) paras.push(goodTexts.join(' \u2022 '));
             }
             if (obj.badItems && obj.badItems.length) {
-                var badTexts = obj.badItems.map(function(item) {
+                var badTexts = obj.badItems.map(function (item) {
                     return typeof item === 'string' ? item : (item.text || '');
                 }).filter(Boolean);
                 if (badTexts.length) paras.push(badTexts.join(' \u2022 '));
@@ -553,7 +565,7 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
         // Detect if an obj is a quiz/activity card that should become an activity slide
         const isActivityCard = (obj) => {
             if (!obj.options || !Array.isArray(obj.options) || obj.options.length < 2) return false;
-            return obj.options.some(function(o) {
+            return obj.options.some(function (o) {
                 return o && (o.isCorrect === true || o.isBest === true);
             });
         };
@@ -565,7 +577,7 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                 meta: { activityType: obj.cardType || 'knowledge-check' },
                 content: {
                     stem: obj.heading || obj.question || obj.stem || 'Select the best answer:',
-                    options: (obj.options || []).map(function(o) {
+                    options: (obj.options || []).map(function (o) {
                         return {
                             text: o.text || o.label || '',
                             isCorrect: !!(o.isCorrect || o.isBest),

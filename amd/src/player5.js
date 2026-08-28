@@ -39,7 +39,7 @@ define([
     'mod_contentcreator/cc-card-slots',
     'mod_contentcreator/cc-voiceover',
     'mod_contentcreator/cc-language-switcher'
-], function($, Str, Ajax, Notification, Config, UI_LABELS, CcState, CcIcons, CcActivities, CcCardSlots, CcVoiceover, CcLangSwitcher) {
+], function ($, Str, Ajax, Notification, Config, UI_LABELS, CcState, CcIcons, CcActivities, CcCardSlots, CcVoiceover, CcLangSwitcher) {
     'use strict';
 
     // v9.83 Phase-1: Version + logger from shared cc-state module (eliminates duplication with builder.js).
@@ -74,16 +74,23 @@ define([
         // v6.5.53: Return translated labels using the UI_LABELS system
         // Map contrastType to UI_LABELS keys
         var labelKeyMap = {
+            // v13.94.3: this map had drifted from CONTRAST_PAIRS in cc-icons.js. It
+            // carried three keys that exist in no palette ('above-below', 'pro-con',
+            // 'right-wrong') and was missing four that do ('great-poor-service',
+            // 'compliant-noncompliant', 'above-below-line', 'tick-cross') - so those
+            // four would have drawn their own icons under Do's/Don'ts labels. The keys
+            // below now match CONTRAST_PAIRS exactly, one for one.
             'dos-donts': { pos: 'dos_donts_pos', neg: 'dos_donts_neg' },
             'safe-unsafe': { pos: 'safe_pos', neg: 'safe_neg' },
-            'above-below': { pos: 'aboveTheLine', neg: 'belowTheLine' },
-            'pro-con': { pos: 'pro_pos', neg: 'pro_neg' },
-            'right-wrong': { pos: 'right_pos', neg: 'right_neg' },
+            'great-poor-service': { pos: 'service_pos', neg: 'service_neg' },
+            'compliant-noncompliant': { pos: 'compliant_pos', neg: 'compliant_neg' },
+            'above-below-line': { pos: 'aboveTheLine', neg: 'belowTheLine' },
+            'professional-unprofessional': { pos: 'professional_pos', neg: 'professional_neg' },
+            'effective-ineffective': { pos: 'effective_pos', neg: 'effective_neg' },
             'best-avoid': { pos: 'best_pos', neg: 'best_neg' },
             'correct-incorrect': { pos: 'correct_pos', neg: 'correct_neg' },
-            'acceptable-unacceptable': { pos: 'acceptable_pos', neg: 'acceptable_neg' },
-            'effective-ineffective': { pos: 'effective_pos', neg: 'effective_neg' },
-            'professional-unprofessional': { pos: 'professional_pos', neg: 'professional_neg' }
+            'tick-cross': { pos: 'correct_pos', neg: 'correct_neg' },
+            'acceptable-unacceptable': { pos: 'acceptable_pos', neg: 'acceptable_neg' }
         };
         
         var keys = labelKeyMap[contrastType] || labelKeyMap['dos-donts'];
@@ -182,7 +189,7 @@ define([
         var duration = 0.12;
         var gap = 0.08;
         
-        frequencies.forEach(function(freq, i) {
+        frequencies.forEach(function (freq, i) {
             var oscillator = ctx.createOscillator();
             var gainNode = ctx.createGain();
             
@@ -264,7 +271,7 @@ define([
         var notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
         var dur = 0.18;
         var gap = 0.07;
-        notes.forEach(function(freq, i) {
+        notes.forEach(function (freq, i) {
             var osc = ctx.createOscillator();
             var osc2 = ctx.createOscillator();
             var gain = ctx.createGain();
@@ -351,7 +358,7 @@ define([
         var notes = [783.99, 1046.50];
         var noteDur = 0.13;
         var gap     = 0.06;
-        notes.forEach(function(freq, i) {
+        notes.forEach(function (freq, i) {
             var osc  = ctx.createOscillator();
             var gain = ctx.createGain();
             osc.connect(gain);
@@ -380,7 +387,7 @@ define([
         var notes = [329.63, 261.63];
         var noteDur = 0.14;
         var gap     = 0.05;
-        notes.forEach(function(freq, i) {
+        notes.forEach(function (freq, i) {
             var osc  = ctx.createOscillator();
             var gain = ctx.createGain();
             osc.connect(gain);
@@ -417,8 +424,8 @@ define([
             + ' Activity Complete!'
             + '</div>');
         $panel.append($banner);
-        setTimeout(function() { $banner.addClass('cc5-mini-celebration-out'); }, 2200);
-        setTimeout(function() { $banner.remove(); }, 2800);
+        setTimeout(function () { $banner.addClass('cc5-mini-celebration-out'); }, 2200);
+        setTimeout(function () { $banner.remove(); }, 2800);
     }
 
     /**
@@ -430,7 +437,7 @@ define([
     function validateImageAspectRatio(file, onAccept) {
         var img = new Image();
         var url = URL.createObjectURL(file);
-        img.onload = function() {
+        img.onload = function () {
             URL.revokeObjectURL(url);
             var ratio = img.width / img.height;
             if (ratio < 1.0) {
@@ -449,7 +456,7 @@ define([
             }
             onAccept(file);
         };
-        img.onerror = function() {
+        img.onerror = function () {
             URL.revokeObjectURL(url);
             showErrorToast('Could not read this image file. Please try a different image.', 'imageReadError');
         };
@@ -496,7 +503,7 @@ define([
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            particles.forEach(function(p) {
+            particles.forEach(function (p) {
                 ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.rotation * Math.PI / 180);
@@ -579,11 +586,11 @@ define([
      */
     function preloadMoodleLabels(keys) {
         try {
-            var requests = keys.map(function(k) {
+            var requests = keys.map(function (k) {
                 return { key: 'cclabel_' + k, component: 'mod_contentcreator' };
             });
-            return Str.get_strings(requests).then(function(values) {
-                keys.forEach(function(k, i) {
+            return Str.get_strings(requests).then(function (values) {
+                keys.forEach(function (k, i) {
                     var v = values[i];
                     // Moodle returns '[[key]]' for an undefined string; never cache that.
                     if (typeof v === 'string' && v && v.indexOf('[[') !== 0) {
@@ -591,7 +598,7 @@ define([
                     }
                 });
                 return true;
-            }).catch(function() {
+            }).catch(function () {
                 return false;
             });
         } catch (e) {
@@ -710,7 +717,7 @@ define([
         var seen = {};
         var terms = section.terminology || [];
         if (!Array.isArray(terms)) terms = [terms];
-        terms.forEach(function(rawTerm) {
+        terms.forEach(function (rawTerm) {
             var term = normalizeTerm(rawTerm);
             if (!term) return;
             var name = (term.term || '').trim().toLowerCase();
@@ -730,13 +737,53 @@ define([
      */
     function fixIntroSentences(text) {
         if (!text) return [];
-        var fixed = text.replace(/([a-z]{3,})\s{2,}([A-Z])/g, "$1. $2").replace(/([a-z]{3,}[^.!?])\s+([A-Z][a-z]{3,})/g, function(m, p1, p2) { if (/(?:before|after|during|using|like|and|with|from|into|near|for|the|than|about)$/i.test(p1)) return m; return p1 + ". " + p2; });
-        return fixed.split(/(?<=[.!?])\s+/).map(function(s) { var t = s.trim(); if (t && !/[.!?]$/.test(t)) t += '.'; return t; }).filter(function(s) { return s.length > 10; }).slice(0, 5);
+        var fixed = text.replace(/([a-z]{3,})\s{2,}([A-Z])/g, "$1. $2").replace(/([a-z]{3,}[^.!?])\s+([A-Z][a-z]{3,})/g, function (m, p1, p2) { if (/(?:before|after|during|using|like|and|with|from|into|near|for|the|than|about)$/i.test(p1)) return m; return p1 + ". " + p2; });
+        return fixed.split(/(?<=[.!?])\s+/).map(function (s) { var t = s.trim(); if (t && !/[.!?]$/.test(t)) t += '.'; return t; }).filter(function (s) { return s.length > 10; }).slice(0, 5);
     }
+    /**
+     * v13.94.6: narration weight for one segment, in word-equivalents.
+     *
+     * Whitespace word counting silently collapses on scripts that do not space their
+     * words - Japanese, Mandarin, Cantonese and Thai, all four of which the plugin offers
+     * a Chirp 3 HD voice for. A whole paragraph counts as one "word", so every segment
+     * ends up equally weighted and the proportional split that drives the card reveal and
+     * the paragraph highlight stops corresponding to the audio at all.
+     *
+     * If the whitespace count is implausibly low for the character count, the text is
+     * treated as unspaced and weighted by characters instead, scaled so the number is
+     * comparable to a word count (~2.2 characters per word-equivalent, which is close to
+     * the speaking rate ratio for CJK against English at the same wpm setting).
+     *
+     * @param {String} text Segment text.
+     * @return {Number} Weight in word-equivalents, always at least 1.
+     */
+    function _voWeight(text) {
+        var t = String(text || '').trim();
+        if (!t) { return 1; }
+        var words = t.split(/\s+/).filter(Boolean).length;
+        if (words < t.length / 8) {
+            return Math.max(1, Math.ceil(t.length / 2.2));
+        }
+        return Math.max(1, words);
+    }
+
     function fixGrammar(str) {
         if (!str) return str;
         if (typeof str !== 'string') str = String(str);
         var s = str;
+        // v13.94.6: this function stripped MARKDOWN and nothing else, so a field
+        // holding HTML - a <br> between two sentences, a <strong> around a term, an
+        // <em> the AI wrapped a definition in - reached Chirp 3 HD as literal tag
+        // text and was read out as "less than b r greater than". The renderer escapes
+        // those tags for display, which is why nobody saw them on screen; narration
+        // has to delete them instead. <br> and closing block tags become a space so
+        // the sentences either side do not fuse into one word; everything else is
+        // removed outright. Done FIRST so the markdown passes below see clean text.
+        // NOTE: cc-state.js _fg carries the identical three lines - they must match,
+        // or the voiceover hash computed by the player diverges from the builder's.
+        s = s.replace(/<br\s*\/?>/gi, ' ');
+        s = s.replace(/<\/(?:p|div|li|ul|ol|h[1-6]|tr|td|th|blockquote)>/gi, ' ');
+        s = s.replace(/<[^>]+>/g, '');
         // v10.13: Strip markdown before TTS  -  convert **bold** and _italic_ to plain text
         s = s.replace(/\*\*([^*]+)\*\*/g, '$1');
         s = s.replace(/__([^_]+)__/g, '$1');
@@ -755,7 +802,7 @@ define([
         s = s.replace(/\bso you\s+safety\b/gi, 'so you maintain safety');
         s = s.replace(/\bso you\s+the\s+safety\b/gi, 'so you ensure the safety');
         s = s.replace(/\bso you\s+the\s+/gi, 'so you understand the ');
-        s = s.replace(/\bso you\s+(?:optimal|proper|adequate|sufficient|full|complete|clear|immediate|minimal|consistent|accurate|appropriate|correct|comfortable|effective|efficient|maximum|minimum|good|better|best|safe|total|reliable|thorough|reasonable|necessary|successful|secure|healthy|stable|strong|smooth|timely|rapid|quick|clean|standard|suitable|regular|balanced|controlled|steady|uniform)\b/gi, function(match) {
+        s = s.replace(/\bso you\s+(?:optimal|proper|adequate|sufficient|full|complete|clear|immediate|minimal|consistent|accurate|appropriate|correct|comfortable|effective|efficient|maximum|minimum|good|better|best|safe|total|reliable|thorough|reasonable|necessary|successful|secure|healthy|stable|strong|smooth|timely|rapid|quick|clean|standard|suitable|regular|balanced|controlled|steady|uniform)\b/gi, function (match) {
             return 'so you ensure ' + match.replace(/^so you\s+/i, '');
         });
         s = s.replace(/\b(is|are|was|were)\s+because\s+because\b/gi, '$1 because');
@@ -783,10 +830,10 @@ define([
         try {
             var doc = new DOMParser().parseFromString(String(html), 'text/html');
             var banned = doc.body.querySelectorAll('script,style,iframe,object,embed,link,meta,form,base');
-            Array.prototype.forEach.call(banned, function(node) { node.parentNode.removeChild(node); });
+            Array.prototype.forEach.call(banned, function (node) { node.parentNode.removeChild(node); });
             var all = doc.body.querySelectorAll('*');
-            Array.prototype.forEach.call(all, function(node) {
-                Array.prototype.slice.call(node.attributes).forEach(function(attr) {
+            Array.prototype.forEach.call(all, function (node) {
+                Array.prototype.slice.call(node.attributes).forEach(function (attr) {
                     var name = attr.name.toLowerCase();
                     var value = String(attr.value || '').replace(/\s+/g, '').toLowerCase();
                     if (name.indexOf('on') === 0) { node.removeAttribute(attr.name); return; }
@@ -814,11 +861,11 @@ define([
      * @return {void}
      */
     function applyThemeClasses() {
-        var apply = function() {
+        var apply = function () {
             var root = document.documentElement;
             var body = document.body;
             var explicit = '';
-            [root, body].forEach(function(el) {
+            [root, body].forEach(function (el) {
                 if (!el || explicit) { return; }
                 var attr = el.getAttribute('data-bs-theme') || el.getAttribute('data-theme') || '';
                 if (attr === 'dark' || attr === 'light') { explicit = attr; return; }
@@ -843,12 +890,12 @@ define([
                 body.classList.toggle('dark', isDark);
                 applyThemeClasses._stampedBody = isDark;
             }
-            document.querySelectorAll('.cc5-player').forEach(function(el) {
+            document.querySelectorAll('.cc5-player').forEach(function (el) {
                 el.classList.toggle('dark', isDark);
                 el.classList.toggle('cc5-dark', isDark);
                 el.classList.toggle('dark-mode', isDark);
             });
-            document.querySelectorAll('.cc5-container, #contentcreator-app').forEach(function(el) {
+            document.querySelectorAll('.cc5-container, #contentcreator-app').forEach(function (el) {
                 el.classList.toggle('dark', isDark);
                 el.classList.toggle('cc5-dark', isDark);
             });
@@ -889,7 +936,7 @@ define([
         try {
             var app = document.getElementById('contentcreator-app');
             if (app && window.MutationObserver && !applyThemeClasses._domObserver) {
-                applyThemeClasses._domObserver = new MutationObserver(function() { apply(); });
+                applyThemeClasses._domObserver = new MutationObserver(function () { apply(); });
                 applyThemeClasses._domObserver.observe(app, { childList: true, subtree: true });
             }
         } catch (e) {
@@ -963,7 +1010,7 @@ define([
         if (!$container || !$container.length) return;
         
         // Find all first-column cells and sanitize their content
-        $container.find('td:first-child').each(function() {
+        $container.find('td:first-child').each(function () {
             var $cell = $(this);
             var text = $cell.text();
             // Remove leading checkbox Unicode characters
@@ -977,7 +1024,7 @@ define([
         });
         
         // v6.6.40: Detect table type and apply appropriate formatting
-        $container.find('table').each(function() {
+        $container.find('table').each(function () {
             var $table = $(this);
             var $headers = $table.find('th');
             var columnCount = $headers.length;
@@ -991,7 +1038,7 @@ define([
                 
                 // Check if second column header suggests a checkbox column
                 var checkboxHeaders = ['check', 'OK', 'tick', 'done', 'complete', 'verified', 'y/n'];
-                checkboxHeaders.forEach(function(header) {
+                checkboxHeaders.forEach(function (header) {
                     if (secondColHeader.indexOf(header) !== -1) {
                         isCheckboxTable = true;
                     }
@@ -1000,7 +1047,7 @@ define([
                 // Also check if all cells in second column are short (< 5 chars = likely checkmarks)
                 if (!isCheckboxTable) {
                     var allShort = true;
-                    $table.find('tbody tr td:nth-child(2)').each(function() {
+                    $table.find('tbody tr td:nth-child(2)').each(function () {
                         if ($(this).text().trim().length > 10) {
                             allShort = false;
                         }
@@ -1025,7 +1072,7 @@ define([
         });
         
         // Ensure check columns are properly centered with tick marks (only for checkbox tables)
-        $container.find('table:not(.cc5-content-table) td:nth-child(2)').each(function() {
+        $container.find('table:not(.cc5-content-table) td:nth-child(2)').each(function () {
             var $cell = $(this);
             var text = $cell.text().trim();
             // If it looks like a check mark, style it properly
@@ -1095,10 +1142,46 @@ define([
         formatTextWithDocLinks: formatTextWithDocLinks
     });
 
+    // v13.94.6: register cc-state's narration resolver against NARRATION_LABELS, NOT
+    // against getLabel.
+    //
+    // getLabel is the right resolver for the SCREEN - it lets a Moodle site customise
+    // wording through the lang file, and it reads UI_LABELS, which translations.js prunes
+    // to the page language plus English. Both of those are wrong for narration.
+    //
+    // The narration text is the input to voiceoverTextHash, and that hash has to match the
+    // one the BUILDER computed when it synthesised the audio. The builder resolves against
+    // NARRATION_LABELS for the content language. If the player resolved the same keys
+    // through getLabel it would get: a site's customised wording (which the builder never
+    // saw), or - on an English Moodle serving a Japanese pack - English, because
+    // UI_LABELS['ja'] was pruned away at module load. Either way the hash diverges, every
+    // section reads as stale, and the whole pack is re-synthesised on first open.
+    //
+    // Same table, same language, same string, same hash.
+    var _narrationLabels = (UI_LABELS && UI_LABELS.NARRATION_LABELS) || {};
+
+    /**
+     * Point cc-state's narration at the CONTENT language of what is being played.
+     *
+     * @param {String} lang Language code, e.g. 'ja-JP'.
+     * @return {void}
+     */
+    function useNarrationLanguage(lang) {
+        if (!CcState || typeof CcState.setLabelResolver !== 'function') { return; }
+        var code = String(lang || 'en');
+        var table = _narrationLabels[code]
+            || _narrationLabels[code.split('-')[0]]
+            || _narrationLabels.en
+            || {};
+        CcState.setLabelResolver(function (key) {
+            return table[key];
+        });
+    }
+
     /**
      * Player class
      */
-    var Player = function(config) {
+    var Player = function (config) {
         this.cmid = config.cmid;
         this.manifest = config.manifest;
         this.container = $(config.container);
@@ -1137,8 +1220,8 @@ define([
         // v7.9.99: Comprehensive voiceover debug logging on init
         var _voTotal = 0, _voWithUrl = 0, _voSentinel = 0;
         if (config.manifest && config.manifest.topics) {
-            config.manifest.topics.forEach(function(t) {
-                (t.sections || []).forEach(function(s) {
+            config.manifest.topics.forEach(function (t) {
+                (t.sections || []).forEach(function (s) {
                     if (s.slideType !== 'activity') {
                         _voTotal++;
                         if (s.voiceoverUrl && s.voiceoverUrl !== 'pregenerated') _voWithUrl++;
@@ -1153,6 +1236,8 @@ define([
         
         // v6.5.24: Set current language for UI label translations
         setCurrentLanguage(this.voiceLanguage);
+        // v13.94.6: narration follows the CONTENT language, always.
+        useNarrationLanguage(this.voiceLanguage);
 
         
         // v6.5.11: If voiceover disabled but mode was somehow set to VOICEOVER, override to FREE
@@ -1162,6 +1247,9 @@ define([
         
         // Voiceover pre-generation cache (v6.4.2)
         this.voiceoverCache = {};
+        // v13.94.6: parallel map of voiceoverTextHash at the moment each cache entry was
+        // written, so playVoiceover can tell a fresh entry from one that predates an edit.
+        this.voiceoverCacheHash = {};
         this.voiceoverLoading = {}; // Track in-progress voiceover requests to prevent race conditions
         this.voiceoverPreloadStatus = { total: 0, loaded: 0, loading: false };
         
@@ -1195,7 +1283,7 @@ define([
          * v6.5.63: Show preloading screen and wait for all content before showing topics
          * v6.6.88: Skip preloading on page reload if content already cached (edit mode toggle fix)
          */
-        init: function() {
+        init: function () {
             var self = this;
             
             // v7.2.0: ALWAYS log session state check for debugging edit mode toggle issue
@@ -1270,7 +1358,7 @@ define([
                 // v11.90 FIX: ALWAYS run preload  -  removes !cachedState guard that permanently
                 // blocked returning students from ever setting voiceoversComplete.
                 if (hasExistingContent) {
-                    this.preloadVoiceovers(function() {
+                    this.preloadVoiceovers(function () {
                         self.saveSessionState();
 
                         // v11.90 FIX: Re-enable voiceover buttons after preload completes.
@@ -1298,7 +1386,7 @@ define([
             }
             
             // Start preloading with callbacks - when both complete, show topics
-            this.preloadVoiceovers(function() {
+            this.preloadVoiceovers(function () {
                 self.preloadStatus.voiceovers = true;
                 self.checkPreloadComplete();
             });
@@ -1310,7 +1398,7 @@ define([
         /**
          * Render preloading screen while voiceovers and documents are prepared (v6.5.63)
          */
-        renderPreloadingScreen: function() {
+        renderPreloadingScreen: function () {
             var html = '<div class="cc5-player" role="region" aria-label="Content Player">';
             html += '<div class="cc5-preloading-screen">';
             html += '<div class="cc5-preloading-content">';
@@ -1331,7 +1419,7 @@ define([
         /**
          * Update preloading screen progress (v6.5.63)
          */
-        updatePreloadingProgress: function() {
+        updatePreloadingProgress: function () {
             var voiceStatus = this.voiceoverPreloadStatus || { total: 0, loaded: 0 };
             var docStatus = this.documentPreloadStatus || { total: 0, loaded: 0 };
             
@@ -1354,7 +1442,7 @@ define([
          * Check if all preloading is complete and show topics (v6.5.63)
          * v6.6.88: Save session state for page reload recovery
          */
-        checkPreloadComplete: function() {
+        checkPreloadComplete: function () {
             if (this.preloadStatus.voiceovers && this.preloadStatus.documents) {
                 // v6.6.88: Save session state so page reload skips preloading
                 this.saveSessionState();
@@ -1368,7 +1456,7 @@ define([
          * v7.2.0: Use time-based validation (30 min window) instead of strict hash matching
          * to prevent "Preparing Content" screen on edit mode toggle
          */
-        loadSessionState: function() {
+        loadSessionState: function () {
             try {
                 var key = 'cc5_session_' + this.cmid;
                 
@@ -1399,7 +1487,7 @@ define([
          * Save session state to sessionStorage (v6.6.88)
          * Stores current view, slide position, and preloaded content
          */
-        saveSessionState: function() {
+        saveSessionState: function () {
             try {
                 var key = 'cc5_session_' + this.cmid;
                 
@@ -1408,7 +1496,7 @@ define([
                 var voiceoverKeys = Object.keys(this.voiceoverCache || {});
                 var self = this;
                 // Keep only last 3 voiceovers to prevent quota issues
-                voiceoverKeys.slice(-3).forEach(function(k) {
+                voiceoverKeys.slice(-3).forEach(function (k) {
                     limitedVoiceoverCache[k] = self.voiceoverCache[k];
                 });
                 
@@ -1449,10 +1537,10 @@ define([
         /**
          * Get a simple hash of manifest for cache validation (v6.6.88)
          */
-        getManifestHash: function() {
+        getManifestHash: function () {
             // Simple hash based on manifest structure
             var topics = this.manifest.topics || [];
-            var slideCount = topics.reduce(function(sum, t) {
+            var slideCount = topics.reduce(function (sum, t) {
                 return sum + (t.sections || []).length;
             }, 0);
             return this.cmid + '_' + topics.length + '_' + slideCount;
@@ -1461,7 +1549,7 @@ define([
          * v7.7.5: Mark Before You Start checklist as complete
          * Sends completion data to Moodle for activity completion tracking
          */
-        markChecklistComplete: function() {
+        markChecklistComplete: function () {
             var self = this;
             
             // Store checklist completion state
@@ -1492,7 +1580,7 @@ define([
                 CcState.fetchWithDeadline(CcState.ajaxUrl(), {
                     method: 'POST',
                     body: checklistData
-                }).catch(function(err) {
+                }).catch(function (err) {
                     // Non-fatal: the localStorage backup written above still holds the state.
                     ccWarn('save_checklist request failed', err);
                 });
@@ -1506,7 +1594,7 @@ define([
         /**
          * v7.7.5: Check if Before You Start checklist was previously completed
          */
-        isChecklistComplete: function() {
+        isChecklistComplete: function () {
             var storageKey = 'cc5_checklist_' + this.cmid + '_' + this.currentTopicId;
             try {
                 var data = JSON.parse(localStorage.getItem(storageKey) || '{}');
@@ -1516,7 +1604,7 @@ define([
             }
         },
 
-        isQuickCheckComplete: function() {
+        isQuickCheckComplete: function () {
             var $section = this.container.find('.cc5-quickcheck-checklist');
             if ($section.length === 0) return true;
             var totalItems = $section.find('.cc5-checklist-checkbox').length;
@@ -1529,10 +1617,10 @@ define([
          * Setup browser focus/visibility detection (v6.4.4)
          * Resets slide progress if student navigates away from tab
          */
-        setupFocusDetection: function() {
+        setupFocusDetection: function () {
             var self = this;
             
-            document.addEventListener('visibilitychange', function() {
+            document.addEventListener('visibilitychange', function () {
                 if (document.hidden && self.currentView === 'slides') {
                     // User switched tabs or minimized - reset current slide
                     self.handleFocusLost();
@@ -1543,7 +1631,7 @@ define([
         /**
          * Handle focus lost - show modal and reset slide (v6.4.4)
          */
-        handleFocusLost: function() {
+        handleFocusLost: function () {
             
             // Pause audio but KEEP the reference and position so we can resume exactly where we left off.
             // Do NOT null currentAudio  -  nulling it loses currentTime and causes voiceover to restart.
@@ -1577,7 +1665,7 @@ define([
         /**
          * Show focus lost modal (v6.4.4)
          */
-        showFocusLostModal: function() {
+        showFocusLostModal: function () {
             var self = this;
             
             // Remove any existing modal
@@ -1595,8 +1683,8 @@ define([
             $(document.body).append(modalHtml);
             
             // Bind close button  -  resume from where the student left off, do NOT re-render
-            $(document.body).find('.cc5-focus-modal-btn').on('click', function() {
-                $('.cc5-focus-modal-overlay').fadeOut(300, function() {
+            $(document.body).find('.cc5-focus-modal-btn').on('click', function () {
+                $('.cc5-focus-modal-overlay').fadeOut(300, function () {
                     $(this).remove();
                 });
                 self.resumeAfterFocusReturn();
@@ -1611,19 +1699,23 @@ define([
          * Continues voiceover and slide timer from exactly where they were paused.
          * Does NOT call render()  -  the slide DOM is already in place.
          */
-        resumeAfterFocusReturn: function() {
+        resumeAfterFocusReturn: function () {
             var self = this;
 
             // Resume voiceover from saved position
             if (this.currentAudio && this.pausedAudioTime !== null && this.pausedAudioTime !== undefined) {
                 this.currentAudio.currentTime = this.pausedAudioTime;
                 this.pausedAudioTime = null;
-                this.currentAudio.play().catch(function() {});
+                // v13.94.3: was an empty catch, so a failed resume after a slide-timer
+                // pause vanished without trace. Still non-fatal, but no longer invisible.
+                this.currentAudio.play().catch(function (e) {
+                    ccWarn('[CC v' + CC_VERSION + '] timer resume play() rejected: ' + e.name);
+                });
             }
 
             // Resume slide timer from remaining time without resetting slideTimeRemaining
             if (this.slideTimeRemaining > 0 && !this.slideTimer) {
-                this.slideTimer = setInterval(function() {
+                this.slideTimer = setInterval(function () {
                     self.slideTimeRemaining--;
                     var $timer = self.container.find('#cc5-timer .cc5-timer-value');
                     $timer.text(self.slideTimeRemaining + 's');
@@ -1645,7 +1737,7 @@ define([
         /**
          * Load progress from localStorage (with Moodle DB fallback)
          */
-        loadProgress: function() {
+        loadProgress: function () {
             var key = 'cc5_progress_' + this.cmid;
             var localProgress = { sections: {}, lastVisited: null };
             try {
@@ -1666,7 +1758,7 @@ define([
          * Load progress from Moodle database
          */
 
-        loadMoodleProgress: function() {
+        loadMoodleProgress: function () {
             var self = this;
             var formData = new FormData();
             formData.append('sesskey', Config.sesskey);
@@ -1677,21 +1769,21 @@ define([
             
             // v7.2.51: Add 60s timeout to prevent infinite spinner on slow connections
             var controller = new AbortController();
-            var timeoutId = setTimeout(function() { controller.abort(); }, 60000);
+            var timeoutId = setTimeout(function () { controller.abort(); }, 60000);
             
             CcState.fetchWithDeadline(ajaxUrl, {
                 method: 'POST',
                 body: formData,
                 signal: controller.signal
             })
-            .then(function(response) {
+            .then(function (response) {
                 clearTimeout(timeoutId);
                     if (!response.ok) {
                         throw new Error('Server returned ' + response.status);
                     }
                     return response.json();
                 })
-                .then(function(data) {
+                .then(function (data) {
                     // v9.78 FIX (A-06): Apply fetched DB progress to player state.
                     // Previously the response was received and immediately discarded.
                     // Now we deep-merge the DB record (may contain cross-device progress)
@@ -1706,7 +1798,7 @@ define([
 
                     // Deep-merge sections: DB wins for any completed section
                     var dbSections = dbProgress.sections || {};
-                    Object.keys(dbSections).forEach(function(sectionId) {
+                    Object.keys(dbSections).forEach(function (sectionId) {
                         var dbSec = dbSections[sectionId];
                         if (!self.progress.sections[sectionId]) {
                             self.progress.sections[sectionId] = dbSec;
@@ -1746,14 +1838,14 @@ define([
                         self.updateNavState();
                     }
                 })
-                .catch(function(error) {
+                .catch(function (error) {
                 });
         },
 
         /**
          * Save progress to localStorage
          */
-        saveProgressLocal: function() {
+        saveProgressLocal: function () {
             var key = 'cc5_progress_' + this.cmid;
             try {
                 localStorage.setItem(key, JSON.stringify(this.progress));
@@ -1766,7 +1858,7 @@ define([
         /**
          * Save progress to localStorage and Moodle DB
          */
-        saveProgress: function() {
+        saveProgress: function () {
             this.saveProgressLocal();
             this.saveMoodleProgress();
         },
@@ -1774,7 +1866,7 @@ define([
         /**
          * Save progress to Moodle database
          */
-        saveMoodleProgress: function() {
+        saveMoodleProgress: function () {
             var isComplete = this.calculateOverallProgress() === 100;
             
             var formData = new FormData();
@@ -1789,16 +1881,45 @@ define([
                 method: 'POST',
                 body: formData
             })
-            .then(function(response) {
+            .then(function (response) {
                     if (!response.ok) {
                         throw new Error('Server returned ' + response.status);
                     }
                     return response.json();
                 })
-                .then(function(data) {
-                })
-                .catch(function(error) {
-                });
+                .then(function (data) {
+                    // v13.94.3: this used to be an empty handler. A server-side failure
+                    // (bad sesskey, capability change, DB error) returns HTTP 200 with
+                    // success:false, so the learner's progress was being discarded with
+                    // no trace anywhere. Record it, and tell the learner once when the
+                    // run that was lost is the one that would have marked them complete.
+                    if (data && data.success === false) {
+                        this._noteProgressSaveFailure(isComplete, data.error || 'no reason given');
+                    } else {
+                        this._progressSaveWarned = false;
+                    }
+                }.bind(this))
+                .catch(function (error) {
+                    this._noteProgressSaveFailure(isComplete, (error && error.message) ? error.message : String(error));
+                }.bind(this));
+        },
+
+        /**
+         * v13.94.3: single place that records a failed progress save. Warns the learner
+         * at most once per session, and only on the save that carried completion  -  a
+         * mid-module save that fails is retried by the next one, but a lost completion
+         * is not recoverable without the learner knowing to redo it.
+         */
+        _noteProgressSaveFailure: function (wasCompletion, reason) {
+            ccWarn('[CC] save_completion failed (completion=' + wasCompletion + '): ' + reason);
+            if (wasCompletion && !this._progressSaveWarned) {
+                this._progressSaveWarned = true;
+                showErrorToast(
+                    getLabel('progressNotSaved')
+                        || 'Your progress could not be saved. Please check your connection and revisit the last slide.',
+                    'saveMoodleProgress'
+                );
+            }
         },
         /**
          * Pre-generate all voiceovers in background for instant playback (v6.4.2)
@@ -1807,7 +1928,7 @@ define([
          * v6.6.57: CRITICAL - Only preload LEARNING slides, NOT activity slides
          * v7.1.5: PARALLEL - Load 3 voiceovers at once for faster preloading
          */
-        preloadVoiceovers: function(onComplete) {
+        preloadVoiceovers: function (onComplete) {
             // v6.5.11: Skip preloading if voiceover is disabled
             if (!this.voiceoverEnabled) {                if (onComplete) onComplete();
                 return;
@@ -1874,9 +1995,9 @@ define([
                 if (index >= allSections.length && activeRequests === 0) {
                     completed = true;
                     self.voiceoverPreloadStatus.loading = false;
-                    var _failList = allSections.filter(function(s) { return !CcVoiceover.isSectionVoiceoverComplete(s); });
+                    var _failList = allSections.filter(function (s) { return !CcVoiceover.isSectionVoiceoverComplete(s); });
                     if (_failList.length) {
-                        _failList.forEach(function(s) {
+                        _failList.forEach(function (s) {
                         });
                     }
                     // v11.89 FIX: Calculate completion for ALL users (students + teachers),
@@ -1891,7 +2012,7 @@ define([
                     // exhausted all retries and still have no HTTPS URL. Schedule one
                     // final pass 10s later when the server may have recovered.
                     if (self.editMode || self.canEdit || self.isTeacher) {
-                        var _missingSections = allSections.filter(function(s) {
+                        var _missingSections = allSections.filter(function (s) {
                             return !(typeof s.voiceoverUrl === 'string' && s.voiceoverUrl.startsWith('http')) &&
                                    !self.voiceoverCache[s.id];
                         });
@@ -1903,7 +2024,7 @@ define([
                             var _plural = _n === 1 ? '' : 's';
                             self.container.find('.cc5-vo-wait-title').text('Almost there\u2026');
                             self.container.find('.cc5-vo-wait-sub').text(_n + ' section' + _plural + ' still generating \u2014 please keep this page open. Audio can take 1\u20133 minutes.');
-                            setTimeout(function() {
+                            setTimeout(function () {
                                 // v12.49 BUG-CC-ZOMBIE-CHAIN: If a new chain has started
                                 // (user clicked Retry again), don't fire  -  the new chain owns it.
                                 if (self._voiceoverChainGen !== _myChainGen) return;
@@ -1911,7 +2032,7 @@ define([
                                 self.container.find('.cc5-vo-wait-title').text('Generating audio\u2026');
                                 self.container.find('.cc5-vo-wait-sub').text('Regenerating ' + _n + ' section' + _plural + '\u2026 This may take 1\u20133 minutes.');
                                 var _stillBlocked = [];
-                                _missingSections.forEach(function(s) {
+                                _missingSections.forEach(function (s) {
                                     delete s._preloadRetryCount;
                                     if (!self.voiceoverCache[s.id] && !self.voiceoverLoading[s.id]) {
                                         preloadOne(s);
@@ -1926,9 +2047,9 @@ define([
                                 // stale chain). By then the stale chain's .catch() will have fired,
                                 // cleared voiceoverLoading, and the section is available again.
                                 if (_stillBlocked.length > 0) {
-                                    setTimeout(function() {
+                                    setTimeout(function () {
                                         if (self._voiceoverChainGen !== _myChainGen) return;
-                                        _stillBlocked.forEach(function(s) {
+                                        _stillBlocked.forEach(function (s) {
                                             delete s._preloadRetryCount;
                                             if (!self.voiceoverCache[s.id] && !self.voiceoverLoading[s.id]) {
                                                 preloadOne(s);
@@ -1939,7 +2060,7 @@ define([
                             }, 10000);
                         }
 
-                        var _failCount = allSections.filter(function(s) {
+                        var _failCount = allSections.filter(function (s) {
                             return s.slideType !== 'activity' && s.voiceoverStatus !== 'complete';
                         }).length;
 
@@ -2110,6 +2231,8 @@ define([
                         delete section.voiceoverSchemaVersion;
                         delete section.voiceoverTextHash;
                         delete self.voiceoverCache[section.id];
+                        // v13.94.6: drop the fingerprint with the entry it belongs to.
+                        if (self.voiceoverCacheHash) { delete self.voiceoverCacheHash[section.id]; }
                         // v12.92: Also reset voiceoverStatus to 'pending'. The stale deletion
                         // leaves voiceoverStatus='complete' (unchanged from before), which makes
                         // _failCount=0 even though the URL is gone — allVoiceoversComplete()
@@ -2184,18 +2307,18 @@ define([
                 // v12.42: Store AbortController on section so the retry button can cancel
                 // any in-flight fetch immediately instead of waiting for it to time out.
                 section._preloadAbortCtrl = _preAbortCtrl;
-                var _preTimeoutId = setTimeout(function() { _preAbortCtrl.abort(); }, 200000);
+                var _preTimeoutId = setTimeout(function () { _preAbortCtrl.abort(); }, 200000);
                 CcState.fetchWithDeadline(ajaxUrl, {
                     method: 'POST',
                     body: formData,
                     signal: _preAbortCtrl.signal
                 })
-                .then(function(response) {
+                .then(function (response) {
                     clearTimeout(_preTimeoutId);
                     if (!response.ok) throw new Error('Server returned ' + response.status);
                     return response.json();
                 })
-                .then(function(data) {
+                .then(function (data) {
                     delete section._preloadAbortCtrl;
                     // v12.48 FIX-CC-TTS-MUTEX: PHP returns {pending:true} when its file lock
                     // cannot be acquired (another PHP process is already generating this section).
@@ -2218,7 +2341,7 @@ define([
                             section._preloadScheduledRetry = true;
                             activeRequests--;
                             startNext();
-                            setTimeout(function() {
+                            setTimeout(function () {
                                 // v12.49 BUG-CC-ZOMBIE-CHAIN: Check generation before firing pending retry.
                                 if (self._voiceoverChainGen !== _myChainGen) {
                                     delete section._preloadScheduledRetry;
@@ -2278,6 +2401,14 @@ define([
                         // CC-ML-DEBUG
                         var audioUrl = 'data:' + data.audioType + ';base64,' + data.audioContent;
                         self.voiceoverCache[section.id] = audioUrl;
+                    // v13.94.6: stamp the entry so it can be validated on replay.
+                    self.voiceoverCacheHash = self.voiceoverCacheHash || {};
+                    self.voiceoverCacheHash[section.id] = section.voiceoverTextHash
+                        || voiceoverTextHash(self.buildFullVoiceoverText(section));
+                        // v13.94.6: stamp the entry so it can be validated on replay.
+                        self.voiceoverCacheHash = self.voiceoverCacheHash || {};
+                        self.voiceoverCacheHash[section.id] = section.voiceoverTextHash
+                            || voiceoverTextHash(self.buildFullVoiceoverText(section));
                         // v12.21: Progressively unlock topic cards as each section's audio completes.
                         self.refreshTopicCardVoiceoverState(section.id);
                         // v11.86 MICRO FIX (ChatGPT idempotency fix): voiceoverStatus is now set
@@ -2330,7 +2461,7 @@ define([
                     activeRequests--;
                     startNext();
                 })
-                .catch(function(error) {
+                .catch(function (error) {
                     clearTimeout(_preTimeoutId);
                     var errorMsg = error.message || String(error);
                     var isAborted = error.name === 'AbortError';
@@ -2380,7 +2511,7 @@ define([
                                 !(typeof section.voiceoverUrl === 'string' && section.voiceoverUrl.startsWith('http'))) {
                             section._supersededRetryCount = _supRetries + 1;
                             ccWarn('[CC v' + CC_VERSION + '] FIX-CC-ORPHANED-SECTION: section ' + section.id + ' freed after chain supersede  -  scheduling fresh preload in 2s (rescue ' + (_supRetries + 1) + '/3)');
-                            setTimeout(function() { self.preloadVoiceovers(); }, 2000);
+                            setTimeout(function () { self.preloadVoiceovers(); }, 2000);
                         }
                         ccWarn('[CC v' + CC_VERSION + '] Preload chain for section ' + section.id + ' superseded (gen ' + _myChainGen + '  ->  ' + self._voiceoverChainGen + ')  -  exiting cleanly, new chain owns it');
                         activeRequests--;
@@ -2404,7 +2535,7 @@ define([
                         section._preloadScheduledRetry = true;
                         activeRequests--;
                         startNext();
-                        setTimeout(function() {
+                        setTimeout(function () {
                             // v12.49 BUG-CC-ZOMBIE-CHAIN: Check generation before firing.
                             // If user clicked Retry between now and then, new chain owns it.
                             if (self._voiceoverChainGen !== _myChainGen) {
@@ -2454,7 +2585,7 @@ define([
         /**
          * Priority preload for current slide - ensures instant playback (v7.1.5)
          */
-        priorityPreloadCurrentSlide: function() {
+        priorityPreloadCurrentSlide: function () {
             if (!this.voiceoverEnabled) return;
             // v11.51 FIX BUG-VO-RACE: Students cannot generate voiceover (credits).
             // v11.49 stripAudio() sets voiceoverUrl='' (falsy), causing this function
@@ -2497,11 +2628,11 @@ define([
                 method: 'POST',
                 body: formData
             })
-            .then(function(response) {
+            .then(function (response) {
                 if (!response.ok) throw new Error('Server returned ' + response.status);
                 return response.json();
             })
-            .then(function(data) {
+            .then(function (data) {
                 delete self.voiceoverLoading[currentSection.id];
                 if (data.success && data.audioContent) {
                     var audioUrl = 'data:' + (data.audioType || 'audio/ogg') + ';base64,' + data.audioContent;
@@ -2551,7 +2682,7 @@ define([
                     ccWarn('[VOICEOVER v' + CC_VERSION + '] PRIORITY PRELOAD FAILED section ' + currentSection.id + ' | ' + (data.error || 'no audio'));
                 }
             })
-            .catch(function(error) {
+            .catch(function (error) {
                 delete self.voiceoverLoading[currentSection.id];
                 ccError('[VOICEOVER v' + CC_VERSION + '] PRIORITY PRELOAD ERROR section ' + currentSection.id + ' | ' + error.message);
             });
@@ -2559,7 +2690,7 @@ define([
         /**
          * Update voiceover preload UI indicator
          */
-        updateVoiceoverPreloadUI: function() {
+        updateVoiceoverPreloadUI: function () {
             var status = this.voiceoverPreloadStatus;
             var indicator = this.container.find('.cc5-voiceover-preload-indicator');
             
@@ -2573,7 +2704,7 @@ define([
                     var pct = Math.round((status.loaded / status.total) * 100);
                     indicator.find('.cc5-preload-text').text('Audio ready: ' + pct + '%');
                 }
-                indicator.fadeOut(300, function() { $(this).remove(); });
+                indicator.fadeOut(300, function () { $(this).remove(); });
             }
         },
 
@@ -2585,10 +2716,10 @@ define([
         // v11.02: Delegates to CcState.buildVoiceoverText  -  the single canonical
         // implementation shared by both player5.js and builder.js. This ensures
         // builder pre-generated voiceovers produce byte-identical text  ->  no staleness.
-        buildFullVoiceoverText: function(section) {
+        buildFullVoiceoverText: function (section) {
             return CcState.buildVoiceoverText(section, this.manifest);
         },
-        getSmartIconForText: function(text) {
+        getSmartIconForText: function (text) {
             if (!text) return 'check-circle';
             
             var lowerText = text.toLowerCase();
@@ -2658,7 +2789,7 @@ define([
          * Simple approach: first word becomes the heading, full sentence shown below
          * Examples: "Inspect your harness..."  ->  heading "Inspect", desc is full sentence
          */
-        extractRequirementTitle: function(text) {
+        extractRequirementTitle: function (text) {
             if (!text) return '';
             
             // Clean the text
@@ -2684,13 +2815,13 @@ define([
          * Get full requirement text for display below heading (v6.6.104)
          * Returns the complete sentence - no truncation
          */
-        getFullRequirementText: function(text) {
+        getFullRequirementText: function (text) {
             if (!text) return '';
             return text.trim();
         },
         
 
-        showCompletionCelebration: function() {
+        showCompletionCelebration: function () {
             var root = document.getElementById('contentcreator-app');
             if (!root) {
                 return;
@@ -2726,7 +2857,7 @@ define([
             function animate() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                particles.forEach(function(p) {
+                particles.forEach(function (p) {
                     ctx.save();
                     ctx.translate(p.x, p.y);
                     ctx.rotate(p.rotation * Math.PI / 180);
@@ -2761,14 +2892,29 @@ define([
         /**
          * Main render function
          */
-        render: function() {
+        render: function () {
             // v13.92: render() replaces .cc5-player wholesale, so a live Topics-and-Text
             // narration sync is left driving detached nodes - the visible cards stop
             // revealing and the activity block never opens. navigateToSlide() tore it
             // down, but ~24 other call sites reach render() directly (the activity
             // "Retry" button and the image apply/remove handlers among them). Tearing it
             // down here covers all of them; setupVoiceoverSync() re-arms on the next play.
+            //
+            // v13.94.6: tearing down the sync was only half of it. The AUDIO went on
+            // playing against a DOM that had been replaced wholesale - so "Retry
+            // activities" mid-narration left a voice describing card 3 while the reveal
+            // sat frozen on card 1, and saving a slide edit narrated the old text over the
+            // new. Stop the element too.
             this.teardownVoiceoverSync();
+            if (this.currentAudio) {
+                try { this.currentAudio.pause(); } catch (e) { /* already detached */ }
+                this.currentAudio = null;
+                this.currentAudioSectionId = null;
+            }
+            if (this._quizFbAudio) {
+                try { this._quizFbAudio.pause(); } catch (e) { /* already detached */ }
+                this._quizFbAudio = null;
+            }
             if (this.currentView === 'topics') {
                 // v12.21: Block the topic page until ALL voiceovers are ready.
                 // If audio is still being generated, show a waiting screen instead.
@@ -2786,7 +2932,7 @@ define([
          * across all topics is missing audio (no HTTPS URL and not in memory cache).
          * Used to gate the topic page  -  students wait until all audio is ready.
          */
-        isVoiceoverGenerationPending: function() {
+        isVoiceoverGenerationPending: function () {
             if (!this.voiceoverEnabled) return false;
             // v12.36 BUG-CC-WAIT-STUCK-FAILED-GATE: user clicked "Continue" bypass button.
             if (this.voiceoverWaitBypassed) return false;
@@ -2835,13 +2981,13 @@ define([
          * v12.36: Failed sections are counted as ready (they won't generate audio;
          * exclude them from the "still waiting" tally so the bar reaches 100%).
          */
-        getVoiceoverProgress: function() {
+        getVoiceoverProgress: function () {
             var topics = (this.manifest && this.manifest.topics) || [];
             var self = this;
             var total = 0;
             var ready = 0;
-            topics.forEach(function(topic) {
-                (topic.sections || []).forEach(function(s) {
+            topics.forEach(function (topic) {
+                (topic.sections || []).forEach(function (s) {
                     if (s.slideType === 'activity') return;
                     total++;
                     var hasUrl = typeof s.voiceoverUrl === 'string' && s.voiceoverUrl.startsWith('http');
@@ -2872,7 +3018,7 @@ define([
          * "Retry failed audio" button (teachers/canEdit only) to re-queue failed
          * sections without a full page reload.
          */
-        renderVoiceoverWaiting: function() {
+        renderVoiceoverWaiting: function () {
             var self = this;
             var prog = this.getVoiceoverProgress();
             var pct = prog.total > 0 ? Math.round((prog.ready / prog.total) * 100) : 0;
@@ -2900,10 +3046,10 @@ define([
             this.container.html(html);
 
             // v12.36: Bind bypass button events immediately after rendering.
-            this.container.find('.cc5-vo-wait-continue-btn').off('click').on('click', function() {                self.voiceoverWaitBypassed = true;
+            this.container.find('.cc5-vo-wait-continue-btn').off('click').on('click', function () {                self.voiceoverWaitBypassed = true;
                 self.renderTopicsGrid();
             });
-            this.container.find('.cc5-vo-wait-retry-btn').off('click').on('click', function() {
+            this.container.find('.cc5-vo-wait-retry-btn').off('click').on('click', function () {
                 // v12.42: 3-second debounce instead of "blocked forever until retry completes".
                 // The old _voiceoverRetryPending guard prevented a second click from working at all
                 // if the first retry's 120s fetch was still in-flight  -  the user saw "nothing happens"
@@ -2921,8 +3067,8 @@ define([
                 // v12.42: Also abort any in-flight AbortController so the old 120s fetch is
                 // cancelled immediately, preventing up to 4 x 120s = 8 minutes of competing chains.
                 var topics = (self.manifest && self.manifest.topics) || [];
-                topics.forEach(function(topic) {
-                    (topic.sections || []).forEach(function(s) {
+                topics.forEach(function (topic) {
+                    (topic.sections || []).forEach(function (s) {
                         if (s.slideType === 'activity') return;
                         var hasCompleteAudio = s.voiceoverStatus === 'complete' &&
                             typeof s.voiceoverUrl === 'string' && s.voiceoverUrl.startsWith('http');
@@ -2969,7 +3115,7 @@ define([
          * (the waiting screen was already dismissed by a re-render on completion).
          * When the last section finishes, calls render() to transition to topic page.
          */
-        refreshTopicCardVoiceoverState: function(sectionId) {
+        refreshTopicCardVoiceoverState: function (sectionId) {
             // Only relevant when on the topics view
             if (this.currentView !== 'topics') return;
 
@@ -2990,7 +3136,7 @@ define([
         /**
          * Render the topics grid view
          */
-        setActiveLang: function(code) {
+        setActiveLang: function (code) {
             // v12.55: Swap manifest.topics to the chosen student language and re-render.
             // The primary topics are stashed in _primaryTopics on first switch so they
             // can be restored cleanly when the student switches back.
@@ -3030,6 +3176,9 @@ define([
                 // Restore primary language
                 this.manifest.topics = this._primaryTopics;
                 this.activeLang = null;
+                // v13.94.6: back to the primary language - move the label language with it.
+                setCurrentLanguage(this.voiceLanguage);
+                useNarrationLanguage(this.voiceLanguage);
             } else {
                 var mlEntry = null;
                 var mlArr = this.manifest.multiLanguage || [];
@@ -3050,14 +3199,14 @@ define([
                     // language mode: hasImage=false, the slide image container renders empty, and
                     // the "Add Image" button appears even for slides that already have an image.
                     var _primTopics = this._primaryTopics || [];
-                    mlEntry.topics.forEach(function(mlTopic) {
+                    mlEntry.topics.forEach(function (mlTopic) {
                         var _primTopic = null;
                         for (var _pi = 0; _pi < _primTopics.length; _pi++) {
                             if (_primTopics[_pi].id === mlTopic.id) { _primTopic = _primTopics[_pi]; break; }
                         }
                         if (!_primTopic) { return; }
                         var _primSects = _primTopic.sections || [];
-                        (mlTopic.sections || []).forEach(function(mlSection) {
+                        (mlTopic.sections || []).forEach(function (mlSection) {
                             for (var _si = 0; _si < _primSects.length; _si++) {
                                 if (String(_primSects[_si].id) === String(mlSection.id)) {
                                     // Copy image if primary has one (preserve any image already
@@ -3072,12 +3221,20 @@ define([
                     });
                     this.manifest.topics = mlEntry.topics;
                     this.activeLang = code;
+            // v13.94.6: setCurrentLanguage was called exactly once, at init, with the
+            // PRIMARY language - so switching to an additional-language pack swapped the
+            // topics, the audio and the render, but left every label resolving English.
+            // That includes the resolver handed to cc-state, which is what builds the
+            // narration text, so a regenerated section in the active language got English
+            // labels spliced into it.
+            setCurrentLanguage(code || this.voiceLanguage);
+            useNarrationLanguage(code || this.voiceLanguage);
                     // CC-ML-DEBUG v13.8: Show actual content of first German/non-English section
                     // so teacher/developer can confirm whether AI produced translated content
                     // or silently fell back to English. This is the DEFINITIVE diagnostic for
                     // "English with German accent" bugs — if title/voiceoverText below is English,
                     // the AI generation produced English content and the course needs regeneration.
-                    (function() {
+                    (function () {
                         var _dbgTopics = mlEntry.topics || [];
                         var _dbgSect = null;
                         for (var _dti = 0; _dti < _dbgTopics.length && !_dbgSect; _dti++) {
@@ -3114,7 +3271,7 @@ define([
             }
         },
 
-        renderTopicsGrid: function() {
+        renderTopicsGrid: function () {
             var self = this;
             var manifest = this.manifest;
             var topics = manifest.topics || [];
@@ -3174,17 +3331,17 @@ define([
 
             // v12.79 CC-LANG-SWITCHER-MODULE: Delegate to cc-language-switcher.js.
             // Previously: ~25 lines of inline HTML building with a local _langLabels map.
-            html += CcLangSwitcher.renderLangSwitcherHtml(manifest, self.activeLang);
+            html += CcLangSwitcher.renderLangSwitcherHtml(manifest, self.activeLang, getLabel);
 
             // Estimated time banner
             var ccEtaSeconds = 0;
             var ccTotalLearning = 0;
             var ccTotalActivities = 0;
             var ccHasVoiceover = !!(manifest.voiceSettings && manifest.voiceSettings.enabled !== false);
-            topics.forEach(function(topic) {
+            topics.forEach(function (topic) {
                 var secs = topic.sections || [];
                 ccTotalLearning += secs.length;
-                secs.forEach(function(s) {
+                secs.forEach(function (s) {
                     if (s.activity && s.activity.activityType) ccTotalActivities++;
                 });
             });
@@ -3198,7 +3355,7 @@ define([
             // v6.5.3: Check topic navigation mode (lockstep vs free)
             var topicNavMode = (manifest.settings && manifest.settings.topicNavMode) || 'free';
             var topicProgressCache = []; // Cache progress for lockstep checks
-            topics.forEach(function(topic) {
+            topics.forEach(function (topic) {
                 topicProgressCache.push(self.calculateTopicProgress(topic));
             });
 
@@ -3211,7 +3368,7 @@ define([
                 var sIcon = self.getContentIcon(sTopic, 0);
                 var sSections = sTopic.sections || [];
                 var sLearning = sSections.length;
-                var sActivity = sSections.filter(function(s) { return s.activity && s.activity.activityType; }).length;
+                var sActivity = sSections.filter(function (s) { return s.activity && s.activity.activityType; }).length;
                 var sSlides = sLearning + sActivity;
                 var sStartLabel = sStatusClass === 'complete'
                     ? (getLabel('review') || 'Review Content')
@@ -3299,7 +3456,7 @@ define([
                 html += '</div></div>';
 
                 html += '<div id="cc5-main-content" class="cc5-topics-grid">';
-                topics.forEach(function(topic, index) {
+                topics.forEach(function (topic, index) {
                     var theme = getColorTheme(topic.color || 'primary');
                     var topicProgress = topicProgressCache[index];
                     var statusClass = topicProgress === 100 ? 'complete' : (topicProgress > 0 ? 'in-progress' : 'not-started');
@@ -3315,7 +3472,7 @@ define([
 
                     var sections = topic.sections || [];
                     var learningCount = sections.length;
-                    var activityCount = sections.filter(function(s) { return s.activity && s.activity.activityType; }).length;
+                    var activityCount = sections.filter(function (s) { return s.activity && s.activity.activityType; }).length;
                     var totalSlides = learningCount + activityCount;
 
                     var cardClasses = 'cc5-topic-card' + (isLocked ? ' cc5-topic-locked' : '');
@@ -3371,7 +3528,7 @@ define([
                 html += '</div>'; // cc5-topics-grid
 
                 // v11.36 FIX-NEXT-ACTIVITY: Show "Return to Course" button when all topics are complete.
-                var allTopicsDone = topics.length > 0 && topics.every(function(t, i) { return topicProgressCache[i] === 100; });
+                var allTopicsDone = topics.length > 0 && topics.every(function (t, i) { return topicProgressCache[i] === 100; });
                 if (allTopicsDone && self.courseUrl) {
                     html += '<div class="cc5-return-course-wrap">';
                     html += '<a href="' + escapeHtml(self.courseUrl) + '" class="cc5-return-course-btn">';
@@ -3391,7 +3548,7 @@ define([
          * Get content-appropriate icon based on topic content
          * Priority: Specific work context > Hazard type > Activity type > Generic
          */
-        getContentIcon: function(topic, index) {
+        getContentIcon: function (topic, index) {
             var text = ((topic.title || '') + ' ' + (topic.description || '')).toLowerCase();
             
             // TIER 1: Specific work environments (highest priority)
@@ -3438,18 +3595,18 @@ define([
         /**
          * Render slide-based view with navigation controls
          */
-        renderSlideView: function() {            var self = this;
+        renderSlideView: function () {            var self = this;
             // FIX-CC-TOPIC-FIND (v12.94): Use String() coercion so that a numeric topic.id
             // from the JSON manifest (e.g. 1) matches a string currentTopicId from jQuery
             // .data() (e.g. "1") and vice-versa. Strict === silently returns undefined when
             // the types differ, causing the !topic guard below to fire and re-render the
             // topics grid over the user's click — "Start Learning does nothing on first load".
             var _ctid = String(self.currentTopicId);
-            var topic = this.manifest.topics?.find(function(t) { return String(t.id) === _ctid; });
+            var topic = this.manifest.topics?.find(function (t) { return String(t.id) === _ctid; });
             if (!topic) {
                 // FIX-CC-CLICK-DIAG (v12.94): Log the mismatch so it surfaces in the browser
                 // console if the topic-not-found fallback fires unexpectedly.
-                var _allIds = (this.manifest.topics || []).map(function(t) { return t.id; });
+                var _allIds = (this.manifest.topics || []).map(function (t) { return t.id; });
                 ccWarn('[CC v' + CC_VERSION + '] renderSlideView: topic not found for currentTopicId=' +
                     JSON.stringify(self.currentTopicId) + ' (type=' + typeof self.currentTopicId +
                     '). manifest topic ids=' + JSON.stringify(_allIds) + '. Falling back to topics grid.');
@@ -3479,7 +3636,7 @@ define([
             html += '<div class="cc5-slide-indicators" role="tablist" aria-label="' + getLabel('slideProgress') + '">';
             var currentSectionForLock = sections[self.currentSlideIndex];
             var currentSlideBlocked = currentSectionForLock && !self.canNavigateNext(currentSectionForLock);
-            sections.forEach(function(section, index) {
+            sections.forEach(function (section, index) {
                 var isComplete = self.isSectionComplete(section.slideId || section.id);
                 var isCurrent = index === self.currentSlideIndex;
                 var isActivity = section.slideType === 'activity';
@@ -3599,7 +3756,7 @@ define([
             // Auto-scroll to top of slide content (v6.4.4)
             var slideContent = this.container.find('.cc5-slide-topbar')[0];
             if (slideContent) {
-                setTimeout(function() {
+                setTimeout(function () {
                     slideContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 50);
             }
@@ -3623,7 +3780,7 @@ define([
          * v7.7.0: Get card progress for a section
          * Returns { current: X, total: Y, timeEstimate: "X min" }
          */
-        getCardProgress: function(section, topic) {
+        getCardProgress: function (section, topic) {
             // Count total sections in this topic
             var totalSections = topic.sections ? topic.sections.length : 1;
             var currentIndex = 1;
@@ -3657,7 +3814,7 @@ define([
         // correctly inside Moodle regardless of whether scroll is on window or a parent container.
         // Animation is a one-shot CSS keyframe; the class is stripped on animationend so hover
         // transforms and other existing styles are completely unaffected afterwards.
-        initScrollReveal: function() {
+        initScrollReveal: function () {
             var self = this;
             if (this._revealObserver) {
                 this._revealObserver.disconnect();
@@ -3676,21 +3833,21 @@ define([
             // Compute stagger delay: each element gets a delay based on its index among siblings
             // sharing the same parent container (e.g. all 4 scene-parts stagger 0, 70, 140, 210 ms)
             var parentCounters = new Map();
-            targets.forEach(function(el) {
+            targets.forEach(function (el) {
                 var parent = el.parentElement;
                 var idx = parentCounters.has(parent) ? parentCounters.get(parent) : 0;
                 parentCounters.set(parent, idx + 1);
                 el.dataset.ccRevealIdx = idx;
             });
 
-            this._revealObserver = new IntersectionObserver(function(entries) {
-                entries.forEach(function(entry) {
+            this._revealObserver = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
                     if (entry.isIntersecting) {
                         var el = entry.target;
                         var delay = (parseInt(el.dataset.ccRevealIdx) || 0) * 0.07;
                         el.style.animationDelay = delay + 's';
                         el.classList.add('cc5-rise-in');
-                        el.addEventListener('animationend', function() {
+                        el.addEventListener('animationend', function () {
                             el.classList.remove('cc5-rise-in');
                             el.style.animationDelay = '';
                         }, { once: true });
@@ -3699,12 +3856,12 @@ define([
                 });
             }, { threshold: 0.08, rootMargin: '0px 0px -20px 0px' });
 
-            targets.forEach(function(el) {
+            targets.forEach(function (el) {
                 self._revealObserver.observe(el);
             });
         },
 
-        renderSlideContent: function(section, topic) {                                  
+        renderSlideContent: function (section, topic) {                                  
             var self = this;
             
             // v7.2.50: Track which document types have been linked on this slide (deduplication)
@@ -3864,7 +4021,7 @@ define([
                     html += '</div>';
                     html += '<div class="cc5-introduction-content">';
                     // v11.58: Render as plain paragraphs  -  no list markup.
-                    introSentences.forEach(function(sentence) {
+                    introSentences.forEach(function (sentence) {
                         html += '<p class="cc5-introduction-para">' + formatTextWithDocLinks(sentence.trim(), linkedDocsTracker) + '</p>';
                     });
                     html += '</div>';
@@ -3904,7 +4061,7 @@ define([
                     
                     html += '<div class="cc5-requirements-grid">';
                     
-                    section.requirements.forEach(function(req, idx) {
+                    section.requirements.forEach(function (req, idx) {
                         // v6.6.17: Handle both string and object formats for backwards compatibility
                         var reqText = typeof req === 'string' ? req : (req.text || req.requirement || '');
                         var reqIcon = (typeof req === 'object' && req.icon) ? req.icon : null;
@@ -3937,7 +4094,9 @@ define([
                 // ===================================================================
                 var positiveItems = section.positiveList || section.doList || [];
                 var negativeItems = section.negativeList || section.dontList || [];
-                var contrastType = section.contrastType || 'dos-donts';
+                // v13.94.3: section.contrastType was never written by anything - see
+                // CcState.sectionContrastType(). This resolved to 'dos-donts' always.
+                var contrastType = CcState.sectionContrastType(section);
                 var contrastConfig = getContrastPair(contrastType);
                 
                 if (positiveItems.length || negativeItems.length) {
@@ -3951,7 +4110,7 @@ define([
                         html += '<span>' + escapeHtml(contrastConfig.positive) + '</span>';
                         html += '</div>';
                         html += '<ul class="cc5-dos-list">';
-                        positiveItems.forEach(function(item) {
+                        positiveItems.forEach(function (item) {
                             html += '<li class="cc5-do-item">';
                             html += '<span class="cc5-list-icon">' + getIcon(contrastConfig.positiveListIcon) + '</span>';
                             html += '<span>' + formatTextWithDocLinks(item, linkedDocsTracker) + '</span>';
@@ -3969,7 +4128,7 @@ define([
                         html += '<span>' + escapeHtml(contrastConfig.negative) + '</span>';
                         html += '</div>';
                         html += '<ul class="cc5-donts-list">';
-                        negativeItems.forEach(function(item) {
+                        negativeItems.forEach(function (item) {
                             html += '<li class="cc5-dont-item">';
                             html += '<span class="cc5-list-icon">' + getIcon(contrastConfig.negativeListIcon) + '</span>';
                             html += '<span>' + formatTextWithDocLinks(item, linkedDocsTracker) + '</span>';
@@ -3990,7 +4149,7 @@ define([
                     html += '<div class="cc5-knowledge-terminology">';
                     html += '<h4 class="cc5-terminology-title">' + (getLabel('keyTerms') || 'Key Terms') + '</h4>';
                     html += '<dl class="cc5-terminology-list">';
-                    combinedTerms.forEach(function(term) {
+                    combinedTerms.forEach(function (term) {
                         html += '<dt class="cc5-term">' + escapeHtml(fixGrammar(term.term || '')) + '</dt>';
                         html += '<dd class="cc5-definition">' + escapeHtml(fixGrammar(term.definition || '')) + '</dd>';
                     });
@@ -4017,7 +4176,7 @@ define([
                 // renders last regardless of the order the AI returned the JSON array.
                 // Does not mutate the stored section.cards[]  -  slice() first.
                 if (section.cards && section.cards.length > 0) {
-                    var _renderCards = section.cards.slice().sort(function(a, b) {
+                    var _renderCards = section.cards.slice().sort(function (a, b) {
                         if (a.cardType === 'decision-point') return 1;
                         if (b.cardType === 'decision-point') return -1;
                         return 0;
@@ -4026,23 +4185,23 @@ define([
                     var _flipItems = [];
                     var _sortItems = [];
                     var _sortLabels = null;
-                    _renderCards.forEach(function(c) {
+                    _renderCards.forEach(function (c) {
                         if (c.cardType === 'concept-explainer' && c.conceptInsights && c.conceptInsights.length) {
-                            c.conceptInsights.forEach(function(ins) {
+                            c.conceptInsights.forEach(function (ins) {
                                 var front = ins.title || '';
                                 var back  = ins.text || ins.content || ins.description || '';
                                 if (front && back) _flipItems.push({ front: front, back: back });
                             });
                         }
                         if (c.cardType === 'mental-model' && c.steps && c.steps.length) {
-                            c.steps.forEach(function(s) {
+                            c.steps.forEach(function (s) {
                                 var front = s.step || s.title || '';
                                 var back  = s.detail || s.text || s.description || '';
                                 if (front && back) _flipItems.push({ front: front, back: back });
                             });
                         }
                         if (c.cardType === 'mistakes' && c.items && c.items.length) {
-                            c.items.forEach(function(m) {
+                            c.items.forEach(function (m) {
                                 var front = m.mistake || m.title || '';
                                 var back  = m.consequence || m.text || m.description || '';
                                 if (front && back) _flipItems.push({ front: front, back: back });
@@ -4054,7 +4213,7 @@ define([
                         // on the Key Takeaways card become the category sort.
                         if (c.keyTerms && c.keyTerms.length &&
                             /^(key-concepts|foundations)$/.test(c.cardType || '')) {
-                            c.keyTerms.forEach(function(t) {
+                            c.keyTerms.forEach(function (t) {
                                 var front = (typeof t === 'string') ? t : (t.term || t.title || '');
                                 var back  = (typeof t === 'string') ? '' : (t.definition || t.text || '');
                                 if (front && back) _flipItems.push({ front: front, back: back });
@@ -4062,27 +4221,25 @@ define([
                         }
                         if (c.cardType === 'competency-summary' || c.cardType === 'key-takeaways' ||
                             c.cardType === 'boundaries') {
-                            (c.goodItems || []).forEach(function(gi) {
+                            (c.goodItems || []).forEach(function (gi) {
                                 var t = typeof gi === 'string' ? gi : (gi.text || gi.behaviour || gi.criterion || '');
                                 if (t) _sortItems.push({ text: t, category: 'good' });
                             });
-                            (c.badItems || []).forEach(function(bi) {
+                            (c.badItems || []).forEach(function (bi) {
                                 var t = typeof bi === 'string' ? bi : (bi.text || '');
                                 if (t) _sortItems.push({ text: t, category: 'bad' });
                             });
                         }
                     });
                     // Determine category labels from section contrastType
-                    var _ct = section.contrastType || 'dos-donts';
-                    var _contrastMap = {
-                        'dos-donts': { positive: 'Good Practice', negative: 'Avoid' },
-                        'safe-unsafe': { positive: 'Safe', negative: 'Unsafe' },
-                        'compliant-noncompliant': { positive: 'Compliant', negative: 'Non-Compliant' },
-                        'professional-unprofessional': { positive: 'Professional', negative: 'Unprofessional' },
-                        'effective-ineffective': { positive: 'Effective', negative: 'Ineffective' },
-                        'legal-illegal': { positive: 'Legal', negative: 'Illegal' }
-                    };
-                    _sortLabels = _contrastMap[_ct] || _contrastMap['dos-donts'];
+                    // v13.94.3: two bugs here. section.contrastType was never written
+                    // by anything, so this map only ever returned its first entry; and
+                    // the labels were hardcoded English, so a translated module showed
+                    // English sort columns. Both now go through the shared resolver and
+                    // the label bundle.
+                    var _ct = CcState.sectionContrastType(section);
+                    var _ctPair = getContrastPair(_ct);
+                    _sortLabels = { positive: _ctPair.positive, negative: _ctPair.negative };
                     // Shuffle sort items deterministically using section id
                     if (_sortItems.length > 1) {
                         var _seed = 0;
@@ -4107,14 +4264,14 @@ define([
                     // not a prose card, it is the activity block, and it stays hidden until
                     // the last card has been revealed.
                     var _PROSE_TYPES = /^(overview|key-concepts|examples-application|key-takeaways|orientation|foundations|mechanism|in-practice|boundaries)$/;
-                    var _proseCards = _renderCards.filter(function(c) {
+                    var _proseCards = _renderCards.filter(function (c) {
                         return c && c.cardType && _PROSE_TYPES.test(c.cardType);
                     });
-                    var _isProsePack = _proseCards.length > 0 && _renderCards.every(function(c) {
+                    var _isProsePack = _proseCards.length > 0 && _renderCards.every(function (c) {
                         return c && c.cardType && (_PROSE_TYPES.test(c.cardType) || c.cardType === 'decision-point');
                     });
                     var _proseHasActivities = _isProsePack && self.activitiesEnabled &&
-                        _renderCards.some(function(c) { return c.cardType === 'decision-point'; });
+                        _renderCards.some(function (c) { return c.cardType === 'decision-point'; });
                     var _proseSeq = 0;
                     var _proseGridClosed = false;
 
@@ -4125,13 +4282,13 @@ define([
                     // section.cards order, so the index has to come from the original
                     // array, not from the render loop counter.
                     var _origCards = section.cards || [];
-                    var _voIndexOf = function(card) {
+                    var _voIndexOf = function (card) {
                         for (var i = 0; i < _origCards.length; i++) {
                             if (_origCards[i] === card) { return i; }
                         }
                         return -1;
                     };
-                    var _stampVoCard = function(cardHtml, voIdx) {
+                    var _stampVoCard = function (cardHtml, voIdx) {
                         if (voIdx < 0 || !cardHtml) { return cardHtml; }
                         // Every route-card renderer opens with '<div class="cc5-card ...'.
                         return cardHtml.replace(/^(\s*<div\b)/, '$1 data-vo-card="' + voIdx + '"');
@@ -4143,7 +4300,7 @@ define([
                              + escapeHtml(String(section.slideId || section.id || '')) + '">';
                     }
 
-                    _renderCards.forEach(function(card, cardIdx) {
+                    _renderCards.forEach(function (card, cardIdx) {
                         if (card.cardType) {
                             // v11.10: decision-point becomes the 3-activity challenge
                             // v11.11: skip challenge rendering when activities are disabled
@@ -4226,26 +4383,26 @@ define([
             return html;
         },
 
-        renderPerformanceAnchor: function(section) { return CcCardSlots.renderPerformanceAnchor(section); },
-        renderPlainEnglish: function(section) { return CcCardSlots.renderPlainEnglish(section); },
-        renderActionBreakdown: function(section) { return CcCardSlots.renderActionBreakdown(section); },
-        renderCompetenceStandard: function(section) { return CcCardSlots.renderCompetenceStandard(section); },
-        renderRouteScenarioCard: function(section) { return CcCardSlots.renderRouteScenarioCard(section); },
-        renderCommonErrors: function(section) { return CcCardSlots.renderCommonErrors(section); },
-        renderConceptAnchor: function(section) { return CcCardSlots.renderConceptAnchor(section); },
-        renderTheoreticalFramework: function(section) { return CcCardSlots.renderTheoreticalFramework(section); },
-        renderAnalyticalLens: function(section) { return CcCardSlots.renderAnalyticalLens(section); },
-        renderEthicsConsiderations: function(section) { return CcCardSlots.renderEthicsConsiderations(section); },
-        renderCaseStudy: function(section) { return CcCardSlots.renderCaseStudy(section); },
-        renderBusinessImpact: function(section) { return CcCardSlots.renderBusinessImpact(section); },
-        renderActionFramework: function(section) { return CcCardSlots.renderActionFramework(section); },
-        renderRiskCard: function(section) { return CcCardSlots.renderRiskCard(section); },
-        renderPolicyAlignment: function(section) { return CcCardSlots.renderPolicyAlignment(section); },
-        renderSkillAnchor: function(section) { return CcCardSlots.renderSkillAnchor(section); },
-        renderCoreFramework: function(section) { return CcCardSlots.renderCoreFramework(section); },
-        renderApplicationGuide: function(section) { return CcCardSlots.renderApplicationGuide(section); },
-        renderCommonPitfalls: function(section) { return CcCardSlots.renderCommonPitfalls(section); },
-        renderPDScenarioCard: function(section) { return CcCardSlots.renderPDScenarioCard(section); },
+        renderPerformanceAnchor: function (section) { return CcCardSlots.renderPerformanceAnchor(section); },
+        renderPlainEnglish: function (section) { return CcCardSlots.renderPlainEnglish(section); },
+        renderActionBreakdown: function (section) { return CcCardSlots.renderActionBreakdown(section); },
+        renderCompetenceStandard: function (section) { return CcCardSlots.renderCompetenceStandard(section); },
+        renderRouteScenarioCard: function (section) { return CcCardSlots.renderRouteScenarioCard(section); },
+        renderCommonErrors: function (section) { return CcCardSlots.renderCommonErrors(section); },
+        renderConceptAnchor: function (section) { return CcCardSlots.renderConceptAnchor(section); },
+        renderTheoreticalFramework: function (section) { return CcCardSlots.renderTheoreticalFramework(section); },
+        renderAnalyticalLens: function (section) { return CcCardSlots.renderAnalyticalLens(section); },
+        renderEthicsConsiderations: function (section) { return CcCardSlots.renderEthicsConsiderations(section); },
+        renderCaseStudy: function (section) { return CcCardSlots.renderCaseStudy(section); },
+        renderBusinessImpact: function (section) { return CcCardSlots.renderBusinessImpact(section); },
+        renderActionFramework: function (section) { return CcCardSlots.renderActionFramework(section); },
+        renderRiskCard: function (section) { return CcCardSlots.renderRiskCard(section); },
+        renderPolicyAlignment: function (section) { return CcCardSlots.renderPolicyAlignment(section); },
+        renderSkillAnchor: function (section) { return CcCardSlots.renderSkillAnchor(section); },
+        renderCoreFramework: function (section) { return CcCardSlots.renderCoreFramework(section); },
+        renderApplicationGuide: function (section) { return CcCardSlots.renderApplicationGuide(section); },
+        renderCommonPitfalls: function (section) { return CcCardSlots.renderCommonPitfalls(section); },
+        renderPDScenarioCard: function (section) { return CcCardSlots.renderPDScenarioCard(section); },
 
         // ===================================================================
         // v13.92: TOPICS-AND-TEXT SEQUENTIAL REVEAL + NARRATION SYNC
@@ -4277,7 +4434,7 @@ define([
          * @param {Boolean} scrollTo Whether to bring the card into view.
          * @return {void}
          */
-        revealProseCard: function($grid, index, scrollTo) {
+        revealProseCard: function ($grid, index, scrollTo) {
             if (!$grid || !$grid.length || isNaN(index)) { return; }
             var $card = $grid.find('.cc5-prose-card[data-prose-index="' + index + '"]');
             if (!$card.length) { return; }
@@ -4292,7 +4449,11 @@ define([
             $card.addClass('cc5-prose-active');
             // The button on the card we just left has done its job.
             $grid.find('.cc5-prose-card[data-prose-index="' + (index - 1) + '"] .cc5-prose-next-btn')
-                .addClass('cc5-prose-btn-used');
+                // v13.94.6: a spent button was retired by pointer-events:none only, which
+                // leaves it focusable and still fires on Enter. Disable it for real.
+                .addClass('cc5-prose-btn-used')
+                .attr('aria-disabled', 'true')
+                .prop('disabled', true);
             if (scrollTo && $card[0] && typeof $card[0].scrollIntoView === 'function') {
                 try {
                     $card[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -4308,7 +4469,7 @@ define([
          * @param {Object} $grid jQuery wrapper for .cc5-prose-grid.
          * @return {void}
          */
-        revealProseActivities: function($grid) {
+        revealProseActivities: function ($grid) {
             // A length-0 set is not a usable anchor: nextAll() on it returns nothing and
             // a container-wide search would reveal an unrelated block if a slide ever
             // renders more than one section. Bail instead of guessing.
@@ -4316,7 +4477,11 @@ define([
             var $block = $grid.nextAll('.cc5-prose-activities').first();
             if (!$block.length) { return; }
             $block.removeClass('cc5-prose-hidden').removeAttr('aria-hidden');
-            $grid.find('.cc5-prose-final-btn').addClass('cc5-prose-btn-used');
+            // v13.94.6: same as above - keyboard-inert, not just pointer-inert.
+            $grid.find('.cc5-prose-final-btn')
+                 .addClass('cc5-prose-btn-used')
+                 .attr('aria-disabled', 'true')
+                 .prop('disabled', true);
             if ($block[0] && typeof $block[0].scrollIntoView === 'function') {
                 try {
                     $block[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -4334,7 +4499,7 @@ define([
          * @param {Number} paraIndex Paragraph within that card, or -1 for none.
          * @return {void}
          */
-        focusProseParagraph: function($grid, cardIndex, paraIndex) {
+        focusProseParagraph: function ($grid, cardIndex, paraIndex) {
             if (!$grid || !$grid.length) { return; }
             $grid.find('.cc5-prose-para.cc5-para-focus').removeClass('cc5-para-focus');
             if (cardIndex < 0 || paraIndex < 0) { return; }
@@ -4344,23 +4509,103 @@ define([
         },
 
         /**
+         * v13.94.4: stop the section narration because the learner advanced by hand.
+         *
+         * Pauses the audio, detaches the timeline sync so it cannot pull the reveal
+         * backwards, and clears the "speaking" affordances. Cards already revealed stay
+         * revealed - the learner keeps everything they have been given.
+         *
+         * @return {void}
+         */
+        stopProseNarration: function () {
+            if (this.currentAudio) {
+                try {
+                    this.currentAudio.pause();
+                    // Rewind so a later replay starts the section from the top rather
+                    // than resuming mid-card, which reads as a glitch.
+                    this.currentAudio.currentTime = 0;
+                } catch (e) {
+                    ccWarn('[CC] could not stop narration on manual advance: '
+                        + (e && e.message ? e.message : e));
+                }
+            }
+            this.teardownVoiceoverSync();
+            if (this.container) {
+                this.container.find('.cc5-prose-card').removeClass('cc5-prose-speaking');
+                this.container.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
+            }
+        },
+
+        /**
+         * v13.94.4: lock or unlock the manual reveal buttons for "must listen" mode.
+         *
+         * In PROGRESSION_MODES.VOICEOVER a card may not be advanced past by hand until
+         * the narration has finished reading it. `passedCardIndex` is the highest card
+         * the narration has completed; every button whose SOURCE card index is at or
+         * below that is unlocked, the rest are locked.
+         *
+         * @param {Object} $grid          The prose grid.
+         * @param {Number} passedCardIndex Highest card index the narration has finished.
+         * @return {void}
+         */
+        applyProseGate: function ($grid, passedCardIndex) {
+            if (!$grid || !$grid.length) { return; }
+            if (this.progressionMode !== PROGRESSION_MODES.VOICEOVER) {
+                $grid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-locked')
+                     .removeAttr('aria-disabled').find('.cc5-prose-btn-lock').remove();
+                return;
+            }
+            var lockLabel = getLabel('listenToUnlock');
+            $grid.find('.cc5-prose-next-btn').each(function () {
+                var $b = $(this);
+                var $card = $b.closest('.cc5-prose-card');
+                var srcIdx = parseInt($card.attr('data-prose-index'), 10);
+                if (isNaN(srcIdx)) { return; }
+                var unlocked = srcIdx <= passedCardIndex;
+                if (unlocked) {
+                    $b.removeClass('cc5-prose-btn-locked')
+                      .removeAttr('aria-disabled')
+                      .prop('disabled', false);
+                    $b.find('.cc5-prose-btn-lock').remove();
+                } else {
+                    // v13.94.6: aria-disabled alone is advisory. The locked state has only
+                    // cursor:not-allowed in CSS, so the button was clickable by mouse AND
+                    // keyboard while the gate was supposed to be holding it.
+                    $b.addClass('cc5-prose-btn-locked')
+                      .attr('aria-disabled', 'true')
+                      .prop('disabled', true);
+                    if (!$b.find('.cc5-prose-btn-lock').length) {
+                        $b.append($('<span class="cc5-prose-btn-lock"></span>').text(' - ' + lockLabel));
+                    }
+                }
+            });
+        },
+
+        /**
          * Clear any running narration sync and its visual state.
          *
          * @return {void}
          */
-        teardownVoiceoverSync: function() {
+        teardownVoiceoverSync: function () {
             if (this._proseSync && this._proseSync.audio) {
                 try {
                     this._proseSync.audio.removeEventListener('timeupdate', this._proseSync.onTick);
                     this._proseSync.audio.removeEventListener('pause', this._proseSync.onPause);
                     this._proseSync.audio.removeEventListener('play', this._proseSync.onPlay);
+                    this._proseSync.audio.removeEventListener('ended', this._proseSync.onEnded);
+                    this._proseSync.audio.removeEventListener('error', this._proseSync.onError);
                 } catch (e) {
                     // Audio element already gone; nothing to detach.
                 }
             }
             if (this._proseSync && this._proseSync.$grid) {
                 this._proseSync.$grid.find('.cc5-prose-para.cc5-para-focus').removeClass('cc5-para-focus');
-                this._proseSync.$grid.find('.cc5-prose-card').removeClass('cc5-prose-speaking');
+                // v13.94.6: cc5-prose-active was added on reveal and removed only by the
+                // NEXT reveal, so after the last card it stayed on forever - and its rule
+                // is a persistent ring implying that card is still being narrated. The
+                // three sibling state classes were all cleared here and this one was not.
+                this._proseSync.$grid.find('.cc5-prose-card')
+                    .removeClass('cc5-prose-speaking cc5-prose-active');
                 this._proseSync.$grid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
                 // The card-level sync stores the cards themselves in $grid, so clear the
                 // class on the set as well as inside it.
@@ -4396,7 +4641,7 @@ define([
          * @param {Object} section The manifest section being narrated.
          * @return {void}
          */
-        setupCardVoiceoverSync: function(audio, section) {
+        setupCardVoiceoverSync: function (audio, section) {
             var self = this;
             if (!audio || !section || !CcState.buildCardVoiceoverSegments) { return; }
 
@@ -4413,7 +4658,7 @@ define([
                 + '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>'
                 + '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>'
                 + '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></span>';
-            $cards.each(function() {
+            $cards.each(function () {
                 var $c = $(this);
                 if ($c.find('.cc5-vo-chip, .cc5-prose-vo-dot').length) { return; }
                 var $host = $c.children('.cc5-flow-badge').first();
@@ -4421,8 +4666,11 @@ define([
                 if ($host.length) { $host.append(chip); } else { $c.prepend(chip); }
             });
 
-            var weights = segments.map(function(seg) { return Math.max(1, seg.words); });
-            var totalWeight = weights.reduce(function(a, b) { return a + b; }, 0);
+            // v13.94.6: same character fallback as the prose branch - see _voWeight().
+            var weights = segments.map(function (seg) {
+                return Math.max(1, seg.words > 1 ? seg.words : _voWeight(seg.text));
+            });
+            var totalWeight = weights.reduce(function (a, b) { return a + b; }, 0);
             var FALLBACK_WPS = 2.6;
 
             var state = {
@@ -4437,7 +4685,7 @@ define([
                 onPlay: null
             };
 
-            var computeBounds = function() {
+            var computeBounds = function () {
                 var duration = audio.duration;
                 var usable = !!duration && isFinite(duration) && duration > 0;
                 state.estimated = !usable;
@@ -4451,14 +4699,14 @@ define([
                 return bounds;
             };
 
-            var mark = function(idx) {
+            var mark = function (idx) {
                 var seg = state.segments[idx];
                 $cards.removeClass('cc5-vo-speaking');
                 if (!seg) { return; }
                 $cards.filter('[data-vo-card="' + seg.cardIndex + '"]').addClass('cc5-vo-speaking');
             };
 
-            state.onTick = function() {
+            state.onTick = function () {
                 if (!state.bounds || state.estimated) {
                     var recomputed = computeBounds();
                     if (recomputed) { state.bounds = recomputed; }
@@ -4471,12 +4719,24 @@ define([
                 state.lastSeg = idx;
                 mark(idx);
             };
-            state.onPause = function() { $cards.removeClass('cc5-vo-speaking'); };
-            state.onPlay  = function() { mark(state.lastSeg); };
+            state.onPause = function () { $cards.removeClass('cc5-vo-speaking'); };
+            state.onPlay  = function () { mark(state.lastSeg); };
+
+            // v13.94.4: NO onEnded/onError here.
+            //
+            // An earlier v13.94.4 edit copied the prose branch's gate handlers into this
+            // function, where they called applyProseGate($grid, ...) - but $grid is
+            // declared in setupVoiceoverSync, not here; this function's element set is
+            // $cards. Under 'use strict' that is a ReferenceError thrown out of the
+            // 'ended' and 'error' listeners on EVERY section of the four card routes.
+            // The reveal gate is a Route 5 concept and these routes have no prose buttons
+            // to unlock, so the correct fix is not to pass $cards - it is to not have the
+            // handlers at all.
 
             audio.addEventListener('timeupdate', state.onTick);
             audio.addEventListener('pause', state.onPause);
             audio.addEventListener('play', state.onPlay);
+            audio.addEventListener('error', state.onError);
             this._proseSync = state;
             mark(0);
             state.lastSeg = 0;
@@ -4493,7 +4753,7 @@ define([
          * @param {Object} section The manifest section being narrated.
          * @return {void}
          */
-        setupVoiceoverSync: function(audio, section) {
+        setupVoiceoverSync: function (audio, section) {
             var self = this;
             this.teardownVoiceoverSync();
             if (!audio || !section) { return; }
@@ -4519,10 +4779,18 @@ define([
 
             // Word count per segment, floored at 1 so a one-word heading still gets a
             // slice of the timeline rather than a zero-length one.
-            var weights = segments.map(function(seg) {
-                return Math.max(1, String(seg.text || '').split(/\s+/).filter(Boolean).length);
+            // v13.94.6: weight by CHARACTERS when the text has no word spacing.
+            //
+            // Japanese, Mandarin, Cantonese and Thai are all offered in the voice list and
+            // none of them delimits words with spaces, so a 65-word-equivalent paragraph
+            // counted as 1. Every segment then got weight 1 and the section split into
+            // equal slices regardless of real length - the card reveal and the paragraph
+            // lift landed essentially at random. Worse in the fallback path, where
+            // duration = totalWeight / WPS put a three-minute section at five seconds.
+            var weights = segments.map(function (seg) {
+                return Math.max(1, _voWeight(seg.text));
             });
-            var totalWeight = weights.reduce(function(a, b) { return a + b; }, 0);
+            var totalWeight = weights.reduce(function (a, b) { return a + b; }, 0);
 
             var state = {
                 audio: audio,
@@ -4554,7 +4822,7 @@ define([
             // supposed to degrade into. So an unusable duration falls back to a
             // words-per-second estimate, which is what the proportional split
             // approximates anyway.
-            var computeBounds = function() {
+            var computeBounds = function () {
                 var duration = audio.duration;
                 var usable = !!duration && isFinite(duration) && duration > 0;
                 state.estimated = !usable;
@@ -4570,7 +4838,7 @@ define([
                 return bounds;
             };
 
-            state.onTick = function() {
+            state.onTick = function () {
                 // Recompute while the bounds are only an estimate: Chrome reports
                 // Infinity for a header-less Ogg/WebM data URL at first, and may resolve
                 // a real duration moments later. Caching the guess forever would run the
@@ -4600,17 +4868,22 @@ define([
                 $grid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
                 $speaking.find('.cc5-prose-next-btn:not(.cc5-prose-btn-used)')
                          .addClass('cc5-prose-btn-ready');
+                // v13.94.4: in "must listen" mode the manual reveal unlocks card by card
+                // as the narration finishes each one. Reaching a segment on card N means
+                // every card before N has been read in full, so N-1 is the highest card
+                // the learner may advance past by hand.
+                self.applyProseGate($grid, seg.cardIndex - 1);
             };
 
             // v13.92: while the learner has the audio paused, nothing is being narrated -
             // so the green speaker must stop pulsing and the button must stop nudging.
             // Both resume on play. The card stays revealed and the paragraph stays
             // highlighted, which is the correct reading of "paused here".
-            state.onPause = function() {
+            state.onPause = function () {
                 $grid.find('.cc5-prose-card').removeClass('cc5-prose-speaking');
                 $grid.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
             };
-            state.onPlay = function() {
+            state.onPlay = function () {
                 var seg = state.segments[state.lastSeg];
                 if (!seg) { return; }
                 var $card = $grid.find('.cc5-prose-card[data-prose-index="' + seg.cardIndex + '"]');
@@ -4622,20 +4895,35 @@ define([
                      .addClass('cc5-prose-btn-ready');
             };
 
+            // v13.94.4: NO onEnded/onError here.
+            //
+            // An earlier v13.94.4 edit copied the prose branch's gate handlers into this
+            // function, where they called applyProseGate($grid, ...) - but $grid is
+            // declared in setupVoiceoverSync, not here; this function's element set is
+            // $cards. Under 'use strict' that is a ReferenceError thrown out of the
+            // 'ended' and 'error' listeners on EVERY section of the four card routes.
+            // The reveal gate is a Route 5 concept and these routes have no prose buttons
+            // to unlock, so the correct fix is not to pass $cards - it is to not have the
+            // handlers at all.
+
             audio.addEventListener('timeupdate', state.onTick);
             audio.addEventListener('pause', state.onPause);
             audio.addEventListener('play', state.onPlay);
+            audio.addEventListener('error', state.onError);
             this._proseSync = state;
 
             // Card 1 is on screen from the start; mark it active so it reads as the
             // one in play rather than as one of four identical cards.
             this.revealProseCard($grid, 0, false);
+            // v13.94.4: nothing has been narrated yet, so in "must listen" mode no card
+            // can be advanced past. -1 locks every button.
+            this.applyProseGate($grid, -1);
         },
 
-        renderRouteCard: function(section, seqOpts) { return CcCardSlots.renderRouteCard(section, seqOpts); },
-        renderBeforeYouStartCard: function(checklistItems) { return CcCardSlots.renderBeforeYouStartCard(checklistItems); },
-        renderDocActivity: function(docActivity) { return CcCardSlots.renderDocActivity(docActivity); },
-        renderAccentCards: function(section, linkedDocsTracker) { return CcCardSlots.renderAccentCards(section, linkedDocsTracker); },
+        renderRouteCard: function (section, seqOpts) { return CcCardSlots.renderRouteCard(section, seqOpts); },
+        renderBeforeYouStartCard: function (checklistItems) { return CcCardSlots.renderBeforeYouStartCard(checklistItems); },
+        renderDocActivity: function (docActivity) { return CcCardSlots.renderDocActivity(docActivity); },
+        renderAccentCards: function (section, linkedDocsTracker) { return CcCardSlots.renderAccentCards(section, linkedDocsTracker); },
 
         // ===================================================================
         // WORLD-CLASS TOPIC-END ACTIVITIES (v6.3.0)
@@ -4644,7 +4932,7 @@ define([
         /**
          * Render any activity type by dispatching to specific renderer
          */
-        renderActivity: function(activity) {
+        renderActivity: function (activity) {
             if (!activity || !activity.activityType) return '';
             
             switch (activity.activityType) {
@@ -4669,20 +4957,20 @@ define([
          * 1. SCENARIO BRANCHING (FLAGSHIP)
          * v6.6.63: World-class improvements - progress indicator, visual feedback icons
          */
-        renderScenarioBranchingActivity: function(activity) { return CcActivities.renderScenarioBranchingActivity(activity); },
+        renderScenarioBranchingActivity: function (activity) { return CcActivities.renderScenarioBranchingActivity(activity); },
 
         /**
          * 2. BEST RESPONSE ANALYSIS
          * v6.6.63: World-class improvements - think first prompt, progress, score summary
          */
-        renderBestResponseActivity: function(activity) { return CcActivities.renderBestResponseActivity(activity); },
+        renderBestResponseActivity: function (activity) { return CcActivities.renderBestResponseActivity(activity); },
 
         /**
          * 3. WHAT WENT WRONG CASE ANALYSIS
          * v6.6.63: World-class improvements - think first prompt, progress, enhanced visuals
          * v7.2.53: Added icon debugging
          */
-        renderWhatWentWrongActivity: function(activity) { return CcActivities.renderWhatWentWrongActivity(activity); },
+        renderWhatWentWrongActivity: function (activity) { return CcActivities.renderWhatWentWrongActivity(activity); },
 
         /**
          * 4. TASK SEQUENCING (v6.6.58 - Complete rebuild with interactive reordering)
@@ -4693,30 +4981,30 @@ define([
          * - Check Answer button with feedback
          * - Correct/incorrect visual indicators
          */
-        renderSequencingActivity: function(activity) { return CcActivities.renderSequencingActivity(activity); },
+        renderSequencingActivity: function (activity) { return CcActivities.renderSequencingActivity(activity); },
 
         /**
          * 5. ESCALATION DECISION
          * v6.6.63: World-class improvements - progress indicator, score summary
          */
-        renderEscalationActivity: function(activity) { return CcActivities.renderEscalationActivity(activity); },
+        renderEscalationActivity: function (activity) { return CcActivities.renderEscalationActivity(activity); },
 
         /**
          * 6. MICRO-REFLECTION
          * v6.6.63: World-class improvements - focus area icons, progress, enhanced styling
          */
-        renderReflectionActivity: function(activity) { return CcActivities.renderReflectionActivity(activity); },
+        renderReflectionActivity: function (activity) { return CcActivities.renderReflectionActivity(activity); },
 
         /**
          * Render legacy activity types (backward compatibility)
          */
-        renderLegacyActivity: function(activity) { return CcActivities.renderLegacyActivity(activity); },
+        renderLegacyActivity: function (activity) { return CcActivities.renderLegacyActivity(activity); },
 
         /**
          * Get section icon using comprehensive contextual mapping (v6.5.30)
          * Unified function for all slide types - now uses 60+ keyword mappings
          */
-        getSectionIcon: function(section) {
+        getSectionIcon: function (section) {
             // Use the comprehensive contextual icon function
             return getContextualSlideIcon(section.title, section.description);
         },
@@ -4725,7 +5013,7 @@ define([
          * Show tutorial overlay on first slide
          * v6.5.11: Adjust message based on voiceover enabled state
          */
-        showTutorial: function() {
+        showTutorial: function () {
             this.tutorialShown = true;
             
             var message = '';
@@ -4769,7 +5057,7 @@ define([
          * v6.6.57: Activity slides are always navigable (no voiceover requirement)
          * v6.6.62: Activity slides now require completion before navigation
          */
-        canNavigateNext: function(section) {
+        canNavigateNext: function (section) {
             if (!section) return false;
 
             // v13.45 FIX-ADMIN-UNLOCK: Editors and teachers can always click through slides freely.
@@ -4821,7 +5109,7 @@ define([
          * v6.6.62: Check if an activity slide is complete
          * Each activity type has different completion criteria
          */
-        isActivityComplete: function(section, slideId) {
+        isActivityComplete: function (section, slideId) {
             var self = this;
             
             // Already marked complete
@@ -4879,7 +5167,7 @@ define([
                     var $situationItems = $container.find('.cc5-escalation .cc5-situation-item');
                     if ($situationItems.length === 0) {
                         isComplete = true;
-                        var $decided = $situationItems.filter(function() {
+                        var $decided = $situationItems.filter(function () {
                             return $(this).find('.cc5-decision-btn.cc5-selected').length > 0;
                         });
                         isComplete = $decided.length === $situationItems.length;
@@ -4892,7 +5180,7 @@ define([
                     if ($textareas.length === 0) {
                         isComplete = true;
                         var allMeetMinimum = true;
-                        $textareas.each(function() {
+                        $textareas.each(function () {
                             var text = $(this).val() || '';
                             var wordCount = self.countWords(text);
                             if (wordCount < self.reflectionMinWords) {
@@ -4928,7 +5216,7 @@ define([
         /**
          * v6.7.32: Check if activity has perfect score
          */
-        checkActivityPerfectScore: function(activityType, $container) {
+        checkActivityPerfectScore: function (activityType, $container) {
             switch (activityType) {
                 case 'scenario-branching':
                     var $points = $container.find('.cc5-scenario-branching .cc5-decision-point');
@@ -4937,7 +5225,7 @@ define([
                     
                 case 'escalation-decision':
                     var $situations = $container.find('.cc5-escalation .cc5-situation-item');
-                    var correctDecisions = $situations.filter(function() {
+                    var correctDecisions = $situations.filter(function () {
                         var $selected = $(this).find('.cc5-decision-btn.cc5-selected');
                         return $selected.attr('data-correct') === 'true';
                     }).length;
@@ -4956,7 +5244,7 @@ define([
         /**
          * v6.6.62: Count words in text (handles multiple languages)
          */
-        countWords: function(text) {
+        countWords: function (text) {
             if (!text || typeof text !== 'string') return 0;
             text = text.trim();
             if (text === '') return 0;
@@ -4969,7 +5257,7 @@ define([
         /**
          * v6.6.62: Get activity-specific incomplete warning message
          */
-        getActivityIncompleteMessage: function(section) {
+        getActivityIncompleteMessage: function (section) {
             if (!section.activity) return getLabel('activityIncomplete');
             
             var activityType = section.activity.activityType;
@@ -4994,7 +5282,7 @@ define([
         /**
          * v6.6.62: Show activity incomplete warning toast
          */
-        showActivityWarning: function(message) {
+        showActivityWarning: function (message) {
             var self = this;
             
             // Remove any existing warning
@@ -5008,9 +5296,9 @@ define([
             this.container.append(html);
             
             // Auto-dismiss after 4 seconds
-            setTimeout(function() {
+            setTimeout(function () {
                 self.container.find('.cc5-activity-warning').addClass('cc5-fade-out');
-                setTimeout(function() {
+                setTimeout(function () {
                     self.container.find('.cc5-activity-warning').remove();
                 }, 300);
             }, 4000);
@@ -5019,7 +5307,7 @@ define([
         /**
          * Start slide timer for timed progression
          */
-        startSlideTimer: function() {
+        startSlideTimer: function () {
             var self = this;
             
             if (this.slideTimer) {
@@ -5028,7 +5316,7 @@ define([
             
             this.slideTimeRemaining = this.slideDuration;
             
-            this.slideTimer = setInterval(function() {
+            this.slideTimer = setInterval(function () {
                 self.slideTimeRemaining--;
                 var $timer = self.container.find('#cc5-timer .cc5-timer-value');
                 $timer.text(self.slideTimeRemaining + 's');
@@ -5053,17 +5341,35 @@ define([
          * Expands sections with activities into interleaved learning + activity slides
          * Structure: Learning 1  ->  Activity 1  ->  Learning 2  ->  Activity 2  ->  ...
          */
-        getCurrentSections: function() {
+        /**
+         * v13.94.6: id of the section the learner is looking at right now.
+         *
+         * Used to discard a narration request that resolved after the learner moved on.
+         * Suffix-stripped, because getCurrentSections() expands each manifest section into
+         * interleaved `<id>_learning` / `<id>_activity` slides while the voiceover is keyed
+         * on the manifest base id - comparing the two forms directly would reject every
+         * request as stale.
+         *
+         * @return {String|null} Base section id, or null when there is no current slide.
+         */
+        getCurrentSectionId: function () {
+            var sections = this.getCurrentSections();
+            var cur = sections && sections[this.currentSlideIndex];
+            if (!cur || !cur.id) { return null; }
+            return String(cur.id).replace(/_learning$|_activity$/, '');
+        },
+
+        getCurrentSections: function () {
             var self = this;
             // FIX-CC-TOPIC-FIND (v12.94): Mirror the String() coercion from renderSlideView so
             // getCurrentSections always resolves the same topic regardless of numeric vs string ID.
             var _ctid = String(self.currentTopicId);
-            var topic = this.manifest.topics?.find(function(t) { return String(t.id) === _ctid; });
+            var topic = this.manifest.topics?.find(function (t) { return String(t.id) === _ctid; });
             var rawSections = topic?.sections || [];
             
             // Expand into interleaved learning + activity slides
             var expandedSections = [];
-            rawSections.forEach(function(section, index) {
+            rawSections.forEach(function (section, index) {
                 // Learning slide (always present)
                 expandedSections.push({
                     ...section,
@@ -5092,10 +5398,10 @@ define([
          * Check if all expanded slides are complete (v6.4.4)
          * Used for interleaved learning + activity mode
          */
-        areAllExpandedSlidesComplete: function(expandedSections) {
+        areAllExpandedSlidesComplete: function (expandedSections) {
             var self = this;
             if (!expandedSections || expandedSections.length === 0) return true;
-            return expandedSections.every(function(section) {
+            return expandedSections.every(function (section) {
                 return self.isSectionComplete(section.slideId || section.id);
             });
         },
@@ -5103,14 +5409,14 @@ define([
         /**
          * Check if section is complete
          */
-        isSectionComplete: function(sectionId) {
+        isSectionComplete: function (sectionId) {
             return this.progress.sections[sectionId]?.complete === true;
         },
 
         /**
          * Mark section as complete
          */
-        markSectionComplete: function(sectionId) {
+        markSectionComplete: function (sectionId) {
             if (!this.progress.sections[sectionId]) {
                 this.progress.sections[sectionId] = {};
             }
@@ -5137,7 +5443,7 @@ define([
         /**
          * Play success chime when all slides in a topic are complete
          */
-        playTopicCompleteSound: function() {
+        playTopicCompleteSound: function () {
             try {
                 var AudioContext = window.AudioContext || window.webkitAudioContext;
                 if (!AudioContext) return;
@@ -5150,7 +5456,7 @@ define([
                 var duration = 0.15;
                 var gap = 0.08;
                 
-                notes.forEach(function(freq, i) {
+                notes.forEach(function (freq, i) {
                     var osc = ctx.createOscillator();
                     var gain = ctx.createGain();
                     
@@ -5169,7 +5475,7 @@ define([
                 });
                 
                 // Close audio context after sound completes
-                setTimeout(function() { ctx.close(); }, 800);
+                setTimeout(function () { ctx.close(); }, 800);
             } catch (e) {
                 // Web Audio is decorative here; a browser that blocks or lacks AudioContext
                 // just plays no sound effect.
@@ -5181,12 +5487,12 @@ define([
          * Check if all slides in topic are complete (v6.4.4)
          * Checks both learning and activity slides for each section
          */
-        areAllSlidesComplete: function(topic) {
+        areAllSlidesComplete: function (topic) {
             var self = this;
             var sections = topic.sections || [];
             if (sections.length === 0) return true;
             
-            return sections.every(function(section) {
+            return sections.every(function (section) {
                 // Check learning slide
                 var learningComplete = self.isSectionComplete(section.id + '_learning');
                 // Check activity slide if present
@@ -5202,7 +5508,7 @@ define([
          * Calculate overall progress percentage (v6.4.4)
          * Uses expanded sections to count both learning and activity slides
          */
-        calculateOverallProgress: function() {
+        calculateOverallProgress: function () {
             var topics = this.manifest.topics || [];
             if (!topics.length) return 0;
             
@@ -5210,10 +5516,10 @@ define([
             var completedSlides = 0;
             var self = this;
             
-            topics.forEach(function(topic) {
+            topics.forEach(function (topic) {
                 // Expand sections to get true slide count
                 var rawSections = topic.sections || [];
-                rawSections.forEach(function(section) {
+                rawSections.forEach(function (section) {
                     // Learning slide
                     totalSlides++;
                     if (self.isSectionComplete(section.id + '_learning')) {
@@ -5236,7 +5542,7 @@ define([
          * Calculate progress for a specific topic (v6.4.4)
          * Uses expanded sections to count both learning and activity slides
          */
-        calculateTopicProgress: function(topic) {
+        calculateTopicProgress: function (topic) {
             var rawSections = topic.sections || [];
             if (!rawSections.length) return 0;
             
@@ -5244,7 +5550,7 @@ define([
             var completedSlides = 0;
             var self = this;
             
-            rawSections.forEach(function(section) {
+            rawSections.forEach(function (section) {
                 // Learning slide
                 totalSlides++;
                 if (self.isSectionComplete(section.id + '_learning')) {
@@ -5266,21 +5572,21 @@ define([
          * Count slides with generated: false (v6.6.15)
          * These are slides where AI generation failed and fallback content was used
          */
-        countFailedSlides: function() {
+        countFailedSlides: function () {
             var manifest = this.manifest;
             var topics = manifest.topics || [];
             var failedCount = 0;
             
-            topics.forEach(function(topic) {
+            topics.forEach(function (topic) {
                 var sections = topic.sections || [];
-                sections.forEach(function(section) {
+                sections.forEach(function (section) {
                     // Check if main section content failed (section-level flag OR any card has failed:true)
                     // v13.90.1: needsReview marks a section whose content was KEPT after
                     // exhausting its generation attempts rather than replaced with
                     // placeholders. It renders normally, but it still needs the author's
                     // attention and must stay retryable, so it counts here too - otherwise
                     // the Regenerate button never appears for it and the flag is inert.
-                    if (section.generated === false || (section.cards && section.cards.some(function(c) {
+                    if (section.generated === false || (section.cards && section.cards.some(function (c) {
                         return c.failed || c.needsReview;
                     }))) {
                         failedCount++;
@@ -5307,7 +5613,7 @@ define([
          * Extract all text content from manifest for export (v6.6.66)
          * Creates a nicely formatted text document with good line spacing
          */
-        extractAllTextContent: function() {
+        extractAllTextContent: function () {
             var manifest = this.manifest;
             var topics = manifest.topics || [];
             var lines = [];
@@ -5322,7 +5628,7 @@ define([
             lines.push('');
             lines.push('');
             
-            topics.forEach(function(topic, topicIdx) {
+            topics.forEach(function (topic, topicIdx) {
                 // Topic header
                 lines.push('-------------------------------------------------------------------');
                 lines.push(getLabel('topicLabel') + ' ' + (topicIdx + 1) + ': ' + fixGrammar(sanitizeTopicTitle(topic.title)));
@@ -5333,7 +5639,7 @@ define([
                 lines.push('');
                 
                 var sections = topic.sections || [];
-                sections.forEach(function(section, secIdx) {
+                sections.forEach(function (section, secIdx) {
                     // Section header
                     lines.push('');
                     lines.push('> ' + getLabel('learningSlide') + ' ' + (topicIdx + 1) + '.' + (secIdx + 1) + ': ' + fixGrammar(section.title));
@@ -5352,7 +5658,7 @@ define([
                     // Key Requirements
                     if (section.requirements && section.requirements.length) {
                         lines.push(getLabel('keyRequirementsTitle') + ':');
-                        section.requirements.forEach(function(req) {
+                        section.requirements.forEach(function (req) {
                             lines.push('  * ' + fixGrammar(req.text || req));
                         });
                         lines.push('');
@@ -5360,9 +5666,9 @@ define([
                     
                     var positiveItems = section.positiveList || section.doList || [];
                     if (positiveItems.length) {
-                        var contrastConfig = getContrastPair(section.contrastType || section.contrastPairType || 'dos-donts');
+                        var contrastConfig = getContrastPair(CcState.sectionContrastType(section));
                         lines.push(contrastConfig.positive + ':');
-                        positiveItems.forEach(function(item) {
+                        positiveItems.forEach(function (item) {
                             lines.push('  OK ' + fixGrammar(item));
                         });
                         lines.push('');
@@ -5370,9 +5676,9 @@ define([
                     
                     var negativeItems = section.negativeList || section.dontList || [];
                     if (negativeItems.length) {
-                        var contrastConfig2 = getContrastPair(section.contrastType || section.contrastPairType || 'dos-donts');
+                        var contrastConfig2 = getContrastPair(CcState.sectionContrastType(section));
                         lines.push(contrastConfig2.negative + ':');
-                        negativeItems.forEach(function(item) {
+                        negativeItems.forEach(function (item) {
                             lines.push('  x ' + fixGrammar(item));
                         });
                         lines.push('');
@@ -5381,7 +5687,7 @@ define([
                     var combinedTerms = getTerminology(section);
                     if (combinedTerms.length > 0) {
                         lines.push((getLabel('keyTerms') || 'Key Terms') + ':');
-                        combinedTerms.forEach(function(term) {
+                        combinedTerms.forEach(function (term) {
                             lines.push('  ' + (term.term || '') + ': ' + fixGrammar(term.definition || ''));
                         });
                         lines.push('');
@@ -5434,7 +5740,7 @@ define([
                             var predOpts = (typeof predObj === 'object' && Array.isArray(predObj.options)) ? predObj.options : [];
                             if (predQ) {
                                 lines.push('  Prediction: ' + fixGrammar(predQ));
-                                predOpts.forEach(function(opt) {
+                                predOpts.forEach(function (opt) {
                                     var optText = (typeof opt === 'string') ? opt : (opt.text || opt.option || '');
                                 lines.push('    * ' + fixGrammar(optText));
                                 });
@@ -5446,12 +5752,12 @@ define([
                     // v11.08: Export all route cards from section.cards array
                     // Unified 7-card types AND legacy card types are both handled.
                     // v11.26 FIX-DP-ORDER: sort decision-point last (matches player render sort)
-                    var exportCards = (section.cards && section.cards.length > 0) ? section.cards.slice().sort(function(a, b) {
+                    var exportCards = (section.cards && section.cards.length > 0) ? section.cards.slice().sort(function (a, b) {
                         if (a.cardType === 'decision-point') return 1;
                         if (b.cardType === 'decision-point') return -1;
                         return 0;
                     }) : (section.cardType ? [section] : []);
-                    exportCards.forEach(function(card) {
+                    exportCards.forEach(function (card) {
                         if (!card.cardType) return;
                         lines.push('Card Type: ' + card.cardType);
                         if (card.heading) lines.push('  ' + fixGrammar(card.heading));
@@ -5461,15 +5767,17 @@ define([
                         // text exported with no text in it. The fixed heading is written
                         // out too, since the card does not carry one.
                         if (CcState.PROSE_CARD_TYPES && CcState.PROSE_CARD_TYPES.indexOf(card.cardType) >= 0) {
-                            var _pHead = (CcState.PROSE_HEADINGS || {})[card.cardType];
+                            var _pHead = (typeof CcState.proseHeadingFor === 'function')
+                                ? CcState.proseHeadingFor(card.cardType)
+                                : (CcState.PROSE_HEADINGS || {})[card.cardType];
                             if (_pHead) { lines.push('  ' + _pHead); }
-                            CcState.proseParagraphs(card).forEach(function(para) {
+                            CcState.proseParagraphs(card).forEach(function (para) {
                                 lines.push('    ' + fixGrammar(para));
                                 lines.push('');
                             });
                             if (card.keyTerms && card.keyTerms.length) {
                                 lines.push('  ' + (getLabel('keyTerms') || 'Key Terms') + ':');
-                                card.keyTerms.forEach(function(t) {
+                                card.keyTerms.forEach(function (t) {
                                     if (t && t.term) { lines.push('    ' + t.term + ': ' + fixGrammar(t.definition || '')); }
                                 });
                                 lines.push('');
@@ -5479,7 +5787,7 @@ define([
                         // v11.08 FIX: Unified card fields  -  sceneParts (hook/applied), conceptInsights,
                         // items (mistakes), goodItems/badItems (competency-summary), question/options (decision-point)
                         if (card.sceneParts && card.sceneParts.length) {
-                            card.sceneParts.forEach(function(part) {
+                            card.sceneParts.forEach(function (part) {
                                 var partTitle = part.title || '';
                                 var partText = part.text || part.content || part.description || part.detail || part.body || part.narrative || '';
                                 if (partTitle) lines.push('  ' + fixGrammar(partTitle));
@@ -5490,7 +5798,7 @@ define([
                             lines.push('  Highlight: ' + fixGrammar(card.highlightText));
                         }
                         if (card.conceptInsights && card.conceptInsights.length) {
-                            card.conceptInsights.forEach(function(insight) {
+                            card.conceptInsights.forEach(function (insight) {
                                 var iTitle = insight.title || '';
                                 var iText = insight.text || insight.content || insight.description || '';
                                 if (iTitle) lines.push('  ' + fixGrammar(iTitle));
@@ -5503,7 +5811,7 @@ define([
                             if (card.legalLink.scenarioConnection) lines.push('    Connection: ' + fixGrammar(card.legalLink.scenarioConnection));
                         }
                         if (card.items && card.items.length) {
-                            card.items.forEach(function(item) {
+                            card.items.forEach(function (item) {
                                 var mistake = typeof item === 'string' ? item : (item.mistake || item.error || item.pitfall || '');
                                 var consequence = typeof item === 'string' ? '' : (item.consequence || '');
                                 if (mistake) lines.push('  - ' + fixGrammar(mistake));
@@ -5512,13 +5820,13 @@ define([
                         }
                         if (card.goodItems && card.goodItems.length) {
                             lines.push('  What Good Looks Like:');
-                            card.goodItems.forEach(function(gi) {
+                            card.goodItems.forEach(function (gi) {
                                 lines.push('    OK ' + fixGrammar(typeof gi === 'string' ? gi : (gi.text || gi)));
                             });
                         }
                         if (card.badItems && card.badItems.length) {
                             lines.push('  Common Mistakes:');
-                            card.badItems.forEach(function(bi) {
+                            card.badItems.forEach(function (bi) {
                                 lines.push('    x ' + fixGrammar(typeof bi === 'string' ? bi : (bi.text || bi)));
                             });
                         }
@@ -5527,7 +5835,7 @@ define([
                         }
                         if (card.options && card.options.length) {
                             var dpLetters = ['A', 'B', 'C', 'D'];
-                            card.options.forEach(function(opt, oIdx) {
+                            card.options.forEach(function (opt, oIdx) {
                                 var isCorrect = !!(opt.correct || opt.isCorrect);
                                 var marker = isCorrect ? 'OK' : ' ';
                                 var letter = dpLetters[oIdx] || String.fromCharCode(65 + oIdx);
@@ -5541,32 +5849,39 @@ define([
                         if (card.pcStatement) lines.push('  PC: ' + fixGrammar(card.pcStatement));
                         if (card.elementText) lines.push('  Element: ' + fixGrammar(card.elementText));
                         if (card.summaryLine) lines.push('  Summary: ' + fixGrammar(card.summaryLine));
-                        if (card.keyPoints && card.keyPoints.length) {
-                            card.keyPoints.forEach(function(pt) { lines.push('  - ' + fixGrammar(pt)); });
+                        // v13.94.6: same object-shape and duplication defect as the HTML
+                        // export below - see the note there.
+                        var _kpDupeTxt = (card.sceneParts && card.sceneParts.length)
+                            || (card.conceptInsights && card.conceptInsights.length);
+                        if (!_kpDupeTxt && card.keyPoints && card.keyPoints.length) {
+                            card.keyPoints.forEach(function (pt) {
+                                var _t = (typeof pt === 'string') ? pt : ((pt && (pt.text || pt.title)) || '');
+                                if (_t) { lines.push('  - ' + fixGrammar(_t)); }
+                            });
                         }
                         if (card.actions && card.actions.length) {
-                            card.actions.forEach(function(a) {
+                            card.actions.forEach(function (a) {
                                 if (a.heading) lines.push('  ' + fixGrammar(a.heading));
-                                if (a.bullets && a.bullets.length) a.bullets.forEach(function(b) { lines.push('    - ' + fixGrammar(b)); });
+                                if (a.bullets && a.bullets.length) a.bullets.forEach(function (b) { lines.push('    - ' + fixGrammar(b)); });
                             });
                         }
                         if (card.standardItems && card.standardItems.length) {
-                            card.standardItems.forEach(function(s) { lines.push('  - ' + fixGrammar(typeof s === 'string' ? s : (s.text || ''))); });
+                            card.standardItems.forEach(function (s) { lines.push('  - ' + fixGrammar(typeof s === 'string' ? s : (s.text || ''))); });
                         }
                         if (card.context) lines.push('  Context: ' + fixGrammar(card.context));
                         if (card.consequence) lines.push('  Consequence: ' + fixGrammar(card.consequence));
                         if (card.optimisationTips && card.optimisationTips.length) {
                             lines.push('  Tips:');
-                            card.optimisationTips.forEach(function(tip) { lines.push('    - ' + fixGrammar(tip)); });
+                            card.optimisationTips.forEach(function (tip) { lines.push('    - ' + fixGrammar(tip)); });
                         }
                         if (card.errorItems && card.errorItems.length) {
-                            card.errorItems.forEach(function(e) {
+                            card.errorItems.forEach(function (e) {
                                 lines.push('  Error: ' + fixGrammar(e.error || ''));
                                 if (e.consequence) lines.push('    Consequence: ' + fixGrammar(e.consequence));
                             });
                         }
                         if (card.frameworks && card.frameworks.length) {
-                            card.frameworks.forEach(function(fw) {
+                            card.frameworks.forEach(function (fw) {
                                 if (fw.name) lines.push('  Framework: ' + fixGrammar(fw.name));
                                 if (fw.originator) lines.push('    Originator: ' + fixGrammar(fw.originator));
                                 if (fw.principle || fw.description) lines.push('    Principle: ' + fixGrammar(fw.principle || fw.description));
@@ -5575,7 +5890,7 @@ define([
                             });
                         }
                         if (card.considerations && card.considerations.length) {
-                            card.considerations.forEach(function(c) {
+                            card.considerations.forEach(function (c) {
                                 if (typeof c === 'object' && c !== null) {
                                     var dim = c.dimension || c.title || '';
                                     var desc = c.description || c.text || '';
@@ -5586,17 +5901,17 @@ define([
                             });
                         }
                         if (card.analysisPrompts && card.analysisPrompts.length) {
-                            card.analysisPrompts.forEach(function(p) { lines.push('  - ' + fixGrammar(p)); });
+                            card.analysisPrompts.forEach(function (p) { lines.push('  - ' + fixGrammar(p)); });
                         }
                         if (card.consequences && card.consequences.length) {
-                            card.consequences.forEach(function(c) { lines.push('  - ' + fixGrammar(c)); });
+                            card.consequences.forEach(function (c) { lines.push('  - ' + fixGrammar(c)); });
                         }
                         if (card.impactStatement) lines.push('  Impact: ' + fixGrammar(card.impactStatement));
                         if (card.keyMetrics && card.keyMetrics.length) {
-                            card.keyMetrics.forEach(function(m) { lines.push('  Metric: ' + fixGrammar(m)); });
+                            card.keyMetrics.forEach(function (m) { lines.push('  Metric: ' + fixGrammar(m)); });
                         }
                         if (card.steps && card.steps.length) {
-                            card.steps.forEach(function(s, i) {
+                            card.steps.forEach(function (s, i) {
                                 if (typeof s === 'string') {
                                     lines.push('  ' + (i + 1) + '. ' + fixGrammar(s));
                                 } else {
@@ -5607,7 +5922,7 @@ define([
                             });
                         }
                         if (card.risks && card.risks.length) {
-                            card.risks.forEach(function(r) {
+                            card.risks.forEach(function (r) {
                                 lines.push('  Risk: ' + fixGrammar(r.risk || r.text || ''));
                                 if (r.likelihood) lines.push('    Likelihood: ' + fixGrammar(r.likelihood));
                                 if (r.impact) lines.push('    Impact: ' + fixGrammar(r.impact));
@@ -5617,7 +5932,7 @@ define([
                         }
                         var dlPolItems = card.policyItems || card.policies || [];
                         if (dlPolItems.length) {
-                            dlPolItems.forEach(function(p) {
+                            dlPolItems.forEach(function (p) {
                                 if (typeof p === 'string') {
                                     lines.push('  - ' + fixGrammar(p));
                                 } else {
@@ -5632,18 +5947,18 @@ define([
                         if (card.conceptDefinition) lines.push('  Definition: ' + fixGrammar(card.conceptDefinition));
                         if (card.significance) lines.push('  Significance: ' + fixGrammar(card.significance));
                         if (card.keyTerms && card.keyTerms.length) {
-                            card.keyTerms.forEach(function(t) { lines.push('  ' + fixGrammar(t.term) + ': ' + fixGrammar(t.definition)); });
+                            card.keyTerms.forEach(function (t) { lines.push('  ' + fixGrammar(t.term) + ': ' + fixGrammar(t.definition)); });
                         }
                         if (card.cognitiveConsiderations && card.cognitiveConsiderations.length) {
-                            card.cognitiveConsiderations.forEach(function(c) { lines.push('  - ' + fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))); });
+                            card.cognitiveConsiderations.forEach(function (c) { lines.push('  - ' + fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))); });
                         }
                         if (card.skillStatement) lines.push('  Skill: ' + fixGrammar(card.skillStatement));
                         if (card.relevance) lines.push('  Relevance: ' + fixGrammar(card.relevance));
                         if (card.keyIndicators && card.keyIndicators.length) {
-                            card.keyIndicators.forEach(function(ind) { lines.push('  - ' + fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''))); });
+                            card.keyIndicators.forEach(function (ind) { lines.push('  - ' + fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''))); });
                         }
                         if (card.frameworkSteps && card.frameworkSteps.length) {
-                            card.frameworkSteps.forEach(function(s, i) {
+                            card.frameworkSteps.forEach(function (s, i) {
                                 lines.push('  ' + (i + 1) + '. ' + fixGrammar(s.step || ''));
                                 if (s.explanation) lines.push('    ' + fixGrammar(s.explanation));
                                 if (s.example) lines.push('    Example: ' + fixGrammar(s.example));
@@ -5651,14 +5966,14 @@ define([
                         }
                         if (card.keyPrinciple) lines.push('  Principle: ' + fixGrammar(card.keyPrinciple));
                         if (card.applications && card.applications.length) {
-                            card.applications.forEach(function(a) {
+                            card.applications.forEach(function (a) {
                                 lines.push('  Situation: ' + fixGrammar(a.situation || ''));
                                 lines.push('    Action: ' + fixGrammar(a.action || ''));
                                 if (a.rationale) lines.push('    Rationale: ' + fixGrammar(a.rationale));
                             });
                         }
                         if (card.pitfallItems && card.pitfallItems.length) {
-                            card.pitfallItems.forEach(function(p) {
+                            card.pitfallItems.forEach(function (p) {
                                 lines.push('  Pitfall: ' + fixGrammar(p.pitfall || ''));
                                 if (p.consequence) lines.push('    Consequence: ' + fixGrammar(p.consequence));
                                 if (p.correction) lines.push('    Correction: ' + fixGrammar(p.correction));
@@ -5671,7 +5986,7 @@ define([
                             } else if (card.reflection.question) {
                                 lines.push('  Reflection: ' + fixGrammar(card.reflection.question));
                                 if (card.reflection.sampleAnswers && Array.isArray(card.reflection.sampleAnswers)) {
-                                    card.reflection.sampleAnswers.forEach(function(a) { lines.push('    - ' + fixGrammar(a)); });
+                                    card.reflection.sampleAnswers.forEach(function (a) { lines.push('    - ' + fixGrammar(a)); });
                                 }
                             }
                         }
@@ -5686,10 +6001,10 @@ define([
                             lines.push('  ' + (section.docActivity.scenario || section.docActivity.instructions));
                         }
                         if (section.docActivity.questions && section.docActivity.questions.length > 0) {
-                            section.docActivity.questions.forEach(function(q, idx) {
+                            section.docActivity.questions.forEach(function (q, idx) {
                                 lines.push('  Q' + (idx + 1) + ': ' + (q.question || q.text));
                                 if (q.options && q.options.length > 0) {
-                                    q.options.forEach(function(opt, optIdx) {
+                                    q.options.forEach(function (opt, optIdx) {
                                         var optText = typeof opt === 'string' ? opt : opt.text;
                                         var isCorrect = opt.isCorrect || opt.correct || false;
                                         var marker = isCorrect ? 'OK' : ' ';
@@ -5727,10 +6042,10 @@ define([
                         // Scenario Branching: Decision points with options
                         if (act.decisionPoints && act.decisionPoints.length) {
                             lines.push('');
-                            act.decisionPoints.forEach(function(point, pIdx) {
+                            act.decisionPoints.forEach(function (point, pIdx) {
                                 lines.push('  Decision ' + (pIdx + 1) + ': ' + point.situation);
                                 if (point.options) {
-                                    point.options.forEach(function(opt, oIdx) {
+                                    point.options.forEach(function (opt, oIdx) {
                                         var marker = opt.isCorrect ? 'OK' : 'x';
                                         lines.push('    ' + marker + ' ' + String.fromCharCode(65 + oIdx) + ') ' + opt.text);
                                         if (opt.feedback) lines.push('        ->  ' + opt.feedback);
@@ -5743,7 +6058,7 @@ define([
                         if (act.responses && act.responses.length) {
                             lines.push('');
                             lines.push('  Responses:');
-                            act.responses.forEach(function(resp, rIdx) {
+                            act.responses.forEach(function (resp, rIdx) {
                                 var classLabel = resp.classification === 'best' ? '[BEST]' : 
                                                 (resp.classification === 'acceptable' ? '[OK]' : '[NO]');
                                 lines.push('    ' + (rIdx + 1) + '. ' + classLabel + ' ' + resp.text);
@@ -5755,7 +6070,7 @@ define([
                         if (act.analysisQuestions && act.analysisQuestions.length) {
                             lines.push('');
                             lines.push('  Analysis Questions:');
-                            act.analysisQuestions.forEach(function(q, qIdx) {
+                            act.analysisQuestions.forEach(function (q, qIdx) {
                                 lines.push('    Q' + (qIdx + 1) + ': ' + q.question);
                                 if (q.modelAnswer) lines.push('    A: ' + q.modelAnswer);
                             });
@@ -5765,7 +6080,7 @@ define([
                         if (act.steps && act.steps.length) {
                             lines.push('');
                             lines.push('  Correct Sequence:');
-                            act.steps.forEach(function(step, sIdx) {
+                            act.steps.forEach(function (step, sIdx) {
                                 var stepText = typeof step === 'string' ? step : (step.text || step.description || '');
                                 lines.push('    ' + (sIdx + 1) + '. ' + stepText);
                             });
@@ -5774,7 +6089,7 @@ define([
                         // Escalation Decision: Scenarios
                         if (act.situations && act.situations.length) {
                             lines.push('');
-                            act.situations.forEach(function(sit, sIdx) {
+                            act.situations.forEach(function (sit, sIdx) {
                                 lines.push('  Scenario ' + (sIdx + 1) + ': ' + sit.situation);
                                 if (sit.correctDecision) lines.push('    Answer: ' + sit.correctDecision);
                                 if (sit.explanation) lines.push('     ->  ' + sit.explanation);
@@ -5785,7 +6100,7 @@ define([
                         if (act.reflectionPrompts && act.reflectionPrompts.length) {
                             lines.push('');
                             lines.push('  Reflection Points:');
-                            act.reflectionPrompts.forEach(function(rp, iIdx) {
+                            act.reflectionPrompts.forEach(function (rp, iIdx) {
                                 var itemText = typeof rp === 'string' ? rp : (rp.question || rp.prompt || '');
                                 lines.push('    * ' + itemText);
                             });
@@ -5812,7 +6127,7 @@ define([
          * Export content as text file (v6.6.66)
          * Downloads a .txt file with all learning content
          */
-        exportAsText: function() {
+        exportAsText: function () {
             var content = this.extractAllTextContent();
             var filename = (this.manifest.context?.topic || 'learning-content').replace(/[^a-zA-Z0-9]/g, '_') + '.txt';
             
@@ -5838,7 +6153,7 @@ define([
          * Export content as PDF (v6.6.66)
          * Generates a professional-looking PDF with all slides
          */
-        exportAsPdf: function() {
+        exportAsPdf: function () {
             var manifest = this.manifest;
             var topics = manifest.topics || [];
             var title = manifest.context?.topic || 'Learning Content';
@@ -5924,7 +6239,7 @@ define([
             }
             
             // Topics and slides
-            topics.forEach(function(topic, topicIdx) {
+            topics.forEach(function (topic, topicIdx) {
                 printHtml += '<div class="topic">';
                 printHtml += '<div class="topic-header"><h2>' + getLabel('topicLabel') + ' ' + (topicIdx + 1) + ': ' + escapeHtml(fixGrammar(sanitizeTopicTitle(topic.title))) + '</h2></div>';
                 if (topic.description) {
@@ -5932,8 +6247,8 @@ define([
                 }
                 
                 var sections = topic.sections || [];
-                sections.forEach(function(section, secIdx) {
-                    var contrastConfig = getContrastPair(section.contrastType || section.contrastPairType || 'dos-donts');
+                sections.forEach(function (section, secIdx) {
+                    var contrastConfig = getContrastPair(CcState.sectionContrastType(section));
                     
                     // Learning slide
                     printHtml += '<div class="slide">';
@@ -5956,7 +6271,7 @@ define([
                         printHtml += '<div class="requirements">';
                         printHtml += '<h4>' + getLabel('keyRequirementsTitle') + '</h4>';
                         printHtml += '<ul>';
-                        section.requirements.forEach(function(req) {
+                        section.requirements.forEach(function (req) {
                             printHtml += '<li>' + escapeHtml(fixGrammar(req.text || req)) + '</li>';
                         });
                         printHtml += '</ul></div>';
@@ -5969,14 +6284,14 @@ define([
                         printHtml += '<div class="dos-donts">';
                         if (positiveItems.length) {
                             printHtml += '<div class="dos"><h4>' + escapeHtml(contrastConfig.positive) + '</h4><ul>';
-                            positiveItems.forEach(function(item) {
+                            positiveItems.forEach(function (item) {
                                 printHtml += '<li>' + escapeHtml(fixGrammar(item)) + '</li>';
                             });
                             printHtml += '</ul></div>';
                         }
                         if (negativeItems.length) {
                             printHtml += '<div class="donts"><h4>' + escapeHtml(contrastConfig.negative) + '</h4><ul>';
-                            negativeItems.forEach(function(item) {
+                            negativeItems.forEach(function (item) {
                                 printHtml += '<li>' + escapeHtml(fixGrammar(item)) + '</li>';
                             });
                             printHtml += '</ul></div>';
@@ -5990,7 +6305,7 @@ define([
                         printHtml += '<div class="knowledge-terms">';
                         printHtml += '<h4>' + (getLabel('keyTerms') || 'Key Terms') + '</h4>';
                         printHtml += '<dl>';
-                        combinedTerms.forEach(function(term) {
+                        combinedTerms.forEach(function (term) {
                             printHtml += '<dt>' + escapeHtml(fixGrammar(term.term || '')) + '</dt>';
                             printHtml += '<dd>' + escapeHtml(fixGrammar(term.definition || '')) + '</dd>';
                         });
@@ -6045,7 +6360,7 @@ define([
                                 printHtml += '<div class="prediction"><strong>Prediction: ' + escapeHtml(fixGrammar(predQ)) + '</strong>';
                                 if (predOpts.length > 0) {
                                     printHtml += '<ul>';
-                                    predOpts.forEach(function(opt) {
+                                    predOpts.forEach(function (opt) {
                                         var optText = (typeof opt === 'string') ? opt : (opt.text || opt.option || '');
                                         printHtml += '<li>' + escapeHtml(fixGrammar(optText)) + '</li>';
                                     });
@@ -6060,20 +6375,41 @@ define([
                     // v11.08: Print all route cards from section.cards array
                     // Unified 7-card types AND legacy card types are both handled.
                     // v11.26 FIX-DP-ORDER: sort decision-point last (matches player render sort)
-                    var printCards = (section.cards && section.cards.length > 0) ? section.cards.slice().sort(function(a, b) {
+                    var printCards = (section.cards && section.cards.length > 0) ? section.cards.slice().sort(function (a, b) {
                         if (a.cardType === 'decision-point') return 1;
                         if (b.cardType === 'decision-point') return -1;
                         return 0;
                     }) : (section.cardType ? [section] : []);
-                    printCards.forEach(function(card) {
+                    printCards.forEach(function (card) {
                         if (!card.cardType) return;
                         printHtml += '<div class="slide" style="border-left: 4px solid #6366f1;">';
-                        printHtml += '<h4>' + escapeHtml(fixGrammar(card.heading || card.cardType)) + '</h4>';
+                        // v13.94.2 FIX-CC-PRINT-PROSE: Topics and Text keeps its content in
+                        // paragraphs[], and the print builder read every other field the plugin
+                        // produces except that one. A Route 5 pack therefore printed as four
+                        // headings with nothing under them - and on this route the heading is
+                        // supplied by the platform and deleted from the card, so even the
+                        // heading printed as the raw cardType ("overview"). Both fixed here.
+                        // v13.94.3: prefer the translated heading when one exists.
+                        var _printHeading = card.heading
+                            || ((CcState && typeof CcState.proseHeadingFor === 'function')
+                                ? CcState.proseHeadingFor(card.cardType)
+                                : ((CcState && CcState.PROSE_HEADINGS) || {})[card.cardType])
+                            || card.cardType;
+                        printHtml += '<h4>' + escapeHtml(fixGrammar(_printHeading)) + '</h4>';
+                        if (card.paragraphs && card.paragraphs.length) {
+                            card.paragraphs.forEach(function (para) {
+                                var _pt = (typeof para === 'string') ? para : (para && (para.text || para.content)) || '';
+                                if (_pt) {
+                                    printHtml += '<p style="margin:0 0 10px 0;">'
+                                        + escapeHtml(fixGrammar(_pt)) + '</p>';
+                                }
+                            });
+                        }
 
                         // v11.08 FIX: Unified card fields  -  sceneParts, conceptInsights, items,
                         // goodItems/badItems, question/options, legalLink, highlightText
                         if (card.sceneParts && card.sceneParts.length) {
-                            card.sceneParts.forEach(function(part) {
+                            card.sceneParts.forEach(function (part) {
                                 var partText = part.text || part.content || part.description || part.detail || part.body || part.narrative || '';
                                 printHtml += '<div style="margin-bottom:8px; padding:8px 12px; background:#f8fafc; border-radius:4px;">';
                                 if (part.title) printHtml += '<p style="margin:0 0 4px 0;"><strong>' + escapeHtml(fixGrammar(part.title)) + '</strong></p>';
@@ -6085,7 +6421,7 @@ define([
                             printHtml += '<div class="accent-card accent-amber"><p><strong>' + escapeHtml(fixGrammar(card.highlightText)) + '</strong></p></div>';
                         }
                         if (card.conceptInsights && card.conceptInsights.length) {
-                            card.conceptInsights.forEach(function(insight) {
+                            card.conceptInsights.forEach(function (insight) {
                                 var iText = insight.text || insight.content || insight.description || '';
                                 printHtml += '<div style="margin-bottom:8px; padding:8px 12px; background:#eff6ff; border-radius:4px;">';
                                 if (insight.title) printHtml += '<p style="margin:0 0 4px 0;"><strong>' + escapeHtml(fixGrammar(insight.title)) + '</strong></p>';
@@ -6102,7 +6438,7 @@ define([
                             printHtml += '</div>';
                         }
                         if (card.items && card.items.length) {
-                            card.items.forEach(function(item) {
+                            card.items.forEach(function (item) {
                                 var mistake = typeof item === 'string' ? item : (item.mistake || item.error || item.pitfall || '');
                                 var consequence = typeof item === 'string' ? '' : (item.consequence || '');
                                 printHtml += '<div style="margin-bottom:6px; padding:6px 10px; background:#fef2f2; border-left:3px solid #ef4444; border-radius:3px;">';
@@ -6113,14 +6449,14 @@ define([
                         }
                         if (card.goodItems && card.goodItems.length) {
                             printHtml += '<div class="dos"><h4>What Good Looks Like</h4><ul>';
-                            card.goodItems.forEach(function(gi) {
+                            card.goodItems.forEach(function (gi) {
                                 printHtml += '<li>' + escapeHtml(fixGrammar(typeof gi === 'string' ? gi : (gi.text || gi))) + '</li>';
                             });
                             printHtml += '</ul></div>';
                         }
                         if (card.badItems && card.badItems.length) {
                             printHtml += '<div class="donts"><h4>Common Mistakes</h4><ul>';
-                            card.badItems.forEach(function(bi) {
+                            card.badItems.forEach(function (bi) {
                                 printHtml += '<li>' + escapeHtml(fixGrammar(typeof bi === 'string' ? bi : (bi.text || bi))) + '</li>';
                             });
                             printHtml += '</ul></div>';
@@ -6131,7 +6467,7 @@ define([
                         if (card.options && card.options.length) {
                             var dpLetters = ['A', 'B', 'C', 'D'];
                             printHtml += '<div style="margin-top:6px;">';
-                            card.options.forEach(function(opt, oIdx) {
+                            card.options.forEach(function (opt, oIdx) {
                                 var isCorrect = !!(opt.correct || opt.isCorrect);
                                 var marker = isCorrect ? '&#10003;' : '&#9675;';
                                 var letter = dpLetters[oIdx] || String.fromCharCode(65 + oIdx);
@@ -6148,43 +6484,55 @@ define([
                         if (card.pcStatement) printHtml += '<p><strong>PC:</strong> ' + escapeHtml(fixGrammar(card.pcStatement)) + '</p>';
                         if (card.elementText) printHtml += '<p>' + escapeHtml(fixGrammar(card.elementText)) + '</p>';
                         if (card.summaryLine) printHtml += '<p><strong>' + escapeHtml(fixGrammar(card.summaryLine)) + '</strong></p>';
-                        if (card.keyPoints && card.keyPoints.length) {
+                        // v13.94.6: keyPoints on hook-scenario, concept-explainer and applied-scenario is an
+                        // array of {title, text} OBJECTS, not strings - fixGrammar coerces with
+                        // String(), so every bullet printed the literal "[object Object]". Latent
+                        // until v13.89 stopped deleting keyPoints after aliasing it into
+                        // sceneParts/conceptInsights. And because those two ARE printed above,
+                        // this block was duplicating them anyway - so it is skipped entirely
+                        // when either is present, and handles the object shape when it is not.
+                        var _kpDupe = (card.sceneParts && card.sceneParts.length)
+                            || (card.conceptInsights && card.conceptInsights.length);
+                        if (!_kpDupe && card.keyPoints && card.keyPoints.length) {
                             printHtml += '<ul>';
-                            card.keyPoints.forEach(function(pt) { printHtml += '<li>' + escapeHtml(fixGrammar(pt)) + '</li>'; });
+                            card.keyPoints.forEach(function (pt) {
+                                var _t = (typeof pt === 'string') ? pt : ((pt && (pt.text || pt.title)) || '');
+                                if (_t) { printHtml += '<li>' + escapeHtml(fixGrammar(_t)) + '</li>'; }
+                            });
                             printHtml += '</ul>';
                         }
                         if (card.actions && card.actions.length) {
-                            card.actions.forEach(function(a) {
+                            card.actions.forEach(function (a) {
                                 if (a.heading) printHtml += '<p><strong>' + escapeHtml(fixGrammar(a.heading)) + '</strong></p>';
                                 if (a.bullets && a.bullets.length) {
                                     printHtml += '<ul>';
-                                    a.bullets.forEach(function(b) { printHtml += '<li>' + escapeHtml(fixGrammar(b)) + '</li>'; });
+                                    a.bullets.forEach(function (b) { printHtml += '<li>' + escapeHtml(fixGrammar(b)) + '</li>'; });
                                     printHtml += '</ul>';
                                 }
                             });
                         }
                         if (card.standardItems && card.standardItems.length) {
                             printHtml += '<ul>';
-                            card.standardItems.forEach(function(s) { printHtml += '<li>' + escapeHtml(fixGrammar(typeof s === 'string' ? s : (s.text || ''))) + '</li>'; });
+                            card.standardItems.forEach(function (s) { printHtml += '<li>' + escapeHtml(fixGrammar(typeof s === 'string' ? s : (s.text || ''))) + '</li>'; });
                             printHtml += '</ul>';
                         }
                         if (card.context) printHtml += '<p>' + escapeHtml(fixGrammar(card.context)) + '</p>';
                         if (card.consequence) printHtml += '<p><strong>Consequence:</strong> ' + escapeHtml(fixGrammar(card.consequence)) + '</p>';
                         if (card.errorItems && card.errorItems.length) {
-                            card.errorItems.forEach(function(e) {
+                            card.errorItems.forEach(function (e) {
                                 printHtml += '<p><strong>Error:</strong> ' + escapeHtml(fixGrammar(e.error || '')) + '</p>';
                                 if (e.consequence) printHtml += '<p><em>' + escapeHtml(fixGrammar(e.consequence)) + '</em></p>';
                             });
                         }
                         if (card.frameworks && card.frameworks.length) {
-                            card.frameworks.forEach(function(fw) {
+                            card.frameworks.forEach(function (fw) {
                                 printHtml += '<p><strong>' + escapeHtml(fixGrammar(fw.name || '')) + '</strong></p>';
                                 printHtml += '<p>' + escapeHtml(fixGrammar(fw.description || '')) + '</p>';
                             });
                         }
                         if (card.considerations && card.considerations.length) {
                             printHtml += '<ul>';
-                            card.considerations.forEach(function(c) {
+                            card.considerations.forEach(function (c) {
                                 if (typeof c === 'object' && c !== null) {
                                     var dim = c.dimension || c.title || '';
                                     var desc = c.description || c.text || '';
@@ -6197,23 +6545,23 @@ define([
                         }
                         if (card.analysisPrompts && card.analysisPrompts.length) {
                             printHtml += '<ul>';
-                            card.analysisPrompts.forEach(function(p) { printHtml += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
+                            card.analysisPrompts.forEach(function (p) { printHtml += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
                             printHtml += '</ul>';
                         }
                         if (card.consequences && card.consequences.length) {
                             printHtml += '<ul>';
-                            card.consequences.forEach(function(c) { printHtml += '<li>' + escapeHtml(fixGrammar(c)) + '</li>'; });
+                            card.consequences.forEach(function (c) { printHtml += '<li>' + escapeHtml(fixGrammar(c)) + '</li>'; });
                             printHtml += '</ul>';
                         }
                         if (card.impactStatement) printHtml += '<p><strong>Impact:</strong> ' + escapeHtml(fixGrammar(card.impactStatement)) + '</p>';
                         if (card.keyMetrics && card.keyMetrics.length) {
                             printHtml += '<ul>';
-                            card.keyMetrics.forEach(function(m) { printHtml += '<li>' + escapeHtml(fixGrammar(m)) + '</li>'; });
+                            card.keyMetrics.forEach(function (m) { printHtml += '<li>' + escapeHtml(fixGrammar(m)) + '</li>'; });
                             printHtml += '</ul>';
                         }
                         if (card.steps && card.steps.length) {
                             printHtml += '<ol>';
-                            card.steps.forEach(function(s) {
+                            card.steps.forEach(function (s) {
                                 if (typeof s === 'string') {
                                     printHtml += '<li>' + escapeHtml(fixGrammar(s)) + '</li>';
                                 } else {
@@ -6226,7 +6574,7 @@ define([
                             printHtml += '</ol>';
                         }
                         if (card.risks && card.risks.length) {
-                            card.risks.forEach(function(r) {
+                            card.risks.forEach(function (r) {
                                 printHtml += '<p><strong>Risk:</strong> ' + escapeHtml(fixGrammar(r.risk || r.text || '')) + '</p>';
                                 if (r.likelihood) printHtml += '<p><strong>Likelihood:</strong> ' + escapeHtml(fixGrammar(r.likelihood)) + '</p>';
                                 if (r.impact) printHtml += '<p>' + escapeHtml(fixGrammar(r.impact)) + '</p>';
@@ -6237,7 +6585,7 @@ define([
                         var prPolItems = card.policyItems || card.policies || [];
                         if (prPolItems.length) {
                             printHtml += '<div>';
-                            prPolItems.forEach(function(p) {
+                            prPolItems.forEach(function (p) {
                                 if (typeof p === 'string') {
                                     printHtml += '<p>' + escapeHtml(fixGrammar(p)) + '</p>';
                                 } else {
@@ -6255,24 +6603,24 @@ define([
                         if (card.significance) printHtml += '<p><strong>Significance:</strong> ' + escapeHtml(fixGrammar(card.significance)) + '</p>';
                         if (card.keyTerms && card.keyTerms.length) {
                             printHtml += '<dl>';
-                            card.keyTerms.forEach(function(t) { printHtml += '<dt><strong>' + escapeHtml(fixGrammar(t.term)) + '</strong></dt><dd>' + escapeHtml(fixGrammar(t.definition)) + '</dd>'; });
+                            card.keyTerms.forEach(function (t) { printHtml += '<dt><strong>' + escapeHtml(fixGrammar(t.term)) + '</strong></dt><dd>' + escapeHtml(fixGrammar(t.definition)) + '</dd>'; });
                             printHtml += '</dl>';
                         }
                         if (card.cognitiveConsiderations && card.cognitiveConsiderations.length) {
                             printHtml += '<ul>';
-                            card.cognitiveConsiderations.forEach(function(c) { printHtml += '<li>' + escapeHtml(fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))) + '</li>'; });
+                            card.cognitiveConsiderations.forEach(function (c) { printHtml += '<li>' + escapeHtml(fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))) + '</li>'; });
                             printHtml += '</ul>';
                         }
                         if (card.skillStatement) printHtml += '<p><strong>Skill:</strong> ' + escapeHtml(fixGrammar(card.skillStatement)) + '</p>';
                         if (card.relevance) printHtml += '<p>' + escapeHtml(fixGrammar(card.relevance)) + '</p>';
                         if (card.keyIndicators && card.keyIndicators.length) {
                             printHtml += '<ul>';
-                            card.keyIndicators.forEach(function(ind) { printHtml += '<li>' + escapeHtml(fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''))) + '</li>'; });
+                            card.keyIndicators.forEach(function (ind) { printHtml += '<li>' + escapeHtml(fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''))) + '</li>'; });
                             printHtml += '</ul>';
                         }
                         if (card.frameworkSteps && card.frameworkSteps.length) {
                             printHtml += '<ol>';
-                            card.frameworkSteps.forEach(function(s) {
+                            card.frameworkSteps.forEach(function (s) {
                                 printHtml += '<li><strong>' + escapeHtml(fixGrammar(s.step || '')) + '</strong>';
                                 if (s.explanation) printHtml += '<br>' + escapeHtml(fixGrammar(s.explanation));
                                 if (s.example) printHtml += '<br><em>Example: ' + escapeHtml(fixGrammar(s.example)) + '</em>';
@@ -6282,7 +6630,7 @@ define([
                         }
                         if (card.keyPrinciple) printHtml += '<p><strong>Principle:</strong> ' + escapeHtml(fixGrammar(card.keyPrinciple)) + '</p>';
                         if (card.applications && card.applications.length) {
-                            card.applications.forEach(function(a) {
+                            card.applications.forEach(function (a) {
                                 printHtml += '<div style="margin-bottom:8px;">';
                                 printHtml += '<p><strong>Situation:</strong> ' + escapeHtml(fixGrammar(a.situation || '')) + '</p>';
                                 printHtml += '<p><strong>Action:</strong> ' + escapeHtml(fixGrammar(a.action || '')) + '</p>';
@@ -6291,7 +6639,7 @@ define([
                             });
                         }
                         if (card.pitfallItems && card.pitfallItems.length) {
-                            card.pitfallItems.forEach(function(p) {
+                            card.pitfallItems.forEach(function (p) {
                                 printHtml += '<div style="margin-bottom:8px;">';
                                 printHtml += '<p><strong>Pitfall:</strong> ' + escapeHtml(fixGrammar(p.pitfall || '')) + '</p>';
                                 if (p.consequence) printHtml += '<p><em>Consequence: ' + escapeHtml(fixGrammar(p.consequence)) + '</em></p>';
@@ -6307,7 +6655,7 @@ define([
                                 printHtml += '<p><strong>Reflection:</strong> ' + escapeHtml(fixGrammar(card.reflection.question)) + '</p>';
                                 if (card.reflection.sampleAnswers && Array.isArray(card.reflection.sampleAnswers)) {
                                     printHtml += '<ul>';
-                                    card.reflection.sampleAnswers.forEach(function(a) { printHtml += '<li>' + escapeHtml(fixGrammar(a)) + '</li>'; });
+                                    card.reflection.sampleAnswers.forEach(function (a) { printHtml += '<li>' + escapeHtml(fixGrammar(a)) + '</li>'; });
                                     printHtml += '</ul>';
                                 }
                             }
@@ -6325,11 +6673,11 @@ define([
                         }
                         if (section.docActivity.questions && section.docActivity.questions.length > 0) {
                             printHtml += '<div class="doc-questions">';
-                            section.docActivity.questions.forEach(function(q, idx) {
+                            section.docActivity.questions.forEach(function (q, idx) {
                                 printHtml += '<div class="doc-question"><strong>Q' + (idx + 1) + ': ' + escapeHtml(fixGrammar(q.question || q.text)) + '</strong>';
                                 if (q.options && q.options.length > 0) {
                                     printHtml += '<ul class="doc-options">';
-                                    q.options.forEach(function(opt, optIdx) {
+                                    q.options.forEach(function (opt, optIdx) {
                                         var optText = typeof opt === 'string' ? opt : opt.text;
                                         var isCorrect = opt.isCorrect || opt.correct || false;
                                         var marker = isCorrect ? 'OK' : '*';
@@ -6372,11 +6720,11 @@ define([
                         // Scenario Branching: Decision points
                         if (act.decisionPoints && act.decisionPoints.length) {
                             printHtml += '<div class="requirements"><h4>Decision Points</h4><ul>';
-                            act.decisionPoints.forEach(function(point, pIdx) {
+                            act.decisionPoints.forEach(function (point, pIdx) {
                                 printHtml += '<li><strong>Decision ' + (pIdx + 1) + ':</strong> ' + escapeHtml(fixGrammar(point.situation));
                                 if (point.options && point.options.length) {
                                     printHtml += '<ul>';
-                                    point.options.forEach(function(opt, oIdx) {
+                                    point.options.forEach(function (opt, oIdx) {
                                         var marker = opt.isCorrect ? 'OK' : 'x';
                                         printHtml += '<li>' + marker + ' ' + String.fromCharCode(65 + oIdx) + ') ' + escapeHtml(fixGrammar(opt.text));
                                         if (opt.feedback) printHtml += ' <em> ->  ' + escapeHtml(fixGrammar(opt.feedback)) + '</em>';
@@ -6392,7 +6740,7 @@ define([
                         // Best Response: Responses
                         if (act.responses && act.responses.length) {
                             printHtml += '<div class="requirements"><h4>Response Classification</h4><ul>';
-                            act.responses.forEach(function(resp, rIdx) {
+                            act.responses.forEach(function (resp, rIdx) {
                                 var classLabel = resp.classification === 'best' ? 'OK BEST' : 
                                                 (resp.classification === 'acceptable' ? '* OK' : 'x NO');
                                 printHtml += '<li><strong>[' + classLabel + ']</strong> ' + escapeHtml(fixGrammar(resp.text));
@@ -6405,7 +6753,7 @@ define([
                         // What Went Wrong: Analysis questions
                         if (act.analysisQuestions && act.analysisQuestions.length) {
                             printHtml += '<div class="requirements"><h4>Analysis Questions</h4><ul>';
-                            act.analysisQuestions.forEach(function(q, qIdx) {
+                            act.analysisQuestions.forEach(function (q, qIdx) {
                                 printHtml += '<li><strong>Q' + (qIdx + 1) + ':</strong> ' + escapeHtml(fixGrammar(q.question));
                                 if (q.modelAnswer) printHtml += '<br/><strong>A:</strong> ' + escapeHtml(fixGrammar(q.modelAnswer));
                                 printHtml += '</li>';
@@ -6416,7 +6764,7 @@ define([
                         // Task Sequencing: Steps
                         if (act.steps && act.steps.length) {
                             printHtml += '<div class="requirements"><h4>Correct Sequence</h4><ol>';
-                            act.steps.forEach(function(step) {
+                            act.steps.forEach(function (step) {
                                 var stepText = typeof step === 'string' ? step : (step.text || step.description || '');
                                 printHtml += '<li>' + escapeHtml(fixGrammar(stepText)) + '</li>';
                             });
@@ -6426,7 +6774,7 @@ define([
                         // Escalation Decision: Scenarios
                         if (act.situations && act.situations.length) {
                             printHtml += '<div class="requirements"><h4>Escalation Situations</h4><ul>';
-                            act.situations.forEach(function(sit, sIdx) {
+                            act.situations.forEach(function (sit, sIdx) {
                                 printHtml += '<li><strong>Scenario ' + (sIdx + 1) + ':</strong> ' + escapeHtml(fixGrammar(sit.situation));
                                 if (sit.correctDecision) printHtml += '<br/><strong>Answer:</strong> ' + escapeHtml(fixGrammar(sit.correctDecision));
                                 if (sit.explanation) printHtml += '<br/><em> ->  ' + escapeHtml(fixGrammar(sit.explanation)) + '</em>';
@@ -6438,7 +6786,7 @@ define([
                         // Reflection: Items
                         if (act.reflectionPrompts && act.reflectionPrompts.length) {
                             printHtml += '<div class="requirements"><h4>Reflection Points</h4><ul>';
-                            act.reflectionPrompts.forEach(function(rp) {
+                            act.reflectionPrompts.forEach(function (rp) {
                                 var itemText = typeof rp === 'string' ? rp : (rp.question || rp.prompt || '');
                                 printHtml += '<li>' + escapeHtml(fixGrammar(itemText)) + '</li>';
                             });
@@ -6469,7 +6817,7 @@ define([
                 printWindow.document.close();
                 
                 // Wait for content to load then trigger print
-                printWindow.onload = function() {
+                printWindow.onload = function () {
                     printWindow.print();
                 };
                 
@@ -6477,11 +6825,15 @@ define([
                     message: getLabel('downloadPdf') + ' - ' + getLabel('generatingPdf'),
                     type: 'info'
                 });
-                // Fallback: download as HTML
+            } else {
+                // v13.94.3: this HTML fallback block used to sit INSIDE the success
+                // branch, so a successful print also dumped an unwanted .html file to
+                // disk, and a popup-blocked export did nothing at all. It now runs only
+                // when window.open was blocked, which is what it was written for.
                 var blob = new Blob([printHtml], { type: 'text/html;charset=utf-8' });
                 var url = URL.createObjectURL(blob);
                 var filename = (title).replace(/[^a-zA-Z0-9]/g, '_') + '.html';
-                
+
                 var a = document.createElement('a');
                 a.href = url;
                 a.download = filename;
@@ -6490,6 +6842,12 @@ define([
                 a.click();
                 dlRoot.removeChild(a);
                 URL.revokeObjectURL(url);
+
+                Notification.addNotification({
+                    message: getLabel('popupBlockedHtmlFallback')
+                        || 'Your browser blocked the print window, so the content was downloaded as an HTML file instead.',
+                    type: 'warning'
+                });
             }
         },
 
@@ -6502,7 +6860,7 @@ define([
          * Show settings modal (v6.7.57)
          * Displays behavioral settings that don't require content regeneration
          */
-        showSettingsModal: function() {
+        showSettingsModal: function () {
             var self = this;
             var manifest = this.manifest;
             var settings = manifest.settings || {};
@@ -6684,13 +7042,13 @@ define([
             $(document.body).append(html);
             
             // v8.4.6: Apply cc5-checked/cc5-disabled classes (replaces CSS :has() for Moodle minifier compatibility)
-            $('.cc5-settings-radio, .cc5-settings-checkbox').each(function() {
+            $('.cc5-settings-radio, .cc5-settings-checkbox').each(function () {
                 var $label = $(this);
                 var $input = $label.find('input');
                 if ($input.is(':checked')) { $label.addClass('cc5-checked'); }
                 if ($input.is(':disabled')) { $label.addClass('cc5-disabled'); }
             });
-            $(document).off('change.cc5settings').on('change.cc5settings', '.cc5-settings-radio input, .cc5-settings-checkbox input', function() {
+            $(document).off('change.cc5settings').on('change.cc5settings', '.cc5-settings-radio input, .cc5-settings-checkbox input', function () {
                 var $input = $(this);
                 var $label = $input.closest('.cc5-settings-radio, .cc5-settings-checkbox');
                 if ($input.attr('type') === 'radio') {
@@ -6701,18 +7059,18 @@ define([
             });
             
             // WCAG 2.1 AA: Focus management - focus first interactive element
-            setTimeout(function() {
+            setTimeout(function () {
                 $('.cc5-settings-modal-close').first().focus();
             }, 100);
             
             // Toggle timed options visibility when progression mode changes
-            $(document).on('change', 'input[name="progressionMode"]', function() {
+            $(document).on('change', 'input[name="progressionMode"]', function () {
                 var showTimed = $(this).val() === 'timed';
                 $('.cc5-settings-timed-options').toggleClass('cc5-hidden', !showTimed);
             });
             
             // Handle voiceover enabled checkbox - enable/disable voiceover progression mode
-            $(document).on('change', '#cc5-voiceover-enabled', function() {
+            $(document).on('change', '#cc5-voiceover-enabled', function () {
                 var isEnabled = $(this).is(':checked');
                 var $voLabel = $('input[name="progressionMode"][value="voiceover"]').closest('.cc5-settings-radio');
                 $('input[name="progressionMode"][value="voiceover"]').prop('disabled', !isEnabled);
@@ -6726,7 +7084,7 @@ define([
         /**
          * Count slides without images (v7.2.44)
          */
-        countSlidesWithoutImages: function() {
+        countSlidesWithoutImages: function () {
             var count = 0;
             var topics = this.manifest.topics || [];
             for (var i = 0; i < topics.length; i++) {
@@ -6750,7 +7108,7 @@ define([
         /**
          * Count slides without voiceover (v7.9.88)
          */
-        countSlidesWithoutVoiceover: function() {
+        countSlidesWithoutVoiceover: function () {
             // v9.94 FIX-COUNT-STALE: Count both slides with NO voiceover URL AND slides
             // whose stored URL is stale (schema mismatch or word-count divergence > 3).
             // Previously only counted slides with no URL at all  -  sites with old wrong
@@ -6796,7 +7154,7 @@ define([
         /**
          * Bulk generate AI images for all slides without images (v7.2.44)
          */
-        bulkGenerateImages: function() {
+        bulkGenerateImages: function () {
             var self = this;
             var slidesToProcess = [];
             
@@ -6874,7 +7232,7 @@ define([
                 }
                 
                 // Generate image for this slide
-                self.generateSlideImageBulk(slide.sectionId, function(success) {
+                self.generateSlideImageBulk(slide.sectionId, function (success) {
                     if (success) {
                         successCount++;
                     }
@@ -6889,7 +7247,7 @@ define([
         /**
          * Bulk generate AI voiceovers for all slides without voiceover (v7.9.88)
          */
-        bulkGenerateVoiceovers: function() {
+        bulkGenerateVoiceovers: function () {
             var self = this;
             var slidesToProcess = [];
             
@@ -6997,7 +7355,7 @@ define([
                 }
                 
                 // Generate voiceover for this slide
-                self.generateSlideVoiceoverBulk(slideData.section, slideData.topicIndex, slideData.sectionIndex, function(success) {
+                self.generateSlideVoiceoverBulk(slideData.section, slideData.topicIndex, slideData.sectionIndex, function (success) {
                     if (success) {
                         successCount++;
                     }
@@ -7017,10 +7375,10 @@ define([
          * @param {Object} section - Section object (mutated in-place)
          * @returns {number} Number of cards that were patched
          */
-        patchMissingCardVoiceoverTexts: function(section) {
+        patchMissingCardVoiceoverTexts: function (section) {
             if (!section.cards || !section.cards.length) return 0;
             var patched = 0;
-            section.cards.forEach(function(card) {
+            section.cards.forEach(function (card) {
                 if (!card) return;
                 // Skip cards that already have a valid voiceoverText
                 if (card.voiceoverText && card.voiceoverText.trim()) return;
@@ -7044,14 +7402,14 @@ define([
                 // (lines 2109-2111) but was absent from patchMissing  -  cards with only keyPoints
                 // produced empty voiceoverText in bulk TTS path
                 if (card.keyPoints && card.keyPoints.length) {
-                    parts.push(card.keyPoints.map(function(p) { return fixGrammar(typeof p === 'string' ? p : (p.text || '')); }).join('. '));
+                    parts.push(card.keyPoints.map(function (p) { return fixGrammar(typeof p === 'string' ? p : (p.text || '')); }).join('. '));
                 }
                 // v10.47 BUG-VO-PATCH-ACTIONS: actions[] narrated in buildFullVoiceoverText
                 // (lines 2143-2146) but was absent from patchMissing
                 if (card.actions && card.actions.length) {
-                    card.actions.forEach(function(a) {
+                    card.actions.forEach(function (a) {
                         if (a.heading) parts.push(fixGrammar(a.heading));
-                        if (a.bullets && a.bullets.length) parts.push(a.bullets.map(function(b) { return fixGrammar(b); }).join('. '));
+                        if (a.bullets && a.bullets.length) parts.push(a.bullets.map(function (b) { return fixGrammar(b); }).join('. '));
                     });
                 }
                 if (card.impactStatement)   parts.push(fixGrammar(card.impactStatement));
@@ -7077,7 +7435,7 @@ define([
                     }
                 }
                 if (card.steps && card.steps.length) {
-                    card.steps.forEach(function(s) {
+                    card.steps.forEach(function (s) {
                         // v10.46 BUG4 FIX: 7-card mental-model uses s.step (verb-led title) not s.action
                         // (Workplace action-framework format). Read s.step || s.action || s.title.
                         var _stepLabel = s.step || s.action || s.title || '';
@@ -7090,7 +7448,7 @@ define([
                 // voiceoverText to stay empty for those card types (patchMissingCardVoiceoverTexts
                 // only ran when voiceoverText was absent  -  so the fallback was never populated).
                 if (card.sceneParts && card.sceneParts.length) {
-                    card.sceneParts.forEach(function(part) {
+                    card.sceneParts.forEach(function (part) {
                         if (part.title) parts.push(fixGrammar(part.title));
                         var _pt = part.text || part.content || part.description || '';
                         if (_pt) parts.push(fixGrammar(_pt));
@@ -7098,7 +7456,7 @@ define([
                     if (card.highlightText) parts.push(fixGrammar(card.highlightText));
                 }
                 if (card.conceptInsights && card.conceptInsights.length) {
-                    card.conceptInsights.forEach(function(insight) {
+                    card.conceptInsights.forEach(function (insight) {
                         if (insight.title) parts.push(fixGrammar(insight.title));
                         var _it = insight.text || insight.content || insight.description || '';
                         if (_it) parts.push(fixGrammar(_it));
@@ -7106,7 +7464,7 @@ define([
                 }
                 // v10.13: Add missing fields that buildFullVoiceoverText reads in multi-card path
                 if (card.risks && card.risks.length) {
-                    card.risks.forEach(function(r) {
+                    card.risks.forEach(function (r) {
                         if (r.risk || r.text) parts.push(fixGrammar(r.risk || r.text));
                         if (r.likelihood) parts.push(fixGrammar(r.likelihood));
                         if (r.impact) parts.push(fixGrammar(r.impact));
@@ -7116,13 +7474,13 @@ define([
                 }
                 var _patchPolItems = card.policyItems || card.policies || [];
                 if (_patchPolItems.length) {
-                    _patchPolItems.forEach(function(p) {
+                    _patchPolItems.forEach(function (p) {
                         if (p.policy) parts.push(fixGrammar(p.policy + (p.requirement ? ': ' + p.requirement : '')));
                         if (p.consequence) parts.push(fixGrammar(p.consequence));
                     });
                 }
                 if (card.frameworks && card.frameworks.length) {
-                    card.frameworks.forEach(function(fw) {
+                    card.frameworks.forEach(function (fw) {
                         if (fw.name) parts.push(fixGrammar(fw.name));
                         if (fw.originator) parts.push(fixGrammar(fw.originator));
                         if (fw.principle) parts.push(fixGrammar(fw.principle));
@@ -7131,42 +7489,42 @@ define([
                     });
                 }
                 if (card.frameworkSteps && card.frameworkSteps.length) {
-                    card.frameworkSteps.forEach(function(s) {
+                    card.frameworkSteps.forEach(function (s) {
                         if (s.step) parts.push(fixGrammar(s.step));
                         if (s.explanation) parts.push(fixGrammar(s.explanation));
                         if (s.example) parts.push(fixGrammar(s.example));
                     });
                 }
                 if (card.applications && card.applications.length) {
-                    card.applications.forEach(function(a) {
+                    card.applications.forEach(function (a) {
                         if (a.situation) parts.push(fixGrammar(a.situation));
                         if (a.action) parts.push(fixGrammar(a.action));
                         if (a.rationale) parts.push(fixGrammar(a.rationale));
                     });
                 }
                 if (card.pitfallItems && card.pitfallItems.length) {
-                    card.pitfallItems.forEach(function(p) {
+                    card.pitfallItems.forEach(function (p) {
                         if (p.pitfall) parts.push(fixGrammar(p.pitfall));
                         if (p.consequence) parts.push(fixGrammar(p.consequence));
                         if (p.correction) parts.push(fixGrammar(p.correction));
                     });
                 }
                 if (card.keyTerms && card.keyTerms.length) {
-                    card.keyTerms.forEach(function(t) {
+                    card.keyTerms.forEach(function (t) {
                         if (t.term && t.definition) parts.push(fixGrammar(t.term) + ' means ' + fixGrammar(t.definition));
                         else if (typeof t === 'string') parts.push(fixGrammar(t));
                     });
                 }
                 if (card.cognitiveConsiderations && card.cognitiveConsiderations.length) {
-                    parts.push(card.cognitiveConsiderations.map(function(c) {
+                    parts.push(card.cognitiveConsiderations.map(function (c) {
                         return fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''));
                     }).join('. '));
                 }
                 if (card.analysisPrompts && card.analysisPrompts.length) {
-                    parts.push(card.analysisPrompts.map(function(p) { return fixGrammar(p); }).join('. '));
+                    parts.push(card.analysisPrompts.map(function (p) { return fixGrammar(p); }).join('. '));
                 }
                 if (card.considerations && card.considerations.length) {
-                    card.considerations.forEach(function(c) {
+                    card.considerations.forEach(function (c) {
                         if (typeof c === 'string') { parts.push(fixGrammar(c)); }
                         else if (c.dimension && c.description) { parts.push(fixGrammar(c.dimension) + '. ' + fixGrammar(c.description)); }
                         else { parts.push(fixGrammar(c.text || c.description || '')); }
@@ -7176,12 +7534,12 @@ define([
                 if (card.skillStatement) parts.push(fixGrammar(card.skillStatement));
                 if (card.relevance) parts.push(fixGrammar(card.relevance));
                 if (card.keyIndicators && card.keyIndicators.length) {
-                    parts.push(card.keyIndicators.map(function(ind) {
+                    parts.push(card.keyIndicators.map(function (ind) {
                         return fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''));
                     }).join('. '));
                 }
                 if (card.optimisationTips && card.optimisationTips.length) {
-                    parts.push(card.optimisationTips.map(function(t) { return fixGrammar(t); }).join('. '));
+                    parts.push(card.optimisationTips.map(function (t) { return fixGrammar(t); }).join('. '));
                 }
                 // v10.35: 7-card format fields absent from original patch list
                 // v10.47: removed dead card.content read (always undefined after normalizeCardSchema
@@ -7189,10 +7547,10 @@ define([
                 if (card.highlightText) parts.push(fixGrammar(card.highlightText));
                 if (card.question)      parts.push(fixGrammar(card.question));
                 if (card.options && card.options.length) {
-                    card.options.forEach(function(o) { if (o.text) parts.push(fixGrammar(o.text)); });
+                    card.options.forEach(function (o) { if (o.text) parts.push(fixGrammar(o.text)); });
                 }
                 if (card.items && card.items.length) {
-                    card.items.forEach(function(item) {
+                    card.items.forEach(function (item) {
                         if (typeof item === 'string') { parts.push(fixGrammar(item)); }
                         else {
                             if (item.mistake)     parts.push(fixGrammar(item.mistake));
@@ -7211,13 +7569,13 @@ define([
                 // these patched sub-headings are consistent with the TTS output.
                 if (card.goodItems && card.goodItems.length) {
                     parts.push('What good looks like');
-                    card.goodItems.forEach(function(gi) {
+                    card.goodItems.forEach(function (gi) {
                         parts.push(fixGrammar(typeof gi === 'string' ? gi : (gi.text || '')));
                     });
                 }
                 if (card.badItems && card.badItems.length) {
                     parts.push('What to avoid');
-                    card.badItems.forEach(function(bi) {
+                    card.badItems.forEach(function (bi) {
                         if (typeof bi === 'string') { parts.push(fixGrammar(bi)); return; }
                         // v13.85: the consequence is now preserved through normalisation,
                         // so narrate it too - it is the half that explains why the mistake
@@ -7245,7 +7603,7 @@ define([
         /**
          * Generate voiceover for bulk operation (v7.9.88) - simplified version with callback
          */
-        generateSlideVoiceoverBulk: function(section, topicIndex, sectionIndex, callback) {
+        generateSlideVoiceoverBulk: function (section, topicIndex, sectionIndex, callback) {
             var self = this;
 
             // v12.48 FIX-CC-BULK-CONCURRENT: If preloadVoiceovers() already has this section
@@ -7259,7 +7617,7 @@ define([
             if (self.voiceoverLoading[section.id]) {
                 ccWarn('[Bulk Voiceover] Section ' + section.id + ' is already in preload  -  waiting for preload to complete (up to 90s)');
                 var _bulkPollAttempts = 0;
-                var _bulkPollInterval = setInterval(function() {
+                var _bulkPollInterval = setInterval(function () {
                     _bulkPollAttempts++;
                     if (!self.voiceoverLoading[section.id]) {
                         clearInterval(_bulkPollInterval);
@@ -7317,15 +7675,19 @@ define([
                 method: 'POST',
                 body: formData
             })
-            .then(function(response) {
+            .then(function (response) {
                 if (!response.ok) throw new Error('Server returned ' + response.status);
                 return response.json();
             })
-            .then(function(data) {
+            .then(function (data) {
                 delete self.voiceoverLoading[section.id];
                 if (data.success && data.audioContent) {
                     var audioUrl = 'data:' + data.audioType + ';base64,' + data.audioContent;
                     self.voiceoverCache[section.id] = audioUrl;
+                    // v13.94.6: stamp the entry so it can be validated on replay.
+                    self.voiceoverCacheHash = self.voiceoverCacheHash || {};
+                    self.voiceoverCacheHash[section.id] = section.voiceoverTextHash
+                        || voiceoverTextHash(self.buildFullVoiceoverText(section));
                     
                     // v11.77 FIX: Persist to Moodle file store immediately so the HTTPS URL
                     // is written to the manifest before saveManifestSilent runs. Previously
@@ -7349,7 +7711,7 @@ define([
                     if (callback) callback(false);
                 }
             })
-            .catch(function(error) {
+            .catch(function (error) {
                 delete self.voiceoverLoading[section.id];
                 ccError('[Bulk Voiceover] Error:', error);
                 if (callback) callback(false);
@@ -7359,7 +7721,7 @@ define([
         /**
          * Generate image for bulk operation (v7.2.44) - simplified version with callback
          */
-        generateSlideImageBulk: function(sectionId, callback) {
+        generateSlideImageBulk: function (sectionId, callback) {
             var self = this;
             var sectionData = this.findSectionById(sectionId);
             if (!sectionData) {
@@ -7376,7 +7738,7 @@ define([
             var _slideDesc = section.description || '';
             if (!_slideDesc && section.cards && section.cards.length > 0) {
                 var _descParts = [];
-                section.cards.forEach(function(card) {
+                section.cards.forEach(function (card) {
                     var _t = card.bodyText || card.heading || card.highlightText || '';
                     if (_t && _descParts.length < 2) _descParts.push(_t);
                     if (!_t && card.sceneParts && card.sceneParts.length) {
@@ -7401,7 +7763,7 @@ define([
             var requestData = {
                 slideTitle: section.title,
                 slideDescription: _slideDesc,
-                requirements: (section.requirements || []).map(function(r) { return typeof r === 'string' ? r : r.text || ''; }),
+                requirements: (section.requirements || []).map(function (r) { return typeof r === 'string' ? r : r.text || ''; }),
                 topicTitle: context.unitTitle || section.title || '',
                 unitCode: context.unitCode || '',
                 unitTitle: context.unitTitle || '',
@@ -7431,7 +7793,7 @@ define([
                 processData: false,
                 contentType: false,
                 timeout: 120000
-            }).done(function(response) {
+            }).done(function (response) {
                 try {
                     var data = typeof response === 'string' ? JSON.parse(response) : response;
                     if (data.success && data.images && data.images.length > 0) {
@@ -7470,7 +7832,7 @@ define([
                 } catch (e) {
                     if (callback) callback(false);
                 }
-            }).fail(function(xhr, status, error) {
+            }).fail(function (xhr, status, error) {
                 ccError('Bulk slide image generation failed', xhr && xhr.status, error);
                 if (callback) callback(false);
             });
@@ -7497,7 +7859,7 @@ define([
          * @param {string} sectionId     Section identifier used for the filename.
          * @param {object} manifestSection  The actual manifest section object to update with the URL.
          */
-        persistVoiceoverToFileStore: function(audioContent, audioType, sectionId, manifestSection) {
+        persistVoiceoverToFileStore: function (audioContent, audioType, sectionId, manifestSection) {
             var self = this;
             if (!audioContent || !manifestSection) { return; }
 
@@ -7511,11 +7873,11 @@ define([
 
             var ajaxUrl = CcState.ajaxUrl();
             CcState.fetchWithDeadline(ajaxUrl, { method: 'POST', body: formData })
-                .then(function(r) {
+                .then(function (r) {
                     if (!r.ok) { throw new Error('HTTP ' + r.status); }
                     return r.json();
                 })
-                .then(function(data) {
+                .then(function (data) {
                     if (data.success && data.url) {
                         manifestSection.voiceoverUrl = data.url;
                         // v11.86 MICRO FIX: Set voiceoverStatus='complete' ONLY here, after the
@@ -7532,7 +7894,7 @@ define([
                         // after each persist, re-evaluate voiceoversComplete from the current
                         // language's sections and immediately update both the flag and buttons.
                         var _reTopicContainer = self.activeLang
-                            ? (function() {
+                            ? (function () {
                                 var _ml = self.manifest.multiLanguage || [];
                                 for (var _ri = 0; _ri < _ml.length; _ri++) {
                                     if (_ml[_ri].code === self.activeLang) { return _ml[_ri]; }
@@ -7541,8 +7903,8 @@ define([
                             })()
                             : self.manifest;
                         var _reSects = [];
-                        ((_reTopicContainer && _reTopicContainer.topics) || []).forEach(function(t) {
-                            (t.sections || []).forEach(function(s) { _reSects.push(s); });
+                        ((_reTopicContainer && _reTopicContainer.topics) || []).forEach(function (t) {
+                            (t.sections || []).forEach(function (s) { _reSects.push(s); });
                         });
                         if (_reSects.length > 0 && CcVoiceover.allVoiceoversComplete(_reSects)) {
                             self.manifest.voiceoversComplete = true;
@@ -7557,7 +7919,7 @@ define([
                         // Debounce: clear any pending timer so multiple concurrent saves
                         // coalesce into one manifest write after all sections complete.
                         if (self.voiceoverSaveTimer) { clearTimeout(self.voiceoverSaveTimer); }
-                        self.voiceoverSaveTimer = setTimeout(function() {
+                        self.voiceoverSaveTimer = setTimeout(function () {
                             self.saveManifestSilent();
                             self.voiceoverSaveTimer = null;
                         }, 3000);
@@ -7565,7 +7927,7 @@ define([
                         ccWarn('[VOICEOVER v' + CC_VERSION + '] FILE STORE FAIL section ' + sectionId + ' | ' + (data.error || 'no url returned'));
                     }
                 })
-                .catch(function(e) {
+                .catch(function (e) {
                     ccWarn('[VOICEOVER v' + CC_VERSION + '] FILE STORE ERROR section ' + sectionId + ' | ' + e.message);
                 });
         },
@@ -7573,7 +7935,7 @@ define([
         /**
          * Save manifest silently without notification (v7.2.44)
          */
-        saveManifestSilent: function() {
+        saveManifestSilent: function () {
             var self = this;
             // BUG-CC-MSGCHAN + BUG-CC-DBWRITE fix (v11.49):
             // 1. stripAudio() removes base64 data: URLs from manifest before every save
@@ -7589,7 +7951,7 @@ define([
                 if (Array.isArray(obj)) { return obj.map(stripAudio); }
                 if (obj && typeof obj === 'object') {
                     var out = {};
-                    Object.keys(obj).forEach(function(k) {
+                    Object.keys(obj).forEach(function (k) {
                         if ((k === 'voiceoverUrl' || k === 'audioUrl') && typeof obj[k] === 'string' && obj[k].indexOf('data:') === 0) {
                             // v11.51 FIX: Use 'pregenerated' sentinel instead of '' so that
                             // - priorityPreloadCurrentSlide guard (if voiceoverUrl) correctly returns
@@ -7631,23 +7993,23 @@ define([
                 // Direct save with retry. Function expression, not a declaration: it was
                 // previously declared inside this if-block, which is invalid in strict mode
                 // and only worked because of legacy function hoisting.
-                var attemptDirectSave = function(attempt) {
+                var attemptDirectSave = function (attempt) {
                     Ajax.call([{
                         methodname: 'mod_contentcreator_save_manifest',
                         args: { cmid: self.cmid, manifest: manifestStr }
-                    }])[0].done(function(response) {
+                    }])[0].done(function (response) {
                         if (response && response.success === false) {
                             ccError('[CC SAVE] saveManifestSilent attempt ' + attempt + ' reported failure: ' + response.message);
                             if (attempt < MAX_SAVE_RETRIES) {
-                                setTimeout(function() { attemptDirectSave(attempt + 1); }, 1000 * attempt);
+                                setTimeout(function () { attemptDirectSave(attempt + 1); }, 1000 * attempt);
                             } else {
                                 ccError('[CC SAVE] saveManifestSilent: all ' + MAX_SAVE_RETRIES + ' direct retries exhausted.');
                             }
                         }
-                    }).fail(function(error) {
+                    }).fail(function (error) {
                         ccError('[CC SAVE] saveManifestSilent direct attempt ' + attempt + ' FAILED: ' + (error && (error.message || JSON.stringify(error)) || 'unknown'));
                         if (attempt < MAX_SAVE_RETRIES) {
-                            setTimeout(function() { attemptDirectSave(attempt + 1); }, 1000 * attempt);
+                            setTimeout(function () { attemptDirectSave(attempt + 1); }, 1000 * attempt);
                         } else {
                             ccError('[CC SAVE] saveManifestSilent: all ' + MAX_SAVE_RETRIES + ' direct retries exhausted.');
                         }
@@ -7678,11 +8040,11 @@ define([
                             islast: isLast,
                             version: isLast ? version : ''
                         }
-                    }])[0].done(function(response) {
+                    }])[0].done(function (response) {
                         if (response && response.success === false) {
                             ccError('[CC SAVE] Chunk ' + index + ' attempt ' + attempt + ' failed: ' + response.message);
                             if (attempt < MAX_SAVE_RETRIES) {
-                                setTimeout(function() { attemptChunkedSave(attempt + 1); }, 1000 * attempt);
+                                setTimeout(function () { attemptChunkedSave(attempt + 1); }, 1000 * attempt);
                             } else {
                                 ccError('[CC SAVE] saveManifestSilent: all ' + MAX_SAVE_RETRIES + ' chunked retries exhausted.');
                             }
@@ -7691,10 +8053,10 @@ define([
                         if (!isLast) {
                             sendChunk(index + 1);
                         }
-                    }).fail(function(error) {
+                    }).fail(function (error) {
                         ccError('[CC SAVE] Chunk ' + index + ' attempt ' + attempt + ' FAILED: ' + (error && (error.message || JSON.stringify(error)) || 'unknown'));
                         if (attempt < MAX_SAVE_RETRIES) {
-                            setTimeout(function() { attemptChunkedSave(attempt + 1); }, 1000 * attempt);
+                            setTimeout(function () { attemptChunkedSave(attempt + 1); }, 1000 * attempt);
                         } else {
                             ccError('[CC SAVE] saveManifestSilent: all ' + MAX_SAVE_RETRIES + ' chunked retries exhausted.');
                         }
@@ -7710,7 +8072,7 @@ define([
         /**
          * Save settings from modal (v6.7.57)
          */
-        saveSettings: function() {
+        saveSettings: function () {
             var self = this;
             
             // Gather values from modal
@@ -7763,7 +8125,7 @@ define([
                     cmid: self.cmid,
                     manifest: JSON.stringify(self.manifest)
                 }
-            }])[0].done(function(response) {
+            }])[0].done(function (response) {
                 if (response.success !== false) {
                     
                     Notification.addNotification({
@@ -7782,7 +8144,7 @@ define([
                         type: 'error'
                     });
                 }
-            }).fail(function(error) {
+            }).fail(function (error) {
                 Notification.addNotification({
                     message: getLabel('settingsSaveFailed'),
                     type: 'error'
@@ -7798,7 +8160,7 @@ define([
         /**
          * Show image source selection modal (v6.6.67)
          */
-        showImageModal: function(sectionId, topicId) {
+        showImageModal: function (sectionId, topicId) {
             var self = this;
             // v6.6.78: Ensure sectionId is always a string (fixes "3.1" being parsed as float)
             sectionId = String(sectionId);
@@ -7880,7 +8242,7 @@ define([
             // WCAG 2.1 AA: Focus management - focus first interactive element
             // BUG-GAL-FOCUS-SELECTOR FIX: was .cc5-settings-modal-close (settings modal
             // close button  -  a different element).  Image modals use .cc5-image-modal-close.
-            setTimeout(function() {
+            setTimeout(function () {
                 $('.cc5-image-modal-close').first().focus();
             }, 100);
         },
@@ -7888,7 +8250,7 @@ define([
         /**
          * Find section in manifest by ID (v6.6.67)
          */
-        findSectionById: function(sectionId) {
+        findSectionById: function (sectionId) {
             // v6.6.78: Ensure sectionId is always a string for comparison
             sectionId = String(sectionId);
             var topics = this.manifest.topics || [];
@@ -7913,7 +8275,7 @@ define([
          *   (b) Saving the manifest (which must always use primary topics) keeps the image.
          * Safe to call unconditionally — does nothing when activeLang is null/empty.
          */
-        mirrorImageToPrimary: function(topicIndex, sectionIndex, imageData) {
+        mirrorImageToPrimary: function (topicIndex, sectionIndex, imageData) {
             if (!this.activeLang || !this._primaryTopics) { return; }
             var primTopic = this._primaryTopics[topicIndex];
             if (!primTopic) { return; }
@@ -7948,7 +8310,7 @@ define([
          * This helper returns a shallow clone with topics restored to primary so every
          * save operation always persists the correct primary topics structure.
          */
-        buildSaveManifest: function() {
+        buildSaveManifest: function () {
             if (!this.activeLang || !this._primaryTopics) {
                 return this.manifest;
             }
@@ -7958,7 +8320,7 @@ define([
         /**
          * Show regenerate image modal with custom prompt input (v6.6.69)
          */
-        showRegenerateModal: function(sectionId) {
+        showRegenerateModal: function (sectionId) {
             
             var html = '<div class="cc5-image-modal-overlay cc5-regenerate-modal-overlay">';
             html += '<div class="cc5-image-modal cc5-regenerate-modal">';
@@ -7987,12 +8349,12 @@ define([
             $(document.body).append(html);
             
             // WCAG 2.1 AA: Focus management - BUG-GAL-FOCUS-SELECTOR FIX
-            setTimeout(function() {
+            setTimeout(function () {
                 $('.cc5-image-modal-close').first().focus();
             }, 100);
             
             // Focus on the textarea
-            setTimeout(function() {
+            setTimeout(function () {
                 $('#cc5-regen-prompt').focus();
             }, 100);
         },
@@ -8000,7 +8362,7 @@ define([
         /**
          * Generate AI image for slide (v6.6.67, v6.6.69, v6.6.72 - pick 1 of 3 + gallery)
          */
-        generateSlideImage: function(sectionId, customPrompt, isRegeneration) {
+        generateSlideImage: function (sectionId, customPrompt, isRegeneration) {
             var self = this;
             var sectionData = this.findSectionById(sectionId);
             if (!sectionData) {
@@ -8019,7 +8381,7 @@ define([
             var _slideDesc2 = section.description || '';
             if (!_slideDesc2 && section.cards && section.cards.length > 0) {
                 var _descParts2 = [];
-                section.cards.forEach(function(card) {
+                section.cards.forEach(function (card) {
                     var _t2 = card.bodyText || card.heading || card.highlightText || '';
                     if (_t2 && _descParts2.length < 2) _descParts2.push(_t2);
                     if (!_t2 && card.sceneParts && card.sceneParts.length) {
@@ -8038,7 +8400,7 @@ define([
             var requestData = {
                 slideTitle: section.title,
                 slideDescription: _slideDesc2,
-                requirements: (section.requirements || []).map(function(r) { return typeof r === 'string' ? r : r.text || ''; }),
+                requirements: (section.requirements || []).map(function (r) { return typeof r === 'string' ? r : r.text || ''; }),
                 positiveList: section.positiveList || section.doList || [],
                 negativeList: section.negativeList || section.dontList || [],
                 context: {
@@ -8057,7 +8419,7 @@ define([
             };
 
             CcState.vendorFetch(this.cmid, 'generateslideimage', {payload: requestData})
-                .then(function(response) {
+                .then(function (response) {
                     // v10.62 FIX BUG-CC-IMGGEN: the handler must show the picker for
                     // multiple images, apply directly for exactly one, and never fall
                     // through to the failure path on success.
@@ -8085,7 +8447,7 @@ define([
                         type: 'error'
                     });
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     ccError('generateSlideImage failed', err);
                     self.render();
                     Notification.addNotification({
@@ -8098,8 +8460,8 @@ define([
         /**
          * Show image picker modal with multiple images (v6.6.72)
          */
-        showImagePickerModal: function(sectionId, images, prompt, sectionData) {
-            images.forEach(function(url, i) {
+        showImagePickerModal: function (sectionId, images, prompt, sectionData) {
+            images.forEach(function (url, i) {
             });
             var self = this;
             
@@ -8114,7 +8476,7 @@ define([
             
             // Image grid
             html += '<div class="cc5-image-picker-grid">';
-            images.forEach(function(imgUrl, index) {
+            images.forEach(function (imgUrl, index) {
                 html += '<div class="cc5-image-picker-item" data-index="' + index + '" data-section-id="' + escapeHtml(sectionId) + '">';
                 html += '<img src="' + escapeHtml(imgUrl) + '" alt="Option ' + (index + 1) + '">'; // v13.86: was raw
                 html += '<div class="cc5-picker-item-overlay">';
@@ -8165,7 +8527,7 @@ define([
             $(document.body).append(html);
             
             // WCAG 2.1 AA: Focus management - BUG-GAL-FOCUS-SELECTOR FIX
-            setTimeout(function() {
+            setTimeout(function () {
                 $('.cc5-image-modal-close').first().focus();
             }, 100);
             
@@ -8178,7 +8540,7 @@ define([
         /**
          * Apply selected image to slide and save others to gallery (v6.6.72)
          */
-        applySelectedImage: function(sectionId, selectedUrl, prompt, sectionData, otherImages) {
+        applySelectedImage: function (sectionId, selectedUrl, prompt, sectionData, otherImages) {
             var self = this;
             
             // Update manifest with selected image
@@ -8197,7 +8559,7 @@ define([
             if (!self.manifest.imageGallery) {
                 self.manifest.imageGallery = [];
             }
-            var alreadyInGallery = self.manifest.imageGallery.some(function(item) {
+            var alreadyInGallery = self.manifest.imageGallery.some(function (item) {
                 return item.url === selectedUrl;
             });
             if (!alreadyInGallery) {
@@ -8212,8 +8574,8 @@ define([
             
             // Save unused images to gallery
             if (otherImages && otherImages.length > 0) {
-                otherImages.forEach(function(imgUrl) {
-                    var alreadyThere = self.manifest.imageGallery.some(function(item) {
+                otherImages.forEach(function (imgUrl) {
+                    var alreadyThere = self.manifest.imageGallery.some(function (item) {
                         return item.url === imgUrl;
                     });
                     if (!alreadyThere) {
@@ -8230,7 +8592,7 @@ define([
             // v11.23: Auto-contribute all generated images to community gallery
             var allImagesForCommunity = [{url: selectedUrl, prompt: prompt}];
             if (otherImages && otherImages.length > 0) {
-                otherImages.forEach(function(imgUrl) {
+                otherImages.forEach(function (imgUrl) {
                     allImagesForCommunity.push({url: imgUrl, prompt: prompt});
                 });
             }
@@ -8260,7 +8622,7 @@ define([
         /**
          * Show fullscreen zoom preview of image (v7.2.0)
          */
-        showImageZoomModal: function(imageUrl) {
+        showImageZoomModal: function (imageUrl) {
             var html = '<div class="cc5-zoom-modal-overlay">';
             html += '<div class="cc5-zoom-modal">';
             html += '<button type="button" class="cc5-zoom-modal-close" aria-label="' + getLabel('closeZoom') + '">';
@@ -8275,7 +8637,7 @@ define([
             $(document.body).append(html);
             
             // Allow ESC key to close
-            $(document).one('keydown.zoomModal', function(e) {
+            $(document).one('keydown.zoomModal', function (e) {
                 if (e.key === 'Escape') {
                     $('.cc5-zoom-modal-overlay').remove();
                 }
@@ -8285,12 +8647,12 @@ define([
         /**
          * v11.10: Download an image from a URL using fetch-as-blob (handles cross-origin CDN images)
          */
-        downloadImage: function(url) {
+        downloadImage: function (url) {
             var filename = 'content-creator-image-' + Date.now() + '.png';
             // v13.93.3: a download that never answers used to leave no trace at all.
             CcState.fetchWithDeadline(url, {}, 'The image download', 60000)
-                .then(function(response) { return response.blob(); })
-                .then(function(blob) {
+                .then(function (response) { return response.blob(); })
+                .then(function (blob) {
                     var blobUrl = URL.createObjectURL(blob);
                     var a = document.createElement('a');
                     a.href = blobUrl;
@@ -8300,7 +8662,7 @@ define([
                     document.body.removeChild(a);
                     URL.revokeObjectURL(blobUrl);
                 })
-                .catch(function() {
+                .catch(function () {
                     window.open(url, '_blank');
                 });
         },
@@ -8316,7 +8678,7 @@ define([
          * v7.2.64: Fetch site-wide image gallery from server
          * Collects images from ALL Content Creator activities on the Moodle site
          */
-        fetchSiteGallery: function(callback) {
+        fetchSiteGallery: function (callback) {
             var self = this;
             
             // If already cached, return immediately
@@ -8345,7 +8707,7 @@ define([
                     sesskey: Config.sesskey
                 },
                 dataType: 'json',
-                success: function(response) {
+                success: function (response) {
                     self.siteGalleryLoading = false;
                     if (response.success && response.images) {
                         self.siteGalleryCache = response.images;
@@ -8360,17 +8722,17 @@ define([
                         $('.cc5-show-gallery-btn').html(getIcon('folder') + ' ' + getLabel('selectFromGallery') + ' (' + updatedTotal + ')');
                     } catch (_countErr) { /* ignore UI update failures */ }
                     // Execute all queued callbacks
-                    self.siteGalleryCallbacks.forEach(function(cb) {
+                    self.siteGalleryCallbacks.forEach(function (cb) {
                         cb(self.siteGalleryCache);
                     });
                     self.siteGalleryCallbacks = [];
                 },
-                error: function(xhr, status, error) {
+                error: function (xhr, status, error) {
                     ccError('Site gallery could not be loaded', xhr && xhr.status, error);
                     self.siteGalleryLoading = false;
                     self.siteGalleryCache = [];
                     // Execute all queued callbacks with empty array
-                    self.siteGalleryCallbacks.forEach(function(cb) {
+                    self.siteGalleryCallbacks.forEach(function (cb) {
                         cb([]);
                     });
                     self.siteGalleryCallbacks = [];
@@ -8382,15 +8744,15 @@ define([
          * Collect ALL images from manifest - slides + gallery (v7.2.48)
          * This ensures all previously generated images are available for reuse
          */
-        collectAllManifestImages: function() {
+        collectAllManifestImages: function () {
             var allImages = [];
             var seenUrls = {}; // Prevent duplicates
             
             // 1. Collect images from all slides in all topics
             if (this.manifest.topics) {
-                this.manifest.topics.forEach(function(topic, topicIndex) {
+                this.manifest.topics.forEach(function (topic, topicIndex) {
                     if (topic.sections) {
-                        topic.sections.forEach(function(section, sectionIndex) {
+                        topic.sections.forEach(function (section, sectionIndex) {
                             if (section.image && section.image.url) {
                                 if (!seenUrls[section.image.url]) {
                                     seenUrls[section.image.url] = true;
@@ -8409,7 +8771,7 @@ define([
             
             // 2. Add images from gallery array (unused images)
             if (this.manifest.imageGallery) {
-                this.manifest.imageGallery.forEach(function(item) {
+                this.manifest.imageGallery.forEach(function (item) {
                     if (item.url && !seenUrls[item.url]) {
                         seenUrls[item.url] = true;
                         allImages.push({
@@ -8428,10 +8790,10 @@ define([
         /**
          * Show image gallery modal (v7.2.64 - Shows ALL images from entire Moodle site)
          */
-        showGalleryModal: function(sectionId) {
+        showGalleryModal: function (sectionId) {
             var self = this;
             
-            this.fetchSiteGallery(function(siteImages) {
+            this.fetchSiteGallery(function (siteImages) {
                 self._renderGalleryModal(sectionId, siteImages);
             });
         },
@@ -8439,7 +8801,7 @@ define([
         /**
          * v7.2.64: Render the gallery modal with provided images
          */
-        _renderGalleryModal: function(sectionId, siteImages) {
+        _renderGalleryModal: function (sectionId, siteImages) {
             var self = this;
             // Combine current manifest images with site-wide images
             var localImages = self.collectAllManifestImages();
@@ -8447,7 +8809,7 @@ define([
             var gallery = [];
             
             // Add local images first (current activity)
-            localImages.forEach(function(img) {
+            localImages.forEach(function (img) {
                 if (!seenUrls[img.url]) {
                     seenUrls[img.url] = true;
                     gallery.push(img);
@@ -8455,7 +8817,7 @@ define([
             });
             
             // Add site-wide images (from other activities)
-            siteImages.forEach(function(img) {
+            siteImages.forEach(function (img) {
                 if (!seenUrls[img.url]) {
                     seenUrls[img.url] = true;
                     gallery.push({
@@ -8493,7 +8855,7 @@ define([
             } else {
                 html += '<p class="cc5-gallery-desc">' + getLabel('galleryDesc') + '</p>';
                 html += '<div class="cc5-gallery-grid">';
-                gallery.forEach(function(item, index) {
+                gallery.forEach(function (item, index) {
                     html += '<div class="cc5-gallery-item" data-index="' + index + '" data-section-id="' + escapeHtml(sectionId) + '">';
                     // BUG-GAL-ZOOM-CLASS FIX: was <div class="cc5-zoom-icon" data-zoom-url="...">
                     // but the click handler listens for .cc5-image-zoom-btn and reads data-image-url.
@@ -8521,7 +8883,7 @@ define([
             $(document.body).append(html);
             
             // WCAG 2.1 AA: Focus management - BUG-GAL-FOCUS-SELECTOR FIX
-            setTimeout(function() {
+            setTimeout(function () {
                 $('.cc5-image-modal-close').first().focus();
             }, 100);
         },
@@ -8529,7 +8891,7 @@ define([
         /**
          * Apply gallery image to slide (v7.2.64 - Works with site-wide images)
          */
-        applyGalleryImage: function(sectionId, galleryIndex) {
+        applyGalleryImage: function (sectionId, galleryIndex) {
             var self = this;
             
             // v7.2.64: Build combined gallery same as in _renderGalleryModal
@@ -8539,7 +8901,7 @@ define([
             var allImages = [];
             
             // Add local images first
-            localImages.forEach(function(img) {
+            localImages.forEach(function (img) {
                 if (!seenUrls[img.url]) {
                     seenUrls[img.url] = true;
                     allImages.push(img);
@@ -8547,7 +8909,7 @@ define([
             });
             
             // Add site-wide images
-            siteImages.forEach(function(img) {
+            siteImages.forEach(function (img) {
                 if (!seenUrls[img.url]) {
                     seenUrls[img.url] = true;
                     allImages.push({
@@ -8581,7 +8943,7 @@ define([
             // Images already in use on slides stay there (they're being copied to this slide)
             if (!selectedImage.inUse && this.manifest.imageGallery) {
                 // Find and remove from gallery array by URL
-                var galleryIdx = this.manifest.imageGallery.findIndex(function(item) {
+                var galleryIdx = this.manifest.imageGallery.findIndex(function (item) {
                     return item.url === selectedImage.url;
                 });
                 if (galleryIdx !== -1) {
@@ -8596,7 +8958,7 @@ define([
                     cmid: self.cmid,
                     manifest: JSON.stringify(self.manifest)
                 }
-            }])[0].fail(function(error) {
+            }])[0].fail(function (error) {
                 ccError('Manifest save failed after image removal', error);
             });
 
@@ -8615,7 +8977,7 @@ define([
         /**
          * Show community gallery modal (v6.6.74)
          */
-        showCommunityGalleryModal: function(sectionId) {
+        showCommunityGalleryModal: function (sectionId) {
             
             var html = '<div class="cc5-image-modal-overlay cc5-community-modal-overlay">';
             html += '<div class="cc5-image-modal cc5-community-modal">';
@@ -8652,7 +9014,7 @@ define([
             $(document.body).append(html);
             
             // WCAG 2.1 AA: Focus management - BUG-GAL-FOCUS-SELECTOR FIX
-            setTimeout(function() {
+            setTimeout(function () {
                 $('.cc5-image-modal-close').first().focus();
             }, 100);
             
@@ -8674,7 +9036,7 @@ define([
          * @param {String} search Optional free-text search term.
          * @param {Number} offset Zero-based pagination offset.
          */
-        browseCommunityGallery: function(sectionId, search, offset) {
+        browseCommunityGallery: function (sectionId, search, offset) {
             offset = offset || 0;
 
             var params = {
@@ -8697,7 +9059,7 @@ define([
             }
 
             CcState.vendorFetch(this.cmid, 'gallerybrowse', {payload: params})
-                .then(function(response) {
+                .then(function (response) {
                     $('.cc5-community-loading').hide();
                     var $grid = $('.cc5-community-grid');
                     $grid.empty();
@@ -8711,7 +9073,7 @@ define([
                         return null;
                     }
 
-                    response.images.forEach(function(img) {
+                    response.images.forEach(function (img) {
                         var html = '<div class="cc5-community-item" data-image-id="' + escapeHtml(img.id) + '" data-section-id="' + escapeHtml(sectionId) + '">';
                         html += '<img src="' + escapeHtml(img.imageUrl) + '" alt="Community image">';
                         // v11.10: Download button for community gallery images
@@ -8755,7 +9117,7 @@ define([
                     }
                     return null;
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     // Surface the server's translated message (permission, rate limit,
                     // vendor error) rather than a generic string.
                     ccError('Community gallery browse failed', err);
@@ -8773,7 +9135,7 @@ define([
          * @param {String} sectionId Section to apply the image to.
          * @param {String} imageId Community gallery image identifier.
          */
-        useCommunityImage: function(sectionId, imageId) {
+        useCommunityImage: function (sectionId, imageId) {
             var self = this;
             var sectionData = this.findSectionById(sectionId);
 
@@ -8782,7 +9144,7 @@ define([
             }
 
             CcState.vendorFetch(this.cmid, 'galleryuse', {payload: {imageId: imageId}})
-                .then(function(response) {
+                .then(function (response) {
                     if (!response || !response.image) {
                         throw new Error('Failed to use community image');
                     }
@@ -8802,7 +9164,7 @@ define([
                             cmid: self.cmid,
                             manifest: JSON.stringify(self.manifest)
                         }
-                    }])[0].fail(function(error) {
+                    }])[0].fail(function (error) {
                         showErrorToast('The image was applied but settings could not be saved. Please try again.', 'communityImageManifestSave', error);
                     });
 
@@ -8816,7 +9178,7 @@ define([
                     });
                     return null;
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     ccError('Community gallery use failed', err);
                     Notification.addNotification({
                         message: err.message || 'Failed to use community image',
@@ -8834,14 +9196,14 @@ define([
          * @param {Array} images Image objects (or plain URLs) to contribute.
          * @param {Object} context Slide context used to tag the contribution.
          */
-        contributeToGallery: function(images, context) {
+        contributeToGallery: function (images, context) {
             var self = this;
 
             if (!images || images.length === 0) {
                 return;
             }
 
-            var contribution = images.map(function(img) {
+            var contribution = images.map(function (img) {
                 return {
                     imageUrl: img.url || img,
                     prompt: img.prompt || '',
@@ -8855,11 +9217,11 @@ define([
             });
 
             CcState.vendorFetch(this.cmid, 'gallerycontribute', {payload: {images: contribution}})
-                .then(function() {
+                .then(function () {
                     ccLog('Contributed ' + contribution.length + ' image(s) to the community gallery');
                     return null;
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     ccWarn('[COMMUNITY-GALLERY] Contribute failed:', err.message || err);
                     return null;
                 });
@@ -8874,7 +9236,7 @@ define([
          * @param {String} sectionId Section to attach the uploaded image to.
          * @param {File} file The image file chosen by the user.
          */
-        uploadSlideImage: function(sectionId, file) {
+        uploadSlideImage: function (sectionId, file) {
             var self = this;
             var sectionData = this.findSectionById(sectionId);
             if (!sectionData) {
@@ -8885,7 +9247,7 @@ define([
             $container.html('<div class="cc5-image-loading"><div class="cc5-image-spinner"></div><span>Uploading...</span></div>');
 
             CcState.vendorUpload(this.cmid, 'uploadslideimage', file)
-                .then(function(response) {
+                .then(function (response) {
                     if (!response || !response.imageUrl) {
                         throw new Error('Failed to upload image');
                     }
@@ -8904,7 +9266,7 @@ define([
                             cmid: self.cmid,
                             manifest: JSON.stringify(self.manifest)
                         }
-                    }])[0].fail(function(error) {
+                    }])[0].fail(function (error) {
                         showErrorToast('Image was uploaded but settings could not be saved. Please try again.', 'imageUploadManifestSave', error);
                     });
 
@@ -8917,7 +9279,7 @@ define([
                     });
                     return null;
                 })
-                .catch(function(err) {
+                .catch(function (err) {
                     ccError('Slide image upload failed', err);
 
                     // Restore empty state
@@ -8935,7 +9297,7 @@ define([
          * Remove image from slide (v6.6.67)
          * v7.2.0: Optimized for instant feedback - removes image from DOM first, then saves in background
          */
-        removeSlideImage: function(sectionId) {
+        removeSlideImage: function (sectionId) {
             var self = this;
             var sectionData = this.findSectionById(sectionId);
             if (!sectionData) {
@@ -8951,8 +9313,8 @@ define([
             var $imageContainer = self.container.find('.cc5-slide-image-container[data-section-id="' + sectionId + '"]');
             if ($imageContainer.length) {
                 var topicId = '';
-                self.manifest.topics.some(function(t) {
-                    return t.sections.some(function(s) {
+                self.manifest.topics.some(function (t) {
+                    return t.sections.some(function (s) {
                         if (s.id === sectionId) { topicId = t.id; return true; }
                         return false;
                     });
@@ -8968,7 +9330,7 @@ define([
                 var $wrapper = $imageContainer.find('.cc5-slide-image-wrapper');
                 if ($wrapper.length) {
                     // Fade out, then swap  -  correct order so animation completes before DOM replacement
-                    $wrapper.fadeOut(150, function() {
+                    $wrapper.fadeOut(150, function () {
                         $imageContainer.html(emptyHtml);
                     });
                 } else {
@@ -8988,7 +9350,7 @@ define([
                 if (Array.isArray(obj)) { return obj.map(_imgRemoveStripAudio); }
                 if (obj && typeof obj === 'object') {
                     var out = {};
-                    Object.keys(obj).forEach(function(k) {
+                    Object.keys(obj).forEach(function (k) {
                         if ((k === 'voiceoverUrl' || k === 'audioUrl') && typeof obj[k] === 'string' && obj[k].indexOf('data:') === 0) {
                             out[k] = 'pregenerated'; // v11.51: sentinel, not empty string
                         } else { out[k] = _imgRemoveStripAudio(obj[k]); }
@@ -9002,19 +9364,19 @@ define([
                 Ajax.call([{
                     methodname: 'mod_contentcreator_save_manifest',
                     args: { cmid: self.cmid, manifest: _imgRemoveManifestStr }
-                }])[0].done(function(saveResponse) {
+                }])[0].done(function (saveResponse) {
                     if (saveResponse.success === false) {
                         if (attempt < _imgRemoveMaxRetries) {
-                            setTimeout(function() { _attemptImageRemoveSave(attempt + 1); }, 1000 * attempt);
+                            setTimeout(function () { _attemptImageRemoveSave(attempt + 1); }, 1000 * attempt);
                         } else {
                             self.manifest.topics[sectionData.topicIndex].sections[sectionData.sectionIndex].image = oldImage;
                             self.render();
                             showErrorToast('Failed to save changes. Please try again.', 'imageRemoveManifestSave');
                         }
                     }
-                }).fail(function(error) {
+                }).fail(function (error) {
                     if (attempt < _imgRemoveMaxRetries) {
-                        setTimeout(function() { _attemptImageRemoveSave(attempt + 1); }, 1000 * attempt);
+                        setTimeout(function () { _attemptImageRemoveSave(attempt + 1); }, 1000 * attempt);
                     } else {
                         self.manifest.topics[sectionData.topicIndex].sections[sectionData.sectionIndex].image = oldImage;
                         self.render();
@@ -9034,7 +9396,7 @@ define([
         // v11.10: DECISION CHALLENGE  -  sort activity + completion helpers
         // ===================================================================
 
-        _initSortActivity: function($challenge) {
+        _initSortActivity: function ($challenge) {
             var $arena = $challenge.find('.cc5-sort-arena');
             if ($arena.data('initialized')) return;
             $arena.data('initialized', true);
@@ -9043,7 +9405,7 @@ define([
             this._showSortItem($challenge, 0);
         },
 
-        _showSortItem: function($challenge, idx) {
+        _showSortItem: function ($challenge, idx) {
             var $arena = $challenge.find('.cc5-sort-arena');
             var $items = $arena.find('.cc5-sort-items-data [data-sort-item]');
             var total = $items.length;
@@ -9078,10 +9440,10 @@ define([
             $arena.find('.cc5-sort-idx').text(idx + 1);
             $arena.find('.cc5-sort-progress-fill').css('width', ((idx / total) * 100) + '%');
             $arena.data('current', idx);
-            setTimeout(function() { $current.removeClass('cc5-sort-item-enter'); }, 300);
+            setTimeout(function () { $current.removeClass('cc5-sort-item-enter'); }, 300);
         },
 
-        _handleSortAnswer: function($challenge, tapped) {
+        _handleSortAnswer: function ($challenge, tapped) {
             var self = this;
             var $arena = $challenge.find('.cc5-sort-arena');
             if ($arena.data('sorting-locked')) return;
@@ -9105,7 +9467,7 @@ define([
                 haptic(10);
                 if (streak >= 3) {
                     $scoreEl.addClass('cc5-sort-streak');
-                    setTimeout(function() { $scoreEl.removeClass('cc5-sort-streak'); }, 500);
+                    setTimeout(function () { $scoreEl.removeClass('cc5-sort-streak'); }, 500);
                 }
             } else {
                 streak = 0;
@@ -9130,7 +9492,7 @@ define([
 
             $scoreEl.text(score);
 
-            setTimeout(function() {
+            setTimeout(function () {
                 $currentItem.removeClass('cc5-sort-correct cc5-sort-incorrect');
                 $arena.find('.cc5-sort-tap').prop('disabled', false);
                 $arena.data('sorting-locked', false);
@@ -9138,7 +9500,7 @@ define([
             }, 600);
         },
 
-        _showChallengeComplete: function($challenge) {
+        _showChallengeComplete: function ($challenge) {
             var self = this;
             var total = parseInt($challenge.data('total-activities'), 10) || 3;
             var passed = 0;
@@ -9153,7 +9515,7 @@ define([
             var $currentPanel = $challenge.find('.cc5-challenge-panel.cc5-active');
             $currentPanel.addClass('cc5-panel-slide-out-left');
 
-            setTimeout(function() {
+            setTimeout(function () {
                 $currentPanel.removeClass('cc5-active cc5-panel-slide-out-left');
                 $challenge.find('.cc5-challenge-step').addClass('cc5-done').removeClass('cc5-active');
 
@@ -9199,8 +9561,8 @@ define([
                 var pctColor = pct === 100 ? 'hsl(142 55% 35%)' : (pct >= 50 ? 'hsl(22 80% 38%)' : 'hsl(0 65% 45%)');
                 $pct.css('color', pctColor);
                 var currentPct = 0;
-                setTimeout(function() {
-                    var animInterval = setInterval(function() {
+                setTimeout(function () {
+                    var animInterval = setInterval(function () {
                         currentPct += 1;
                         if (currentPct > pct) currentPct = pct;
                         $pct.text(currentPct + '%');
@@ -9220,7 +9582,7 @@ define([
                 }, 300);
 
                 if (pct === 100) {
-                    setTimeout(function() {
+                    setTimeout(function () {
                         playChallengeCompleteSound();
                         haptic(40);
                         self._fireConfetti($complete.find('.cc5-confetti-container'));
@@ -9237,17 +9599,17 @@ define([
                         self.saveProgress();
                     }
                 } else {
-                    setTimeout(function() { playDecisionCorrectSound(); }, 300);
+                    setTimeout(function () { playDecisionCorrectSound(); }, 300);
                 }
 
-                setTimeout(function() {
+                setTimeout(function () {
                     $complete.removeClass('cc5-complete-slide-in-right');
                     $challenge.removeClass('cc5-transitioning');
                 }, 500);
             }, 300);
         },
 
-        _fireConfetti: function($container) {
+        _fireConfetti: function ($container) {
             var colors = ['#f94144','#f3722c','#f8961e','#f9c74f','#90be6d','#43aa8b','#577590','#277da1'];
             var shapes = ['cc5-confetti-square','cc5-confetti-circle','cc5-confetti-strip'];
             for (var i = 0; i < 80; i++) {
@@ -9261,20 +9623,20 @@ define([
                 });
                 $container.append($piece);
             }
-            setTimeout(function() { $container.find('.cc5-confetti-piece').remove(); }, 4500);
+            setTimeout(function () { $container.find('.cc5-confetti-piece').remove(); }, 4500);
         },
 
         /**
          * Bind event handlers
          */
-        bindEvents: function() {
+        bindEvents: function () {
             var self = this;            
             // v6.6.43: Log container for debugging event delegation
             // DEBUG: Document-level click to verify clicks work
-            $(document).on("click", ".cc5-topic-card", function(e) { });
+            $(document).on("click", ".cc5-topic-card", function (e) { });
             
             // Topic card click (v6.5.3: respect lockstep mode)
-            this.container.on('click keydown', '.cc5-topic-card', function(e) {
+            this.container.on('click keydown', '.cc5-topic-card', function (e) {
                 // WCAG 2.1 AA: Keyboard support for topic cards.
                 // v13.85: this guard had been merged onto the end of the comment line
                 // above, so EVERY keystroke on a focused topic card opened the topic and
@@ -9292,7 +9654,7 @@ define([
                     var $lockBadge = $card.find('.cc5-topic-lock-badge');
                     if ($lockBadge.length) {
                         $lockBadge.addClass('cc5-lock-shake');
-                        setTimeout(function() {
+                        setTimeout(function () {
                             $lockBadge.removeClass('cc5-lock-shake');
                         }, 600);
                     }
@@ -9320,12 +9682,38 @@ define([
             // advances itself from the audio timeline (see setupVoiceoverSync) and this
             // button is the manual path for a learner with audio muted or finished.
             // ===============================================================
-            this.container.on('click', '.cc5-prose-next-btn', function(e) {
+            this.container.on('click', '.cc5-prose-next-btn', function (e) {
                 e.preventDefault();
                 var $btn = $(this);
+                // v13.94.4: a used button is only visually retired by CSS
+                // (pointer-events: none), which does not stop a keyboard Enter, and a
+                // locked button must not advance at all. Guard both here rather than
+                // relying on styling to enforce behaviour.
+                if ($btn.hasClass('cc5-prose-btn-used') || $btn.hasClass('cc5-prose-btn-locked')) {
+                    return;
+                }
                 var target = $btn.attr('data-prose-next');
                 var $grid = $btn.closest('.cc5-prose-grid');
                 $btn.removeClass('cc5-prose-btn-ready');
+
+                // v13.94.4: advancing by hand stops the narration.
+                //
+                // Topics and Text narrates a whole section from one audio file and reveals
+                // each card from that timeline. Nothing here touched the audio, so a
+                // learner who clicked "Next Card" while card 1 was being read got card 2
+                // on screen with card 1 still playing over it - and the sync then dragged
+                // the reveal back as the timeline caught up. Clicking the button is the
+                // learner saying they are reading rather than listening, so the narration
+                // stops and the reveal becomes theirs to drive.
+                //
+                // Deliberately NOT done in "must listen to voiceover" mode: there the
+                // button is only unlocked for a card the narration has already finished,
+                // and stopping the audio would strand the slide-level Next control, which
+                // waits on the narration reaching its end.
+                if (self.progressionMode !== PROGRESSION_MODES.VOICEOVER) {
+                    self.stopProseNarration();
+                }
+
                 if (target === 'activities') {
                     self.revealProseActivities($grid);
                 } else {
@@ -9334,11 +9722,18 @@ define([
             });
 
             // Back button click (v6.7.54: Always enabled, no disabled check needed)
-            this.container.on('click', '.cc5-back-btn', function(e) {
+            this.container.on('click', '.cc5-back-btn', function (e) {
                 e.preventDefault();
                 if (self.slideTimer) {
                     clearInterval(self.slideTimer);
                     self.slideTimer = null;
+                }
+                if (self._quizFbAudio) {
+                    // v13.94.6: the quiz feedback clip was referenced by exactly one handler
+                    // and by nothing else, so it survived the slide transition and played on
+                    // over the next slide's narration.
+                    try { self._quizFbAudio.pause(); } catch (e) { /* detached */ }
+                    self._quizFbAudio = null;
                 }
                 if (self.currentAudio) {
                     self.currentAudio.pause();
@@ -9354,7 +9749,7 @@ define([
             // v7.7.5: Before You Start checklist checkbox handler
             
             // v8.4.46: QuickCheck checklist - whole row clickable, toggles native checkbox
-            this.container.on('click', '.cc5-quickcheck-section .cc5-checklist-item', function(e) {
+            this.container.on('click', '.cc5-quickcheck-section .cc5-checklist-item', function (e) {
                 if ($(e.target).is('input[type="checkbox"]')) return;
                 e.preventDefault();
                 var $item = $(this);
@@ -9365,7 +9760,7 @@ define([
                 }
             });
             // Users MUST tick all boxes before slide can be considered complete
-            this.container.on('change', '.cc5-checklist-checkbox', function(e) {
+            this.container.on('change', '.cc5-checklist-checkbox', function (e) {
                 var $checkbox = $(this);
                 var $item = $checkbox.closest('.cc5-checklist-item');
                 var $section = $checkbox.closest('.cc5-beforestart-section, .cc5-quickcheck-checklist');
@@ -9403,7 +9798,7 @@ define([
             
             // Slide indicator click
             // v8.4.6: Block forward navigation if current slide is not complete (progression enforcement)
-            this.container.on('click keydown', '.cc5-slide-indicator', function(e) {
+            this.container.on('click keydown', '.cc5-slide-indicator', function (e) {
                 // WCAG 2.1 AA: Keyboard support for slide indicators
                 if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
                 if (e.type === 'keydown') e.preventDefault();
@@ -9422,13 +9817,13 @@ define([
             });
             
             // Previous slide
-            this.container.on('click', '.cc5-nav-chevron.cc5-prev:not(.cc5-disabled)', function(e) {
+            this.container.on('click', '.cc5-nav-chevron.cc5-prev:not(.cc5-disabled)', function (e) {
                 e.preventDefault();
                 self.navigateToSlide(self.currentSlideIndex - 1);
             });
             
             // Next slide
-            this.container.on('click', '.cc5-nav-chevron.cc5-next:not(.cc5-disabled)', function(e) {
+            this.container.on('click', '.cc5-nav-chevron.cc5-next:not(.cc5-disabled)', function (e) {
                 e.preventDefault();
                 var sections = self.getCurrentSections();
                 
@@ -9468,7 +9863,7 @@ define([
             });
             
             // v6.6.62: Show warning when clicking disabled next button on activity slides
-            this.container.on('click', '.cc5-nav-chevron.cc5-next.cc5-disabled', function(e) {
+            this.container.on('click', '.cc5-nav-chevron.cc5-next.cc5-disabled', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -9484,13 +9879,13 @@ define([
             
             // Voiceover button click (large button)
             // v12.55: Language switcher  -  swap manifest.topics to selected language
-            this.container.on('click', '.cc5-lang-pill', function(e) {
+            this.container.on('click', '.cc5-lang-pill', function (e) {
                 e.preventDefault();
                 var code = $(this).data('lang') || '';
                 self.setActiveLang(code);
             });
 
-            this.container.on('click', '.cc5-voiceover-btn-large', function(e) {
+            this.container.on('click', '.cc5-voiceover-btn-large', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -9498,7 +9893,7 @@ define([
             });
             
             // v8.4.53: Pause voiceover button click
-            this.container.on('click', '.cc5-voiceover-pause-btn', function(e) {
+            this.container.on('click', '.cc5-voiceover-pause-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -9511,15 +9906,15 @@ define([
             });
             
             // Tutorial dismiss
-            this.container.on('click', '[data-action="dismiss-tutorial"]', function(e) {
+            this.container.on('click', '[data-action="dismiss-tutorial"]', function (e) {
                 e.preventDefault();
-                self.container.find('.cc5-tutorial-overlay').fadeOut(200, function() {
+                self.container.find('.cc5-tutorial-overlay').fadeOut(200, function () {
                     $(this).remove();
                 });
             });
             
             // v6.6.15: Regenerate content button click
-            this.container.on('click', '.cc5-regenerate-btn', function(e) {
+            this.container.on('click', '.cc5-regenerate-btn', function (e) {
                 e.preventDefault();
                 // Redirect to builder with regenerate=failed parameter
                 // The builder will only regenerate slides with generated:false
@@ -9528,11 +9923,11 @@ define([
                     var confirmMsg = 'There are ' + failedCount + ' slides with placeholder content. ' +
                         'Regenerate only the failed slides? (Successful content will be preserved)';
                     Notification.saveCancelPromise('Regenerate failed slides', confirmMsg, 'Regenerate')
-                        .then(function() {
+                        .then(function () {
                             window.location.href = '?id=' + self.cmid + '&edit=1&regenerate=failed';
                             return null;
                         })
-                        .catch(function() {
+                        .catch(function () {
                             // User cancelled  -  nothing to do.
                             return null;
                         });
@@ -9540,60 +9935,60 @@ define([
             });
             
             // v6.6.66: Export PDF button click
-            this.container.on('click', '.cc5-export-pdf-btn', function(e) {
+            this.container.on('click', '.cc5-export-pdf-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 self.exportAsPdf();
             });
             
             // v6.6.66: Export Text button click
-            this.container.on('click', '.cc5-export-text-btn', function(e) {
+            this.container.on('click', '.cc5-export-text-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 self.exportAsText();
             });
             
             // v6.7.57: Settings button click
-            this.container.on('click', '.cc5-settings-btn', function(e) {
+            this.container.on('click', '.cc5-settings-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 self.showSettingsModal();
             });
             
             // v6.7.57: Settings modal event handlers
-            $(document).on('click', '.cc5-settings-modal-close', function(e) {
+            $(document).on('click', '.cc5-settings-modal-close', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $('.cc5-settings-modal-overlay').remove();
             });
             
-            $(document).on('click', '.cc5-settings-modal-overlay', function(e) {
+            $(document).on('click', '.cc5-settings-modal-overlay', function (e) {
                 if ($(e.target).hasClass('cc5-settings-modal-overlay')) {
                     $('.cc5-settings-modal-overlay').remove();
                 }
             });
             
-            $(document).on('click', '.cc5-settings-save-btn', function(e) {
+            $(document).on('click', '.cc5-settings-save-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 self.saveSettings();
             });
             
-            $(document).on('click', '.cc5-settings-cancel-btn', function(e) {
+            $(document).on('click', '.cc5-settings-cancel-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $('.cc5-settings-modal-overlay').remove();
             });
             
             // v7.2.46: Bulk generate AI images button handler
-            $(document).on('click', '.cc5-bulk-generate-images-btn', function(e) {
+            $(document).on('click', '.cc5-bulk-generate-images-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 self.bulkGenerateImages();
             });
 
             // v7.9.88: Bulk generate AI voiceover button handler
-            $(document).on('click', '.cc5-bulk-generate-voiceover-btn', function(e) {
+            $(document).on('click', '.cc5-bulk-generate-voiceover-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 self.bulkGenerateVoiceovers();
@@ -9604,7 +9999,7 @@ define([
             // ===================================================================
             
             // Add Image button click - show modal
-            this.container.on('click', '.cc5-add-image-btn', function(e) {
+            this.container.on('click', '.cc5-add-image-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -9619,7 +10014,7 @@ define([
             //   - Students: hide the container so they never see the broken-icon + alt text.
             // NOTE: The native DOM 'error' event doesn't bubble, so jQuery delegated
             //       .on('error', '.cc5-slide-image') would silently fail  -  hence the custom event.
-            this.container.on('cc5img_error', '.cc5-slide-image-container', function() {
+            this.container.on('cc5img_error', '.cc5-slide-image-container', function () {
                 var $container = $(this);
                 var sectionId = $container.data('section-id');
                 ccWarn('[CC5] Slide image 404 for section ' + sectionId + ' (server file may have been removed). Recovering UI...');
@@ -9628,8 +10023,8 @@ define([
                     // Teacher mode: swap broken wrapper  ->  Add Image empty state
                     var topicId = '';
                     if (self.manifest && self.manifest.topics) {
-                        self.manifest.topics.some(function(t) {
-                            return t.sections.some(function(s) {
+                        self.manifest.topics.some(function (t) {
+                            return t.sections.some(function (s) {
                                 if (s.id === sectionId) { topicId = t.id; return true; }
                                 return false;
                             });
@@ -9649,7 +10044,7 @@ define([
             });
             
             // Image regenerate button click - show modal with prompt input (v6.6.69)
-            this.container.on('click', '.cc5-image-regenerate-btn', function(e) {
+            this.container.on('click', '.cc5-image-regenerate-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -9658,14 +10053,14 @@ define([
 
             // IMAGE2 event handlers removed in v11.16
             
-            $(document).on('click', '.cc5-regen-cancel-btn', function(e) {
+            $(document).on('click', '.cc5-regen-cancel-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $('.cc5-regenerate-modal-overlay').remove();
             });
             
             // Regenerate modal confirm button
-            $(document).on('click', '.cc5-regen-confirm-btn', function(e) {
+            $(document).on('click', '.cc5-regen-confirm-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -9675,14 +10070,14 @@ define([
             });
             
             // Image remove button click
-            this.container.on('click', '.cc5-image-remove-btn', function(e) {
+            this.container.on('click', '.cc5-image-remove-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
                 self.removeSlideImage(sectionId);
             });
             
-            $(document).on('click', '.cc5-image-modal-close', function(e) {
+            $(document).on('click', '.cc5-image-modal-close', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -9701,7 +10096,7 @@ define([
                 }
             });
             
-            $(document).on('click', '.cc5-image-modal-overlay', function(e) {
+            $(document).on('click', '.cc5-image-modal-overlay', function (e) {
                 if ($(e.target).hasClass('cc5-image-modal-overlay')) {
                     var $overlay = $(e.target);
                     var sectionId = $overlay.attr('data-section-id') ||
@@ -9724,7 +10119,7 @@ define([
             // On first click: marks chosen option correct/incorrect, reveals feedback,
             // locks the card. Wrong answer also reveals the Try Again button.
             // Keyboard: Enter/Space activate.
-            $(document).on('click keydown', '.cc5-dp-option', function(e) {
+            $(document).on('click keydown', '.cc5-dp-option', function (e) {
                 if (e.type === 'keydown' && e.which !== 13 && e.which !== 32) return;
                 var $option  = $(this);
                 if ($option.closest('.cc5-decision-challenge').length) return;
@@ -9762,7 +10157,7 @@ define([
             // -- v10.43b: Try Again  -  completely reset the decision-point card --
             // Re-renders each option from scratch (removes all inline styles, attrs,
             // and jQuery .data() in one clean pass) so no stale CSS or state survives.
-            $(document).on('click', '.cc5-dp-try-again-btn', function(e) {
+            $(document).on('click', '.cc5-dp-try-again-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $btn     = $(this);
@@ -9778,7 +10173,7 @@ define([
                 $options.attr('data-answered', 'false');
 
                 // -- 2. Reset every option row completely --
-                $options.find('.cc5-dp-option').each(function() {
+                $options.find('.cc5-dp-option').each(function () {
                     var $opt = $(this);
                     // Remove selection attribute so CSS colour rules don't apply
                     $opt.removeAttr('data-selected');
@@ -9808,7 +10203,7 @@ define([
             // ===============================================================
 
             // Enable "Next" button in challenge when quiz answered correctly
-            $(document).on('click keydown', '.cc5-decision-challenge .cc5-dp-option', function(e) {
+            $(document).on('click keydown', '.cc5-decision-challenge .cc5-dp-option', function (e) {
                 if (e.type === 'keydown' && e.which !== 13 && e.which !== 32) return;
                 var $opt = $(this);
                 var $challenge = $opt.closest('.cc5-decision-challenge');
@@ -9855,12 +10250,19 @@ define([
                     var _fbUrl = $opt.attr('data-feedback-audio');
                     if (_fbUrl) {
                         try {
+                            // v13.94.6: the section narration has to stop too. This handler
+                            // only ever knew about the PREVIOUS feedback clip, so answering a
+                            // quiz while the section was still being narrated produced two
+                            // Chirp voices at once - the same narrator, different sentences.
+                            if (self.currentAudio) {
+                                try { self.currentAudio.pause(); } catch (e) { /* detached */ }
+                            }
                             if (self._quizFbAudio) {
                                 self._quizFbAudio.pause();
                                 self._quizFbAudio.currentTime = 0;
                             }
                             self._quizFbAudio = new Audio(_fbUrl);
-                            self._quizFbAudio.play().catch(function(e) {
+                            self._quizFbAudio.play().catch(function (e) {
                                 // Autoplay policy, or a missing file. Never fall back to a
                                 // different voice - just log it.
                                 ccWarn('[QUIZ VOICE] feedback clip would not play: ' + e.message);
@@ -9894,14 +10296,14 @@ define([
             });
 
             // Try Again inside challenge quiz  -  reset options so user can try again
-            $(document).on('click', '.cc5-decision-challenge .cc5-dp-try-again-btn', function(e) {
+            $(document).on('click', '.cc5-decision-challenge .cc5-dp-try-again-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $btn = $(this);
                 var $panel = $btn.closest('.cc5-challenge-panel');
                 var $options = $panel.find('.cc5-dp-options');
                 $options.attr('data-answered', 'false').data('answered', false).removeData('answered');
-                $options.find('.cc5-dp-option').each(function() {
+                $options.find('.cc5-dp-option').each(function () {
                     var $opt = $(this);
                     $opt.removeAttr('data-selected');
                     // v13.86: clear the announced result and the locked state too.
@@ -9918,7 +10320,7 @@ define([
             });
 
             // "Next Activity" button  -  slide current panel left, new panel slides in from right
-            $(document).on('click', '.cc5-challenge-next-btn', function(e) {
+            $(document).on('click', '.cc5-challenge-next-btn', function (e) {
                 e.preventDefault();
                 if ($(this).prop('disabled')) return;
                 var nextPanel = parseInt($(this).data('next'), 10);
@@ -9929,7 +10331,7 @@ define([
                 // Slide current panel out to the left
                 var $current = $challenge.find('.cc5-challenge-panel.cc5-active');
                 $current.addClass('cc5-panel-slide-out-left');
-                setTimeout(function() {
+                setTimeout(function () {
                     $current.removeClass('cc5-active cc5-panel-slide-out-left');
                     // Slide new panel in from the right
                     var $next = $challenge.find('.cc5-challenge-panel[data-panel="' + nextPanel + '"]');
@@ -9948,7 +10350,7 @@ define([
                     if ($next.find('.cc5-sort-arena').length) {
                         self._initSortActivity($challenge);
                     }
-                    setTimeout(function() {
+                    setTimeout(function () {
                         $next.removeClass('cc5-panel-slide-in-right');
                         $challenge.removeClass('cc5-transitioning');
                     }, 450);
@@ -9956,7 +10358,7 @@ define([
             });
 
             // Flip card click with satisfying whoosh sound
-            $(document).on('click keydown', '.cc5-flip-card', function(e) {
+            $(document).on('click keydown', '.cc5-flip-card', function (e) {
                 if (e.type === 'keydown' && e.which !== 13 && e.which !== 32) return;
                 e.preventDefault();
                 var $card = $(this);
@@ -9985,17 +10387,17 @@ define([
             });
 
             // Sort activity tap buttons with drop sound
-            $(document).on('click', '.cc5-sort-tap', function(e) {
+            $(document).on('click', '.cc5-sort-tap', function (e) {
                 e.preventDefault();
                 var $btn = $(this);
                 $btn.addClass('cc5-tap-pressed');
-                setTimeout(function() { $btn.removeClass('cc5-tap-pressed'); }, 150);
+                setTimeout(function () { $btn.removeClass('cc5-tap-pressed'); }, 150);
                 var tapped = $btn.data('tap');
                 self._handleSortAnswer($btn.closest('.cc5-decision-challenge'), tapped);
             });
 
             // "See Results" button  -  trigger completion
-            $(document).on('click', '.cc5-challenge-finish-btn', function(e) {
+            $(document).on('click', '.cc5-challenge-finish-btn', function (e) {
                 e.preventDefault();
                 if ($(this).prop('disabled')) return;
                 var $challenge = $(this).closest('.cc5-decision-challenge');
@@ -10003,12 +10405,12 @@ define([
             });
 
             // Retry activities  -  preserve scroll position across re-render
-            $(document).on('click', '.cc5-challenge-retry-btn', function(e) {
+            $(document).on('click', '.cc5-challenge-retry-btn', function (e) {
                 e.preventDefault();
                 playTickSound();
                 var scrollTop = $(window).scrollTop();
                 self.render();
-                setTimeout(function() { $(window).scrollTop(scrollTop); }, 50);
+                setTimeout(function () { $(window).scrollTop(scrollTop); }, 50);
             });
 
             // v12.57 FIX-CC-CHALLENGE-NEXT: "Continue" button  -  navigate to the next slide/topic
@@ -10017,10 +10419,24 @@ define([
             // Implementation: enable the next-chevron (challenge completion already records
             // progress, so canNavigateNext should allow it) then fire a programmatic click.
             // If there is no next slide (this is already the last one), hide the button.
-            $(document).on('click', '.cc5-challenge-continue-btn', function(e) {
+            $(document).on('click', '.cc5-challenge-continue-btn', function (e) {
                 e.preventDefault();
+                // v13.94.6: this used to strip cc5-disabled and then trigger the chevron.
+                // The Next handler is delegated as '.cc5-nav-chevron.cc5-next:not(.cc5-disabled)'
+                // and jQuery evaluates a delegated selector at DISPATCH time, so removing the
+                // class immediately before .trigger() made the guard match - and
+                // canNavigateNext() was never consulted on this path at all.
+                //
+                // The effect was that "must listen to voiceover" could be skipped entirely:
+                // open a slide, ignore the narration, scroll to the activity block, complete
+                // the three activities, click Continue, advance. Same for TIMED mode's
+                // minimum dwell. The compliance guarantee the mode exists to provide was
+                // void on all five routes. Ask the same question the chevron asks.
+                var _sections = self.getCurrentSections();
+                if (!self.canNavigateNext(_sections[self.currentSlideIndex])) {
+                    return;
+                }
                 var $nextChevron = self.container.find('.cc5-nav-chevron.cc5-next');
-                // Remove disabled state in case challenge completion hasn't unlocked it yet.
                 $nextChevron.removeClass('cc5-disabled').prop('disabled', false);
                 $nextChevron.trigger('click');
             });
@@ -10029,7 +10445,7 @@ define([
             // Mark all steps as "done" so the user can navigate freely between panels using
             // the Next buttons (which stay enabled from the first pass). The step indicators
             // correctly show all activities completed during review.
-            $(document).on('click', '.cc5-challenge-review-btn', function(e) {
+            $(document).on('click', '.cc5-challenge-review-btn', function (e) {
                 e.preventDefault();
                 var $challenge = $(this).closest('.cc5-decision-challenge');
                 $challenge.addClass('cc5-transitioning');
@@ -10037,14 +10453,14 @@ define([
                 playSlideSound();
                 var $complete = $challenge.find('.cc5-challenge-complete');
                 $complete.addClass('cc5-complete-slide-out-left');
-                setTimeout(function() {
+                setTimeout(function () {
                     $complete.addClass('cc5-hidden').removeClass('cc5-complete-slide-out-left');
                     $challenge.find('.cc5-challenge-panel').removeClass('cc5-active');
                     $challenge.find('.cc5-challenge-panel').first().addClass('cc5-active cc5-panel-slide-in-right');
                     // Show all steps as completed (review mode) with step 1 also active
                     $challenge.find('.cc5-challenge-step').addClass('cc5-done').removeClass('cc5-active');
                     $challenge.find('.cc5-challenge-step').first().addClass('cc5-active');
-                    setTimeout(function() {
+                    setTimeout(function () {
                         $challenge.find('.cc5-challenge-panel').first().removeClass('cc5-panel-slide-in-right');
                         $challenge.removeClass('cc5-transitioning');
                     }, 450);
@@ -10053,7 +10469,7 @@ define([
             // -- end v11.10 challenge handlers -----------------------------
 
             // Generate AI image option click
-            $(document).on('click', '.cc5-image-generate-option', function(e) {
+            $(document).on('click', '.cc5-image-generate-option', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -10062,7 +10478,7 @@ define([
             });
             
             // Upload image option click - trigger file input
-            $(document).on('click', '.cc5-image-upload-option', function(e) {
+            $(document).on('click', '.cc5-image-upload-option', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $modal = $(this).closest('.cc5-image-modal');
@@ -10070,7 +10486,7 @@ define([
             });
             
             // v7.2.0: Gallery option click - show gallery modal
-            $(document).on('click', '.cc5-image-gallery-option', function(e) {
+            $(document).on('click', '.cc5-image-gallery-option', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -10079,7 +10495,7 @@ define([
             });
             
             // v11.29: Community Gallery option click from Add Image modal
-            $(document).on('click', '.cc5-image-community-option', function(e) {
+            $(document).on('click', '.cc5-image-community-option', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -10088,12 +10504,12 @@ define([
             });
             
             // File input change - validate aspect ratio then upload
-            $(document).on('change', '.cc5-image-file-input', function(e) {
+            $(document).on('change', '.cc5-image-file-input', function (e) {
                 var file = this.files[0];
                 var sectionId = $(this).data('section-id');
                 var $input = $(this);
                 if (file && sectionId) {
-                    validateImageAspectRatio(file, function(validFile) {
+                    validateImageAspectRatio(file, function (validFile) {
                         $('.cc5-image-modal-overlay').remove();
                         self.uploadSlideImage(sectionId, validFile);
                     });
@@ -10102,7 +10518,7 @@ define([
             });
             
             // v7.2.0: Zoom button click - show fullscreen preview
-            $(document).on('click', '.cc5-image-zoom-btn', function(e) {
+            $(document).on('click', '.cc5-image-zoom-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -10113,7 +10529,7 @@ define([
             });
 
             // v11.10: Download button click - download image via fetch-as-blob
-            $(document).on('click', '.cc5-image-download-btn', function(e) {
+            $(document).on('click', '.cc5-image-download-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -10124,7 +10540,7 @@ define([
             });
             
             // v7.2.0: Close zoom modal
-            $(document).on('click', '.cc5-zoom-modal-overlay, .cc5-zoom-modal-close', function(e) {
+            $(document).on('click', '.cc5-zoom-modal-overlay, .cc5-zoom-modal-close', function (e) {
                 if ($(e.target).hasClass('cc5-zoom-modal-overlay') || $(e.target).closest('.cc5-zoom-modal-close').length) {
                     e.preventDefault();
                     $('.cc5-zoom-modal-overlay').remove();
@@ -10132,7 +10548,7 @@ define([
             });
             
             // v6.6.72: Image picker item click - select image from generated options
-            $(document).on('click', '.cc5-image-picker-item', function(e) {
+            $(document).on('click', '.cc5-image-picker-item', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -10146,7 +10562,7 @@ define([
                 
                 if (images.length > index) {
                     var selectedUrl = images[index];
-                    var otherImages = images.filter(function(_, i) { return i !== index; });
+                    var otherImages = images.filter(function (_, i) { return i !== index; });
                     
                     // Close modal
                     $overlay.remove();
@@ -10164,7 +10580,7 @@ define([
             });
             
             // v6.6.72: Show gallery button click
-            $(document).on('click', '.cc5-show-gallery-btn', function(e) {
+            $(document).on('click', '.cc5-show-gallery-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -10172,7 +10588,7 @@ define([
                 self.showGalleryModal(sectionId);
             });
             
-            $(document).on('click', '.cc5-gallery-item', function(e) {
+            $(document).on('click', '.cc5-gallery-item', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $item = $(this);
@@ -10182,7 +10598,7 @@ define([
             });
             
             // v6.6.74: Show community gallery button click
-            $(document).on('click', '.cc5-show-community-btn', function(e) {
+            $(document).on('click', '.cc5-show-community-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var sectionId = $(this).data('section-id');
@@ -10190,7 +10606,7 @@ define([
             });
             
             // v6.6.74: Community gallery item click - use image
-            $(document).on('click', '.cc5-community-item', function(e) {
+            $(document).on('click', '.cc5-community-item', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $item = $(this);
@@ -10200,7 +10616,7 @@ define([
             });
             
             // v6.6.74: Community gallery search
-            $(document).on('click', '.cc5-community-search-btn', function(e) {
+            $(document).on('click', '.cc5-community-search-btn', function (e) {
                 e.preventDefault();
                 var $input = $('.cc5-community-search-input');
                 var search = $input.val() || '';
@@ -10210,7 +10626,7 @@ define([
             });
             
             // v6.6.74: Community gallery search on enter key
-            $(document).on('keypress', '.cc5-community-search-input', function(e) {
+            $(document).on('keypress', '.cc5-community-search-input', function (e) {
                 if (e.which === 13) {
                     e.preventDefault();
                     var search = $(this).val() || '';
@@ -10221,7 +10637,7 @@ define([
             });
             
             // v6.6.74: Community gallery pagination
-            $(document).on('click', '.cc5-community-page-btn', function(e) {
+            $(document).on('click', '.cc5-community-page-btn', function (e) {
                 e.preventDefault();
                 var offset = parseInt($(this).data('offset'), 10);
                 var search = $('.cc5-community-search-input').val() || '';
@@ -10234,7 +10650,7 @@ define([
             // ===================================================================
             // v7.6.1: Document Reference Popup Handler
             // ===================================================================
-            this.container.on('click', '.cc5-doc-link', function(e) {
+            this.container.on('click', '.cc5-doc-link', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -10261,7 +10677,7 @@ define([
             });
             
             // Close document popup
-            $(document).on('click', '.cc5-doc-popup-close, .cc5-doc-popup-overlay', function(e) {
+            $(document).on('click', '.cc5-doc-popup-close, .cc5-doc-popup-overlay', function (e) {
                 if ($(e.target).hasClass('cc5-doc-popup-overlay') || $(e.target).closest('.cc5-doc-popup-close').length) {
                     $('.cc5-doc-popup-overlay').remove();
                 }
@@ -10270,11 +10686,11 @@ define([
             // Touch gestures for mobile - swipe left/right
             
             var touchStartX = 0;
-            this.container.on('touchstart', '.cc5-slide-content', function(e) {
+            this.container.on('touchstart', '.cc5-slide-content', function (e) {
                 touchStartX = e.originalEvent.touches[0].clientX;
             });
             
-            this.container.on('touchend', '.cc5-slide-content', function(e) {
+            this.container.on('touchend', '.cc5-slide-content', function (e) {
                 var touchEndX = e.originalEvent.changedTouches[0].clientX;
                 var diff = touchStartX - touchEndX;
                 
@@ -10291,7 +10707,7 @@ define([
             
             // Edit slide button click (v6.5.0)
             // v6.6.43: Enhanced logging to diagnose click handler issues
-            this.container.on('click', '.cc5-edit-slide-btn', function(e) {
+            this.container.on('click', '.cc5-edit-slide-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var topicId = $(this).data('topic-id');
@@ -10299,7 +10715,7 @@ define([
                 
                 // Visual feedback to confirm click registered
                 $(this).css('opacity', '0.5');
-                setTimeout(function() {
+                setTimeout(function () {
                     $(this).css('opacity', '1');
                 }.bind(this), 200);
                 
@@ -10307,21 +10723,21 @@ define([
             });
             
             // Edit modal close button
-            $(document).on('click', '.cc5-edit-modal-close', function(e) {
+            $(document).on('click', '.cc5-edit-modal-close', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $('.cc5-edit-modal-overlay').remove();
             });
             
             // Click on overlay background to close
-            $(document).on('click', '.cc5-edit-modal-overlay', function(e) {
+            $(document).on('click', '.cc5-edit-modal-overlay', function (e) {
                 if ($(e.target).hasClass('cc5-edit-modal-overlay')) {
                     $('.cc5-edit-modal-overlay').remove();
                 }
             });
             
             // Edit modal save button
-            $(document).on('click', '.cc5-edit-modal-save', function(e) {
+            $(document).on('click', '.cc5-edit-modal-save', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 if (typeof self.saveSlideEdit !== 'function') {
@@ -10333,7 +10749,7 @@ define([
             // -- Icon picker (v11.90) ------------------------------------------
 
             // Open icon picker overlay when "Browse" button is clicked
-            $(document).on('click', '.cc5-icon-picker-btn', function(e) {
+            $(document).on('click', '.cc5-icon-picker-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var wrap = $(this).closest('.cc5-icon-picker-wrap');
@@ -10351,7 +10767,7 @@ define([
             });
 
             // Select an icon from the grid
-            $(document).on('click', '.cc5-icon-picker-item', function(e) {
+            $(document).on('click', '.cc5-icon-picker-item', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var iconName = $(this).data('icon');
@@ -10366,30 +10782,30 @@ define([
             });
 
             // Close picker via X button
-            $(document).on('click', '.cc5-icon-picker-close', function(e) {
+            $(document).on('click', '.cc5-icon-picker-close', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $('#cc5-icon-picker-overlay').remove();
             });
 
             // Close picker by clicking the backdrop
-            $(document).on('click', '#cc5-icon-picker-overlay', function(e) {
+            $(document).on('click', '#cc5-icon-picker-overlay', function (e) {
                 if ($(e.target).is('#cc5-icon-picker-overlay')) {
                     $(this).remove();
                 }
             });
 
             // Filter icons by search query
-            $(document).on('input', '.cc5-icon-picker-search', function() {
+            $(document).on('input', '.cc5-icon-picker-search', function () {
                 var q = $(this).val().toLowerCase().trim();
-                $(this).closest('.cc5-icon-picker-popup').find('.cc5-icon-picker-item').each(function() {
+                $(this).closest('.cc5-icon-picker-popup').find('.cc5-icon-picker-item').each(function () {
                     var name = String($(this).data('icon'));
                     $(this).toggle(!q || name.indexOf(q) !== -1);
                 });
             });
 
             // Live preview while typing an icon name manually into the input
-            $(document).on('input', '.cc5-ipi-input', function() {
+            $(document).on('input', '.cc5-ipi-input', function () {
                 var val = $(this).val().trim();
                 var preview = $(this).closest('.cc5-icon-picker-wrap').find('.cc5-ipi-preview');
                 if (val && CcIcons.hasIcon(val)) {
@@ -10400,7 +10816,7 @@ define([
             });
             
             // Edit modal add requirement
-            $(document).on('click', '.cc5-edit-add-requirement', function(e) {
+            $(document).on('click', '.cc5-edit-add-requirement', function (e) {
                 e.preventDefault();
                 var list = $('.cc5-edit-requirements-list');
                 var idx = list.find('.cc5-edit-list-item').length;
@@ -10409,7 +10825,7 @@ define([
             });
             
             // Edit modal add do item
-            $(document).on('click', '.cc5-edit-add-do', function(e) {
+            $(document).on('click', '.cc5-edit-add-do', function (e) {
                 e.preventDefault();
                 var list = $('.cc5-edit-do-list');
                 var currentCount = list.find('.cc5-edit-list-item').length;
@@ -10418,7 +10834,7 @@ define([
             });
             
             // Edit modal add dont item
-            $(document).on('click', '.cc5-edit-add-dont', function(e) {
+            $(document).on('click', '.cc5-edit-add-dont', function (e) {
                 e.preventDefault();
                 var list = $('.cc5-edit-dont-list');
                 var currentCount = list.find('.cc5-edit-list-item').length;
@@ -10432,7 +10848,7 @@ define([
             // ===================================================================
             
             // Add terminology term (Knowledge card only)
-            $(document).on('click', '.cc5-edit-add-term', function(e) {
+            $(document).on('click', '.cc5-edit-add-term', function (e) {
                 e.preventDefault();
                 var list = $('.cc5-edit-knowledge-terminology');
                 var idx = list.find('.cc5-edit-term-item').length;
@@ -10445,7 +10861,7 @@ define([
             });
             
             // Remove terminology term
-            $(document).on('click', '.cc5-edit-remove-term', function(e) {
+            $(document).on('click', '.cc5-edit-remove-term', function (e) {
                 e.preventDefault();
                 $(this).closest('.cc5-edit-term-item').remove();
             });
@@ -10460,7 +10876,7 @@ define([
             function _renumberCardButtons($container) {
                 var $blocks = $container.find('.cc5-edit-card-block');
                 var total = $blocks.length;
-                $blocks.each(function(newPos) {
+                $blocks.each(function (newPos) {
                     var $up = $(this).find('.cc5-edit-card-move-up');
                     var $dn = $(this).find('.cc5-edit-card-move-down');
                     var isFirst = (newPos === 0);
@@ -10472,7 +10888,7 @@ define([
                 });
             }
 
-            $(document).on('click', '.cc5-edit-card-move-up', function(e) {
+            $(document).on('click', '.cc5-edit-card-move-up', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $blk = $(this).closest('.cc5-edit-card-block');
@@ -10482,7 +10898,7 @@ define([
                 _renumberCardButtons($blk.closest('.cc5-edit-modal-body, .cc5-edit-modal'));
             });
 
-            $(document).on('click', '.cc5-edit-card-move-down', function(e) {
+            $(document).on('click', '.cc5-edit-card-move-down', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $blk = $(this).closest('.cc5-edit-card-block');
@@ -10492,7 +10908,7 @@ define([
                 _renumberCardButtons($blk.closest('.cc5-edit-modal-body, .cc5-edit-modal'));
             });
 
-            $(document).on('click', '.cc5-edit-card-delete', function(e) {
+            $(document).on('click', '.cc5-edit-card-delete', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 var $blk = $(this).closest('.cc5-edit-card-block');
@@ -10502,12 +10918,12 @@ define([
                     'Remove "' + cardLabel + '" from this slide? This takes effect when you click ' +
                         'Save. Close without saving to cancel.',
                     'Remove'
-                ).then(function() {
+                ).then(function () {
                     var $container = $blk.closest('.cc5-edit-modal-body, .cc5-edit-modal');
                     $blk.remove();
                     _renumberCardButtons($container);
                     return null;
-                }).catch(function() {
+                }).catch(function () {
                     // User cancelled  -  the card stays.
                     return null;
                 });
@@ -10517,7 +10933,7 @@ define([
             // ===================================================================
 
             // Add decision option
-            $(document).on('click', '.cc5-edit-add-option', function(e) {
+            $(document).on('click', '.cc5-edit-add-option', function (e) {
                 e.preventDefault();
                 var list = $('.cc5-edit-decision-options');
                 var idx = list.find('.cc5-edit-option-item').length;
@@ -10533,13 +10949,13 @@ define([
             });
             
             // Remove decision option
-            $(document).on('click', '.cc5-edit-remove-option', function(e) {
+            $(document).on('click', '.cc5-edit-remove-option', function (e) {
                 e.preventDefault();
                 $(this).closest('.cc5-edit-option-item').remove();
             });
             
             // Add checklist item
-            $(document).on('click', '.cc5-edit-add-checklist', function(e) {
+            $(document).on('click', '.cc5-edit-add-checklist', function (e) {
                 e.preventDefault();
                 var list = $('.cc5-edit-checklist-list');
                 var idx = list.find('.cc5-edit-checklist-item').length;
@@ -10551,13 +10967,13 @@ define([
             });
             
             // Remove checklist item
-            $(document).on('click', '.cc5-edit-remove-checklist', function(e) {
+            $(document).on('click', '.cc5-edit-remove-checklist', function (e) {
                 e.preventDefault();
                 $(this).closest('.cc5-edit-checklist-item').remove();
             });
             
             // v7.9.4: Add Quick-Check terminology
-            $(document).on('click', '.cc5-edit-add-qc-term', function(e) {
+            $(document).on('click', '.cc5-edit-add-qc-term', function (e) {
                 e.preventDefault();
                 var list = $('.cc5-edit-qc-terminology');
                 var idx = list.find('.cc5-edit-term-item').length;
@@ -10570,7 +10986,7 @@ define([
             });
             
             // v7.9.4: Remove Quick-Check terminology
-            $(document).on('click', '.cc5-edit-remove-qc-term', function(e) {
+            $(document).on('click', '.cc5-edit-remove-qc-term', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $(this).closest('.cc5-edit-term-item').remove();
@@ -10579,7 +10995,7 @@ define([
             // -- v10.27: Add / Remove handlers for unified 7-card editors -----
 
             // mental-model add step
-            $(document).on('click', '.cc5-edit-add-mm-step', function(e) {
+            $(document).on('click', '.cc5-edit-add-mm-step', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-mm-steps-list');
                 var idx  = list.find('.cc5-edit-mm-step-item').length;
@@ -10594,13 +11010,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-mm-step', function(e) {
+            $(document).on('click', '.cc5-edit-remove-mm-step', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-mm-step-item').remove();
             });
 
             // decision-point add option
-            $(document).on('click', '.cc5-edit-add-dp-option', function(e) {
+            $(document).on('click', '.cc5-edit-add-dp-option', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-dp-options-list');
                 var idx  = list.find('.cc5-edit-dp-option-item').length;
@@ -10617,13 +11033,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-dp-option', function(e) {
+            $(document).on('click', '.cc5-edit-remove-dp-option', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-dp-option-item').remove();
             });
 
             // mistakes add item
-            $(document).on('click', '.cc5-edit-add-mistake', function(e) {
+            $(document).on('click', '.cc5-edit-add-mistake', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-mistakes-list');
                 var idx  = list.find('.cc5-edit-mistake-item').length;
@@ -10635,13 +11051,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-mistake', function(e) {
+            $(document).on('click', '.cc5-edit-remove-mistake', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-mistake-item').remove();
             });
 
             // competency-summary good/bad items add/remove  [v10.39]
-            $(document).on('click', '.cc5-edit-add-good-item', function(e) {
+            $(document).on('click', '.cc5-edit-add-good-item', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-good-items-list');
                 var idx  = list.find('.cc5-edit-good-item').length;
@@ -10651,11 +11067,11 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-good-item', function(e) {
+            $(document).on('click', '.cc5-edit-remove-good-item', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-good-item').remove();
             });
-            $(document).on('click', '.cc5-edit-add-bad-item', function(e) {
+            $(document).on('click', '.cc5-edit-add-bad-item', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-bad-items-list');
                 // v13.90.1 FIX-BADITEM-IDX-COLLISION: this used the row COUNT as the new
@@ -10667,7 +11083,7 @@ define([
                 // A fresh row has no prior consequence by definition, so give it an index
                 // that cannot match any existing one.
                 var idx = -1;
-                list.find('.cc5-edit-bad-item').each(function() {
+                list.find('.cc5-edit-bad-item').each(function () {
                     var v = parseInt($(this).data('idx'), 10);
                     if (!isNaN(v) && v > idx) { idx = v; }
                 });
@@ -10678,13 +11094,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-bad-item', function(e) {
+            $(document).on('click', '.cc5-edit-remove-bad-item', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-bad-item').remove();
             });
 
             // hook-scenario / applied-scenario: add/remove story beat rows  [v10.40]
-            $(document).on('click', '.cc5-edit-add-beat', function(e) {
+            $(document).on('click', '.cc5-edit-add-beat', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-beats-list');
                 var idx  = list.find('.cc5-edit-beat-item').length;
@@ -10695,13 +11111,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-beat', function(e) {
+            $(document).on('click', '.cc5-edit-remove-beat', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-beat-item').remove();
             });
 
             // concept-explainer: add/remove insight chip rows  [v10.40]
-            $(document).on('click', '.cc5-edit-add-insight', function(e) {
+            $(document).on('click', '.cc5-edit-add-insight', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-insights-list');
                 var idx  = list.find('.cc5-edit-insight-item').length;
@@ -10712,13 +11128,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-insight', function(e) {
+            $(document).on('click', '.cc5-edit-remove-insight', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-insight-item').remove();
             });
 
             // concept-explainer: add/remove conceptItem (detail card) rows  [v10.40]
-            $(document).on('click', '.cc5-edit-add-concept-item', function(e) {
+            $(document).on('click', '.cc5-edit-add-concept-item', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-concept-items-list');
                 var idx  = list.find('.cc5-edit-concept-item').length;
@@ -10732,13 +11148,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-concept-item', function(e) {
+            $(document).on('click', '.cc5-edit-remove-concept-item', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-concept-item').remove();
             });
 
             // hook-scenario / applied-scenario: add/remove sceneParts[] rows  [v10.47]
-            $(document).on('click', '.cc5-edit-add-scene-part', function(e) {
+            $(document).on('click', '.cc5-edit-add-scene-part', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-scene-parts-list');
                 var idx  = list.find('.cc5-edit-scene-part-item').length;
@@ -10752,13 +11168,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-scene-part', function(e) {
+            $(document).on('click', '.cc5-edit-remove-scene-part', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-scene-part-item').remove();
             });
 
             // concept-explainer: add/remove conceptInsights[] rows  [v10.47]
-            $(document).on('click', '.cc5-edit-add-concept-insight', function(e) {
+            $(document).on('click', '.cc5-edit-add-concept-insight', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-concept-insights-list');
                 var idx  = list.find('.cc5-edit-concept-insight-item').length;
@@ -10772,7 +11188,7 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-concept-insight', function(e) {
+            $(document).on('click', '.cc5-edit-remove-concept-insight', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-concept-insight-item').remove();
             });
@@ -10781,7 +11197,7 @@ define([
 
             // -- v11.04: Add/Remove handlers for top-level card-type editors (v9.87) --
             // competence-standard
-            $(document).on('click', '.cc5-edit-add-standard', function(e) {
+            $(document).on('click', '.cc5-edit-add-standard', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-standard-items');
                 var idx = list.find('.cc5-edit-standard-item').length;
@@ -10791,12 +11207,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-standard', function(e) {
+            $(document).on('click', '.cc5-edit-remove-standard', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-standard-item').remove();
             });
             // common-errors
-            $(document).on('click', '.cc5-edit-add-error', function(e) {
+            $(document).on('click', '.cc5-edit-add-error', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-error-items');
                 var idx = list.find('.cc5-edit-error-item').length;
@@ -10807,12 +11223,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-error', function(e) {
+            $(document).on('click', '.cc5-edit-remove-error', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-error-item').remove();
             });
             // action-breakdown
-            $(document).on('click', '.cc5-edit-add-action', function(e) {
+            $(document).on('click', '.cc5-edit-add-action', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-action-items');
                 var idx = list.find('.cc5-edit-action-item').length;
@@ -10823,13 +11239,13 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-action', function(e) {
+            $(document).on('click', '.cc5-edit-remove-action', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-action-item').remove();
             });
             // performance-anchor  -  no list items, only text fields
             // plain-english
-            $(document).on('click', '.cc5-edit-add-keypoint', function(e) {
+            $(document).on('click', '.cc5-edit-add-keypoint', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-keypoints-list');
                 var idx = list.find('.cc5-edit-keypoint-item').length;
@@ -10839,12 +11255,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-keypoint', function(e) {
+            $(document).on('click', '.cc5-edit-remove-keypoint', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-keypoint-item').remove();
             });
             // concept-anchor keyTerms
-            $(document).on('click', '.cc5-edit-add-cardterm', function(e) {
+            $(document).on('click', '.cc5-edit-add-cardterm', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-card-keyterms-list');
                 var idx = list.find('.cc5-edit-card-keyterm-item').length;
@@ -10855,19 +11271,19 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-cardterm', function(e) {
+            $(document).on('click', '.cc5-edit-remove-cardterm', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-card-keyterm-item').remove();
             });
             // v13.92: Topics-and-Text prose card rows.
-            $(document).on('click', '.cc5-edit-add-prose-para', function(e) {
+            $(document).on('click', '.cc5-edit-add-prose-para', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-prose-paras');
                 var idx = list.find('.cc5-edit-prose-para').length;
                 list.append('<textarea class="cc5-edit-prose-para" rows="5" data-idx="' + idx +
                     '" placeholder="Paragraph ' + (idx + 1) + '" style="margin-bottom:8px;"></textarea>');
             });
-            $(document).on('click', '.cc5-edit-add-prose-term', function(e) {
+            $(document).on('click', '.cc5-edit-add-prose-term', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-prose-terms-list');
                 var idx = list.find('.cc5-edit-prose-term-item').length;
@@ -10878,12 +11294,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-prose-term', function(e) {
+            $(document).on('click', '.cc5-edit-remove-prose-term', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-prose-term-item').remove();
             });
-            ['good', 'bad'].forEach(function(kind) {
-                $(document).on('click', '.cc5-edit-add-prose-' + kind, function(e) {
+            ['good', 'bad'].forEach(function (kind) {
+                $(document).on('click', '.cc5-edit-add-prose-' + kind, function (e) {
                     e.preventDefault();
                     var list = $(this).siblings('.cc5-edit-prose-' + kind + '-list');
                     var idx = list.find('.cc5-edit-prose-' + kind + '-item').length;
@@ -10894,13 +11310,13 @@ define([
                     list.append(row);
                 });
             });
-            $(document).on('click', '.cc5-edit-remove-prose-item', function(e) {
+            $(document).on('click', '.cc5-edit-remove-prose-item', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('[class*="cc5-edit-prose-"]').remove();
             });
 
             // theoretical-framework
-            $(document).on('click', '.cc5-edit-add-framework', function(e) {
+            $(document).on('click', '.cc5-edit-add-framework', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-frameworks-list');
                 var idx = list.find('.cc5-edit-framework-item').length;
@@ -10914,12 +11330,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-framework', function(e) {
+            $(document).on('click', '.cc5-edit-remove-framework', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-framework-item').remove();
             });
             // analytical-lens: cognitiveConsiderations
-            $(document).on('click', '.cc5-edit-add-cogconsideration', function(e) {
+            $(document).on('click', '.cc5-edit-add-cogconsideration', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-cogconsiderations-list');
                 var idx = list.find('.cc5-edit-cogconsideration-item').length;
@@ -10929,12 +11345,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-cogconsideration', function(e) {
+            $(document).on('click', '.cc5-edit-remove-cogconsideration', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-cogconsideration-item').remove();
             });
             // analytical-lens: analysisPrompts
-            $(document).on('click', '.cc5-edit-add-analysisprompt', function(e) {
+            $(document).on('click', '.cc5-edit-add-analysisprompt', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-analysisprompts-list');
                 var idx = list.find('.cc5-edit-analysisprompt-item').length;
@@ -10944,12 +11360,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-analysisprompt', function(e) {
+            $(document).on('click', '.cc5-edit-remove-analysisprompt', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-analysisprompt-item').remove();
             });
             // ethics-considerations
-            $(document).on('click', '.cc5-edit-add-ethicsconsideration', function(e) {
+            $(document).on('click', '.cc5-edit-add-ethicsconsideration', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-ethicsconsiderations-list');
                 var idx = list.find('.cc5-edit-ethicsconsideration-item').length;
@@ -10960,12 +11376,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-ethicsconsideration', function(e) {
+            $(document).on('click', '.cc5-edit-remove-ethicsconsideration', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-ethicsconsideration-item').remove();
             });
             // case-study-1/2: analysisPrompts
-            $(document).on('click', '.cc5-edit-add-casestudyprompt', function(e) {
+            $(document).on('click', '.cc5-edit-add-casestudyprompt', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-casestudyprompts-list');
                 var idx = list.find('.cc5-edit-casestudyprompt-item').length;
@@ -10975,12 +11391,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-casestudyprompt', function(e) {
+            $(document).on('click', '.cc5-edit-remove-casestudyprompt', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-casestudyprompt-item').remove();
             });
             // business-impact: keyMetrics
-            $(document).on('click', '.cc5-edit-add-keymetric', function(e) {
+            $(document).on('click', '.cc5-edit-add-keymetric', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-keymetrics-list');
                 var idx = list.find('.cc5-edit-keymetric-item').length;
@@ -10990,12 +11406,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-keymetric', function(e) {
+            $(document).on('click', '.cc5-edit-remove-keymetric', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-keymetric-item').remove();
             });
             // business-impact: consequences
-            $(document).on('click', '.cc5-edit-add-consequence', function(e) {
+            $(document).on('click', '.cc5-edit-add-consequence', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-consequences-list');
                 var idx = list.find('.cc5-edit-consequence-item').length;
@@ -11005,12 +11421,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-consequence', function(e) {
+            $(document).on('click', '.cc5-edit-remove-consequence', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-consequence-item').remove();
             });
             // action-framework: steps
-            $(document).on('click', '.cc5-edit-add-actionstep', function(e) {
+            $(document).on('click', '.cc5-edit-add-actionstep', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-actionsteps-list');
                 var idx = list.find('.cc5-edit-actionstep-item').length;
@@ -11022,12 +11438,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-actionstep', function(e) {
+            $(document).on('click', '.cc5-edit-remove-actionstep', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-actionstep-item').remove();
             });
             // risk-card
-            $(document).on('click', '.cc5-edit-add-risk', function(e) {
+            $(document).on('click', '.cc5-edit-add-risk', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-risks-list');
                 var idx = list.find('.cc5-edit-risk-item').length;
@@ -11041,12 +11457,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-risk', function(e) {
+            $(document).on('click', '.cc5-edit-remove-risk', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-risk-item').remove();
             });
             // policy-alignment
-            $(document).on('click', '.cc5-edit-add-policyitem', function(e) {
+            $(document).on('click', '.cc5-edit-add-policyitem', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-policyitems-list');
                 var idx = list.find('.cc5-edit-policyitem-item').length;
@@ -11058,12 +11474,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-policyitem', function(e) {
+            $(document).on('click', '.cc5-edit-remove-policyitem', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-policyitem-item').remove();
             });
             // scenario-1/2: optimisationTips
-            $(document).on('click', '.cc5-edit-add-opttip', function(e) {
+            $(document).on('click', '.cc5-edit-add-opttip', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-opttips-list');
                 var idx = list.find('.cc5-edit-opttip-item').length;
@@ -11073,12 +11489,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-opttip', function(e) {
+            $(document).on('click', '.cc5-edit-remove-opttip', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-opttip-item').remove();
             });
             // skill-anchor: keyIndicators
-            $(document).on('click', '.cc5-edit-add-keyindicator', function(e) {
+            $(document).on('click', '.cc5-edit-add-keyindicator', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-keyindicators-list');
                 var idx = list.find('.cc5-edit-keyindicator-item').length;
@@ -11088,12 +11504,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-keyindicator', function(e) {
+            $(document).on('click', '.cc5-edit-remove-keyindicator', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-keyindicator-item').remove();
             });
             // core-framework: frameworkSteps
-            $(document).on('click', '.cc5-edit-add-frameworkstep', function(e) {
+            $(document).on('click', '.cc5-edit-add-frameworkstep', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-frameworksteps-list');
                 var idx = list.find('.cc5-edit-frameworkstep-item').length;
@@ -11105,12 +11521,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-frameworkstep', function(e) {
+            $(document).on('click', '.cc5-edit-remove-frameworkstep', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-frameworkstep-item').remove();
             });
             // application-guide: applications
-            $(document).on('click', '.cc5-edit-add-application', function(e) {
+            $(document).on('click', '.cc5-edit-add-application', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-applications-list');
                 var idx = list.find('.cc5-edit-application-item').length;
@@ -11122,12 +11538,12 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-application', function(e) {
+            $(document).on('click', '.cc5-edit-remove-application', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-application-item').remove();
             });
             // common-pitfalls: pitfallItems
-            $(document).on('click', '.cc5-edit-add-pitfall', function(e) {
+            $(document).on('click', '.cc5-edit-add-pitfall', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-pitfalls-list');
                 var idx = list.find('.cc5-edit-pitfall-item').length;
@@ -11139,14 +11555,14 @@ define([
                 row += '</div>';
                 list.append(row);
             });
-            $(document).on('click', '.cc5-edit-remove-pitfall', function(e) {
+            $(document).on('click', '.cc5-edit-remove-pitfall', function (e) {
                 e.preventDefault(); e.stopPropagation();
                 $(this).closest('.cc5-edit-pitfall-item').remove();
             });
             // -- end v11.04 top-level card-type add/remove handlers ---------------
 
             // Document popup link click (v6.5.3)
-            this.container.on('click keydown', '.cc5-doc-link', function(e) {
+            this.container.on('click keydown', '.cc5-doc-link', function (e) {
                 // Handle click or Enter/Space key
                 if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') {
                     return;
@@ -11159,7 +11575,7 @@ define([
             });
             
             // v7.1.8: PDF section link click - opens PDF viewer at specific page
-            this.container.on('click keydown', '.cc5-pdf-link', function(e) {
+            this.container.on('click keydown', '.cc5-pdf-link', function (e) {
                 if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') {
                     return;
                 }
@@ -11172,7 +11588,7 @@ define([
             });
             
             // Document modal close handlers - v6.5.43: Restore scroll position
-            $(document).on('click', '.cc5-doc-modal-close', function(e) {
+            $(document).on('click', '.cc5-doc-modal-close', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 $('.cc5-doc-modal-overlay').remove();
@@ -11182,7 +11598,7 @@ define([
                 }
             });
             
-            $(document).on('click', '.cc5-doc-modal-overlay', function(e) {
+            $(document).on('click', '.cc5-doc-modal-overlay', function (e) {
                 if ($(e.target).hasClass('cc5-doc-modal-overlay')) {
                     $('.cc5-doc-modal-overlay').remove();
                     // Restore scroll position
@@ -11193,7 +11609,7 @@ define([
             });
             
             // Escape key to close document modal
-            $(document).on('keydown.cc5docmodal', function(e) {
+            $(document).on('keydown.cc5docmodal', function (e) {
                 if (e.key === 'Escape' && $('.cc5-doc-modal-overlay').length) {
                     $('.cc5-doc-modal-overlay').remove();
                     // Restore scroll position
@@ -11204,7 +11620,7 @@ define([
             });
             
             // Edit modal delete list item
-            $(document).on('click', '.cc5-edit-delete-item', function(e) {
+            $(document).on('click', '.cc5-edit-delete-item', function (e) {
                 e.preventDefault();
                 var itemToDelete = $(this).closest('.cc5-edit-list-item');
                 itemToDelete.remove();
@@ -11212,7 +11628,7 @@ define([
             
             // v6.5.22: Escalation Decision Activity button clicks
             // v6.6.63: Enhanced with progress tracking and score summary
-            this.container.on('click', '.cc5-decision-btn', function(e) {
+            this.container.on('click', '.cc5-decision-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11266,14 +11682,14 @@ define([
                     
                     // v6.7.47: Perfect score celebration
                     if (correctCount === total) {
-                        setTimeout(function() {
+                        setTimeout(function () {
                             playCelebrationSound();
                             showActivityConfetti();
                         }, 200);
                     }
                     
                     // Scroll to score summary
-                    setTimeout(function() {
+                    setTimeout(function () {
                         $scoreSummary[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }, 300);
                 }
@@ -11288,7 +11704,7 @@ define([
             // ===========================================================================
             
             // 1. SCENARIO BRANCHING: Option click reveals feedback and advances to next decision
-            this.container.on('click', '.cc5-option', function(e) {
+            this.container.on('click', '.cc5-option', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11307,8 +11723,14 @@ define([
                 // Mark as answered
                 $decisionPoint.addClass('cc5-answered');
                 
-                // Disable all options in this decision point
-                $allOptions.addClass('cc5-disabled');
+                // Disable all options in this decision point.
+                // v13.94.6: the class alone only sets pointer-events:none, which does not
+                // stop a keyboard Enter - a learner could Tab to a locked option and answer
+                // again after submitting. These are real <button>s, so disable them properly
+                // and mark them for assistive tech.
+                $allOptions.addClass('cc5-disabled')
+                           .prop('disabled', true)
+                           .attr('aria-disabled', 'true');
                 
                 // Show correct/incorrect state
                 var isCorrect = $btn.attr('data-correct') === 'true';
@@ -11339,9 +11761,9 @@ define([
                 var calculatedDelay = Math.max(minDelay, (wordCount / wordsPerSecond) * 1000 + 1500); // +1.5s buffer
                 
                 // After a delay, advance to next decision point (if any)
-                setTimeout(function() {
+                setTimeout(function () {
                     var currentPointId = $decisionPoint.data('point-id');
-                    var $nextPoint = $decisionPoints.find('.cc5-decision-point').filter(function() {
+                    var $nextPoint = $decisionPoints.find('.cc5-decision-point').filter(function () {
                         return $(this).data('point-id') > currentPointId && !$(this).hasClass('cc5-active');
                     }).first();
                     
@@ -11370,7 +11792,7 @@ define([
                         
                         // v6.7.47: Perfect score celebration
                         if (correctCount === totalPoints) {
-                            setTimeout(function() {
+                            setTimeout(function () {
                                 playCelebrationSound();
                                 showActivityConfetti();
                             }, 200);
@@ -11380,7 +11802,7 @@ define([
                         $activity.find('.cc5-learning-takeaway').removeClass('cc5-hidden').addClass('cc5-visible');
                         
                         // Scroll to score summary
-                        setTimeout(function() {
+                        setTimeout(function () {
                             $scoreSummary[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }, 300);
                         
@@ -11392,7 +11814,7 @@ define([
             
             // 2. BEST RESPONSE ANALYSIS: Reveal button shows classification and explanation
             // v6.6.64: Enhanced with progress indicator and score summary
-            this.container.on('click', '.cc5-reveal-btn', function(e) {
+            this.container.on('click', '.cc5-reveal-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11439,13 +11861,13 @@ define([
                     $bestResponse.find('.cc5-learning-takeaway').removeClass('cc5-hidden').addClass('cc5-visible');
                     
                     // Scroll to score summary
-                    setTimeout(function() {
+                    setTimeout(function () {
                         $scoreSummary[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }, 300);
                 }
                 
                 // Scroll the revealed content into view if needed
-                setTimeout(function() {
+                setTimeout(function () {
                     $revealContent[0]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 100);
                 
@@ -11461,7 +11883,7 @@ define([
             
             // Helper function to update step position numbers
             function updateStepNumbers($container) {
-                $container.find('.cc5-sequence-step').each(function(index) {
+                $container.find('.cc5-sequence-step').each(function (index) {
                     $(this).find('.cc5-step-current-pos').text(index + 1);
                     // Update button states
                     var $moveUp = $(this).find('.cc5-step-move-up');
@@ -11472,7 +11894,7 @@ define([
             }
             
             // 3a. Move Up button (mobile-friendly reordering)
-            this.container.on('click', '.cc5-step-move-up', function(e) {
+            this.container.on('click', '.cc5-step-move-up', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11493,7 +11915,7 @@ define([
                     updateStepNumbers($container);
                     
                     // Remove animation class after transition
-                    setTimeout(function() {
+                    setTimeout(function () {
                         $step.removeClass('cc5-step-moving');
                         $prevStep.removeClass('cc5-step-moving');
                     }, 300);
@@ -11507,7 +11929,7 @@ define([
             });
             
             // 3b. Move Down button (mobile-friendly reordering)
-            this.container.on('click', '.cc5-step-move-down', function(e) {
+            this.container.on('click', '.cc5-step-move-down', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11528,7 +11950,7 @@ define([
                     updateStepNumbers($container);
                     
                     // Remove animation class after transition
-                    setTimeout(function() {
+                    setTimeout(function () {
                         $step.removeClass('cc5-step-moving');
                         $nextStep.removeClass('cc5-step-moving');
                     }, 300);
@@ -11542,7 +11964,7 @@ define([
             });
             
             // 3c. Check Order button
-            this.container.on('click', '.cc5-check-sequence-btn', function(e) {
+            this.container.on('click', '.cc5-check-sequence-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11554,7 +11976,7 @@ define([
                 
                 // Check each step's position
                 var allCorrect = true;
-                $container.find('.cc5-sequence-step').each(function(displayIndex) {
+                $container.find('.cc5-sequence-step').each(function (displayIndex) {
                     var correctPosition = parseInt($(this).attr('data-correct-position'));
                     var isCorrect = (displayIndex + 1) === correctPosition;
                     
@@ -11585,7 +12007,7 @@ define([
                     // Show common mistake tip
                     $commonMistake.removeClass('cc5-hidden-until-checked');
                     // v6.7.47: Perfect order celebration with confetti
-                    setTimeout(function() {
+                    setTimeout(function () {
                         playCelebrationSound();
                         showActivityConfetti();
                     }, 200);
@@ -11597,7 +12019,7 @@ define([
                 }
                 
                 // Scroll feedback into view
-                setTimeout(function() {
+                setTimeout(function () {
                     $feedback[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 100);
                 
@@ -11606,7 +12028,7 @@ define([
             });
             
             // v6.6.63: Reset/Start Over button
-            this.container.on('click', '.cc5-reset-sequence-btn', function(e) {
+            this.container.on('click', '.cc5-reset-sequence-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11628,7 +12050,7 @@ define([
                 }
                 
                 // Re-append in new order
-                stepsArray.forEach(function(step) {
+                stepsArray.forEach(function (step) {
                     $container.append(step);
                 });
                 
@@ -11647,7 +12069,7 @@ define([
                 
                 // Visual feedback - brief highlight animation
                 $container.addClass('cc5-reshuffle-animation');
-                setTimeout(function() {
+                setTimeout(function () {
                     $container.removeClass('cc5-reshuffle-animation');
                 }, 500);
                 
@@ -11662,7 +12084,7 @@ define([
             var draggedStep = null;
             
             // v7.2.64: Improved drag-drop with better detection and visual feedback
-            this.container.on('dragstart', '.cc5-sequence-step', function(e) {
+            this.container.on('dragstart', '.cc5-sequence-step', function (e) {
                 draggedStep = this;
                 $(this).addClass('cc5-dragging');
                 // Set drag image with slight offset for better visibility
@@ -11672,7 +12094,7 @@ define([
                 $(this).closest('.cc5-sequence-steps').addClass('cc5-dragging-active');
             });
             
-            this.container.on('dragend', '.cc5-sequence-step', function(e) {
+            this.container.on('dragend', '.cc5-sequence-step', function (e) {
                 $(this).removeClass('cc5-dragging');
                 draggedStep = null;
                 // Remove all drag indicators
@@ -11681,7 +12103,7 @@ define([
             });
             
             // Handle dragover on individual steps
-            this.container.on('dragover', '.cc5-sequence-step', function(e) {
+            this.container.on('dragover', '.cc5-sequence-step', function (e) {
                 e.preventDefault();
                 e.originalEvent.dataTransfer.dropEffect = 'move';
                 
@@ -11706,7 +12128,7 @@ define([
                 }
             });
             
-            this.container.on('dragleave', '.cc5-sequence-step', function(e) {
+            this.container.on('dragleave', '.cc5-sequence-step', function (e) {
                 // Only remove if leaving to outside the element
                 var rect = this.getBoundingClientRect();
                 var x = e.originalEvent.clientX;
@@ -11717,7 +12139,7 @@ define([
             });
             
             // Handle drop on step
-            this.container.on('drop', '.cc5-sequence-step', function(e) {
+            this.container.on('drop', '.cc5-sequence-step', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11748,12 +12170,12 @@ define([
             });
             
             // v7.2.64: Also handle drops on the container (in case user drops between steps)
-            this.container.on('dragover', '.cc5-sequence-steps', function(e) {
+            this.container.on('dragover', '.cc5-sequence-steps', function (e) {
                 e.preventDefault();
                 e.originalEvent.dataTransfer.dropEffect = 'move';
             });
             
-            this.container.on('drop', '.cc5-sequence-steps', function(e) {
+            this.container.on('drop', '.cc5-sequence-steps', function (e) {
                 // Only handle if not dropped on a step (fallback)
                 if ($(e.target).closest('.cc5-sequence-step').length === 0 && draggedStep) {
                     e.preventDefault();
@@ -11765,7 +12187,7 @@ define([
                     var $steps = $container.find('.cc5-sequence-step');
                     var inserted = false;
                     
-                    $steps.each(function() {
+                    $steps.each(function () {
                         var rect = this.getBoundingClientRect();
                         if (!inserted && dropY < rect.top + rect.height / 2) {
                             $dragged.insertBefore($(this));
@@ -11793,7 +12215,7 @@ define([
             // ===========================================================================
             var selectedSequenceStep = null;
             
-            this.container.on('click', '.cc5-sequence-step', function(e) {
+            this.container.on('click', '.cc5-sequence-step', function (e) {
                 // Don't interfere with drag handle or reorder buttons
                 if ($(e.target).closest('.cc5-step-drag-handle, .cc5-step-move-up, .cc5-step-move-down').length) {
                     return;
@@ -11842,7 +12264,7 @@ define([
             // v6.6.63: Enhanced with progress indicator updates
             // ===========================================================================
             
-            this.container.on('input', '.cc5-reflection-input', function() {
+            this.container.on('input', '.cc5-reflection-input', function () {
                 var $textarea = $(this);
                 var $item = $textarea.closest('.cc5-reflection-item');
                 var $reflection = $textarea.closest('.cc5-reflection');
@@ -11881,7 +12303,7 @@ define([
             // v6.6.64: Enhanced with progress indicator and score summary
             // ===========================================================================
             
-            this.container.on('toggle', '.cc5-what-went-wrong details.cc5-model-answer', function() {
+            this.container.on('toggle', '.cc5-what-went-wrong details.cc5-model-answer', function () {
                 var $details = $(this);
                 var $whatWentWrong = $details.closest('.cc5-what-went-wrong');
                 var $analysisQuestions = $whatWentWrong.find('.cc5-analysis-questions');
@@ -11912,7 +12334,7 @@ define([
                         $whatWentWrong.find('.cc5-prevention-takeaway').removeClass('cc5-hidden').addClass('cc5-visible');
                         
                         // Scroll to score summary
-                        setTimeout(function() {
+                        setTimeout(function () {
                             $scoreSummary[0]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }, 300);
                     }
@@ -11925,7 +12347,7 @@ define([
             // v6.7.32: Try Again button - reset activity and allow retry
             // ===========================================================================
             
-            this.container.on('click', '.cc5-try-again-btn', function(e) {
+            this.container.on('click', '.cc5-try-again-btn', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -11938,7 +12360,7 @@ define([
          * v6.7.32: Reset activity to allow retry
          * v6.7.42: Improved scroll to top of activity section
          */
-        resetActivity: function(activityType) {
+        resetActivity: function (activityType) {
             var self = this;
             var sections = this.getCurrentSections();
             var currentSection = sections[this.currentSlideIndex];
@@ -11975,13 +12397,13 @@ define([
             // 6. Smooth scroll activity section into view
             var activitySection = this.container.find('.cc5-activity-section');
             if (activitySection.length) {
-                setTimeout(function() {
+                setTimeout(function () {
                     activitySection[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }, 100);
             }
             
             // 7. Update navigation state after reset
-            setTimeout(function() {
+            setTimeout(function () {
                 self.updateActivityNavState();
             }, 200);
         },
@@ -11989,7 +12411,7 @@ define([
         /**
          * v6.6.62: Update navigation button state based on activity completion
          */
-        updateActivityNavState: function() {
+        updateActivityNavState: function () {
             var sections = this.getCurrentSections();
             var currentSection = sections[this.currentSlideIndex];
             
@@ -12020,7 +12442,7 @@ define([
         /**
          * Navigate to specific slide
          */
-        navigateToSlide: function(index) {
+        navigateToSlide: function (index) {
             var self = this;
             var sections = this.getCurrentSections();
             if (index < 0 || index >= sections.length) return;
@@ -12028,6 +12450,13 @@ define([
             if (this.slideTimer) {
                 clearInterval(this.slideTimer);
                 this.slideTimer = null;
+            }
+            if (this._quizFbAudio) {
+                // v13.94.6: the quiz feedback clip was referenced by exactly one handler and
+                // by nothing else - not by navigation, not by teardown - so it survived the
+                // slide transition and played on over the next slide's narration.
+                try { this._quizFbAudio.pause(); } catch (e) { /* detached */ }
+                this._quizFbAudio = null;
             }
             if (this.currentAudio) {
                 this.currentAudio.pause();
@@ -12057,7 +12486,7 @@ define([
             var currentSection = sections[index];
             var slideId = currentSection.slideId || currentSection.id;
             if (currentSection.cardType && !this.isSectionComplete(slideId)) {
-                this.slideCompletionTimer = setTimeout(function() {
+                this.slideCompletionTimer = setTimeout(function () {
                     self.markSectionComplete(slideId);
                 }, 15000);
             }
@@ -12077,7 +12506,7 @@ define([
          * @param {string} placeholder Placeholder text shown when input is empty.
          * @returns {string} HTML fragment.
          */
-        renderIconPickerInput: function(currentVal, cssClass, placeholder) {
+        renderIconPickerInput: function (currentVal, cssClass, placeholder) {
             var previewSvg = (currentVal && CcIcons.hasIcon(currentVal)) ? getIcon(currentVal) : '';
             var previewClass = 'cc5-ipi-preview' + (previewSvg ? '' : ' cc5-ipi-empty');
             var html = '';
@@ -12094,7 +12523,7 @@ define([
          * Appended to <body> as a singleton; removed on selection or dismiss.
          * @returns {string} HTML string for the overlay.
          */
-        buildIconPickerOverlay: function() {
+        buildIconPickerOverlay: function () {
             var allNames = Object.keys(CcIcons.ICONS);
             var html = '<div id="cc5-icon-picker-overlay">';
             html += '<div class="cc5-icon-picker-popup">';
@@ -12118,7 +12547,7 @@ define([
          * Show edit modal for a slide (v6.5.0)
          * v6.5.58: Enhanced section lookup with fallback strategies
          */
-        showEditModal: function(topicId, sectionId) {
+        showEditModal: function (topicId, sectionId) {
             var self = this;
             var section = null;
             var foundTopic = null;
@@ -12171,7 +12600,7 @@ define([
             // v8.4.14: Apply fixGrammar to section data so edit modal matches slide display exactly
             // Deep clone section to avoid mutating the manifest, then grammar-fix all text fields
             var editSection = JSON.parse(JSON.stringify(section));
-            var grammarFixDeep = function(obj) {
+            var grammarFixDeep = function (obj) {
                 if (!obj || typeof obj !== 'object') return obj;
                 if (Array.isArray(obj)) {
                     for (var ai = 0; ai < obj.length; ai++) {
@@ -12249,7 +12678,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Standard Items</label>';
                     html += '<div class="cc5-edit-standard-items">';
-                    (section.standardItems || []).forEach(function(item, idx) {
+                    (section.standardItems || []).forEach(function (item, idx) {
                         var text = typeof item === 'string' ? item : (item.text || '');
                         html += '<div class="cc5-edit-standard-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-standard-text" value="' + escapeHtml(text) + '">';
@@ -12264,7 +12693,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Error Items</label>';
                     html += '<div class="cc5-edit-error-items">';
-                    (section.errorItems || []).forEach(function(item, idx) {
+                    (section.errorItems || []).forEach(function (item, idx) {
                         html += '<div class="cc5-edit-error-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-error-text" placeholder="Error" value="' + escapeHtml(item.error || '') + '">';
                         html += '<input type="text" class="cc5-edit-error-consequence" placeholder="Consequence" value="' + escapeHtml(item.consequence || '') + '">';
@@ -12279,7 +12708,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Action Items</label>';
                     html += '<div class="cc5-edit-action-items">';
-                    (section.actions || []).forEach(function(action, idx) {
+                    (section.actions || []).forEach(function (action, idx) {
                         html += '<div class="cc5-edit-action-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-action-heading" placeholder="Action heading" value="' + escapeHtml(action.heading || '') + '">';
                         html += '<textarea class="cc5-edit-action-bullets" placeholder="Bullets (one per line)" rows="3">' + escapeHtml((action.bullets || []).join('\n')) + '</textarea>';
@@ -12315,7 +12744,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Key Points</label>';
                     html += '<div class="cc5-edit-keypoints-list">';
-                    (section.keyPoints || []).forEach(function(pt, idx) {
+                    (section.keyPoints || []).forEach(function (pt, idx) {
                         html += '<div class="cc5-edit-keypoint-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-keypoint-text" value="' + escapeHtml(pt || '') + '">';
                         html += '<button type="button" class="cc5-edit-remove-keypoint" title="Remove">' + getIcon('x') + '</button>';
@@ -12339,7 +12768,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Card-Level Key Terms</label>';
                     html += '<div class="cc5-edit-card-keyterms-list">';
-                    (section.keyTerms || []).forEach(function(t, idx) {
+                    (section.keyTerms || []).forEach(function (t, idx) {
                         html += '<div class="cc5-edit-card-keyterm-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-cardterm-name" placeholder="Term" value="' + escapeHtml(t.term || '') + '">';
                         html += '<input type="text" class="cc5-edit-cardterm-def" placeholder="Definition" value="' + escapeHtml(t.definition || t.meaning || '') + '">';
@@ -12356,7 +12785,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Theoretical Frameworks</label>';
                     html += '<div class="cc5-edit-frameworks-list">';
-                    (section.frameworks || []).forEach(function(fw, idx) {
+                    (section.frameworks || []).forEach(function (fw, idx) {
                         html += '<div class="cc5-edit-framework-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<input type="text" class="cc5-edit-fw-name" placeholder="Framework name" value="' + escapeHtml(fw.name || '') + '" style="margin-bottom:4px;">';
                         html += '<input type="text" class="cc5-edit-fw-originator" placeholder="Originator / Author" value="' + escapeHtml(fw.originator || '') + '" style="margin-bottom:4px;">';
@@ -12376,7 +12805,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Cognitive Considerations</label>';
                     html += '<div class="cc5-edit-cogconsiderations-list">';
-                    (section.cognitiveConsiderations || []).forEach(function(c, idx) {
+                    (section.cognitiveConsiderations || []).forEach(function (c, idx) {
                         var txt = typeof c === 'string' ? c : (c.text || c.description || '');
                         html += '<div class="cc5-edit-cogconsideration-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-cogconsideration-text" value="' + escapeHtml(txt) + '">';
@@ -12389,7 +12818,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Analysis Prompts</label>';
                     html += '<div class="cc5-edit-analysisprompts-list">';
-                    (section.analysisPrompts || []).forEach(function(p, idx) {
+                    (section.analysisPrompts || []).forEach(function (p, idx) {
                         html += '<div class="cc5-edit-analysisprompt-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-analysisprompt-text" value="' + escapeHtml(p || '') + '">';
                         html += '<button type="button" class="cc5-edit-remove-analysisprompt" title="Remove">' + getIcon('x') + '</button>';
@@ -12405,7 +12834,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Ethical Considerations</label>';
                     html += '<div class="cc5-edit-ethicsconsiderations-list">';
-                    (section.considerations || []).forEach(function(c, idx) {
+                    (section.considerations || []).forEach(function (c, idx) {
                         var dim = (typeof c === 'object' && c) ? (c.dimension || c.title || '') : '';
                         var desc = (typeof c === 'object' && c) ? (c.description || c.text || '') : (c || '');
                         html += '<div class="cc5-edit-ethicsconsideration-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
@@ -12424,7 +12853,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Analysis Prompts</label>';
                     html += '<div class="cc5-edit-casestudyprompts-list">';
-                    (section.analysisPrompts || []).forEach(function(p, idx) {
+                    (section.analysisPrompts || []).forEach(function (p, idx) {
                         html += '<div class="cc5-edit-casestudyprompt-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-casestudyprompt-text" value="' + escapeHtml(p || '') + '">';
                         html += '<button type="button" class="cc5-edit-remove-casestudyprompt" title="Remove">' + getIcon('x') + '</button>';
@@ -12452,7 +12881,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Key Metrics</label>';
                     html += '<div class="cc5-edit-keymetrics-list">';
-                    (section.keyMetrics || []).forEach(function(m, idx) {
+                    (section.keyMetrics || []).forEach(function (m, idx) {
                         html += '<div class="cc5-edit-keymetric-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-keymetric-text" value="' + escapeHtml(typeof m === 'string' ? m : (m.metric || m.text || '')) + '">';
                         html += '<button type="button" class="cc5-edit-remove-keymetric" title="Remove">' + getIcon('x') + '</button>';
@@ -12464,7 +12893,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Consequences</label>';
                     html += '<div class="cc5-edit-consequences-list">';
-                    (section.consequences || []).forEach(function(c, idx) {
+                    (section.consequences || []).forEach(function (c, idx) {
                         html += '<div class="cc5-edit-consequence-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-consequence-text" value="' + escapeHtml(typeof c === 'string' ? c : (c.text || '')) + '">';
                         html += '<button type="button" class="cc5-edit-remove-consequence" title="Remove">' + getIcon('x') + '</button>';
@@ -12480,7 +12909,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Action Steps</label>';
                     html += '<div class="cc5-edit-actionsteps-list">';
-                    (section.steps || []).forEach(function(s, idx) {
+                    (section.steps || []).forEach(function (s, idx) {
                         var action = typeof s === 'string' ? s : (s.action || s.text || '');
                         var detail = (typeof s === 'object' && s) ? (s.detail || '') : '';
                         var timeframe = (typeof s === 'object' && s) ? (s.timeframe || '') : '';
@@ -12501,7 +12930,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Risks</label>';
                     html += '<div class="cc5-edit-risks-list">';
-                    (section.risks || []).forEach(function(r, idx) {
+                    (section.risks || []).forEach(function (r, idx) {
                         html += '<div class="cc5-edit-risk-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<input type="text" class="cc5-edit-risk-text" placeholder="Risk" value="' + escapeHtml(r.risk || r.text || '') + '" style="margin-bottom:4px;">';
                         html += '<input type="text" class="cc5-edit-risk-likelihood" placeholder="Likelihood (e.g. High)" value="' + escapeHtml(r.likelihood || '') + '" style="margin-bottom:4px;">';
@@ -12522,7 +12951,7 @@ define([
                     html += '<label>Policy Items</label>';
                     html += '<div class="cc5-edit-policyitems-list">';
                     var polItems = section.policyItems || section.policies || [];
-                    polItems.forEach(function(p, idx) {
+                    polItems.forEach(function (p, idx) {
                         var policyText = typeof p === 'string' ? p : (p.policy || p.text || '');
                         var reqText = (typeof p === 'object' && p) ? (p.requirement || '') : '';
                         var consText = (typeof p === 'object' && p) ? (p.consequence || '') : '';
@@ -12543,7 +12972,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Optimisation Tips</label>';
                     html += '<div class="cc5-edit-opttips-list">';
-                    (section.optimisationTips || []).forEach(function(tip, idx) {
+                    (section.optimisationTips || []).forEach(function (tip, idx) {
                         html += '<div class="cc5-edit-opttip-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-opttip-text" value="' + escapeHtml(tip || '') + '">';
                         html += '<button type="button" class="cc5-edit-remove-opttip" title="Remove">' + getIcon('x') + '</button>';
@@ -12583,7 +13012,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Key Indicators</label>';
                     html += '<div class="cc5-edit-keyindicators-list">';
-                    (section.keyIndicators || []).forEach(function(ind, idx) {
+                    (section.keyIndicators || []).forEach(function (ind, idx) {
                         var txt = typeof ind === 'string' ? ind : (ind.text || ind.indicator || '');
                         html += '<div class="cc5-edit-keyindicator-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-keyindicator-text" value="' + escapeHtml(txt) + '">';
@@ -12604,7 +13033,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Framework Steps</label>';
                     html += '<div class="cc5-edit-frameworksteps-list">';
-                    (section.frameworkSteps || []).forEach(function(s, idx) {
+                    (section.frameworkSteps || []).forEach(function (s, idx) {
                         html += '<div class="cc5-edit-frameworkstep-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<input type="text" class="cc5-edit-fwstep-step" placeholder="Step name" value="' + escapeHtml(s.step || '') + '" style="margin-bottom:4px;">';
                         html += '<textarea class="cc5-edit-fwstep-explanation" rows="2" placeholder="Explanation">' + escapeHtml(s.explanation || '') + '</textarea>';
@@ -12622,7 +13051,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Application Scenarios</label>';
                     html += '<div class="cc5-edit-applications-list">';
-                    (section.applications || []).forEach(function(a, idx) {
+                    (section.applications || []).forEach(function (a, idx) {
                         html += '<div class="cc5-edit-application-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<input type="text" class="cc5-edit-app-situation" placeholder="Situation" value="' + escapeHtml(a.situation || '') + '" style="margin-bottom:4px;">';
                         html += '<textarea class="cc5-edit-app-action" rows="2" placeholder="Action">' + escapeHtml(a.action || '') + '</textarea>';
@@ -12640,7 +13069,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Pitfall Items</label>';
                     html += '<div class="cc5-edit-pitfalls-list">';
-                    (section.pitfallItems || []).forEach(function(p, idx) {
+                    (section.pitfallItems || []).forEach(function (p, idx) {
                         html += '<div class="cc5-edit-pitfall-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<input type="text" class="cc5-edit-pitfall-text" placeholder="Pitfall" value="' + escapeHtml(p.pitfall || '') + '" style="margin-bottom:4px;">';
                         html += '<input type="text" class="cc5-edit-pitfall-consequence" placeholder="Consequence" value="' + escapeHtml(p.consequence || '') + '" style="margin-bottom:4px;">';
@@ -12665,7 +13094,7 @@ define([
                         html += '<div class="cc5-edit-field">';
                         html += '<label>Scene Parts <small> -  each part shown as an icon-card panel on screen</small></label>';
                         html += '<div class="cc5-edit-scene-parts-list">';
-                        section.sceneParts.forEach(function(part, pidx) {
+                        section.sceneParts.forEach(function (part, pidx) {
                             // v12.07 FIX: Pre-populate with resolved display icon so the
                             // picker matches what the card renders (pool default if no icon stored).
                             var _spPartText = part.text || part.content || part.description || '';
@@ -12695,7 +13124,7 @@ define([
                         html += '<div class="cc5-edit-field">';
                         html += '<label>Story Beats <small style="font-weight:400;opacity:0.7;"> -  each sentence shown as a numbered card on screen</small></label>';
                         html += '<div class="cc5-edit-beats-list">';
-                        _hsBeats.forEach(function(beat, idx) {
+                        _hsBeats.forEach(function (beat, idx) {
                             html += '<div class="cc5-edit-beat-item" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">';
                             html += '<span style="min-width:22px;height:22px;border-radius:50%;background:var(--cc5-accent,#6366f1);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;">' + (idx + 1) + '</span>';
                             html += '<textarea class="cc5-edit-beat-text" rows="2" style="flex:1;">' + escapeHtml(beat) + '</textarea>';
@@ -12730,7 +13159,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Insight Sentences <small style="font-weight:400;opacity:0.7;"> -  each sentence shown as a numbered blue chip on screen</small></label>';
                     html += '<div class="cc5-edit-insights-list">';
-                    _ceChips.forEach(function(chip, idx) {
+                    _ceChips.forEach(function (chip, idx) {
                         html += '<div class="cc5-edit-insight-item" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">';
                         html += '<span style="min-width:22px;height:22px;border-radius:50%;background:hsl(217deg 80% 55%);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;">' + (idx + 1) + '</span>';
                         html += '<textarea class="cc5-edit-insight-text" rows="2" style="flex:1;">' + escapeHtml(chip) + '</textarea>';
@@ -12745,7 +13174,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Detail Cards <small style="font-weight:400;opacity:0.7;"> -  optional icon-title-description cards shown in a grid below the insights</small></label>';
                     html += '<div class="cc5-edit-concept-items-list">';
-                    (section.conceptItems || []).forEach(function(ci, idx) {
+                    (section.conceptItems || []).forEach(function (ci, idx) {
                         html += '<div class="cc5-edit-concept-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                         html += self.renderIconPickerInput(ci.icon || '', 'cc5-edit-ci-icon', 'Icon name');
@@ -12765,7 +13194,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Steps <small style="font-weight:400;opacity:0.7;"> -  icon shown in step circle; leave blank for step number</small></label>';
                     html += '<div class="cc5-edit-mm-steps-list">';
-                    (section.steps || []).forEach(function(s, idx) {
+                    (section.steps || []).forEach(function (s, idx) {
                         html += '<div class="cc5-edit-mm-step-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                         html += self.renderIconPickerInput(s.icon || '', 'cc5-edit-mm-step-icon', 'Icon (e.g. check)');
@@ -12790,7 +13219,7 @@ define([
                     html += '<label>Options</label>';
                     html += '<div class="cc5-edit-dp-options-list">';
                     var dpLetters = ['A', 'B', 'C', 'D'];
-                    (section.options || []).forEach(function(opt, idx) {
+                    (section.options || []).forEach(function (opt, idx) {
                         html += '<div class="cc5-edit-dp-option-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
                         html += '<strong style="min-width:16px;">' + (dpLetters[idx] || (idx + 1)) + '</strong>';
@@ -12812,7 +13241,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label>Mistakes</label>';
                     html += '<div class="cc5-edit-mistakes-list">';
-                    (section.items || []).forEach(function(item, idx) {
+                    (section.items || []).forEach(function (item, idx) {
                         // v12.07 FIX: Pre-populate picker with resolved display icon, not just stored icon.
                         // When item.icon is empty the card renders a pool-default via step 1 of
                         // resolveScenePartIcon. Without this pre-population the picker showed an
@@ -12836,7 +13265,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label style="color:var(--cc5-green)">What Good Looks Like</label>';
                     html += '<div class="cc5-edit-good-items-list">';
-                    (section.goodItems || []).forEach(function(item, idx) {
+                    (section.goodItems || []).forEach(function (item, idx) {
                         var text = typeof item === 'string' ? item : (item.text || '');
                         html += '<div class="cc5-edit-good-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-good-item-text" value="' + escapeHtml(text) + '">';
@@ -12850,7 +13279,7 @@ define([
                     html += '<div class="cc5-edit-field">';
                     html += '<label style="color:var(--cc5-red)">What to Avoid</label>';
                     html += '<div class="cc5-edit-bad-items-list">';
-                    (section.badItems || []).forEach(function(item, idx) {
+                    (section.badItems || []).forEach(function (item, idx) {
                         var text = typeof item === 'string' ? item : (item.text || '');
                         html += '<div class="cc5-edit-bad-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-bad-item-text" value="' + escapeHtml(text) + '">';
@@ -12912,7 +13341,7 @@ define([
                 html += '<p style="font-size:0.78rem;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.45);border-radius:4px;padding:6px 10px;margin:0 0 12px;">Moving or removing cards will regenerate the voiceover when you save <strong>(5 credits)</strong>.</p>';
                 html += '</div>';
 
-                section.cards.forEach(function(card, cardIdx) {
+                section.cards.forEach(function (card, cardIdx) {
                     var ct = card.cardType || '';
                     var cardLabel = _mcHeadings[ct] || (ct || ('Card ' + (cardIdx + 1)));
                     var _isFirstCard = (cardIdx === 0);
@@ -12960,14 +13389,14 @@ define([
                     // the flip cards and the category sort ------------------------
                     if (_isProseCard) {
                         var _pParas = Array.isArray(card.paragraphs) ? card.paragraphs.slice() : [];
-                        _pParas = _pParas.map(function(p) {
+                        _pParas = _pParas.map(function (p) {
                             return typeof p === 'string' ? p : ((p && (p.text || p.paragraph || p.body)) || '');
                         });
                         while (_pParas.length < 2) { _pParas.push(''); }
                         html += '<div class="cc5-edit-field">';
                         html += '<label>Paragraphs <small>(two, 55-70 words each)</small></label>';
                         html += '<div class="cc5-edit-prose-paras">';
-                        _pParas.forEach(function(para, pIdx) {
+                        _pParas.forEach(function (para, pIdx) {
                             html += '<textarea class="cc5-edit-prose-para" rows="5" data-idx="' + pIdx + '" ' +
                                 'placeholder="Paragraph ' + (pIdx + 1) + '" style="margin-bottom:8px;">' +
                                 escapeHtml(para) + '</textarea>';
@@ -12980,7 +13409,7 @@ define([
                             html += '<div class="cc5-edit-field">';
                             html += '<label>Key Terms <small>(become the Flip &amp; Learn cards)</small></label>';
                             html += '<div class="cc5-edit-prose-terms-list">';
-                            (card.keyTerms || []).forEach(function(t, tIdx) {
+                            (card.keyTerms || []).forEach(function (t, tIdx) {
                                 html += '<div class="cc5-edit-prose-term-item" data-idx="' + tIdx + '">';
                                 html += '<input type="text" class="cc5-edit-prose-term-name" placeholder="Term" value="' + escapeHtml(t.term || '') + '">';
                                 html += '<input type="text" class="cc5-edit-prose-term-def" placeholder="Definition" value="' + escapeHtml(t.definition || '') + '">';
@@ -12993,12 +13422,12 @@ define([
                         }
 
                         if (ct === 'key-takeaways' || ct === 'boundaries') {
-                            [['good', 'Sound Understanding', card.goodItems], ['bad', 'Common Misconceptions', card.badItems]].forEach(function(pair) {
+                            [['good', 'Sound Understanding', card.goodItems], ['bad', 'Common Misconceptions', card.badItems]].forEach(function (pair) {
                                 var kind = pair[0];
                                 html += '<div class="cc5-edit-field">';
                                 html += '<label>' + pair[1] + ' <small>(become the Category Sort items)</small></label>';
                                 html += '<div class="cc5-edit-prose-' + kind + '-list">';
-                                (pair[2] || []).forEach(function(it, iIdx) {
+                                (pair[2] || []).forEach(function (it, iIdx) {
                                     var txt = typeof it === 'string' ? it : ((it && it.text) || '');
                                     html += '<div class="cc5-edit-prose-' + kind + '-item" data-idx="' + iIdx + '">';
                                     html += '<input type="text" class="cc5-edit-prose-' + kind + '-text" placeholder="Statement" value="' + escapeHtml(txt) + '">';
@@ -13022,7 +13451,7 @@ define([
                             html += '<div class="cc5-edit-field">';
                             html += '<label>Scene Parts <small> -  each part shown as an icon-card panel on screen</small></label>';
                             html += '<div class="cc5-edit-scene-parts-list">';
-                            card.sceneParts.forEach(function(part, pidx) {
+                            card.sceneParts.forEach(function (part, pidx) {
                                 // v12.07 FIX: Pre-populate with resolved display icon (multi-card accordion path).
                                 var _mcSpText = part.text || '';
                                 var _mcSpDisplayIcon = part.icon || resolveScenePartIcon('', part.title || '', _mcSpText, pidx, ct, new Set());
@@ -13053,7 +13482,7 @@ define([
                             html += '<div class="cc5-edit-field">';
                             html += '<label>Story Beats <small> -  each sentence shown as a numbered card on screen</small></label>';
                             html += '<div class="cc5-edit-beats-list">';
-                            _mcBeats.forEach(function(beat, bidx) {
+                            _mcBeats.forEach(function (beat, bidx) {
                                 html += '<div class="cc5-edit-beat-item" data-idx="' + bidx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">';
                                 html += '<span style="min-width:22px;height:22px;border-radius:50%;background:var(--cc5-accent,#6366f1);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;">' + (bidx + 1) + '</span>';
                                 html += '<textarea class="cc5-edit-beat-text" rows="2" style="flex:1;">' + escapeHtml(beat) + '</textarea>';
@@ -13078,7 +13507,7 @@ define([
                         html += '<div class="cc5-edit-field">';
                         html += '<label>Concept Insights <small> -  icon / title / text panels shown in a grid</small></label>';
                         html += '<div class="cc5-edit-concept-insights-list">';
-                        (card.conceptInsights || []).forEach(function(ci, ciidx) {
+                        (card.conceptInsights || []).forEach(function (ci, ciidx) {
                             html += '<div class="cc5-edit-concept-insight-item" data-idx="' + ciidx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                             html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                             html += self.renderIconPickerInput(ci.icon || '', 'cc5-edit-cins-icon', 'Icon (e.g. lightbulb)');
@@ -13100,7 +13529,7 @@ define([
                         html += '<div class="cc5-edit-field">';
                         html += '<label>Steps <small> -  icon shown in step circle; leave blank for step number</small></label>';
                         html += '<div class="cc5-edit-mm-steps-list">';
-                        (card.steps || []).forEach(function(s, sidx) {
+                        (card.steps || []).forEach(function (s, sidx) {
                             html += '<div class="cc5-edit-mm-step-item" data-idx="' + sidx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                             html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                             html += self.renderIconPickerInput(s.icon || '', 'cc5-edit-mm-step-icon', 'Icon (e.g. check)');
@@ -13125,7 +13554,7 @@ define([
                         html += '<label>Options</label>';
                         html += '<div class="cc5-edit-dp-options-list">';
                         var _mcDpLetters = ['A','B','C','D'];
-                        (card.options || []).forEach(function(opt, oidx) {
+                        (card.options || []).forEach(function (opt, oidx) {
                             html += '<div class="cc5-edit-dp-option-item" data-idx="' + oidx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                             html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
                             html += '<strong style="min-width:16px;">' + (_mcDpLetters[oidx] || (oidx + 1)) + '</strong>';
@@ -13147,7 +13576,7 @@ define([
                         html += '<div class="cc5-edit-field">';
                         html += '<label>Mistakes</label>';
                         html += '<div class="cc5-edit-mistakes-list">';
-                        (card.items || []).forEach(function(item, midx) {
+                        (card.items || []).forEach(function (item, midx) {
                             // v12.07 FIX: Pre-populate with resolved display icon (mirrors single-section fix).
                             var _mkDisplayIcon = item.icon || resolveScenePartIcon('', item.mistake || '', item.consequence || '', midx, 'mistakes', new Set());
                             html += '<div class="cc5-edit-mistake-item" data-idx="' + midx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
@@ -13167,7 +13596,7 @@ define([
                         html += '<div class="cc5-edit-field">';
                         html += '<label style="color:var(--cc5-green,#10b981)">What Good Looks Like</label>';
                         html += '<div class="cc5-edit-good-items-list">';
-                        (card.goodItems || []).forEach(function(item, giidx) {
+                        (card.goodItems || []).forEach(function (item, giidx) {
                             var gtext = typeof item === 'string' ? item : (item.text || '');
                             html += '<div class="cc5-edit-good-item" data-idx="' + giidx + '">';
                             html += '<input type="text" class="cc5-edit-good-item-text" value="' + escapeHtml(gtext) + '">';
@@ -13180,7 +13609,7 @@ define([
                         html += '<div class="cc5-edit-field">';
                         html += '<label style="color:var(--cc5-red,#ef4444)">What to Avoid</label>';
                         html += '<div class="cc5-edit-bad-items-list">';
-                        (card.badItems || []).forEach(function(item, biidx) {
+                        (card.badItems || []).forEach(function (item, biidx) {
                             var btext = typeof item === 'string' ? item : (item.text || '');
                             html += '<div class="cc5-edit-bad-item" data-idx="' + biidx + '">';
                             html += '<input type="text" class="cc5-edit-bad-item-text" value="' + escapeHtml(btext) + '">';
@@ -13220,7 +13649,7 @@ define([
             
             // WCAG 2.1 AA: Focus management - focus first interactive element
             // v10.54: Fixed  -  was incorrectly targeting .cc5-settings-modal-close
-            setTimeout(function() {
+            setTimeout(function () {
                 $('.cc5-edit-modal-close').first().focus();
             }, 100);
         },
@@ -13229,7 +13658,7 @@ define([
          * Render edit list item (v6.5.0)
          */
         // v7.9.70: Fixed renderEditListItem - was missing handlers for keyfact/do/dont types
-        renderEditListItem: function(type, idx, data) {
+        renderEditListItem: function (type, idx, data) {
             var html = '<div class="cc5-edit-list-item" data-type="' + type + '">';
             
             if (type === 'requirement') {
@@ -13259,7 +13688,7 @@ define([
         /**
          * Save slide edit (v6.5.0)
          */
-        saveSlideEdit: function() {
+        saveSlideEdit: function () {
             var self = this;
             var modal = $('.cc5-edit-modal');
             var saveBtn = modal.find('.cc5-edit-modal-save');
@@ -13301,9 +13730,9 @@ define([
 
             // keyFacts  -  preserve existing (UI was removed at v8.4.6, was silently wiping to [])
             var keyFacts = $('.cc5-edit-keyfacts-list').length
-                ? (function() {
+                ? (function () {
                     var kf = [];
-                    $('.cc5-edit-keyfacts-list .cc5-edit-list-item').each(function() {
+                    $('.cc5-edit-keyfacts-list .cc5-edit-list-item').each(function () {
                         var t = $(this).find('.cc5-edit-item-text').val().trim();
                         if (t) kf.push(t);
                     });
@@ -13314,7 +13743,7 @@ define([
             // Requirements  -  preserve existing when list not rendered
             var requirements = [];
             if ($('.cc5-edit-requirements-list').length) {
-                $('.cc5-edit-requirements-list .cc5-edit-list-item').each(function() {
+                $('.cc5-edit-requirements-list .cc5-edit-list-item').each(function () {
                     var text = $(this).find('.cc5-edit-item-text').val().trim();
                     if (text) requirements.push({ icon: 'check-circle', text: text });
                 });
@@ -13325,7 +13754,7 @@ define([
             // Do list  -  preserve existing when list not rendered
             var doList = [];
             if ($('.cc5-edit-do-list').length) {
-                $('.cc5-edit-do-list .cc5-edit-list-item').each(function() {
+                $('.cc5-edit-do-list .cc5-edit-list-item').each(function () {
                     var text = $(this).find('.cc5-edit-item-text').val().trim();
                     if (text) doList.push(text);
                 });
@@ -13336,7 +13765,7 @@ define([
             // Dont list  -  preserve existing when list not rendered
             var dontList = [];
             if ($('.cc5-edit-dont-list').length) {
-                $('.cc5-edit-dont-list .cc5-edit-list-item').each(function() {
+                $('.cc5-edit-dont-list .cc5-edit-list-item').each(function () {
                     var text = $(this).find('.cc5-edit-item-text').val().trim();
                     if (text) dontList.push(text);
                 });
@@ -13347,7 +13776,7 @@ define([
             // Terminology  -  preserve existing when terminology editor not rendered
             var terminology = [];
             if ($('.cc5-edit-knowledge-terminology').length) {
-                $('.cc5-edit-knowledge-terminology .cc5-edit-term-item').each(function() {
+                $('.cc5-edit-knowledge-terminology .cc5-edit-term-item').each(function () {
                     var term = $(this).find('.cc5-edit-term-name').val().trim();
                     var definition = $(this).find('.cc5-edit-term-definition').val().trim();
                     if (term) terminology.push({ term: term, definition: definition });
@@ -13384,7 +13813,7 @@ define([
             if (predQuestionEl.length) {
                 var predQuestion = (predQuestionEl.val() || '').trim();
                 var predOptions = [];
-                $('.cc5-edit-prediction-option').each(function() {
+                $('.cc5-edit-prediction-option').each(function () {
                     var optVal = $(this).val().trim();
                     if (optVal) predOptions.push(optVal);
                 });
@@ -13422,13 +13851,13 @@ define([
                 // competence-standard
                 if (section.cardType === 'competence-standard') {
                     var stdItemsArr = [];
-                    modal.find('.cc5-edit-standard-text').each(function() { var t=$(this).val().trim(); if(t) stdItemsArr.push(t); });
+                    modal.find('.cc5-edit-standard-text').each(function () { var t=$(this).val().trim(); if(t) stdItemsArr.push(t); });
                     cardData.standardItems = stdItemsArr;
                 }
                 // common-errors
                 if (section.cardType === 'common-errors') {
                     var errItemsArr = [];
-                    modal.find('.cc5-edit-error-item').each(function() {
+                    modal.find('.cc5-edit-error-item').each(function () {
                         var err=$(this).find('.cc5-edit-error-text').val().trim();
                         var cons=$(this).find('.cc5-edit-error-consequence').val().trim();
                         if(err) errItemsArr.push({error:err, consequence:cons});
@@ -13438,10 +13867,10 @@ define([
                 // action-breakdown
                 if (section.cardType === 'action-breakdown') {
                     var actItemsArr = [];
-                    modal.find('.cc5-edit-action-item').each(function() {
+                    modal.find('.cc5-edit-action-item').each(function () {
                         var h=$(this).find('.cc5-edit-action-heading').val().trim();
                         var br=$(this).find('.cc5-edit-action-bullets').val().trim();
-                        var bl=br?br.split('\n').filter(function(b){return b.trim();}):[]; 
+                        var bl=br?br.split('\n').filter(function (b){return b.trim();}):[]; 
                         if(h||bl.length) actItemsArr.push({heading:h, bullets:bl});
                     });
                     cardData.actions = actItemsArr;
@@ -13455,7 +13884,7 @@ define([
                 // plain-english
                 if (section.cardType === 'plain-english') {
                     var kpArr = [];
-                    modal.find('.cc5-edit-keypoint-text').each(function() { var t=$(this).val().trim(); if(t) kpArr.push(t); });
+                    modal.find('.cc5-edit-keypoint-text').each(function () { var t=$(this).val().trim(); if(t) kpArr.push(t); });
                     cardData.keyPoints = kpArr;
                 }
                 // concept-anchor
@@ -13463,7 +13892,7 @@ define([
                     cardData.conceptDefinition = modal.find('#cc5-edit-concept-definition').val() || '';
                     cardData.significance = modal.find('#cc5-edit-significance').val() || '';
                     var cktArr = [];
-                    modal.find('.cc5-edit-card-keyterm-item').each(function() {
+                    modal.find('.cc5-edit-card-keyterm-item').each(function () {
                         var tn=$(this).find('.cc5-edit-cardterm-name').val().trim();
                         var td=$(this).find('.cc5-edit-cardterm-def').val().trim();
                         if(tn) cktArr.push({term:tn, definition:td});
@@ -13473,7 +13902,7 @@ define([
                 // theoretical-framework
                 if (section.cardType === 'theoretical-framework') {
                     var fwArr = [];
-                    modal.find('.cc5-edit-framework-item').each(function() {
+                    modal.find('.cc5-edit-framework-item').each(function () {
                         var fn=$(this).find('.cc5-edit-fw-name').val().trim();
                         var fo=$(this).find('.cc5-edit-fw-originator').val().trim();
                         var fp=$(this).find('.cc5-edit-fw-principle').val().trim();
@@ -13486,16 +13915,16 @@ define([
                 // analytical-lens
                 if (section.cardType === 'analytical-lens') {
                     var cogArr = [];
-                    modal.find('.cc5-edit-cogconsideration-text').each(function() { var t=$(this).val().trim(); if(t) cogArr.push(t); });
+                    modal.find('.cc5-edit-cogconsideration-text').each(function () { var t=$(this).val().trim(); if(t) cogArr.push(t); });
                     cardData.cognitiveConsiderations = cogArr;
                     var apArr = [];
-                    modal.find('.cc5-edit-analysisprompt-text').each(function() { var t=$(this).val().trim(); if(t) apArr.push(t); });
+                    modal.find('.cc5-edit-analysisprompt-text').each(function () { var t=$(this).val().trim(); if(t) apArr.push(t); });
                     cardData.analysisPrompts = apArr;
                 }
                 // ethics-considerations
                 if (section.cardType === 'ethics-considerations') {
                     var ethArr = [];
-                    modal.find('.cc5-edit-ethicsconsideration-item').each(function() {
+                    modal.find('.cc5-edit-ethicsconsideration-item').each(function () {
                         var dim=$(this).find('.cc5-edit-ethicsdim-text').val().trim();
                         var desc=$(this).find('.cc5-edit-ethicsdesc-text').val().trim();
                         if(dim||desc) ethArr.push({dimension:dim, description:desc});
@@ -13505,7 +13934,7 @@ define([
                 // case-study-1 / case-study-2
                 if (section.cardType === 'case-study-1' || section.cardType === 'case-study-2') {
                     var csApArr = [];
-                    modal.find('.cc5-edit-casestudyprompt-text').each(function() { var t=$(this).val().trim(); if(t) csApArr.push(t); });
+                    modal.find('.cc5-edit-casestudyprompt-text').each(function () { var t=$(this).val().trim(); if(t) csApArr.push(t); });
                     cardData.analysisPrompts = csApArr;
                     cardData.keyInsight = modal.find('#cc5-edit-key-insight').val() || '';
                     cardData.criticalReflection = modal.find('#cc5-edit-critical-reflection').val() || '';
@@ -13514,16 +13943,16 @@ define([
                 if (section.cardType === 'business-impact') {
                     cardData.impactStatement = modal.find('#cc5-edit-impact-statement').val() || '';
                     var kmArr = [];
-                    modal.find('.cc5-edit-keymetric-text').each(function() { var t=$(this).val().trim(); if(t) kmArr.push(t); });
+                    modal.find('.cc5-edit-keymetric-text').each(function () { var t=$(this).val().trim(); if(t) kmArr.push(t); });
                     cardData.keyMetrics = kmArr;
                     var consqArr = [];
-                    modal.find('.cc5-edit-consequence-text').each(function() { var t=$(this).val().trim(); if(t) consqArr.push(t); });
+                    modal.find('.cc5-edit-consequence-text').each(function () { var t=$(this).val().trim(); if(t) consqArr.push(t); });
                     cardData.consequences = consqArr;
                 }
                 // action-framework
                 if (section.cardType === 'action-framework') {
                     var stepsArr = [];
-                    modal.find('.cc5-edit-actionstep-item').each(function() {
+                    modal.find('.cc5-edit-actionstep-item').each(function () {
                         var act=$(this).find('.cc5-edit-step-action').val().trim();
                         var det=$(this).find('.cc5-edit-step-detail').val().trim();
                         var tf=$(this).find('.cc5-edit-step-timeframe').val().trim();
@@ -13534,7 +13963,7 @@ define([
                 // risk-card
                 if (section.cardType === 'risk-card') {
                     var risksArr = [];
-                    modal.find('.cc5-edit-risk-item').each(function() {
+                    modal.find('.cc5-edit-risk-item').each(function () {
                         var rt=$(this).find('.cc5-edit-risk-text').val().trim();
                         var rl=$(this).find('.cc5-edit-risk-likelihood').val().trim();
                         var ri=$(this).find('.cc5-edit-risk-impact').val().trim();
@@ -13547,7 +13976,7 @@ define([
                 // policy-alignment
                 if (section.cardType === 'policy-alignment') {
                     var polArr = [];
-                    modal.find('.cc5-edit-policyitem-item').each(function() {
+                    modal.find('.cc5-edit-policyitem-item').each(function () {
                         var pt=$(this).find('.cc5-edit-policy-text').val().trim();
                         var pr=$(this).find('.cc5-edit-policy-requirement').val().trim();
                         var pc=$(this).find('.cc5-edit-policy-consequence').val().trim();
@@ -13558,13 +13987,13 @@ define([
                 // scenario-1 / scenario-2 (optimisationTips + optional PD reflection)
                 if (section.cardType === 'scenario-1' || section.cardType === 'scenario-2') {
                     var otArr = [];
-                    modal.find('.cc5-edit-opttip-text').each(function() { var t=$(this).val().trim(); if(t) otArr.push(t); });
+                    modal.find('.cc5-edit-opttip-text').each(function () { var t=$(this).val().trim(); if(t) otArr.push(t); });
                     cardData.optimisationTips = otArr;
                     if (modal.find('#cc5-edit-turning-point').length) {
                         cardData.turningPoint = modal.find('#cc5-edit-turning-point').val() || '';
                         var rq = modal.find('#cc5-edit-reflection-question').val() || '';
                         var raRaw = modal.find('#cc5-edit-reflection-answers').val() || '';
-                        var raSplit = raRaw ? raRaw.split('\n').filter(function(l){return l.trim();}) : [];
+                        var raSplit = raRaw ? raRaw.split('\n').filter(function (l){return l.trim();}) : [];
                         cardData.reflection = {question: rq, sampleAnswers: raSplit};
                     }
                 }
@@ -13573,14 +14002,14 @@ define([
                     cardData.skillStatement = modal.find('#cc5-edit-skill-statement').val() || '';
                     cardData.relevance = modal.find('#cc5-edit-relevance').val() || '';
                     var kiArr = [];
-                    modal.find('.cc5-edit-keyindicator-text').each(function() { var t=$(this).val().trim(); if(t) kiArr.push(t); });
+                    modal.find('.cc5-edit-keyindicator-text').each(function () { var t=$(this).val().trim(); if(t) kiArr.push(t); });
                     cardData.keyIndicators = kiArr;
                 }
                 // core-framework
                 if (section.cardType === 'core-framework') {
                     cardData.keyPrinciple = modal.find('#cc5-edit-key-principle').val() || '';
                     var fsArr = [];
-                    modal.find('.cc5-edit-frameworkstep-item').each(function() {
+                    modal.find('.cc5-edit-frameworkstep-item').each(function () {
                         var st=$(this).find('.cc5-edit-fwstep-step').val().trim();
                         var ex=$(this).find('.cc5-edit-fwstep-explanation').val().trim();
                         var eg=$(this).find('.cc5-edit-fwstep-example').val().trim();
@@ -13591,7 +14020,7 @@ define([
                 // application-guide
                 if (section.cardType === 'application-guide') {
                     var appArr = [];
-                    modal.find('.cc5-edit-application-item').each(function() {
+                    modal.find('.cc5-edit-application-item').each(function () {
                         var sit=$(this).find('.cc5-edit-app-situation').val().trim();
                         var act=$(this).find('.cc5-edit-app-action').val().trim();
                         var rat=$(this).find('.cc5-edit-app-rationale').val().trim();
@@ -13602,7 +14031,7 @@ define([
                 // common-pitfalls
                 if (section.cardType === 'common-pitfalls') {
                     var pfArr = [];
-                    modal.find('.cc5-edit-pitfall-item').each(function() {
+                    modal.find('.cc5-edit-pitfall-item').each(function () {
                         var pf=$(this).find('.cc5-edit-pitfall-text').val().trim();
                         var pc=$(this).find('.cc5-edit-pitfall-consequence').val().trim();
                         var pcr=$(this).find('.cc5-edit-pitfall-correction').val().trim();
@@ -13618,7 +14047,7 @@ define([
                     var _spItems = modal.find('.cc5-edit-scene-part-item');
                     if (_spItems.length) {
                         var _ssparts = [];
-                        _spItems.each(function() {
+                        _spItems.each(function () {
                             var ic = $(this).find('.cc5-edit-sp-icon').val().trim();
                             var ti = $(this).find('.cc5-edit-sp-title').val().trim();
                             var te = $(this).find('.cc5-edit-sp-text').val().trim();
@@ -13627,7 +14056,7 @@ define([
                         cardData.sceneParts = _ssparts;
                     } else {
                         var _beatTexts = [];
-                        modal.find('.cc5-edit-beat-item').each(function() {
+                        modal.find('.cc5-edit-beat-item').each(function () {
                             var t = $(this).find('.cc5-edit-beat-text').val().trim();
                             if (t) _beatTexts.push(t);
                         });
@@ -13639,13 +14068,13 @@ define([
                 // v10.40: concept-explainer  -  collect insight chips + conceptItems grid
                 if (section.cardType === 'concept-explainer') {
                     var _insightTexts = [];
-                    modal.find('.cc5-edit-insight-item').each(function() {
+                    modal.find('.cc5-edit-insight-item').each(function () {
                         var t = $(this).find('.cc5-edit-insight-text').val().trim();
                         if (t) _insightTexts.push(t);
                     });
                     cardData.content = _insightTexts.join(' ');
                     var _ciArr = [];
-                    modal.find('.cc5-edit-concept-item').each(function() {
+                    modal.find('.cc5-edit-concept-item').each(function () {
                         var icon = $(this).find('.cc5-edit-ci-icon').val().trim();
                         var title = $(this).find('.cc5-edit-ci-title').val().trim();
                         var desc = $(this).find('.cc5-edit-ci-description').val().trim();
@@ -13655,7 +14084,7 @@ define([
                 }
                 if (section.cardType === 'mental-model') {
                     var mmSteps = [];
-                    modal.find('.cc5-edit-mm-step-item').each(function() {
+                    modal.find('.cc5-edit-mm-step-item').each(function () {
                         var stepIcon  = $(this).find('.cc5-edit-mm-step-icon').val().trim();
                         var stepTitle = $(this).find('.cc5-edit-mm-step-title').val().trim();
                         var stepDetail = $(this).find('.cc5-edit-mm-step-detail').val().trim();
@@ -13666,7 +14095,7 @@ define([
                 if (section.cardType === 'decision-point') {
                     cardData.question = modal.find('#cc5-edit-dp-question').val().trim();
                     var dpOptions = [];
-                    modal.find('.cc5-edit-dp-option-item').each(function() {
+                    modal.find('.cc5-edit-dp-option-item').each(function () {
                         var optText = $(this).find('.cc5-edit-dp-option-text').val().trim();
                         var optFeedback = $(this).find('.cc5-edit-dp-feedback').val().trim();
                         var optCorrect = $(this).find('.cc5-edit-dp-correct').is(':checked');
@@ -13676,7 +14105,7 @@ define([
                 }
                 if (section.cardType === 'mistakes') {
                     var mistakeItems = [];
-                    modal.find('.cc5-edit-mistake-item').each(function() {
+                    modal.find('.cc5-edit-mistake-item').each(function () {
                         var m = $(this).find('.cc5-edit-mistake-text').val().trim();
                         var c = $(this).find('.cc5-edit-mistake-consequence').val().trim();
                         var ic = $(this).find('.cc5-edit-mistake-icon').val().trim();
@@ -13687,7 +14116,7 @@ define([
                 if (section.cardType === 'competency-summary') {
                     // v10.39: goodItems/badItems dual-column schema
                     var goodItems = [];
-                    modal.find('.cc5-edit-good-item').each(function() {
+                    modal.find('.cc5-edit-good-item').each(function () {
                         var s = $(this).find('.cc5-edit-good-item-text').val().trim();
                         if (s) goodItems.push(s);
                     });
@@ -13696,7 +14125,7 @@ define([
                     // instead of collapsing the item back to a bare string and destroying it.
                     var _priorBad = Array.isArray(cardData.badItems) ? cardData.badItems : [];
                     var badItems = [];
-                    modal.find('.cc5-edit-bad-item').each(function() {
+                    modal.find('.cc5-edit-bad-item').each(function () {
                         var s = $(this).find('.cc5-edit-bad-item-text').val().trim();
                         if (!s) { return; }
                         var idx = parseInt($(this).data('idx'), 10);
@@ -13720,7 +14149,7 @@ define([
             if (_mcCardBlocks.length > 0) {
                 cardsDataArr = [];
                 var _origCards = (self._editingSection && self._editingSection.cards) ? self._editingSection.cards : [];
-                _mcCardBlocks.each(function() {
+                _mcCardBlocks.each(function () {
                     var _blk = $(this);
                     var _ci  = parseInt(_blk.data('card-idx')); // original index — look up source card
                     var _ct  = _blk.data('card-type') || '';
@@ -13736,7 +14165,7 @@ define([
                     if (['overview','key-concepts','examples-application','key-takeaways',
                          'orientation','foundations','mechanism','in-practice','boundaries'].indexOf(_ct) !== -1) {
                         var _pParas = [];
-                        _blk.find('.cc5-edit-prose-para').each(function() {
+                        _blk.find('.cc5-edit-prose-para').each(function () {
                             var t = $(this).val().trim();
                             if (t) { _pParas.push(t); }
                         });
@@ -13750,17 +14179,17 @@ define([
                         _cu.voiceoverText = '';
                         if (_blk.find('.cc5-edit-prose-terms-list').length) {
                             var _pTerms = [];
-                            _blk.find('.cc5-edit-prose-term-item').each(function() {
+                            _blk.find('.cc5-edit-prose-term-item').each(function () {
                                 var n = $(this).find('.cc5-edit-prose-term-name').val().trim();
                                 var d = $(this).find('.cc5-edit-prose-term-def').val().trim();
                                 if (n && d) { _pTerms.push({ term: n, definition: d }); }
                             });
                             _cu.keyTerms = _pTerms;
                         }
-                        ['good', 'bad'].forEach(function(kind) {
+                        ['good', 'bad'].forEach(function (kind) {
                             if (!_blk.find('.cc5-edit-prose-' + kind + '-list').length) { return; }
                             var _items = [];
-                            _blk.find('.cc5-edit-prose-' + kind + '-item').each(function() {
+                            _blk.find('.cc5-edit-prose-' + kind + '-item').each(function () {
                                 var t = $(this).find('.cc5-edit-prose-' + kind + '-text').val().trim();
                                 if (t) { _items.push({ text: t }); }
                             });
@@ -13771,7 +14200,7 @@ define([
                         // v10.47: collect structured sceneParts[] (JSON format) first;
                         // fall back to flat beats for legacy sections without sceneParts[]
                         var _sparts = [];
-                        _blk.find('.cc5-edit-scene-part-item').each(function() {
+                        _blk.find('.cc5-edit-scene-part-item').each(function () {
                             var ic = $(this).find('.cc5-edit-sp-icon').val().trim();
                             var ti = $(this).find('.cc5-edit-sp-title').val().trim();
                             var te = $(this).find('.cc5-edit-sp-text').val().trim();
@@ -13781,7 +14210,7 @@ define([
                             _cu.sceneParts = _sparts;
                         } else {
                             var _beats = [];
-                            _blk.find('.cc5-edit-beat-item').each(function() {
+                            _blk.find('.cc5-edit-beat-item').each(function () {
                                 var t = $(this).find('.cc5-edit-beat-text').val().trim();
                                 if (t) _beats.push(t);
                             });
@@ -13793,7 +14222,7 @@ define([
                         // v10.47: collect conceptInsights[] (icon/title/text)  -  matches cc-card-slots.js
                         // rendering and buildFullVoiceoverText. Replaces old conceptItems/content fields.
                         var _cinsights = [];
-                        _blk.find('.cc5-edit-concept-insight-item').each(function() {
+                        _blk.find('.cc5-edit-concept-insight-item').each(function () {
                             var ic = $(this).find('.cc5-edit-cins-icon').val().trim();
                             var ti = $(this).find('.cc5-edit-cins-title').val().trim();
                             var te = $(this).find('.cc5-edit-cins-text').val().trim();
@@ -13804,7 +14233,7 @@ define([
                     if (_ct === 'mental-model') {
                         // v10.49: collect step.icon (was missing  -  icon lost on every save)
                         var _steps = [];
-                        _blk.find('.cc5-edit-mm-step-item').each(function() {
+                        _blk.find('.cc5-edit-mm-step-item').each(function () {
                             var ic = $(this).find('.cc5-edit-mm-step-icon').val().trim();
                             var st = $(this).find('.cc5-edit-mm-step-title').val().trim();
                             var de = $(this).find('.cc5-edit-mm-step-detail').val().trim();
@@ -13815,7 +14244,7 @@ define([
                     if (_ct === 'decision-point') {
                         _cu.question = _blk.find('.cc5-edit-card-dp-question').val().trim();
                         var _opts = [];
-                        _blk.find('.cc5-edit-dp-option-item').each(function() {
+                        _blk.find('.cc5-edit-dp-option-item').each(function () {
                             var tx = $(this).find('.cc5-edit-dp-option-text').val().trim();
                             var fb = $(this).find('.cc5-edit-dp-feedback').val().trim();
                             var co = $(this).find('.cc5-edit-dp-correct').is(':checked');
@@ -13825,7 +14254,7 @@ define([
                     }
                     if (_ct === 'mistakes') {
                         var _mits = [];
-                        _blk.find('.cc5-edit-mistake-item').each(function() {
+                        _blk.find('.cc5-edit-mistake-item').each(function () {
                             var mi = $(this).find('.cc5-edit-mistake-text').val().trim();
                             var co = $(this).find('.cc5-edit-mistake-consequence').val().trim();
                             var _ico = $(this).find('.cc5-edit-mistake-icon').val().trim();
@@ -13835,7 +14264,7 @@ define([
                     }
                     if (_ct === 'competency-summary') {
                         var _gi = [];
-                        _blk.find('.cc5-edit-good-item').each(function() {
+                        _blk.find('.cc5-edit-good-item').each(function () {
                             var s = $(this).find('.cc5-edit-good-item-text').val().trim();
                             if (s) _gi.push(s);
                         });
@@ -13859,7 +14288,7 @@ define([
                         // _cu was deep-copied from above.
                         var _priorBadCard = Array.isArray(_cu.badItems) ? _cu.badItems : [];
                         var _bi = [];
-                        _blk.find('.cc5-edit-bad-item').each(function() {
+                        _blk.find('.cc5-edit-bad-item').each(function () {
                             var s = $(this).find('.cc5-edit-bad-item-text').val().trim();
                             if (!s) { return; }
                             var _bidx = parseInt($(this).data('idx'), 10);
@@ -13916,7 +14345,7 @@ define([
                 Ajax.call([{
                     methodname: 'mod_contentcreator_save_slide_edit',
                     args: _slideEditArgs
-                }])[0].done(function(response) {
+                }])[0].done(function (response) {
                 
                 if (response.success) {
                     Notification.addNotification({ message: response.message, type: 'success' });
@@ -13961,10 +14390,10 @@ define([
                         
                         // v9.87: Apply cardData to local manifest (both section level AND cards[0] for multi-card sections)
                         if (Object.keys(cardData).length > 0) {
-                            Object.keys(cardData).forEach(function(k) { sec[k] = cardData[k]; });
+                            Object.keys(cardData).forEach(function (k) { sec[k] = cardData[k]; });
                             // Sync to sec.cards[0] if multi-card section so renderer reads updated values
                             if (sec.cards && sec.cards.length > 0) {
-                                Object.keys(cardData).forEach(function(k) { sec.cards[0][k] = cardData[k]; });
+                                Object.keys(cardData).forEach(function (k) { sec.cards[0][k] = cardData[k]; });
                             }
                         }
 
@@ -14007,6 +14436,8 @@ define([
 
                         // Always clear voiceover cache when content is edited
                         delete self.voiceoverCache[sectionId];
+                        // v13.94.6: drop the fingerprint with the entry it belongs to.
+                        if (self.voiceoverCacheHash) { delete self.voiceoverCacheHash[sectionId]; }
                         if (regenerateVoiceover) {
                             delete sec.voiceoverUrl;
                             delete sec.voiceoverTextHash; // v9.98
@@ -14034,8 +14465,8 @@ define([
                                     method: 'POST',
                                     body: voFormData
                                 })
-                                .then(function(voResp) { return voResp.json(); })
-                                .then(function(voData) {
+                                .then(function (voResp) { return voResp.json(); })
+                                .then(function (voData) {
                                     // v12.51 BUG-CC-AUTOGEN-PENDING: PHP mutex returns {pending:true}
                                     // when another PHP process holds the file lock for this sectionId
                                     // (e.g. the background preload from page load is still running TTS).
@@ -14061,7 +14492,15 @@ define([
                                         sec.voiceoverWordCount = _autoVoText.split(/\s+/).length;
                                         sec.voiceoverSchemaVersion = VOICEOVER_SCHEMA_VERSION;
                                         sec.voiceoverTextHash = voiceoverTextHash(_autoVoText); // v9.98
-                                        self.voiceoverCache[sectionId] = audioUrl;                                        // v12.25: Confirm voiceover is ready
+                                        self.voiceoverCache[sectionId] = audioUrl;
+                        // v13.94.6: stamp the entry so it can be validated on replay.
+                        self.voiceoverCacheHash = self.voiceoverCacheHash || {};
+                        self.voiceoverCacheHash[sectionId] = section.voiceoverTextHash
+                            || voiceoverTextHash(self.buildFullVoiceoverText(section));
+                                        // v13.94.6: stamp the entry so it can be validated on replay.
+                                        self.voiceoverCacheHash = self.voiceoverCacheHash || {};
+                                        self.voiceoverCacheHash[sectionId] = section.voiceoverTextHash
+                                            || voiceoverTextHash(self.buildFullVoiceoverText(section));                                        // v12.25: Confirm voiceover is ready
                                         Notification.addNotification({
                                             message: 'Voiceover updated successfully for this slide.',
                                             type: 'success'
@@ -14076,7 +14515,7 @@ define([
                                         });
                                     }
                                 })
-                                .catch(function(voErr) {
+                                .catch(function (voErr) {
                                     ccError('[VOICEOVER v' + CC_VERSION + '] AUTO-GEN ERROR section ' + sectionId + ': ' + voErr.message);
                                     // v12.25: Warn user on network error
                                     Notification.addNotification({
@@ -14094,13 +14533,13 @@ define([
                 } else {
                     Notification.addNotification({ message: response.message || 'Failed to save', type: 'error' });
                 }
-                }).fail(function(error) {
-                    if (attempt < _slideEditMaxRetries) {                        setTimeout(function() { _attemptSlideEditSave(attempt + 1); }, 1000 * attempt);
+                }).fail(function (error) {
+                    if (attempt < _slideEditMaxRetries) {                        setTimeout(function () { _attemptSlideEditSave(attempt + 1); }, 1000 * attempt);
                     } else {
                         showErrorToast(getLabel('slideSaveFailed') || 'Failed to save changes. Please try again.', 'saveSlideEdit', error);
                         saveBtn.prop('disabled', false).removeClass('cc5-saving');
                     }
-                }).done(function() {
+                }).done(function () {
                     saveBtn.prop('disabled', false).removeClass('cc5-saving');
                 });
             } // end _attemptSlideEditSave
@@ -14112,7 +14551,7 @@ define([
          * v6.5.11: Check if voiceover is enabled
          * v6.6.57: Only for learning slides (activity slides are interactive, no voiceover)
          */
-        playVoiceover: function(sectionId) {
+        playVoiceover: function (sectionId) {
             
             // v7.9.1: Guard against undefined sectionId
             if (!sectionId || sectionId === 'undefined') {
@@ -14189,7 +14628,25 @@ define([
             
             // Check if paused same section - resume playback
             if (this.currentAudio && this.currentAudio.paused && this.currentAudio.currentTime > 0) {
-                this.currentAudio.play();
+                // v13.94.3 FIX-CC-RESUME-SILENT: this called play() and added the playing
+                // class without waiting to see whether playback actually started. A
+                // rejection here (autoplay policy, a lost media element) left the button
+                // showing "playing" over silence, with an unhandled promise rejection and
+                // nothing said to the learner. The initial-play path at ~14797 has handled
+                // this since v13.6; resume never did.
+                var _resumeSelf = this;
+                var _resumePromise = this.currentAudio.play();
+                if (_resumePromise !== undefined) {
+                    _resumePromise.catch(function (e) {
+                        ccError('[CC v' + CC_VERSION + '] audio resume rejected | ' + e.name + ': ' + e.message);
+                        btn.removeClass('cc5-playing cc5-loading cc5-attention');
+                        _resumeSelf.container.find('.cc5-voiceover-pause-btn[data-section-id="' + sectionId + '"]').hide();
+                        Notification.addNotification({
+                            message: 'Audio playback was blocked by the browser. Click play again to retry.',
+                            type: 'warning'
+                        });
+                    });
+                }
                 btn.addClass('cc5-playing');
                 var pauseBtnResume = this.container.find('.cc5-voiceover-pause-btn[data-section-id="' + sectionId + '"]');
                 pauseBtnResume.show();
@@ -14290,8 +14747,37 @@ define([
             // CC-ML-DEBUG v13.4: playVoiceover entry
 
             // Check cache first (v6.4.2 - instant playback)
-            if (this.voiceoverCache[sectionId]) {                this.playCachedVoiceover(this.voiceoverCache[sectionId], btn, sectionId, section);
-                return;
+            //
+            // v13.94.6: the cache entry is now fingerprinted before it is trusted.
+            //
+            // This was the FIRST return path in the function, and the entire staleness
+            // apparatus below it - schema version, word count, text hash - only ever
+            // guarded section.voiceoverUrl. A cache entry was never checked against
+            // anything. The cache is also persisted to sessionStorage and restored on a
+            // 30-minute window, and loadSessionState writes a manifestHash it never reads
+            // back. So: a teacher edits a slide and saves; the edit correctly evicts the
+            // cache in THAT tab; a second tab, or the same tab after a reload inside the
+            // window, restores the pre-edit audio and serves it ahead of every check. The
+            // learner hears the old script over the new text, with no warning.
+            if (this.voiceoverCache[sectionId]) {
+                var _cachedHash = this.voiceoverCacheHash && this.voiceoverCacheHash[sectionId];
+                var _liveHash = '';
+                try {
+                    _liveHash = voiceoverTextHash(this.buildFullVoiceoverText(section));
+                } catch (e) {
+                    _liveHash = '';
+                }
+                // An entry stamped at write time and still matching is good. An UNSTAMPED
+                // entry predates this fix (or came from an older sessionStorage payload) and
+                // cannot be vouched for, so it is discarded rather than trusted.
+                if (_cachedHash && _liveHash && _cachedHash === _liveHash) {
+                    this.playCachedVoiceover(this.voiceoverCache[sectionId], btn, sectionId, section);
+                    return;
+                }
+                ccWarn('[CC] discarding stale cached voiceover for section ' + sectionId
+                    + (_cachedHash ? ' (content changed)' : ' (unstamped entry)'));
+                delete this.voiceoverCache[sectionId];
+                if (this.voiceoverCacheHash) { delete this.voiceoverCacheHash[sectionId]; }
             }
             
             // v11.51 FIX: 'pregenerated' sentinel means audio WAS generated but was stripped
@@ -14446,7 +14932,7 @@ define([
                 ccWarn('[VOICEOVER v' + CC_VERSION + '] WAITING for in-progress load of section ' + sectionId + ' (230s timeout)');
                 btn.addClass('cc5-loading');
                 var waitStartTime = Date.now();
-                var checkInterval = setInterval(function() {
+                var checkInterval = setInterval(function () {
                     // v12.13 FIX: Check voiceoverUrl FIRST  -  set by persistVoiceoverToFileStore
                     // after TTS completes, even when cache key differs from sectionId.
                     // v12.19 FIX: Also check _preloadFallbackUrl  -  saved by _teacherNeedsRegen
@@ -14556,20 +15042,20 @@ define([
             // v12.43: raised from 120s to 200s  -  server logs confirm 4-chunk voiceovers
             // take 143-153s; 120s was timing out on-demand fetches before server responded.
             var _odAbortCtrl = new AbortController();
-            var _odTimeoutId = setTimeout(function() { _odAbortCtrl.abort(); }, 200000);
+            var _odTimeoutId = setTimeout(function () { _odAbortCtrl.abort(); }, 200000);
             CcState.fetchWithDeadline(ajaxUrl, {
                 method: 'POST',
                 body: formData,
                 signal: _odAbortCtrl.signal
             })
-            .then(function(response) {
+            .then(function (response) {
                     clearTimeout(_odTimeoutId);
                     if (!response.ok) {
                         throw new Error('Server returned ' + response.status);
                     }
                     return response.json();
                 })
-                .then(function(data) {
+                .then(function (data) {
                     var _onDemandDur = ((Date.now() - _onDemandStart) / 1000).toFixed(1);
                     // v12.50 BUG-CC-ONDEMAND-PENDING: PHP mutex returns {pending:true} when
                     // another PHP process already holds the file lock for this sectionId.
@@ -14595,6 +15081,10 @@ define([
                     btn.removeClass('cc5-loading');
                     if (data.success && data.audioContent) {                        var audioUrl = 'data:' + (data.audioType || 'audio/ogg') + ';base64,' + data.audioContent;
                         self.voiceoverCache[sectionId] = audioUrl;
+                        // v13.94.6: stamp the entry so it can be validated on replay.
+                        self.voiceoverCacheHash = self.voiceoverCacheHash || {};
+                        self.voiceoverCacheHash[sectionId] = section.voiceoverTextHash
+                            || voiceoverTextHash(self.buildFullVoiceoverText(section));
                         // v9.90 FIX (VO-CANEDIT-SAVEBACK): persist regenerated audio for
                         // canEdit teachers (non-editMode) as well as editMode teachers.
                         //
@@ -14638,7 +15128,7 @@ define([
                         });
                     }
                 })
-                .catch(function(error) {
+                .catch(function (error) {
                     clearTimeout(_odTimeoutId);
                     var _onDemandNetDur = ((Date.now() - _onDemandStart) / 1000).toFixed(1);
                     delete self.voiceoverLoading[sectionId];
@@ -14662,9 +15152,41 @@ define([
                     });
                 });
         },
-        playCachedVoiceover: function(audioDataUrl, btn, sectionId, section, isPreGenerated) {
+        playCachedVoiceover: function (audioDataUrl, btn, sectionId, section, isPreGenerated) {
             var self = this;
-            
+
+            // v13.94.6: this is now the single choke point for starting narration, and it
+            // enforces two things nothing enforced before.
+            //
+            // FIRST - the previous element is paused and dereferenced. The line below used
+            // to assign `this.currentAudio = new Audio(...)` straight over the top of a
+            // PLAYING element. The old element kept its own reference alive through its
+            // event listeners and went on talking, with nothing left pointing at it that
+            // could stop it. Two narrations at once, and the only escape was to navigate.
+            //
+            // SECOND - a staleness check. playVoiceover's guards all run BEFORE its fetch
+            // is issued, and that fetch can take 200s (on-demand) or 230s (wait-poll). A
+            // learner who clicks Play, gives up, and moves on would have the abandoned
+            // request resolve here minutes later and start narrating the slide they left -
+            // on Route 5, arming a timeline sync from that audio onto the DOM of the slide
+            // they are now looking at. A request is only honoured if the section it was
+            // issued for is still the one on screen.
+            if (this.currentAudio) {
+                try { this.currentAudio.pause(); } catch (e) { /* already detached */ }
+            }
+            this.teardownVoiceoverSync();
+
+            var _liveSection = this.getCurrentSectionId();
+            var _wantSection = String(sectionId || '').replace(/_learning$|_activity$/, '');
+            if (_liveSection !== null && _liveSection !== _wantSection) {
+                ccWarn('[CC] discarding stale narration for section ' + sectionId
+                    + ' - learner is now on ' + _liveSection);
+                this.currentAudio = null;
+                this.currentAudioSectionId = null;
+                btn.removeClass('cc5-playing cc5-loading');
+                return;
+            }
+
             this.currentAudio = new Audio(audioDataUrl);
             this.currentAudioSectionId = sectionId;
             
@@ -14672,14 +15194,14 @@ define([
             // paragraph lift from this audio element's timeline.
             this.setupVoiceoverSync(this.currentAudio, section);
 
-            this.currentAudio.onplaying = function() {
+            this.currentAudio.onplaying = function () {
                 btn.addClass('cc5-playing').removeClass('cc5-attention');
                 var pauseBtn = self.container.find('.cc5-voiceover-pause-btn[data-section-id="' + sectionId + '"]');
                 pauseBtn.show();
                 self.container.find('.cc5-nav-chevron.cc5-next').addClass('cc5-disabled').prop('disabled', true);
             };
             
-            this.currentAudio.onended = function() {
+            this.currentAudio.onended = function () {
                 btn.removeClass('cc5-playing');
                 var pauseBtn = self.container.find('.cc5-voiceover-pause-btn[data-section-id="' + sectionId + '"]');
                 pauseBtn.hide();
@@ -14730,7 +15252,7 @@ define([
                     self.container.find('.cc5-fullscore-hint').fadeOut();
                 } else {
                     // Voiceover done but activity still needed - update hint
-                    self.container.find('.cc5-voiceover-hint').fadeOut(300, function() {
+                    self.container.find('.cc5-voiceover-hint').fadeOut(300, function () {
                         // After voiceover hint fades, show activity hint if needed
                         if (self.requireFullScore && !self.container.find('.cc5-fullscore-hint').length) {
                             var hintHtml = '<div class="cc5-fullscore-hint">';
@@ -14742,14 +15264,22 @@ define([
                     });                }
                 // v9.65: Safety re-check  -  ensures button state is correct regardless of
                 // any async re-render that may have occurred while audio was playing.
-                setTimeout(function() { self.updateActivityNavState(); }, 50);
+                setTimeout(function () { self.updateActivityNavState(); }, 50);
             };
             
-            this.currentAudio.onerror = function(e) {
+            this.currentAudio.onerror = function (e) {
                 btn.removeClass('cc5-playing cc5-attention');
                 var pauseBtn = self.container.find('.cc5-voiceover-pause-btn[data-section-id="' + sectionId + '"]');
                 pauseBtn.hide();
                 self.currentAudioSectionId = null;
+                // v13.94.6: enabling the chevron here was not enough to release the gate.
+                // canNavigateNext() still returns false while voiceoverPlayed is false, and
+                // updateActivityNavState() re-disables the button the moment the learner
+                // ticks a checkbox or finishes an activity - so a slide whose audio 404s
+                // handed back a Next that went grey again permanently, with no control on
+                // the page able to clear it. Audio that cannot play cannot be listened to,
+                // so the listen requirement is satisfied by definition.
+                self.voiceoverPlayed = true;
                 self.container.find('.cc5-nav-chevron.cc5-next').removeClass('cc5-disabled').prop('disabled', false);
                 var audioError = self.currentAudio && self.currentAudio.error;
                 var errorCode = audioError ? audioError.code : 'unknown';
@@ -14764,6 +15294,8 @@ define([
                     self.voiceoverRetryCount = (self.voiceoverRetryCount || 0) + 1;
                     if (self.voiceoverRetryCount < 2) {
                         delete self.voiceoverCache[sectionId];
+                        // v13.94.6: drop the fingerprint with the entry it belongs to.
+                        if (self.voiceoverCacheHash) { delete self.voiceoverCacheHash[sectionId]; }
                         self.playVoiceover(sectionId);
                     } else {
                         self.voiceoverRetryCount = 0;
@@ -14779,7 +15311,7 @@ define([
             // are otherwise completely silent — no onerror fires, no console output.
             var _playPromise = this.currentAudio.play();
             if (_playPromise !== undefined) {
-                _playPromise.catch(function(e) {
+                _playPromise.catch(function (e) {
                     ccError('[CC v' + CC_VERSION + '] audio.play() rejected | sectionId=' + sectionId + ' | ' + e.name + ': ' + e.message);
                     btn.removeClass('cc5-playing cc5-loading cc5-attention');
                     self.currentAudio = null;
@@ -14798,7 +15330,7 @@ define([
          * v6.5.14: Checks for pre-generated content first - instant display for students
          * v6.5.43: Save/restore scroll position on open/close
          */
-        showDocumentModal: function(docId, docName) {
+        showDocumentModal: function (docId, docName) {
             var self = this;
             
             // v6.5.43: Save scroll position before opening modal
@@ -14908,7 +15440,7 @@ define([
             // v6.5.49: Edit button click handler
             if (this.canEdit && hasPregenerated) {
                 var contentToEdit = (pregenerated && pregenerated.content) ? pregenerated.content : cachedContent;
-                $('.cc5-doc-edit-btn').on('click', function() {
+                $('.cc5-doc-edit-btn').on('click', function () {
                     self.toggleDocumentEditMode(docId, docName, contentToEdit);
                 });
             }
@@ -14923,7 +15455,7 @@ define([
          * Toggle document edit mode (v6.5.49)
          * Switches between view and edit mode for document content
          */
-        toggleDocumentEditMode: function(docId, docName, currentContent) {
+        toggleDocumentEditMode: function (docId, docName, currentContent) {
             var self = this;
             var $body = $('.cc5-doc-modal-body');
             var $editBtn = $('.cc5-doc-edit-btn');
@@ -14961,7 +15493,7 @@ define([
                 $editBtn.html('<svg class="cc5-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>' + getLabel('saving'));
                 
                 // Save to manifest
-                this.saveDocumentContent(docId, newContent, function(success) {
+                this.saveDocumentContent(docId, newContent, function (success) {
                     if (success) {
                         // Replace textarea with rendered content
                         var viewHtml = '<div class="cc5-doc-content">' + newContent + '</div>';
@@ -14987,7 +15519,7 @@ define([
         /**
          * Save document content to manifest (v6.5.49)
          */
-        saveDocumentContent: function(docId, content, callback) {
+        saveDocumentContent: function (docId, content, callback) {
             
             // Update local manifest
             if (!this.manifest.documentExamples) {
@@ -15014,9 +15546,9 @@ define([
                     cmid: this.cmid,
                     manifest: JSON.stringify(this.manifest)
                 }
-            }])[0].done(function(response) {
+            }])[0].done(function (response) {
                 callback(response.success !== false);
-            }).fail(function(error) {
+            }).fail(function (error) {
                 showErrorToast(getLabel('documentSaveFailed') || 'Could not save document. Please try again.', 'saveDocumentContent', error);
                 callback(false);
             });
@@ -15025,7 +15557,7 @@ define([
         /**
          * Show save notification (v6.5.49)
          */
-        showDocumentSaveNotification: function(success) {
+        showDocumentSaveNotification: function (success) {
             var message = success ? getLabel('documentSaved') : 'Error saving document';
             var className = success ? 'cc5-doc-save-success' : 'cc5-doc-save-error';
             
@@ -15041,8 +15573,8 @@ define([
             $('.cc5-doc-modal-body').prepend($notification);
             
             // Auto-remove after 3 seconds
-            setTimeout(function() {
-                $notification.fadeOut(300, function() {
+            setTimeout(function () {
+                $notification.fadeOut(300, function () {
                     $(this).remove();
                 });
             }, 3000);
@@ -15052,7 +15584,7 @@ define([
          * v7.1.8: Show PDF viewer modal at specific page
          * Opens uploaded reference PDFs in an embedded viewer with page navigation
          */
-        showPdfModal: function(docId, sectionTitle, targetPage) {
+        showPdfModal: function (docId, sectionTitle, targetPage) {
             var self = this;
             
             // Save scroll position
@@ -15164,7 +15696,7 @@ define([
             $overlay.data('pdf-base64', refDoc.pdfBase64);
             
             // Bind close handlers
-            $overlay.on('click', function(e) {
+            $overlay.on('click', function (e) {
                 if ($(e.target).hasClass('cc5-pdf-modal-overlay')) {
                     // v7.2.62: Cleanup Blob URL before removing
                     var blobUrl = $overlay.find('.cc5-pdf-iframe').data('blob-url');
@@ -15176,7 +15708,7 @@ define([
                 }
             });
             
-            $overlay.find('.cc5-pdf-modal-close').on('click', function(e) {
+            $overlay.find('.cc5-pdf-modal-close').on('click', function (e) {
                 e.preventDefault();
                 $overlay.remove();
                 if (typeof self.savedScrollPosition === 'number') {
@@ -15185,7 +15717,7 @@ define([
             });
             
             // Bind page navigation
-            $overlay.on('click', '.cc5-pdf-nav-btn', function(e) {
+            $overlay.on('click', '.cc5-pdf-nav-btn', function (e) {
                 e.preventDefault();
                 var action = $(this).data('action');
                 var currentPage = $overlay.data('current-page');
@@ -15228,7 +15760,7 @@ define([
             });
             
             // Escape key to close
-            $(document).one('keydown.cc5pdfmodal', function(e) {
+            $(document).one('keydown.cc5pdfmodal', function (e) {
                 if (e.key === 'Escape') {
                     $overlay.remove();
                     if (typeof self.savedScrollPosition === 'number') {
@@ -15241,7 +15773,7 @@ define([
         /**
          * Fetch document content from API (v6.5.3)
          */
-        fetchDocumentContent: function(docId, docName, context) {
+        fetchDocumentContent: function (docId, docName, context) {
             var self = this;
             
             // Build request data
@@ -15265,13 +15797,13 @@ define([
             Ajax.call([{
                 methodname: 'mod_contentcreator_generate_document_example',
                 args: requestData
-            }])[0].done(function(response) {
+            }])[0].done(function (response) {
                 if (response.success && response.content) {
                     self.renderDocumentContent(response.content, docName, context);
                 } else {
                     self.renderDocumentError(response.error || 'Failed to generate document example');
                 }
-            }).fail(function(error) {
+            }).fail(function (error) {
                 // Show fallback content instead of error.
                 ccWarn('generate_document_example failed, showing fallback', error);
                 self.renderDocumentFallback(docId, docName, context);
@@ -15281,7 +15813,7 @@ define([
         /**
          * Render document content in modal (v6.5.3)
          */
-        renderDocumentContent: function(content, docName, context) {
+        renderDocumentContent: function (content, docName, context) {
             var $body = $('.cc5-doc-modal-body');
             
             var html = '';
@@ -15308,7 +15840,7 @@ define([
         /**
          * Render document error in modal (v6.5.3)
          */
-        renderDocumentError: function(errorMessage) {
+        renderDocumentError: function (errorMessage) {
             var $body = $('.cc5-doc-modal-body');
             
             var html = '<div class="cc5-doc-modal-error">';
@@ -15323,7 +15855,7 @@ define([
          * Render fallback document content (v6.5.3)
          * Shows static example when API is unavailable
          */
-        renderDocumentFallback: function(docId, docName, context) {
+        renderDocumentFallback: function (docId, docName, context) {
             var $body = $('.cc5-doc-modal-body');
             
             // Static fallback content based on document type
@@ -15353,7 +15885,7 @@ define([
         /**
          * Get fallback document content for common document types (v6.5.3)
          */
-        getFallbackDocumentContent: function(docId, context) {
+        getFallbackDocumentContent: function (docId, context) {
             var fallbacks = {
                 swms: '<h3>Safe Work Method Statement</h3><p>A SWMS is a document that sets out the high-risk work activities, hazards, and controls for a specific task.</p><table><tr><th>Step</th><th>Hazard</th><th>Control</th></tr><tr><td>1. Site setup</td><td>Slips, trips, falls</td><td>Clear work area, use barriers</td></tr><tr><td>2. Equipment check</td><td>Faulty equipment</td><td>Pre-start inspection</td></tr><tr><td>3. Task execution</td><td>Task-specific hazards</td><td>Follow SOPs, use PPE</td></tr></table>',
                 jsa: '<h3>Job Safety Analysis</h3><p>A JSA breaks down a job into steps and identifies hazards and controls for each step.</p><table><tr><th>Job Step</th><th>Potential Hazard</th><th>Control Measure</th></tr><tr><td>Prepare work area</td><td>Slips, trips</td><td>Clean and organise area</td></tr><tr><td>Set up equipment</td><td>Strain injury</td><td>Use correct lifting technique</td></tr><tr><td>Complete task</td><td>Various</td><td>Follow established procedures</td></tr></table>',
@@ -15363,7 +15895,7 @@ define([
             };
             
             // v6.6.6: Fixed banned phrase "ensure compliance"  ->  use observable action language
-            return fallbacks[docId] || '<h3>' + escapeHtml(docId.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); })) + '</h3><p>This workplace document supports organisational policies and procedures.</p><p>Key elements typically include:</p><ul><li>Purpose and scope</li><li>Responsibilities</li><li>Procedure steps</li><li>Required approvals</li><li>Record keeping</li></ul>';
+            return fallbacks[docId] || '<h3>' + escapeHtml(docId.replace(/_/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); })) + '</h3><p>This workplace document supports organisational policies and procedures.</p><p>Key elements typically include:</p><ul><li>Purpose and scope</li><li>Responsibilities</li><li>Procedure steps</li><li>Required approvals</li><li>Record keeping</li></ul>';
         }
     };
 
@@ -15371,7 +15903,7 @@ define([
         /**
          * Initialize the Content Creator v6 Player
          */
-        init: function(config) {
+        init: function (config) {
             // v13.86: bring the player's labels under Moodle's string API. One batched
             // request; the private table serves until it lands, and for any key a site
             // has not overridden.
@@ -15390,13 +15922,13 @@ define([
             // Rather than rewrite six families of CSS, resolve the theme once and stamp
             // every class name they look for, then keep it in step with the environment.
             applyThemeClasses();
-            $(document).ready(function() {
+            $(document).ready(function () {
                 var container = $('#contentcreator-app');
 
                 Ajax.call([{
                     methodname: 'mod_contentcreator_get_manifest',
                     args: { cmid: config.cmid }
-                }])[0].done(function(response) {
+                }])[0].done(function (response) {
                     if (!response.success || !response.manifest) {
                         // v9.72 FIX: Missing else for empty/failed manifest  -  previously left container
                         // blank with no visible feedback when manifest was empty.
@@ -15433,19 +15965,19 @@ define([
                         if (!mf || !Array.isArray(mf.topics)) return;
                         var _hookTitles = ['The Setting', 'The Details', 'What Happened', 'The Pressure'];
                         var _applyTitles = ['Back on the Job', 'The New Challenge', 'The Decision Moment', 'The Right Move'];
-                        mf.topics.forEach(function(topic) {
+                        mf.topics.forEach(function (topic) {
                             if (!topic || !Array.isArray(topic.sections)) return;
-                            topic.sections.forEach(function(section) {
+                            topic.sections.forEach(function (section) {
                                 // Normalize cards[] array (7-card unified sections)
                                 if (Array.isArray(section.cards)) {
-                                    section.cards.forEach(function(card) {
+                                    section.cards.forEach(function (card) {
                                         if (card.cardType !== 'hook-scenario' && card.cardType !== 'applied-scenario') return;
                                         // Alias normalization (mirrors generator.js normalizeCardSchema)
                                         if (!card.sceneParts && card.scene_parts) { card.sceneParts = card.scene_parts; }
                                         if (!card.sceneParts && card.parts && Array.isArray(card.parts)) { card.sceneParts = card.parts; }
                                         // Normalize existing sceneParts field names
                                         if (Array.isArray(card.sceneParts)) {
-                                            card.sceneParts = card.sceneParts.map(function(p) {
+                                            card.sceneParts = card.sceneParts.map(function (p) {
                                                 if (typeof p === 'string') return { title: '', icon: '', text: p };
                                                 return {
                                                     title: p.title || p.label || '',
@@ -15472,7 +16004,7 @@ define([
                                                 var _flat = (card.content || card.description || card.bodyText || '').trim();
                                                 if (_flat) {
                                                     var _sents = _flat.match(/[^.!?]+[.!?][\s]*/g) || [_flat];
-                                                    _sents = _sents.map(function(s) { return s.trim(); }).filter(Boolean);
+                                                    _sents = _sents.map(function (s) { return s.trim(); }).filter(Boolean);
                                                     card.sceneParts = [];
                                                     for (var _pi = 0; _pi < 4; _pi++) {
                                                         var _s = Math.floor(_pi * _sents.length / 4);
@@ -15489,7 +16021,7 @@ define([
                                     if (!section.sceneParts && section.scene_parts) { section.sceneParts = section.scene_parts; }
                                     if (!section.sceneParts && section.parts && Array.isArray(section.parts)) { section.sceneParts = section.parts; }
                                     if (Array.isArray(section.sceneParts)) {
-                                        section.sceneParts = section.sceneParts.map(function(p) {
+                                        section.sceneParts = section.sceneParts.map(function (p) {
                                             if (typeof p === 'string') return { title: '', icon: '', text: p };
                                             return {
                                                 title: p.title || p.label || '',
@@ -15502,7 +16034,7 @@ define([
                                         var _flatS = (section.content || section.description || section.bodyText || '').trim();
                                         if (_flatS) {
                                             var _sentsS = _flatS.match(/[^.!?]+[.!?][\s]*/g) || [_flatS];
-                                            _sentsS = _sentsS.map(function(s) { return s.trim(); }).filter(Boolean);
+                                            _sentsS = _sentsS.map(function (s) { return s.trim(); }).filter(Boolean);
                                             var _titlesS = section.cardType === 'applied-scenario' ? _applyTitles : _hookTitles;
                                             section.sceneParts = [];
                                             for (var _piS = 0; _piS < 4; _piS++) {
@@ -15549,7 +16081,7 @@ define([
                         emptyHtml += '</div>';
                         container.html(emptyHtml);
                     }
-                }).fail(function(error) {
+                }).fail(function (error) {
                     ccError('Manifest could not be loaded', error);
                     // The refresh handler is bound in JS rather than emitted as an inline
                     // onclick attribute, which any Content-Security-Policy without
@@ -15558,7 +16090,7 @@ define([
                         '</div><h3>Unable to Load Content</h3><p>We encountered a problem loading this activity. ' +
                         'Please try refreshing the page.</p>' +
                         '<button type="button" class="cc5-btn cc5-retry-btn">Refresh Page</button></div>');
-                    container.find('.cc5-retry-btn').on('click', function() {
+                    container.find('.cc5-retry-btn').on('click', function () {
                         window.location.reload();
                     });
                 });

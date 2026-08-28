@@ -50,48 +50,64 @@ class provider implements
      * @return collection The updated collection.
      */
     public static function get_metadata(collection $collection): collection {
-        $collection->add_database_table('contentcreator_attempts', [
-            'userid' => 'privacy:metadata:contentcreator_attempts:userid',
-            'score' => 'privacy:metadata:contentcreator_attempts:score',
-            'maxscore' => 'privacy:metadata:contentcreator_attempts:maxscore',
-            'completed' => 'privacy:metadata:contentcreator_attempts:completed',
-            'responses' => 'privacy:metadata:contentcreator_attempts:responses',
-            'attemptdata' => 'privacy:metadata:contentcreator_attempts:attemptdata',
-            'timecreated' => 'privacy:metadata:contentcreator_attempts:timecreated',
-            'timemodified' => 'privacy:metadata:contentcreator_attempts:timemodified',
-        ], 'privacy:metadata:contentcreator_attempts');
+        $collection->add_database_table(
+            'contentcreator_attempts',
+            [
+                'userid' => 'privacy:metadata:contentcreator_attempts:userid',
+                'score' => 'privacy:metadata:contentcreator_attempts:score',
+                'maxscore' => 'privacy:metadata:contentcreator_attempts:maxscore',
+                'completed' => 'privacy:metadata:contentcreator_attempts:completed',
+                'responses' => 'privacy:metadata:contentcreator_attempts:responses',
+                'attemptdata' => 'privacy:metadata:contentcreator_attempts:attemptdata',
+                'timecreated' => 'privacy:metadata:contentcreator_attempts:timecreated',
+                'timemodified' => 'privacy:metadata:contentcreator_attempts:timemodified',
+            ],
+            'privacy:metadata:contentcreator_attempts'
+        );
 
-        $collection->add_database_table('contentcreator_progress', [
-            'userid' => 'privacy:metadata:contentcreator_progress:userid',
-            'progress' => 'privacy:metadata:contentcreator_progress:progress',
-            'timecreated' => 'privacy:metadata:contentcreator_progress:timecreated',
-            'timemodified' => 'privacy:metadata:contentcreator_progress:timemodified',
-        ], 'privacy:metadata:contentcreator_progress');
+        $collection->add_database_table(
+            'contentcreator_progress',
+            [
+                'userid' => 'privacy:metadata:contentcreator_progress:userid',
+                'progress' => 'privacy:metadata:contentcreator_progress:progress',
+                'timecreated' => 'privacy:metadata:contentcreator_progress:timecreated',
+                'timemodified' => 'privacy:metadata:contentcreator_progress:timemodified',
+            ],
+            'privacy:metadata:contentcreator_progress'
+        );
 
-        $collection->add_database_table('contentcreator_checklist', [
-            'userid' => 'privacy:metadata:contentcreator_checklist:userid',
-            'cmid' => 'privacy:metadata:contentcreator_checklist:cmid',
-            'topicid' => 'privacy:metadata:contentcreator_checklist:topicid',
-            'complete' => 'privacy:metadata:contentcreator_checklist:complete',
-            'timecreated' => 'privacy:metadata:contentcreator_checklist:timecreated',
-            'timemodified' => 'privacy:metadata:contentcreator_checklist:timemodified',
-        ], 'privacy:metadata:contentcreator_checklist');
+        $collection->add_database_table(
+            'contentcreator_checklist',
+            [
+                'userid' => 'privacy:metadata:contentcreator_checklist:userid',
+                'cmid' => 'privacy:metadata:contentcreator_checklist:cmid',
+                'topicid' => 'privacy:metadata:contentcreator_checklist:topicid',
+                'complete' => 'privacy:metadata:contentcreator_checklist:complete',
+                'timecreated' => 'privacy:metadata:contentcreator_checklist:timecreated',
+                'timemodified' => 'privacy:metadata:contentcreator_checklist:timemodified',
+            ],
+            'privacy:metadata:contentcreator_checklist'
+        );
 
-        // v13.86: the two file areas were never declared. Neither holds personal data -
+        // v13.86: The two file areas were never declared. Neither holds personal data -
         // both store audio generated FROM ACTIVITY CONTENT authored by a teacher, never
         // from anything a learner wrote - but a provider that omits a stored file area
         // is incomplete, and a reviewer cannot verify the absence of personal data from
         // silence.
         $collection->add_subsystem_link('core_files', [], 'privacy:metadata:files');
 
-        $collection->add_external_location_link('lmslabs', [
-            'siteid' => 'privacy:metadata:lmslabs:siteid',
-            'apikey' => 'privacy:metadata:lmslabs:apikey',
-            'prompt' => 'privacy:metadata:lmslabs:prompt',
-            'topictext' => 'privacy:metadata:lmslabs:topictext',
-            'cardtext' => 'privacy:metadata:lmslabs:cardtext',
-            'documentcontent' => 'privacy:metadata:lmslabs:documentcontent',
-        ], 'privacy:metadata:lmslabs');
+        $collection->add_external_location_link(
+            'lmslabs',
+            [
+                'siteid' => 'privacy:metadata:lmslabs:siteid',
+                'apikey' => 'privacy:metadata:lmslabs:apikey',
+                'prompt' => 'privacy:metadata:lmslabs:prompt',
+                'topictext' => 'privacy:metadata:lmslabs:topictext',
+                'cardtext' => 'privacy:metadata:lmslabs:cardtext',
+                'documentcontent' => 'privacy:metadata:lmslabs:documentcontent',
+            ],
+            'privacy:metadata:lmslabs'
+        );
 
         return $collection;
     }
@@ -113,11 +129,14 @@ class provider implements
                   JOIN {contentcreator_attempts} ca ON ca.contentcreatorid = cc.id
                  WHERE ca.userid = :userid";
 
-        $contextlist->add_from_sql($sql, [
-            'contextlevel' => CONTEXT_MODULE,
-            'modname' => 'contentcreator',
-            'userid' => $userid,
-        ]);
+        $contextlist->add_from_sql(
+            $sql,
+            [
+                'contextlevel' => CONTEXT_MODULE,
+                'modname' => 'contentcreator',
+                'userid' => $userid,
+            ]
+        );
 
         $sql = "SELECT ctx.id
                   FROM {context} ctx
@@ -126,11 +145,14 @@ class provider implements
                   JOIN {contentcreator_progress} cp ON cp.cmid = cm.id
                  WHERE cp.userid = :userid";
 
-        $contextlist->add_from_sql($sql, [
-            'contextlevel' => CONTEXT_MODULE,
-            'modname' => 'contentcreator',
-            'userid' => $userid,
-        ]);
+        $contextlist->add_from_sql(
+            $sql,
+            [
+                'contextlevel' => CONTEXT_MODULE,
+                'modname' => 'contentcreator',
+                'userid' => $userid,
+            ]
+        );
 
         $sql = "SELECT ctx.id
                   FROM {context} ctx
@@ -139,11 +161,14 @@ class provider implements
                   JOIN {contentcreator_checklist} ck ON ck.cmid = cm.id
                  WHERE ck.userid = :userid";
 
-        $contextlist->add_from_sql($sql, [
-            'contextlevel' => CONTEXT_MODULE,
-            'modname' => 'contentcreator',
-            'userid' => $userid,
-        ]);
+        $contextlist->add_from_sql(
+            $sql,
+            [
+                'contextlevel' => CONTEXT_MODULE,
+                'modname' => 'contentcreator',
+                'userid' => $userid,
+            ]
+        );
 
         return $contextlist;
     }
@@ -168,26 +193,38 @@ class provider implements
                   JOIN {modules} m ON m.id = cm.module AND m.name = :modname
                  WHERE cm.id = :cmid";
 
-        $userlist->add_from_sql('userid', $sql, [
-            'modname' => 'contentcreator',
-            'cmid' => $context->instanceid,
-        ]);
+        $userlist->add_from_sql(
+            'userid',
+            $sql,
+            [
+                'modname' => 'contentcreator',
+                'cmid' => $context->instanceid,
+            ]
+        );
 
         $sql = "SELECT cp.userid
                   FROM {contentcreator_progress} cp
                  WHERE cp.cmid = :cmid";
 
-        $userlist->add_from_sql('userid', $sql, [
-            'cmid' => $context->instanceid,
-        ]);
+        $userlist->add_from_sql(
+            'userid',
+            $sql,
+            [
+                'cmid' => $context->instanceid,
+            ]
+        );
 
         $sql = "SELECT ck.userid
                   FROM {contentcreator_checklist} ck
                  WHERE ck.cmid = :cmid";
 
-        $userlist->add_from_sql('userid', $sql, [
-            'cmid' => $context->instanceid,
-        ]);
+        $userlist->add_from_sql(
+            'userid',
+            $sql,
+            [
+                'cmid' => $context->instanceid,
+            ]
+        );
     }
 
     /**
@@ -215,10 +252,13 @@ class provider implements
                 continue;
             }
 
-            $attempts = $DB->get_records('contentcreator_attempts', [
-                'contentcreatorid' => $cm->instance,
-                'userid' => $user->id,
-            ]);
+            $attempts = $DB->get_records(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $cm->instance,
+                    'userid' => $user->id,
+                ]
+            );
 
             if ($attempts) {
                 $attemptdata = [];
@@ -239,10 +279,13 @@ class provider implements
                 );
             }
 
-            $progress = $DB->get_record('contentcreator_progress', [
-                'cmid' => $cm->id,
-                'userid' => $user->id,
-            ]);
+            $progress = $DB->get_record(
+                'contentcreator_progress',
+                [
+                    'cmid' => $cm->id,
+                    'userid' => $user->id,
+                ]
+            );
 
             if ($progress) {
                 writer::with_context($context)->export_data(
@@ -255,10 +298,13 @@ class provider implements
                 );
             }
 
-            $checklist = $DB->get_records('contentcreator_checklist', [
-                'cmid' => $cm->id,
-                'userid' => $user->id,
-            ]);
+            $checklist = $DB->get_records(
+                'contentcreator_checklist',
+                [
+                    'cmid' => $cm->id,
+                    'userid' => $user->id,
+                ]
+            );
 
             if ($checklist) {
                 $checklistdata = [];
@@ -326,18 +372,27 @@ class provider implements
                 continue;
             }
 
-            $DB->delete_records('contentcreator_attempts', [
-                'contentcreatorid' => $cm->instance,
-                'userid' => $userid,
-            ]);
-            $DB->delete_records('contentcreator_progress', [
-                'cmid' => $cm->id,
-                'userid' => $userid,
-            ]);
-            $DB->delete_records('contentcreator_checklist', [
-                'cmid' => $cm->id,
-                'userid' => $userid,
-            ]);
+            $DB->delete_records(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $cm->instance,
+                    'userid' => $userid,
+                ]
+            );
+            $DB->delete_records(
+                'contentcreator_progress',
+                [
+                    'cmid' => $cm->id,
+                    'userid' => $userid,
+                ]
+            );
+            $DB->delete_records(
+                'contentcreator_checklist',
+                [
+                    'cmid' => $cm->id,
+                    'userid' => $userid,
+                ]
+            );
         }
     }
 

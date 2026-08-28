@@ -11,7 +11,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define(['mod_contentcreator/cc-voiceover'], function(CcVoiceover) {
+define(['mod_contentcreator/cc-voiceover'], function (CcVoiceover) {
     'use strict';
 
     var LANGUAGE_LABELS = CcVoiceover.LANGUAGE_LABELS;
@@ -21,7 +21,7 @@ define(['mod_contentcreator/cc-voiceover'], function(CcVoiceover) {
      * @param {string} str
      * @returns {string}
      */
-    var _esc = function(str) {
+    var _esc = function (str) {
         return String(str)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -50,13 +50,13 @@ define(['mod_contentcreator/cc-voiceover'], function(CcVoiceover) {
      *                                 language tab is selected.
      * @returns {string} HTML string for the .cc5-lang-switcher bar, or ''.
      */
-    var renderLangSwitcherHtml = function(manifest, activeLang) {
+    var renderLangSwitcherHtml = function (manifest, activeLang, getLabel) {
         var ml = manifest.multiLanguage;
         if (!ml || !ml.length) {
             return '';
         }
         // Only render when at least one additional language has generated topics.
-        var hasPopulated = ml.some(function(e) { return e.topics && e.topics.length > 0; });
+        var hasPopulated = ml.some(function (e) { return e.topics && e.topics.length > 0; });
         if (!hasPopulated) {
             return '';
         }
@@ -65,14 +65,27 @@ define(['mod_contentcreator/cc-voiceover'], function(CcVoiceover) {
         var primaryVoiceLang = (manifest.voiceSettings && manifest.voiceSettings.language) || 'en-AU';
         var primaryLabel     = LANGUAGE_LABELS[primaryVoiceLang] || primaryVoiceLang;
 
-        var html = '<div class="cc5-lang-switcher" role="tablist" aria-label="Select content language">';
+        // v13.94.3: two fixes here. The aria-label was a hardcoded English string - the
+        // one piece of text a screen-reader user hears from this control, in a widget
+        // whose entire purpose is switching language. It now comes from the label
+        // bundle. And the role was "tablist"/"tab" with aria-selected, which is an
+        // invalid pattern: there is no tabpanel anywhere and no aria-controls, so
+        // assistive tech announced tabs that point at nothing and promised arrow-key
+        // navigation that does not exist. These are toggle buttons, so they are now a
+        // labelled group of buttons with aria-pressed, which is what they actually are.
+        var _lbl = (typeof getLabel === 'function')
+            ? getLabel
+            : function (k) { return k === 'selectContentLanguage' ? 'Select content language' : k; };
+
+        var html = '<div class="cc5-lang-switcher" role="group" aria-label="' +
+            _esc(_lbl('selectContentLanguage')) + '">';
         html += '<button type="button" class="cc5-lang-pill' +
             (activeLangCode === '' ? ' cc5-lang-pill-active' : '') +
-            '" data-lang="" role="tab" aria-selected="' +
+            '" data-lang="" aria-pressed="' +
             (activeLangCode === '' ? 'true' : 'false') +
             '" data-testid="btn-lang-primary">' + _esc(primaryLabel) + '</button>';
 
-        ml.forEach(function(entry) {
+        ml.forEach(function (entry) {
             if (!entry.topics || !entry.topics.length) {
                 return;
             }
@@ -81,7 +94,7 @@ define(['mod_contentcreator/cc-voiceover'], function(CcVoiceover) {
             html += '<button type="button" class="cc5-lang-pill' +
                 (isActive ? ' cc5-lang-pill-active' : '') +
                 '" data-lang="' + _esc(entry.code) +
-                '" role="tab" aria-selected="' + (isActive ? 'true' : 'false') +
+                '" aria-pressed="' + (isActive ? 'true' : 'false') +
                 '" data-testid="btn-lang-' + _esc(entry.code) + '">' +
                 _esc(label) + '</button>';
         });

@@ -17,7 +17,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(Prompts, CcState) {
+define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (Prompts, CcState) {
     'use strict';
 
     // v8.3.7: Debug logging with version prefix
@@ -966,7 +966,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         if (mode === 'topicstext') {
             var ttOrder = TOPICSTEXT_CARD_ORDER.slice();
             if (activitiesEnabled === false) {
-                ttOrder = ttOrder.filter(function(t) { return t !== 'decision-point'; });
+                ttOrder = ttOrder.filter(function (t) { return t !== 'decision-point'; });
             }
             return ttOrder;
         }
@@ -978,7 +978,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         var order = UNIFIED_CARD_ORDER.slice();
         // v11.11: When activities are disabled, exclude decision-point card
         if (activitiesEnabled === false) {
-            order = order.filter(function(t) { return t !== 'decision-point'; });
+            order = order.filter(function (t) { return t !== 'decision-point'; });
         }
         return order;
     };
@@ -1003,15 +1003,15 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
     const CC_PROSE_TYPES = ['overview', 'key-concepts', 'examples-application', 'key-takeaways',
         'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'];
 
-    const normaliseProseParagraphs = function(raw) {
+    const normaliseProseParagraphs = function (raw) {
         var out = [];
-        var push = function(v) {
+        var push = function (v) {
             if (typeof v !== 'string') { return; }
             // Literal escape sequences first, then real newlines and <br>.
             var t = v.replace(/\\r\\n|\\n|\\r/g, '\n')
                      .replace(/<br\s*\/?>/gi, '\n')
                      .replace(/<\/?p[^>]*>/gi, '\n');
-            t.split(/\n{1,}/).forEach(function(part) {
+            t.split(/\n{1,}/).forEach(function (part) {
                 var cleaned = part
                     .replace(/^\s*(?:[-*•–—]|\d+[.)])\s+/, '') // list markers
                     .replace(/\*\*(.+?)\*\*/g, '$1')                          // bold
@@ -1024,7 +1024,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         };
         if (typeof raw === 'string') { push(raw); }
         else if (Array.isArray(raw)) {
-            raw.forEach(function(item) {
+            raw.forEach(function (item) {
                 if (typeof item === 'string') { push(item); }
                 else if (item && typeof item === 'object') {
                     push(item.text || item.paragraph || item.body || item.content || '');
@@ -1228,21 +1228,21 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 if (!card.keyTerms && card.key_terms) { card.keyTerms = card.key_terms; delete card.key_terms; }
                 if (!card.keyTerms && card.terms) { card.keyTerms = card.terms; delete card.terms; }
                 if (Array.isArray(card.keyTerms)) {
-                    card.keyTerms = card.keyTerms.map(function(t) {
+                    card.keyTerms = card.keyTerms.map(function (t) {
                         if (typeof t === 'string') { return { term: t, definition: '' }; }
                         return {
                             term: (t && (t.term || t.title || t.name)) || '',
                             definition: (t && (t.definition || t.text || t.meaning || t.description)) || ''
                         };
-                    }).filter(function(t) { return t.term && t.definition; });
+                    }).filter(function (t) { return t.term && t.definition; });
                 }
                 if (!card.goodItems && card.good_items) { card.goodItems = card.good_items; delete card.good_items; }
                 if (!card.badItems && card.bad_items) { card.badItems = card.bad_items; delete card.bad_items; }
-                ['goodItems', 'badItems'].forEach(function(k) {
+                ['goodItems', 'badItems'].forEach(function (k) {
                     if (Array.isArray(card[k])) {
-                        card[k] = card[k].map(function(it) {
+                        card[k] = card[k].map(function (it) {
                             return typeof it === 'string' ? { text: it } : { text: (it && (it.text || it.item || it.statement)) || '' };
-                        }).filter(function(it) { return it.text; });
+                        }).filter(function (it) { return it.text; });
                     }
                 });
             }
@@ -1270,7 +1270,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 // fallback if a later pass answers in the vendor's field names rather than
                 // the internal ones. Removing it was implicated in the v13.87 content loss.
                 if (Array.isArray(card.sceneParts)) {
-                    card.sceneParts = card.sceneParts.map(function(p) {
+                    card.sceneParts = card.sceneParts.map(function (p) {
                         if (typeof p === 'string') return { title: '', icon: '', text: p };
                         // v10.99: widened alias  -  also reads detail/body/narrative in case
                         // the AI or a repair pass used a non-standard field name.
@@ -1299,7 +1299,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                         var _flat97 = (card.content || card.description || '').trim();
                         if (_flat97) {
                             var _sents97 = _flat97.match(/[^.!?]+[.!?][\s]*/g) || [_flat97];
-                            _sents97 = _sents97.map(function(s) { return s.trim(); }).filter(Boolean);
+                            _sents97 = _sents97.map(function (s) { return s.trim(); }).filter(Boolean);
                             // v13.85 FIX BUG-SCENE-QUADRANT-DUPES: this always built FOUR
                             // quadrants, and the Math.max(start + 1, end) floor guaranteed a
                             // non-empty slice - so with fewer than four sentences the
@@ -1338,11 +1338,18 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                     card.legalLink = {
                         legislationName: card.heading || '',
                         legalObligation: card.keyInfo,
-                        scenarioConnection: card.summaryLine || ''
+                        scenarioConnection: card.summaryLine || '',
+                        // v13.94.3: the panel this feeds is headed "What the law says".
+                        // PD is explicitly the NON-regulatory route, so on PD that banner
+                        // was appearing over an invented obligation - a module about
+                        // giving feedback would grow a legal panel. The PD prompt now
+                        // asks for a principle or professional standard instead, and this
+                        // tells the renderer which banner to use.
+                        labelKey: (mode === 'pd') ? 'whatThePrincipleRequires' : 'whatTheLawSays'
                     };
                 }
                 if (Array.isArray(card.conceptInsights)) {
-                    card.conceptInsights = card.conceptInsights.map(function(i) {
+                    card.conceptInsights = card.conceptInsights.map(function (i) {
                         if (typeof i === 'string') return { title: '', icon: '', text: i };
                         return { title: i.title || i.label || '', icon: i.icon || '', text: i.text || i.content || i.description || '' };
                     });
@@ -1355,7 +1362,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 if (!card.steps && card.frameworkSteps) { card.steps = card.frameworkSteps; }
                 // v10.43: normalise step fields  -  preserve icon field
                 if (Array.isArray(card.steps)) {
-                    card.steps = card.steps.map(function(s) {
+                    card.steps = card.steps.map(function (s) {
                         if (typeof s === 'string') return { step: s, detail: '', icon: '' };
                         var step = s.step || s.action || s.title || '';
                         var detail = s.detail || s.description || s.explanation || '';
@@ -1377,7 +1384,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                     card.question = card.heading || card.summaryLine;
                 }
                 if (!card.options && (Array.isArray(card.standardItems) || Array.isArray(card.errorItems))) {
-                    var _readOpt = function(o) {
+                    var _readOpt = function (o) {
                         if (typeof o === 'string') { return { text: o, feedback: '' }; }
                         if (!o) { return { text: '', feedback: '' }; }
                         return {
@@ -1389,22 +1396,22 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                     // ignored rather than added, because a decision point must have exactly
                     // one right answer  -  the expansion pass sometimes pads these arrays.
                     var _right = null;
-                    (card.standardItems || []).some(function(s) {
+                    (card.standardItems || []).some(function (s) {
                         var o = _readOpt(s);
                         if (o.text) { _right = o; return true; }
                         return false;
                     });
-                    var _wrong = (card.errorItems || []).map(_readOpt).filter(function(o) { return o.text; });
+                    var _wrong = (card.errorItems || []).map(_readOpt).filter(function (o) { return o.text; });
                     if (_right && _wrong.length) {
                         card.options = [{ text: _right.text, feedback: _right.feedback, correct: true }]
-                            .concat(_wrong.map(function(o) {
+                            .concat(_wrong.map(function (o) {
                                 return { text: o.text, feedback: o.feedback, correct: false };
                             }));
                     }
                 }
                 // normalise option fields: {text,feedback,correct/isCorrect}
                 if (Array.isArray(card.options)) {
-                    card.options = card.options.map(function(o) {
+                    card.options = card.options.map(function (o) {
                         if (typeof o === 'string') return { text: o, feedback: '', correct: false };
                         return {
                             text: o.text || o.option || o.label || '',
@@ -1418,29 +1425,29 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                     var letters = { A:0,B:1,C:2,D:3,a:0,b:1,c:2,d:3 };
                     var correctIdx = letters[card.correctOption];
                     if (correctIdx !== undefined) {
-                        card.options.forEach(function(o, i) { o.correct = (i === correctIdx); });
+                        card.options.forEach(function (o, i) { o.correct = (i === correctIdx); });
                     }
                     delete card.correctOption;
                 }
             }
             if (card.cardType === 'mistakes') {
-                if (!card.items && card.mistakes) { card.items = card.mistakes.map(function(m) { return typeof m === 'string' ? { mistake: m } : m; }); delete card.mistakes; }
+                if (!card.items && card.mistakes) { card.items = card.mistakes.map(function (m) { return typeof m === 'string' ? { mistake: m } : m; }); delete card.mistakes; }
                 // v13.85: `icon` was dropped on every one of these paths, so the icon the
                 // prompt asks for and the renderer reads never survived the middle of the
                 // pipe - resolveScenePartIcon() always fell back to keyword guessing.
                 if (!card.items && card.errorItems) {
-                    card.items = card.errorItems.map(function(e) {
+                    card.items = card.errorItems.map(function (e) {
                         return { mistake: e.error || e.pitfall || '', icon: e.icon || '', consequence: e.consequence || '' };
                     });
                 }
                 if (!card.items && card.pitfallItems) {
-                    card.items = card.pitfallItems.map(function(p) {
+                    card.items = card.pitfallItems.map(function (p) {
                         return { mistake: p.pitfall || p.error || '', icon: p.icon || '', consequence: p.consequence || '' };
                     });
                 }
                 // normalise item fields
                 if (Array.isArray(card.items)) {
-                    card.items = card.items.map(function(item) {
+                    card.items = card.items.map(function (item) {
                         if (typeof item === 'string') return { mistake: item, icon: '', consequence: '' };
                         return {
                             mistake: item.mistake || item.error || item.pitfall || '',
@@ -1453,23 +1460,23 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             }
             if (card.cardType === 'competency-summary') {
                 // v10.39: goodItems / badItems dual-column schema  -  normalise all AI field aliases
-                const _toStrArray = function(arr) {
+                const _toStrArray = function (arr) {
                     if (!Array.isArray(arr)) return [];
-                    return arr.map(function(item) {
+                    return arr.map(function (item) {
                         if (typeof item === 'string') return item.trim();
                         return (item.text || item.behaviour || item.criterion || item.item || '').trim();
                     }).filter(Boolean);
                 };
                 // v13.85: like _toStrArray but keeps the consequence alongside the label.
-                const _toPairArray = function(arr) {
+                const _toPairArray = function (arr) {
                     if (!Array.isArray(arr)) return [];
-                    return arr.map(function(item) {
+                    return arr.map(function (item) {
                         if (typeof item === 'string') { return { text: item.trim(), consequence: '' }; }
                         return {
                             text: (item.text || item.error || item.behaviour || item.criterion || item.item || '').trim(),
                             consequence: (item.consequence || item.impact || item.result || '').trim()
                         };
-                    }).filter(function(p) { return p.text; });
+                    }).filter(function (p) { return p.text; });
                 };
                 // goodItems aliases
                 if (!card.goodItems) {
@@ -1493,7 +1500,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                         // consequence away - about fifty words of generated, billed
                         // content per section, deleted before anything could render it.
                         // The prompt asks for a 10+ word consequence on every item.
-                        _vendorBad = card.errorItems.map(function(e) {
+                        _vendorBad = card.errorItems.map(function (e) {
                             if (typeof e === 'string') return { text: e, consequence: '' };
                             return {
                                 text: e.error || e.mistake || e.pitfall || e.text || '',
@@ -2018,16 +2025,16 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
      * @param {Number} depth Recursion guard.
      * @return {String} Space-joined prose.
      */
-    const harvestCardText = function(node, depth) {
+    const harvestCardText = function (node, depth) {
         depth = depth || 0;
         if (depth > 6 || node === null || node === undefined) { return ''; }
         if (typeof node === 'string') { return node; }
         if (Array.isArray(node)) {
-            return node.map(function(item) { return harvestCardText(item, depth + 1); })
+            return node.map(function (item) { return harvestCardText(item, depth + 1); })
                 .filter(Boolean).join(' ');
         }
         if (typeof node !== 'object') { return ''; }
-        return Object.keys(node).map(function(key) {
+        return Object.keys(node).map(function (key) {
             if (CC_NON_PROSE_KEYS.test(key)) { return ''; }
             return harvestCardText(node[key], depth + 1);
         }).filter(Boolean).join(' ');
@@ -2043,7 +2050,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
      * @param {String} word A single word.
      * @return {Number} Syllable count, minimum 1.
      */
-    const countSyllables = function(word) {
+    const countSyllables = function (word) {
         var w = String(word).toLowerCase().replace(/[^a-z]/g, '');
         if (!w) { return 0; }
         if (w.length <= 3) { return 1; }
@@ -2059,10 +2066,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
      * @param {String} text Prose.
      * @return {Array} Trimmed, non-empty sentences.
      */
-    const splitSentences = function(text) {
+    const splitSentences = function (text) {
         return String(text || '')
             .split(/(?<=[.!?])\s+/)
-            .map(function(sentence) { return sentence.trim(); })
+            .map(function (sentence) { return sentence.trim(); })
             .filter(Boolean);
     };
 
@@ -2083,10 +2090,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
      * @param {String} mode Route mode.
      * @return {Array} Human-readable issue strings for the repair prompt.
      */
-    const readabilityIssues = function(cards, mode) {
+    const readabilityIssues = function (cards, mode) {
         var target = CC_READABILITY_TARGET[mode] || CC_READABILITY_TARGET.pd;
         var issues = [];
-        cards.forEach(function(card, i) {
+        cards.forEach(function (card, i) {
             var text = harvestCardText(card, 0);
             var sentences = splitSentences(text);
             if (!sentences.length) { return; }
@@ -2097,7 +2104,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             // would skew it. Sentence length below is checked at any card size,
             // because one 43-word sentence is a defect however short the card.
             if (words.length >= 25) {
-                var syllables = words.reduce(function(sum, w) { return sum + countSyllables(w); }, 0);
+                var syllables = words.reduce(function (sum, w) { return sum + countSyllables(w); }, 0);
                 var grade = (0.39 * (words.length / sentences.length))
                     + (11.8 * (syllables / words.length)) - 15.59;
                 // 1.5 grades of tolerance: repair the real outliers, not every card.
@@ -2109,7 +2116,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
 
             var longest = '';
             var longestWords = 0;
-            sentences.forEach(function(sentence) {
+            sentences.forEach(function (sentence) {
                 var n = sentence.split(/\s+/).filter(Boolean).length;
                 if (n > longestWords) { longestWords = n; longest = sentence; }
             });
@@ -2161,13 +2168,13 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
      * @param {String} mode Route mode.
      * @return {Array} Human-readable issue strings for the repair prompt.
      */
-    const depthIssues = function(cards, mode) {
+    const depthIssues = function (cards, mode) {
         const target = CC_DEPTH_TARGET[mode] || CC_DEPTH_TARGET.pd;
         const thin = [];
         let packWords = 0;
         let scored = 0;
 
-        cards.forEach(function(card, i) {
+        cards.forEach(function (card, i) {
             // decision-point is a question with four options - it is meant to be
             // short, and holding it to a prose floor would push the model to pad the
             // one card where padding actively hurts.
@@ -2206,11 +2213,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             // Collapse to one instruction naming every offender, so the repair pass
             // sees all of them rather than the first five.
             issues.push(thin.length + ' cards are below the ' + target.floor + '-word floor and MUST ' +
-                'be expanded: ' + thin.map(function(t) {
+                'be expanded: ' + thin.map(function (t) {
                     return 'card ' + t.n + ' (' + t.type + ', ' + t.words + ' words)';
                 }).join(', ') + '. Target ' + target.band + ' words each.' + how);
         } else {
-            thin.forEach(function(t) {
+            thin.forEach(function (t) {
                 issues.push('Card ' + t.n + ' (' + t.type + '): only ' + t.words + ' words of visible ' +
                     'content, the floor is ' + target.floor + ' and the working band is ' +
                     target.band + '.' + how);
@@ -2226,11 +2233,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
      * @param {Array} cards Normalised cards.
      * @return {Array} Human-readable issue strings.
      */
-    const duplicateSentenceIssues = function(cards) {
+    const duplicateSentenceIssues = function (cards) {
         var seen = {};
         var issues = [];
-        cards.forEach(function(card, i) {
-            splitSentences(harvestCardText(card, 0)).forEach(function(sentence) {
+        cards.forEach(function (card, i) {
+            splitSentences(harvestCardText(card, 0)).forEach(function (sentence) {
                 var norm = sentence.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
                 // Short lines are headings and boilerplate, not duplicated prose.
                 if (norm.split(' ').length < 8) { return; }
@@ -2273,7 +2280,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
      * @param {Array} repaired Cards returned by the repair pass.
      * @return {Array} Repaired cards with any lost content restored.
      */
-    const mergePreservingContent = function(previous, repaired) {
+    const mergePreservingContent = function (previous, repaired) {
         if (!Array.isArray(previous) || !Array.isArray(repaired)) { return repaired; }
         if (previous.length !== repaired.length) {
             // Card count changed: the repair is not a card-for-card edit, so there is
@@ -2282,7 +2289,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             return repaired;
         }
 
-        const hasContent = function(v) {
+        const hasContent = function (v) {
             if (v === null || v === undefined) { return false; }
             if (typeof v === 'string') { return v.trim().length > 0; }
             if (Array.isArray(v)) { return v.length > 0; }
@@ -2291,15 +2298,15 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         };
 
         let restored = 0;
-        const merged = repaired.map(function(next, i) {
+        const merged = repaired.map(function (next, i) {
             const prev = previous[i] || {};
             const out = {};
             // Start from every key either side knows about.
             const keys = {};
-            Object.keys(prev).forEach(function(k) { keys[k] = true; });
-            Object.keys(next || {}).forEach(function(k) { keys[k] = true; });
+            Object.keys(prev).forEach(function (k) { keys[k] = true; });
+            Object.keys(next || {}).forEach(function (k) { keys[k] = true; });
 
-            Object.keys(keys).forEach(function(k) {
+            Object.keys(keys).forEach(function (k) {
                 const nv = next ? next[k] : undefined;
                 const pv = prev[k];
                 if (hasContent(nv)) { out[k] = nv; return; }
@@ -2391,7 +2398,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         var TITLED_CARD_TYPES = ['competency-summary', 'case-study-1', 'case-study-2'];
 
         // Per-card structure
-        cards.forEach(function(card, i) {
+        cards.forEach(function (card, i) {
             var prefix = 'Card ' + (i + 1) + ' (' + (card.cardType || 'unknown') + ')';
             if (!card.cardType) { issues.push(prefix + ': missing cardType'); }
             if (TITLED_CARD_TYPES.indexOf(card.cardType) !== -1 && !card.title && !card.heading) {
@@ -2583,15 +2590,16 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                         // Cache under key  -  safe across topics/modes/countries in same batch
                         context._promptCache[cacheKey] = systemPrompt;
                     }
-                    // getLangPrefixForUserPrompt: explicit belt-and-suspenders call so the
-                    // mandatory language gate is present even if buildFiveCardUserPrompt
-                    // is updated to drop its internal prefix in a future refactor.
-                    const _langGate = (typeof Prompts.getLangPrefixForUserPrompt === 'function')
-                        ? Prompts.getLangPrefixForUserPrompt(context)
-                        : '';
+                    // v13.94.3: the "belt-and-suspenders" language gate that used to be
+                    // prepended here was emitting the 5-line LANGUAGE OVERRIDE block
+                    // TWICE, back to back, at the top of every non-English user prompt -
+                    // all five route builders in prompts.js already start with
+                    // getLangPrefixForUserPrompt(context) as their first token. Removed;
+                    // if a future refactor drops the internal prefix, restore it there
+                    // rather than duplicating it here.
                     prompt = {
                         system: systemPrompt,
-                        user: _langGate + Prompts.buildFiveCardUserPrompt(context, topic)
+                        user: Prompts.buildFiveCardUserPrompt(context, topic)
                     };
                     contentType = attemptCount === 1 ? 'five-card-sequence' : 'five-card-retry';
                 } else {
@@ -2678,7 +2686,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 if (softIssues.length) {
                     ccLog('%c[QUALITY] ' + softIssues.length + ' measured issue(s) on attempt ' + attemptCount + ':',
                         'color: #f59e0b; font-weight: bold;');
-                    softIssues.forEach(function(issue, i) { ccLog('%c  ' + (i + 1) + '. ' + issue, 'color: #f59e0b;'); });
+                    softIssues.forEach(function (issue, i) { ccLog('%c  ' + (i + 1) + '. ' + issue, 'color: #f59e0b;'); });
                 }
 
                 // v13.89: the measured quality checks are REPORT-ONLY.
@@ -2724,7 +2732,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                         // The v13.87 proof run could not tell whether thin output came
                         // from generation or from the repair pass, because nothing
                         // recorded the size of what was produced. Now it does.
-                        contentWords: (function() {
+                        contentWords: (function () {
                             try {
                                 return harvestCardText(card, 0).split(/\s+/).filter(Boolean).length;
                             } catch (e) { return null; }
@@ -2744,7 +2752,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 lastIssues = validation.issues.slice(0, 5);
                 lastScore = { cards: fixedCards };
                 ccLog('%c[VALIDITY GATE] Structural issues (top ' + lastIssues.length + '):', 'color: #ef4444;');
-                lastIssues.forEach(function(issue, i) { ccLog('%c  ' + (i + 1) + '. ' + issue, 'color: #ef4444;'); });
+                lastIssues.forEach(function (issue, i) { ccLog('%c  ' + (i + 1) + '. ' + issue, 'color: #ef4444;'); });
                 if (attemptCount >= MAX_ATTEMPTS) {
                     ccLog('%c[VALIDITY GATE] All attempts exhausted  -  returning failed sequence', 'color: #ef4444; font-weight: bold;');
                 }
@@ -2797,7 +2805,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         // placeholder sequence only when there is nothing worth keeping.
         const _salvage = (lastScore && Array.isArray(lastScore.cards)) ? lastScore.cards : null;
         const _salvageWords = _salvage
-            ? _salvage.reduce(function(sum, c) {
+            ? _salvage.reduce(function (sum, c) {
                 try { return sum + harvestCardText(c, 0).split(/\s+/).filter(Boolean).length; } catch (e) { return sum; }
             }, 0)
             : 0;
@@ -2806,7 +2814,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             ccError('[VALIDITY GATE] All attempts exhausted  -  KEEPING ' + _salvageWords
                 + ' words of generated content across ' + _salvage.length
                 + ' card(s) rather than discarding it. Flagged for review: ' + failReason);
-            return _salvage.map(function(card) {
+            return _salvage.map(function (card) {
                 return Object.assign({}, card, {
                     // failed:false keeps the card RENDERABLE - player5.js:4795 and
                     // cc-card-slots hide a card flagged failed, which would defeat the
@@ -3097,7 +3105,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
             if (lbl.includes('DECISION POINT')) {
                 const letters = ['A', 'B', 'C', 'D'];
                 const correctLetter = (fld(t, 'CORRECT') || '').trim().toUpperCase().replace(/[^A-D]/, '');
-                const options = letters.map(function(L) {
+                const options = letters.map(function (L) {
                     const text = fld(t, 'OPTION ' + L);
                     if (!text) return null;
                     return {
@@ -3183,10 +3191,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         ccDiag('Activities: enabled=' + (plannedManifest?.activitySettings?.enabled ?? true));
         ccDiag('Options: ' + JSON.stringify(options));
         if (plannedManifest?.topics) {
-            plannedManifest.topics.forEach(function(t, i) {
+            plannedManifest.topics.forEach(function (t, i) {
                 var secs = t.sections || t.subtopics || [];
                 ccDiag('  Topic ' + (i+1) + ': "' + (t.title || t.name || 'UNTITLED') + '" | sections=' + secs.length);
-                secs.forEach(function(s, j) {
+                secs.forEach(function (s, j) {
                     ccDiag('    Section ' + (j+1) + ': "' + (s.title || s.name || 'UNTITLED') + '" | id=' + (s.id || 'NO ID'));
                 });
             });
@@ -3382,11 +3390,18 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 // paragraph, which is exactly the equivalent material.
                 const _ttParas = Array.isArray(imageFirstCard.paragraphs) ? imageFirstCard.paragraphs : null;
                 const _ttProse = _ttParas
-                    ? _ttParas.map(function(p) { return typeof p === 'string' ? p : (p && (p.text || p.paragraph)) || ''; })
+                    ? _ttParas.map(function (p) { return typeof p === 'string' ? p : (p && (p.text || p.paragraph)) || ''; })
                         .filter(Boolean).slice(0, 2).join(' ')
                     : '';
                 const scenarioContent = imageFirstCard.content || imageFirstCard.description || _ttProse || '';
-                const scenarioTitle   = imageFirstCard.title || imageFirstCard.heading || '';
+                // v13.94.4: Topics-and-Text prose cards carry NO title or heading - the four
+                // headings are supplied by the platform and deliberately stripped from the
+                // card (see CcState.PROSE_HEADINGS). So scenarioTitle was always empty here
+                // and scenarioContext came out byte-identical to description, sending the
+                // vendor the same paragraph twice under two names. The section title is the
+                // real subject line on this route, so use it.
+                const scenarioTitle   = imageFirstCard.title || imageFirstCard.heading
+                    || (_ttParas ? (section.title || '') : '');
                 const scenarioContext = scenarioTitle ? (scenarioTitle + '. ' + scenarioContent).trim() : scenarioContent;
 
                 // v13.91.2: send the route's TRUE value.
@@ -3405,11 +3420,31 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                 // therefore removed so the correct branch is actually reached.
                 const _imageRoute = plannedManifest.context?.mode || section.route || 'vet';
 
+                // v13.94.4: pass the PARENT TOPIC as topicTitle.
+                //
+                // generateTopicImage() resolves topicTitle as
+                // `section.topicTitle || context.unitTitle || section.title`. Nothing sets
+                // section.topicTitle, and Topics and Text has no unitTitle - so it fell all
+                // the way through to section.title and the vendor received the same string
+                // twice, as both slideTitle and topicTitle, with the parent topic never
+                // sent at all. On a route whose images are editorial rather than workplace
+                // that parent topic is the single most useful piece of framing there is:
+                // a subtopic called "Sleep stages and what each one does" is a very
+                // different picture under "Foundations of Sleep Science" than it would be
+                // under "Shift Rostering". Verified missing by capturing the outgoing
+                // request payload, not by reading.
+                const _parentTopicTitle = topic?.title || topic?.name || '';
+
                 const enrichedSection = {
                     ...section,
                     description:     imageFirstCard.description || imageFirstCard.content || _ttProse || section.description || '',
                     keyPoints:       (imageFirstCard.requirements || imageFirstCard.keyPoints || section.keyPoints || []).slice(0, 3),
                     route:           _imageRoute,
+                    // Only override when it adds something: an identical parent and section
+                    // title is no more use than the fallback it replaces.
+                    topicTitle:      (_parentTopicTitle && _parentTopicTitle !== section.title)
+                        ? _parentTopicTitle
+                        : (section.topicTitle || ''),
                     scenarioContext: scenarioContext.substring(0, 600),
                 };
                 ccDiag('generate() Launching image generation for section "' + (section?.title || 'UNTITLED') + '" | enriched desc=' + (enrichedSection.description || '').substring(0, 80));
@@ -3597,7 +3632,9 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
      * @param {Function} onProgress    - Optional callback({current, total, itemLabel})
      * @returns {Promise<Array>} Translated topics (same structure, text values in target lang)
      */
-    const translateTopicsForLanguage = async (primaryTopics, targetLang, cmid, onProgress) => {
+    // v13.94.3: routeMode added. The callAI route argument below was hard-coded 'vet',
+    // so every route's translation pass was attributed to VET server-side.
+    const translateTopicsForLanguage = async (primaryTopics, targetLang, cmid, onProgress, routeMode) => {
         const langName = (typeof Prompts.getLanguageName === 'function')
             ? Prompts.getLanguageName(targetLang)
             : targetLang;
@@ -3626,8 +3663,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
 
         // Collect all sections with translatable content (skip activity slides)
         const allEntries = [];
-        topics.forEach(function(topic) {
-            (topic.sections || []).forEach(function(section) {
+        topics.forEach(function (topic) {
+            (topic.sections || []).forEach(function (section) {
                 if (section.slideType !== 'activity') {
                     allEntries.push({ section: section });
                 }
@@ -3669,7 +3706,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
                     cmid,
                     'ml_translate_' + String(section.id || 'sec'),
                     0,
-                    'vet',
+                    routeMode || 'vet',
                     targetLang
                 );
 
@@ -3724,8 +3761,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function(P
         let _mlTrIdx = 0;
         while (_mlTrIdx < allEntries.length) {
             while (_mlTrInFlight.length < 3 && _mlTrIdx < allEntries.length) {
-                (function(_entry) {
-                    const _p = translateOne(_entry).then(function() {
+                (function (_entry) {
+                    const _p = translateOne(_entry).then(function () {
                         const _i = _mlTrInFlight.indexOf(_p);
                         if (_i >= 0) _mlTrInFlight.splice(_i, 1);
                     });

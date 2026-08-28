@@ -45,14 +45,16 @@ class save_manifest extends external_api {
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
-            'cmid' => new external_value(PARAM_INT, 'Course module ID'),
-            'manifest' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON manifest data',
-            ),
-            'version' => new external_value(PARAM_TEXT, 'Manifest version', VALUE_DEFAULT, ''),
-        ]);
+        return new external_function_parameters(
+            [
+                'cmid' => new external_value(PARAM_INT, 'Course module ID'),
+                'manifest' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON manifest data',
+                ),
+                'version' => new external_value(PARAM_TEXT, 'Manifest version', VALUE_DEFAULT, ''),
+            ]
+        );
     }
 
     /**
@@ -73,33 +75,46 @@ class save_manifest extends external_api {
         // Release session lock before long-running DB operation to prevent blocking other requests.
         \core\session\manager::write_close();
 
-        try {
-            $params = self::validate_parameters(self::execute_parameters(), [
+        // v13.94.3: Parameter validation, context validation and the capability check used to
+        // sit INSIDE the try below, so a rejected parameter, a bad context or a genuine
+        // permission failure all came back as HTTP 200 with the same "could not be saved"
+        // string. That hides an access-control failure from the caller, from the browser
+        // console and from the site's logs, and it means Moodle's own web-service error
+        // layer - which knows how to report these three properly - never sees them. They now
+        // run outside the try and are allowed to throw.
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            [
                 'cmid' => $cmid,
                 'manifest' => $manifest,
                 'version' => $version,
-            ]);
+            ]
+        );
 
-            debugging('Content Creator manifest size: ' . round(strlen($params['manifest']) / 1024) .
-                ' KB, cmid: ' . $params['cmid'], DEBUG_DEVELOPER);
+        $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
+        $context = context_module::instance($cm->id);
+        self::validate_context($context);
 
-            $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
-            $context = context_module::instance($cm->id);
-            self::validate_context($context);
+        // Version 11.39 FIX: Mirror the flexible capability check from ajax.php.
+        // Custom roles cloned from editingteacher do not inherit new plugin capabilities,
+        // so 'mod/contentcreator:addinstance' (the old check) was too strict and caused
+        // "Failed to save generated content" for legitimate editing teachers.
+        // Accept 'moodle/course:manageactivities' as a fallback — every genuine
+        // editing teacher has this regardless of whether their role explicitly lists
+        // mod/contentcreator capabilities.
+        // v13.86: the moodle/course:manageactivities fallback was removed. It made
+        // mod/contentcreator:manage advisory - a CAP_PROHIBIT on it denied nothing.
+        // Roles that already hold manageactivities are granted :manage by the
+        // upgrade step in db/upgrade.php, so no legitimate editing teacher loses
+        // access.
+        require_capability('mod/contentcreator:manage', $context);
 
-            // Version 11.39 FIX: Mirror the flexible capability check from ajax.php.
-            // Custom roles cloned from editingteacher do not inherit new plugin capabilities,
-            // so 'mod/contentcreator:addinstance' (the old check) was too strict and caused
-            // "Failed to save generated content" for legitimate editing teachers.
-            // Accept 'moodle/course:manageactivities' as a fallback — every genuine
-            // editing teacher has this regardless of whether their role explicitly lists
-            // mod/contentcreator capabilities.
-            // v13.86: the moodle/course:manageactivities fallback was removed. It made
-            // mod/contentcreator:manage advisory - a CAP_PROHIBIT on it denied nothing.
-            // Roles that already hold manageactivities are granted :manage by the
-            // upgrade step in db/upgrade.php, so no legitimate editing teacher loses
-            // access.
-            require_capability('mod/contentcreator:manage', $context);
+        try {
+            debugging(
+                'Content Creator manifest size: ' . round(strlen($params['manifest']) / 1024) .
+                    ' KB, cmid: ' . $params['cmid'],
+                DEBUG_DEVELOPER
+            );
 
             $manifest = $params['manifest'];
 
@@ -123,8 +138,11 @@ class save_manifest extends external_api {
             }
             $poststripsize = strlen($manifest);
             if ($poststripsize < $prestripsize) {
-                debugging('Content Creator manifest data: URL strip removed ' .
-                    round(($prestripsize - $poststripsize) / 1024) . ' KB.', DEBUG_DEVELOPER);
+                debugging(
+                    'Content Creator manifest data: URL strip removed ' .
+                        round(($prestripsize - $poststripsize) / 1024) . ' KB.',
+                    DEBUG_DEVELOPER
+                );
             }
 
             $record = new \stdClass();
@@ -145,19 +163,28 @@ class save_manifest extends external_api {
                     'message' => get_string('manifestsaved', 'mod_contentcreator'),
                 ];
             } catch (\dml_write_exception $e) {
-                debugging('Content Creator manifest DB write failed (' .
-                    round(strlen($record->manifestjson) / 1024) . ' KB compressed): ' .
-                    $e->getMessage(), DEBUG_DEVELOPER);
+                debugging(
+                    'Content Creator manifest DB write failed (' .
+                        round(strlen($record->manifestjson) / 1024) . ' KB compressed): ' .
+                        $e->getMessage(),
+                    DEBUG_DEVELOPER
+                );
                 return [
                     'success' => false,
                     'message' => get_string('errorsavefailed', 'mod_contentcreator'),
                 ];
             }
         } catch (\Throwable $e) {
-            debugging('Content Creator save_manifest exception: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            // v13.94.3: This was logged at DEBUG_DEVELOPER only, which no production site
+            // runs, so the one thing that could explain a save failure was thrown away on
+            // exactly the sites where it matters. Report it at DEBUG_NORMAL and hand the
+            // caller a stable errorcode, so a support request can be traced without asking
+            // a client to turn developer debugging on. The visible message is unchanged.
+            debugging('Content Creator save_manifest exception: ' . $e->getMessage(), DEBUG_NORMAL);
             return [
                 'success' => false,
                 'message' => get_string('errorsavefailed', 'mod_contentcreator'),
+                'errorcode' => 'savemanifestfailed',
             ];
         }
     }
@@ -168,9 +195,18 @@ class save_manifest extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'message' => new external_value(PARAM_TEXT, 'Response message'),
-        ]);
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'message' => new external_value(PARAM_TEXT, 'Response message'),
+                // v13.94.3: Stable machine-readable cause, present only on the unexpected-failure
+                // path. Optional so the success and validation replies are unchanged.
+                'errorcode' => new external_value(
+                    PARAM_ALPHANUMEXT,
+                    'Stable error identifier when the save failed unexpectedly',
+                    VALUE_OPTIONAL
+                ),
+            ]
+        );
     }
 }

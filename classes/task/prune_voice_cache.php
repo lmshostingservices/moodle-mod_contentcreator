@@ -93,7 +93,9 @@ class prune_voice_cache extends \core\task\scheduled_task {
             $deleted++;
         }
 
-        mtrace('Content Creator: pruned ' . $deleted . ' cached voiceover file(s), ' .
-            round($bytes / 1048576, 1) . ' MB, older than ' . $days . ' days.');
+        mtrace(
+            'Content Creator: pruned ' . $deleted . ' cached voiceover file(s), ' .
+                round($bytes / 1048576, 1) . ' MB, older than ' . $days . ' days.'
+        );
     }
 }

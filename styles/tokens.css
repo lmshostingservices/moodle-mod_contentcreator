@@ -130,6 +130,7 @@
     /* Shadow alias */
     --cc-shadow-hover: 0 8px 25px -5px rgb(0 0 0 / 0.1);
 
+
     /* Z-index scale (Phase 3) */
     --cc-z-base: 0;
     --cc-z-dropdown: 100;
@@ -138,12 +139,37 @@
     --cc-z-tooltip: 600;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.94.6  FIX-CC-BUILDER-DARK   -  dark mode was entirely dead on Moodle 4.4+
+   ───────────────────────────────────────────────────────────────────────────────
+   The dark token block below keyed off `.dark`, `.theme-dark`, `body.dark` or
+   `[data-theme="dark"]`. Moodle 4.4 moved to Bootstrap 5 and sets its dark
+   theme with `data-bs-theme="dark"` on <html> - none of the four legacy hooks
+   is present. This file contained ZERO occurrences of `data-bs-theme`, against
+   49 in player5.css. This is the root of the problem, not a symptom of it:
+   every --cc-* token consumed by builder.css and cards.css resolved to its
+   light value on any current Moodle, whatever those files' own selectors said.
+
+   `[data-bs-theme="dark"]` is now appended to every dark selector group. The
+   legacy hooks are kept: they cost nothing and they still carry older sites.
+
+   Why not key off `.cc-dark` instead, which tokens.css already honours? Because
+   `.cc-dark` is a class something has to put on the container, and that
+   something is JavaScript this change cannot touch. A hook that depends on code
+   we are not editing is not a hook at all. `data-bs-theme` is set by Moodle
+   itself, before our CSS is evaluated, and needs nothing from us. `.cc-dark`
+   stays where it is in tokens.css as a manual override for anyone who wants to
+   force the dark palette from markup.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
 /* Dark Mode Support - Moodle themes use various class names */
+
 .cc-dark,
 .dark .contentcreator-container,
 .theme-dark .contentcreator-container,
 body.dark .contentcreator-container,
-[data-theme="dark"] .contentcreator-container {
+[data-theme="dark"] .contentcreator-container,
+[data-bs-theme="dark"] .contentcreator-container {
     --cc-bg: hsl(0 0% 7%);
     --cc-bg-muted: hsl(0 0% 9%);
     --cc-bg-subtle: hsl(0 0% 11%);
@@ -578,7 +604,6 @@ button.cc-btn:disabled {
         animation: none !important;
     }
 }
-
 
 /*
  * Compatibility aliases (13.70).

@@ -63,26 +63,28 @@ class generate_voiceover extends external_api {
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
-            'cmid'      => new external_value(PARAM_INT, 'Course module ID'),
-            'text'      => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'Text to convert to speech',
-            ),
-            'sectionId' => new external_value(PARAM_ALPHANUMEXT, 'Section identifier', VALUE_DEFAULT, ''),
-            // FIX-CC-EXTVO-LANG (v12.78): language was appended to formData in player5.js
-            // (line 2009: formData.append('language', self.activeLang || self.voiceLanguage))
-            // but was never declared in execute_parameters() — Moodle's external API
-            // silently stripped it, so execute() never received it.  The function then
-            // always fell back to get_config('mod_contentcreator', 'voicelanguage')
-            // (the site-level primary language, typically 'en-AU'), causing additional-
-            // language voiceovers to be synthesised in English regardless of which
-            // language tab the teacher or student had selected.
-            'language'  => new external_value(PARAM_TEXT, 'Language code override (e.g. fr-FR, ja-JP)', VALUE_DEFAULT, ''),
-            // Version 13.1: explicit voice name (Aoede/Kore/Leda/Zephyr/Puck/Charon/Fenrir/Orus).
-            // Falls back to site-level default when not supplied.
-            'voice'     => new external_value(PARAM_ALPHA, 'Chirp 3 HD voice name', VALUE_DEFAULT, ''),
-        ]);
+        return new external_function_parameters(
+            [
+                'cmid'      => new external_value(PARAM_INT, 'Course module ID'),
+                'text'      => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'Text to convert to speech',
+                ),
+                'sectionId' => new external_value(PARAM_ALPHANUMEXT, 'Section identifier', VALUE_DEFAULT, ''),
+                // FIX-CC-EXTVO-LANG (v12.78): language was appended to formData in player5.js
+                // (line 2009: formData.append('language', self.activeLang || self.voiceLanguage))
+                // but was never declared in execute_parameters() — Moodle's external API
+                // silently stripped it, so execute() never received it.  The function then
+                // always fell back to get_config('mod_contentcreator', 'voicelanguage')
+                // (the site-level primary language, typically 'en-AU'), causing additional-
+                // language voiceovers to be synthesised in English regardless of which
+                // language tab the teacher or student had selected.
+                'language'  => new external_value(PARAM_TEXT, 'Language code override (e.g. fr-FR, ja-JP)', VALUE_DEFAULT, ''),
+                // Version 13.1: explicit voice name (Aoede/Kore/Leda/Zephyr/Puck/Charon/Fenrir/Orus).
+                // Falls back to site-level default when not supplied.
+                'voice'     => new external_value(PARAM_ALPHA, 'Chirp 3 HD voice name', VALUE_DEFAULT, ''),
+            ]
+        );
     }
 
     /**
@@ -104,13 +106,16 @@ class generate_voiceover extends external_api {
     ): array {
         global $CFG, $USER;
 
-        $params = self::validate_parameters(self::execute_parameters(), [
-            'cmid'      => $cmid,
-            'text'      => $text,
-            'sectionId' => $sectionid,
-            'language'  => $language,
-            'voice'     => $voice,
-        ]);
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            [
+                'cmid'      => $cmid,
+                'text'      => $text,
+                'sectionId' => $sectionid,
+                'language'  => $language,
+                'voice'     => $voice,
+            ]
+        );
 
         $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
@@ -118,7 +123,7 @@ class generate_voiceover extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
-        // v13.85: this call SPENDS SITE CREDITS. Gating it on :view alone meant every
+        // v13.85: This call SPENDS SITE CREDITS. Gating it on :view alone meant every
         // enrolled learner in every course could draw on the same paid balance, with no
         // administrative control beyond disabling the feature site-wide. The new
         // capability is granted to student by default, so behaviour is unchanged until a
@@ -206,7 +211,14 @@ class generate_voiceover extends external_api {
         $voicename  = (in_array($voiceparam, $validvoices)) ? $voiceparam : $sitedefaultvoice;
 
         // Build the voice ID: {language}-Chirp3-HD-{VoiceName}.
-        $voiceid = self::get_chirp_voice_id($voicelanguage, $voicename);
+        // v13.94.3: this used to call a private copy of the mapping that omitted the
+        // fallbacks for the eight locales Chirp 3 HD has no voice for, so this path asked
+        // for ids such as 'ms-MY-Chirp3-HD-Zephyr'. The service rejects them and the
+        // learner gets silence, while the identical request through ajax.php worked. Both
+        // paths now resolve through the one shared table.
+        $resolvedvoice = \mod_contentcreator\voice::resolve($voicelanguage, $voicename);
+        $voiceid = $resolvedvoice['voiceid'];
+        $voicelanguage = $resolvedvoice['language'];
 
         // Clean text and enforce the same character cap that ajax.php applies.
         $text = strip_tags($params['text']);
@@ -263,28 +275,30 @@ class generate_voiceover extends external_api {
         // can view the activity, so abuse control is enforced here rather than by the
         // capability gate: a per-user sliding-window limit plus the MAX_TEXT_LENGTH cap
         // applied to the text above. Do not remove either without replacing them.
-        \mod_contentcreator\ratelimiter::check($USER->id, 'voice', 100, HOURSECS);
-        // v13.85: aggregate ceiling. The per-user limit above cannot bound total spend on
-        // an endpoint every enrolled learner may call; with a large cohort it has no
-        // effective ceiling at all. Configurable, generous by default, 0 disables.
-        $sitemax = get_config('mod_contentcreator', 'sitelimitvoice');
-        $sitemax = ($sitemax !== false && $sitemax !== '' && is_numeric($sitemax)) ? (int)$sitemax : 2000;
-        \mod_contentcreator\ratelimiter::check_site('voice', $sitemax, HOURSECS);
+        // v13.94.3: the per-user ceiling was hardcoded at 100 here, so the ratelimitvoice
+        // admin setting applied only to the AJAX path - an administrator who lowered it, or
+        // set it to 0 to disable the bucket, changed nothing for this web service. enforce()
+        // reads the setting and applies the site ceiling in one place, shared with ajax.php.
+        \mod_contentcreator\ratelimiter::enforce($USER->id, 'voice', 100, HOURSECS);
 
         // Release session lock before long-running API call to prevent blocking other requests.
         \core\session\manager::write_close();
 
         // Call EssayGraderAI API for TTS.
         $curl = new \curl();
-        $curl->setopt([
-            'CURLOPT_TIMEOUT'       => 300,
-            'CURLOPT_RETURNTRANSFER' => true,
-            'CURLOPT_SSL_VERIFYPEER' => true,
-        ]);
-        $curl->setHeader([
-            'Content-Type: application/json',
-            'Accept: application/json',
-        ]);
+        $curl->setopt(
+            [
+                'CURLOPT_TIMEOUT'       => 300,
+                'CURLOPT_RETURNTRANSFER' => true,
+                'CURLOPT_SSL_VERIFYPEER' => true,
+            ]
+        );
+        $curl->setHeader(
+            [
+                'Content-Type: application/json',
+                'Accept: application/json',
+            ]
+        );
 
         $payload = [
             'siteId'       => $siteid,
@@ -330,7 +344,7 @@ class generate_voiceover extends external_api {
         $audioraw = base64_decode($data['audioContent'] ?? '');
         if ($audioraw && strlen($audioraw) <= self::MAX_CACHE_BYTES) {
             try {
-                // v13.86: writes to the shared site-wide cache, matching the read above.
+                // v13.86: Writes to the shared site-wide cache, matching the read above.
                 $oldcachefile = $fs->get_file(
                     $cachectx->id,
                     'mod_contentcreator',
@@ -342,14 +356,17 @@ class generate_voiceover extends external_api {
                 if ($oldcachefile) {
                     $oldcachefile->delete();
                 }
-                $fs->create_file_from_string([
-                    'contextid' => $cachectx->id,
-                    'component' => 'mod_contentcreator',
-                    'filearea'  => 'voice_cache',
-                    'itemid'    => 0,
-                    'filepath'  => '/',
-                    'filename'  => $cachekey . '.ogg',
-                ], $audioraw);
+                $fs->create_file_from_string(
+                    [
+                        'contextid' => $cachectx->id,
+                        'component' => 'mod_contentcreator',
+                        'filearea'  => 'voice_cache',
+                        'itemid'    => 0,
+                        'filepath'  => '/',
+                        'filename'  => $cachekey . '.ogg',
+                    ],
+                    $audioraw
+                );
             } catch (\Throwable $e) {
                 // Cache write failure is non-fatal — audio is still returned to the caller.
                 debugging('Voice cache write failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
@@ -364,30 +381,9 @@ class generate_voiceover extends external_api {
         ];
     }
 
-    /**
-     * Build the Chirp 3 HD voice ID from a language code and a voice name.
-     *
-     * @param string $languagecode Language code, for example 'en-AU' or 'zh-CN'.
-     * @param string $voicename Voice name, for example 'Aoede' or 'Puck'.
-     * @return string Full voice ID.
-     */
-    private static function get_chirp_voice_id(string $languagecode, string $voicename): string {
-        // Special mappings for certain language codes
-        // FIX-CC-ML-NB-NO (v13.19): 'nb-NO' was incorrectly remapped to 'no-NO'.
-        // Google Chirp 3 HD has no 'no-NO' voice; 'nb-NO-Chirp3-HD-Aoede' is the
-        // correct identifier. Remove the wrong mapping so nb-NO passes through.
-        $languagemappings = [
-            'zh-CN'  => 'cmn-CN', // Mandarin Chinese.
-            'zh-TW'  => 'cmn-TW', // Traditional Chinese.
-            'zh-HK'  => 'yue-HK', // Cantonese
-            // nb-NO intentionally NOT mapped — nb-NO-Chirp3-HD-Aoede is valid.
-            'fil-PH' => 'fil-PH', // Filipino (kept for legacy zh-style callers).
-        ];
-
-        $mappedcode = $languagemappings[$languagecode] ?? $languagecode;
-
-        return "{$mappedcode}-Chirp3-HD-{$voicename}";
-    }
+    // v13.94.3: The get_chirp_voice_id() helper was removed. It was a second, incomplete copy of the
+    // language-to-voice mapping and was the reason this path and ajax.php disagreed. The
+    // one implementation now lives in \mod_contentcreator\voice::resolve().
 
     /**
      * Describes the return value for execute().
@@ -395,14 +391,16 @@ class generate_voiceover extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'success'      => new external_value(PARAM_BOOL, 'Success status'),
-            'audioContent' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'Base64 encoded audio',
-            ),
-            'audioType'    => new external_value(PARAM_TEXT, 'Audio MIME type'),
-            'error'        => new external_value(PARAM_TEXT, 'Error message if any', VALUE_DEFAULT, ''),
-        ]);
+        return new external_single_structure(
+            [
+                'success'      => new external_value(PARAM_BOOL, 'Success status'),
+                'audioContent' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'Base64 encoded audio',
+                ),
+                'audioType'    => new external_value(PARAM_TEXT, 'Audio MIME type'),
+                'error'        => new external_value(PARAM_TEXT, 'Error message if any', VALUE_DEFAULT, ''),
+            ]
+        );
     }
 }

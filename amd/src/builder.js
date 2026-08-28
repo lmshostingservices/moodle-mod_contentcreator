@@ -18,9 +18,56 @@ define([
     'mod_contentcreator/manifest.builder',
     'mod_contentcreator/planner',
     'mod_contentcreator/cc-state',
-    'mod_contentcreator/generator'
-], function(Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator) {
+    'mod_contentcreator/generator',
+    'mod_contentcreator/translations'
+], function (Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator, Translations) {
     'use strict';
+
+    // =======================================================================
+    // v13.94.6: NARRATION LABELS AT SYNTHESIS TIME
+    //
+    // cc-state's buildVoiceoverText() resolves its headings and connectors -
+    // "Scene Setting", "Now, complete the activity below.", "{term} means
+    // {definition}" and ~44 others - through a label resolver registered by
+    // whoever is about to use it. v13.94.3 removed the hardcoded English from
+    // that function and translated all 47 keys into all 53 languages.
+    //
+    // But the ONLY registration site was player5.js. The builder - which is what
+    // actually synthesises the .ogg files - registered nothing, so the resolver
+    // was null here and every one of those keys fell back to its English default.
+    // The English was still being baked into the audio, permanently, for every
+    // non-English module. The translations existed; nothing consulted them.
+    //
+    // Two consequences, both fixed by registering here:
+    //   1. A Japanese module no longer has English phrases spoken mid-sentence
+    //      in a Japanese voice.
+    //   2. The player computes the SAME text the builder synthesised, so
+    //      voiceoverTextHash matches and isHashStale() stops firing on every
+    //      section of every non-English module - which was re-synthesising the
+    //      whole pack on the teacher's first open, a second full TTS bill.
+    //
+    // The language must be re-registered per pack, because one build can produce
+    // several packs in several languages.
+    // =======================================================================
+    const _narrationLabels = (Translations && Translations.NARRATION_LABELS) || {};
+
+    /**
+     * Point cc-state's narration at one language for the synthesis about to happen.
+     *
+     * @param {String} lang Language code, e.g. 'ja' or 'pt-BR'.
+     * @return {void}
+     */
+    const useNarrationLanguage = (lang) => {
+        if (!CcState || typeof CcState.setLabelResolver !== 'function') { return; }
+        var code = String(lang || 'en');
+        var table = _narrationLabels[code]
+            || _narrationLabels[code.split('-')[0]]
+            || _narrationLabels.en
+            || {};
+        CcState.setLabelResolver(function (key) {
+            return table[key];
+        });
+    };
 
     // =======================================================================
     // v13.86: BUILDER MESSAGES THROUGH MOODLE'S STRING API
@@ -146,7 +193,7 @@ define([
      */
     const ccPost = async (body, label, ms) => {
         const ctrl = new AbortController();
-        const timer = setTimeout(function() {
+        const timer = setTimeout(function () {
             ctrl.abort();
             ccWarn('[CC NET] ' + label + ' aborted after ' + Math.round((ms || 210000) / 1000)
                 + 's with no response from the server');
@@ -317,7 +364,7 @@ define([
         s = s.replace(/\bso you\s+safety\b/gi, 'so you maintain safety');
         s = s.replace(/\bso you\s+the\s+safety\b/gi, 'so you ensure the safety');
         s = s.replace(/\bso you\s+the\s+/gi, 'so you understand the ');
-        s = s.replace(/\bso you\s+(?:optimal|proper|adequate|sufficient|full|complete|clear|immediate|minimal|consistent|accurate|appropriate|correct|comfortable|effective|efficient|maximum|minimum|good|better|best|safe|total|reliable|thorough|reasonable|necessary|successful|secure|healthy|stable|strong|smooth|timely|rapid|quick|clean|standard|suitable|regular|balanced|controlled|steady|uniform)\b/gi, function(match) {
+        s = s.replace(/\bso you\s+(?:optimal|proper|adequate|sufficient|full|complete|clear|immediate|minimal|consistent|accurate|appropriate|correct|comfortable|effective|efficient|maximum|minimum|good|better|best|safe|total|reliable|thorough|reasonable|necessary|successful|secure|healthy|stable|strong|smooth|timely|rapid|quick|clean|standard|suitable|regular|balanced|controlled|steady|uniform)\b/gi, function (match) {
             return 'so you ensure ' + match.replace(/^so you\s+/i, '');
         });
         s = s.replace(/\b(is|are|was|were)\s+because\s+because\b/gi, '$1 because');
@@ -867,7 +914,7 @@ define([
         
         // v6.8.2: Helper function to update task/equipment categories based on Unit of Competency.
         // v13.66: Published on the module-scoped binding so fetchTGAUnit and handlePdfUpload can call it.
-        updateCategoriesForUnit = function() {
+        updateCategoriesForUnit = function () {
             const taskCardsContainer = document.getElementById('cc-task-category-cards');
             const equipmentCardsContainer = document.getElementById('cc-equipment-category-cards');
             const industry = document.getElementById('cc-industry')?.value || '';
@@ -913,7 +960,7 @@ define([
         // DYNAMIC MATCHING: Extracts words from unit/PDF and matches against category card text
         // Uses stemming-like matching for word roots (5+ chars for precision)
         // v13.66: Module-scoped binding so updateCategoriesForUnit() can reach it.
-        autoSuggestFromContent = function(combinedText) {
+        autoSuggestFromContent = function (combinedText) {
             if (!combinedText) return;
             
             const taskCards = document.querySelectorAll('#cc-task-category-cards .cc-category-card');
@@ -1172,7 +1219,7 @@ define([
         // v6.8.7: Published on the shared ccBuilder object so the wizard steps
         // outside this closure can call it.
         // ===========================================================================
-        ccBuilder.renderCategoryCards = function(container, categories, type) {
+        ccBuilder.renderCategoryCards = function (container, categories, type) {
             if (!container || !categories || categories.length === 0) {
                 container.innerHTML = '<div class="cc-category-placeholder">No categories available</div>';
                 return;
@@ -1391,7 +1438,7 @@ define([
         
         // Update legacy job tasks array from selected categories (for prompt compatibility)
         // v6.9.1: Only runs if AI context is NOT available to avoid overwriting AI selections
-        ccBuilder.updateLegacyJobTasksFromCategories = function() {
+        ccBuilder.updateLegacyJobTasksFromCategories = function () {
             // v6.9.1: Skip if AI context is active - don't overwrite AI-selected data
             if (CC_AI_CONTEXT && 
                 (CC_SELECTED_JOB_TITLES?.length > 0 || 
@@ -1428,7 +1475,7 @@ define([
         };
         
         // v6.6.40: Update Workplace mode selection counts
-        const updateWpSelectionCounts = function() {
+        const updateWpSelectionCounts = function () {
             const taskCount = (CC_WP_SELECTED_TASK_CATEGORIES || []).length;
             const equipmentCount = (CC_WP_SELECTED_EQUIPMENT_CATEGORIES || []).length;
             
@@ -1471,7 +1518,7 @@ define([
         // NOTE: VET mode AI suggestions were removed in v6.9.14 - AI now auto-generates
         // ===========================================================================
         
-        ccBuilder.renderWorkplaceAISuggestions = async function(documentData) {
+        ccBuilder.renderWorkplaceAISuggestions = async function (documentData) {
             const container = document.getElementById('cc-wp-ai-suggestions-container');
             if (!container) {
                 return;
@@ -5763,7 +5810,7 @@ define([
                     // Fix coverageSummary.performanceCriteria codes
                     const fixedCoverage = t.coverageSummary
                         ? Object.assign({}, t.coverageSummary, {
-                            performanceCriteria: fixedSubtopics.map(function(s) { return s.pcNumber; })
+                            performanceCriteria: fixedSubtopics.map(function (s) { return s.pcNumber; })
                           })
                         : t.coverageSummary;
                     return Object.assign({}, t, {
@@ -5777,9 +5824,9 @@ define([
                 // AUTO-SPLIT-SECTION: Post-process AI-returned topics — if the corresponding
                 // TGA element has >MAX_PCS_PER_SECTION PCs, split into Part 1 + Part 2.
                 // This mirrors createDefaultMajorTopics() split logic for the AI path.
-                suggestedMajorTopics = suggestedMajorTopics.flatMap(function(t) {
+                suggestedMajorTopics = suggestedMajorTopics.flatMap(function (t) {
                     var elNum = t.elementNumber || 0;
-                    var el = tgaData && tgaData.elements && tgaData.elements.find(function(_, idx) { return idx + 1 === elNum; });
+                    var el = tgaData && tgaData.elements && tgaData.elements.find(function (_, idx) { return idx + 1 === elNum; });
                     var pcCount = (el && el.performanceCriteria && el.performanceCriteria.length) || 0;
                     var subs = t.subtopics || [];
                     if (pcCount > MAX_PCS_PER_SECTION && subs.length > 1) {
@@ -6767,7 +6814,13 @@ define([
         container.querySelector('#cc-download-uni-prompt')?.addEventListener('click', () => downloadDynamicPrompt('university'));
         container.querySelector('#cc-download-wp-prompt')?.addEventListener('click', () => downloadDynamicPrompt('workplace'));
         container.querySelector('#cc-download-vet-prompt')?.addEventListener('click', () => downloadDynamicPrompt('vet'));
-        container.querySelector('#cc-download-pd-prompt')?.addEventListener('click', () => downloadDynamicPrompt('pd'));
+        // v13.94.3: the #cc-download-pd-prompt button is rendered by the shared step that
+        // serves BOTH the PD route and Route 5 (Topics and Text). Hard-coding 'pd' here
+        // meant Route 5 users downloaded the PD prompt file, and the topicstext template
+        // added in 13.94.1 was unreachable. Resolve the route at click time instead.
+        container.querySelector('#cc-download-pd-prompt')?.addEventListener('click', () => {
+            downloadDynamicPrompt(selectedMode === 'topicstext' ? 'topicstext' : 'pd');
+        });
 
         container.querySelector('#cc-pd-suggest-topics')?.addEventListener('click', suggestPDTopics);
         container.querySelector('#cc-pd-paste-own')?.addEventListener('click', () => {
@@ -6947,7 +7000,7 @@ define([
         const voiceLangSel = container.querySelector('#cc-voice-language');
         function syncAdditionalLangFilter() {
             var primaryLang = voiceLangSel ? voiceLangSel.value : 'en-AU';
-            container.querySelectorAll('#cc-additional-langs input[type="checkbox"]').forEach(function(cb) {
+            container.querySelectorAll('#cc-additional-langs input[type="checkbox"]').forEach(function (cb) {
                 var row = cb.closest('label.cc-multilang-option');
                 if (!row) return;
                 // Find the text node (last child text node of the label, after the input)
@@ -7236,7 +7289,7 @@ define([
                 wpIndustrySelect._ccWpBound = true;
                 wpIndustrySelect.addEventListener('change', updateGenerateTopicsButton);
                 // v13.86: fill the Job Title field's suggestion list for the chosen industry.
-                wpIndustrySelect.addEventListener('change', function(e) {
+                wpIndustrySelect.addEventListener('change', function (e) {
                     const list = document.getElementById('cc-wp-job-title-options');
                     if (!list) { return; }
                     list.innerHTML = getJobTitlesForIndustry(e.target.value)
@@ -7801,6 +7854,7 @@ define([
     const downloadDynamicPrompt = async (mode) => {
         const filenames = {
             vet: 'ChatGPT-Prompt-VET.txt',
+            topicstext: 'ChatGPT-Prompt-Topics-and-Text.txt',
             workplace: 'ChatGPT-Prompt-Workplace.txt',
             university: 'ChatGPT-Prompt-University.txt',
             pd: 'ChatGPT-Prompt-PD.txt'
@@ -7925,7 +7979,10 @@ define([
                     topicsText += '  ' + letter + ': ' + o + '\n';
                 });
             }
-        } else if (mode === 'pd') {
+        } else if (mode === 'pd' || mode === 'topicstext') {
+            // v13.94.1: Topics and Text shares renderStep2PD and therefore the same
+            // cc-pd-* field ids, so it shares this context block too. Without this the
+            // route fell through with no context and no topics in its prompt file.
             const courseTitle = document.getElementById('cc-pd-course-title')?.value || '';
             const audience = document.getElementById('cc-pd-audience')?.selectedOptions?.[0]?.text || 'All Staff';
             const industry = document.getElementById('cc-pd-industry')?.value || '';
@@ -8040,6 +8097,13 @@ define([
                 topicsHeader += 'Generate a COMPLETE card sequence for EACH sub topic below.\n';
                 topicsHeader += 'Label each sub topic using JUST the letter: A, B, C, etc. Do NOT prefix with "Sub Topic".\n';
                 topicsHeader += 'Do NOT use numbers. Do NOT skip any sub topics.\n\n';
+            } else if (mode === 'topicstext') {
+                topicsHeader += 'YOUR SUB TOPICS TO COVER\n';
+                topicsHeader += '====================================================================\n\n';
+                topicsHeader += 'The teacher has defined the following sub topics.\n';
+                topicsHeader += 'Produce ONE JSON object for EACH sub topic below, in this order.\n';
+                topicsHeader += 'Separate consecutive sub topics with a line containing only === NEXT ===\n';
+                topicsHeader += 'Do NOT combine sub topics. Do NOT skip any. Do NOT add commentary between blocks.\n\n';
             } else if (mode === 'pd') {
                 topicsHeader += 'YOUR SUB TOPICS TO COVER\n';
                 topicsHeader += '====================================================================\n\n';
@@ -8145,13 +8209,13 @@ Displays: A numbered step-by-step flow  -  how to handle exactly this type of si
 
 TITLE: [Short heading: the mental model or decision process  -  8 words max. e.g. "How to check it properly every time"]
 STEP 1 TITLE: [Short step label  -  4 words max]
-STEP 1 DETAIL: [2 - 3 sentences. What this step involves and why it matters.]
+STEP 1 DETAIL: [2 - 3 sentences, 35 - 45 words. What this step involves, what you are looking for, and what tells you it is done.]
 STEP 2 TITLE: [Short step label]
-STEP 2 DETAIL: [2 - 3 sentences.]
+STEP 2 DETAIL: [2 - 3 sentences, 35 - 45 words.]
 STEP 3 TITLE: [Short step label]
-STEP 3 DETAIL: [2 - 3 sentences.]
+STEP 3 DETAIL: [2 - 3 sentences, 35 - 45 words.]
 STEP 4 TITLE: [Short step label  -  optional 4th step if genuinely needed]
-STEP 4 DETAIL: [2 - 3 sentences  -  only if genuinely needed]
+STEP 4 DETAIL: [2 - 3 sentences, 35 - 45 words  -  only if genuinely needed]
 VOICEOVER: [Copy all step content word for word in this exact format: "[STEP 1 TITLE]: [STEP 1 DETAIL] [STEP 2 TITLE]: [STEP 2 DETAIL] [STEP 3 TITLE]: [STEP 3 DETAIL]"  -  and so on for every step you wrote. Do NOT include TITLE  -  the player has already announced "How to Handle It: [your TITLE]" (Step 2). Start your VOICEOVER directly with Step 1 Title. Minimum 60 words covering all steps.]
 
 [CARD 4  -  APPLIED SCENARIO]
@@ -8159,7 +8223,7 @@ Displays: "Later that day..."  -  a continuation of Card 1, same job, new develo
 
 TITLE: [Short title that signals continuation  -  8 words max. e.g. "Later that morning  -  a second delivery arrives"]
 CONTENT: [3 - 4 paragraphs, minimum 150 words. Continue the SAME job situation from Card 1. Use "Later that day...", "On the same shift...", or "The same worker now..."  -  new complication or higher stakes. End with a moment of correct action or decision.]
-HIGHLIGHT: [1 - 2 sentences. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
+HIGHLIGHT: [1 - 2 sentences, 18 - 28 words. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
 VOICEOVER: [Copy CONTENT word for word then HIGHLIGHT word for word  -  verbatim, in that order. The player has already announced the PC/sub-topic heading (Step 1) and "On the Job: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "Later that day..." or "On the same shift..." as written in CONTENT. No preamble, no card label.]
 
 [CARD 5  -  COMMON MISTAKES]
@@ -8194,15 +8258,15 @@ VOICEOVER: [Copy all GOOD items then all BAD items word for word in this exact f
 Displays: An interactive question placing the learner inside the Card 1/4 story.
 
 TITLE: [Short title that places the learner in the story  -  10 words max. e.g. "You are the driver  -  what do you do?"]
-QUESTION: [1 - 2 sentences. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
+QUESTION: [1 - 2 sentences, 25 - 35 words. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
 OPTION A: [Specific action. Sounds reasonable  -  not obviously wrong.]
-FEEDBACK A: [2 - 3 sentences. What happens if they choose this. Specific, realistic consequence.]
+FEEDBACK A: [2 - 3 sentences, 28 - 38 words. What happens if they choose this. Specific, realistic consequence.]
 OPTION B: [Specific action  -  the correct or best action.]
-FEEDBACK B: [2 - 3 sentences. Why this is right and what it achieves.]
+FEEDBACK B: [2 - 3 sentences, 28 - 38 words. Why this is right and what it achieves.]
 OPTION C: [Specific action  -  a common shortcut or wrong assumption.]
-FEEDBACK C: [2 - 3 sentences. The consequence of this choice.]
+FEEDBACK C: [2 - 3 sentences, 28 - 38 words. The consequence of this choice.]
 OPTION D: [Specific action  -  another option that seems reasonable but misses something important.]
-FEEDBACK D: [2 - 3 sentences. What is missed and why it matters.]
+FEEDBACK D: [2 - 3 sentences, 28 - 38 words. What is missed and why it matters.]
 CORRECT: [Letter of the correct option  -  A, B, C or D]
 VOICEOVER: [Write in this exact format  -  copy each field verbatim: "[QUESTION text] Option A: [OPTION A text]. Option B: [OPTION B text]. Option C: [OPTION C text]. Option D: [OPTION D text]." Do NOT include any FEEDBACK text here  -  feedback only plays after the learner clicks an option, not in the voiceover. The player has already announced the PC/sub-topic heading (Step 1) and "Your Decision: [your TITLE]" (Step 2)  -  start directly with the QUESTION sentence, no preamble.]
 
@@ -8237,6 +8301,89 @@ Generate a complete 7-card block for EACH Performance Criterion.
 Do NOT combine multiple PCs into one block.
 Do NOT add commentary or summaries between cards.
 Stop after all PCs are complete.
+
+--------------------------------------------------------------------
+
+The context and task details follow below.
+
+--------------------------------------------------------------------`,
+            topicstext: `ROLE
+
+You are writing short-course explanatory content for the AI Content Creator  -  an interactive Moodle learning activity. This is the "Topics and Text" route. It is used for any subject at all: history, science, policy, craft, health, finance, whatever the course is about. There is no workplace framing, no compliance angle and no scenario.
+
+You write clear, compact explanatory prose for an intelligent adult who does not know the subject yet. Third person. Plain, confident, specific. Define a term the first time you use it. No hedging, no moralising, no "in this module you will learn", no calls to action.
+
+--------------------------------------------------------------------
+
+WHAT THIS ROUTE PRODUCES
+
+Four short colour-coded cards per sub topic, then a question that drives three activities. The four headings are FIXED and supplied by the platform  -  Overview, Key Concepts, Examples & Application, Key Takeaways. Do NOT write your own headings and do NOT repeat the topic name in one.
+
+The cards are revealed one at a time as the voiceover reads them, so length discipline matters more here than on any other route.
+
+--------------------------------------------------------------------
+
+HARD LIMITS  -  READ TWICE
+
+- Cards 1-4 carry EXACTLY TWO paragraphs each.
+- Each paragraph is 55-70 words. Not 40. Not 90.
+- A whole card is therefore 110-140 words. Never exceed 150 on a card.
+- Sentences under 22 words.
+- Plain text only. Never write the characters backslash-n, and no <br>, no markdown, no bullet characters, no asterisks, no numbered lists.
+- Do NOT write a voiceoverText field. The narration on this route is the paragraphs themselves, read verbatim, so a separate script would desynchronise the audio from the on-screen reveal.
+
+--------------------------------------------------------------------
+
+OUTPUT FORMAT
+
+Return ONE JSON object per sub topic and nothing else  -  no commentary, no markdown code fences, no headings between blocks. Separate consecutive sub topics with a line containing only:
+
+=== NEXT ===
+
+Each object must be exactly this shape, with exactly these five cards in this order:
+
+{"cards":[
+{"cardType":"overview","paragraphs":["<55-70 words>","<55-70 words>"]},
+{"cardType":"key-concepts","paragraphs":["<55-70 words>","<55-70 words>"],"keyTerms":[{"term":"<1-4 words>","definition":"<one sentence, 12-25 words, standing on its own without the term in front of it>"},{"term":"","definition":""},{"term":"","definition":""}]},
+{"cardType":"examples-application","paragraphs":["<55-70 words>","<55-70 words>"]},
+{"cardType":"key-takeaways","paragraphs":["<55-70 words>","<55-70 words>"],"goodItems":[{"text":"<8-16 words, sound practice or correct understanding>"},{"text":""},{"text":""}],"badItems":[{"text":"<8-16 words, the matching error or misconception>"},{"text":""},{"text":""}]},
+{"cardType":"decision-point","title":"<3-7 words naming what is being checked, not the topic name>","question":"<15-30 words, answerable only by someone who understood the cards>","options":[{"text":"","correct":true,"feedback":"<12-25 words saying why it is right>"},{"text":"","correct":false,"feedback":"<12-25 words naming the exact misunderstanding>"},{"text":"","correct":false,"feedback":""},{"text":"","correct":false,"feedback":""}]}
+]}
+
+Exactly four options. Exactly ONE with correct set to true. The three wrong answers must each be plausible to someone who half understood.
+
+--------------------------------------------------------------------
+
+WHAT EACH CARD MUST DO
+
+CARD 1  -  overview
+Paragraph 1: say what the subject IS. Open with a plain definitional sentence that names the subject and places it in its broadest true category. No metaphor, no question, no anecdote, no statistic. Test: sentence one must survive being read on its own as a true definition.
+Paragraph 2: why it matters and what changes for someone who understands it  -  concrete stakes, consequence or usefulness.
+
+CARD 2  -  key-concepts
+The two or three load-bearing ideas the rest depends on. Name each idea, define it in one sentence, then say what work it does in the subject. Prefer ideas that are DISTINCTIONS (X as against Y) over ideas that are only labels. Give the simplest COMPLETE version of an idea, never a simplification you would have to retract later.
+keyTerms: 3-4 terms drawn from these paragraphs. These become flip cards, so each definition must be learnable on its own.
+
+CARD 3  -  examples-application
+The same ideas in real situations. Give two concrete examples, cases, settings or contexts and show what the ideas from Card 2 look like in each. Name real particulars  -  a place, a role, a situation, a decision. Where two approaches differ, say what each buys and at what cost. Everything must trace back to Card 2; introduce no new concept. Do NOT ask the reader questions and do NOT write a story with named characters. Test: at least one sentence must take the form "X rather than Y, because...".
+
+CARD 4  -  key-takeaways
+Paragraph 1: the points that must survive if the learner forgets everything else, written as prose, not a list. Say why each matters, not just that it does.
+Paragraph 2: the most common mistaken belief about this subject. Name it, say plainly that it is mistaken, say why it is plausible, then give the correct account. This paragraph MUST contain an explicit negation  -  "is not", "does not", or "contrary to".
+goodItems and badItems become a drag-to-sort activity, so each must be judgeable on its own and a badItem must be plainly wrong rather than merely less good.
+
+CARD 5  -  decision-point
+One multiple-choice question testing understanding of Cards 1-4, not recall of a phrase.
+
+--------------------------------------------------------------------
+
+REFERENCE MATERIAL
+
+When reference material is supplied below, use it as the PRIMARY source. Keep named systems, people, works, places, dates and terms  -  never replace a specific with a generic.
+
+--------------------------------------------------------------------
+
+Use the sub topics listed in the section below. Produce one JSON object for EACH sub topic, separated by === NEXT ===. Do not combine sub topics. Do not add commentary between blocks. Stop when all sub topics are done.
 
 --------------------------------------------------------------------
 
@@ -8326,13 +8473,13 @@ Displays: A numbered step-by-step flow  -  how to handle exactly this type of si
 
 TITLE: [Short heading: the mental model or decision process  -  8 words max. e.g. "How to check it properly every time"]
 STEP 1 TITLE: [Short step label  -  4 words max]
-STEP 1 DETAIL: [2 - 3 sentences. What this step involves and why it matters.]
+STEP 1 DETAIL: [2 - 3 sentences, 35 - 45 words. What this step involves, what you are looking for, and what tells you it is done.]
 STEP 2 TITLE: [Short step label]
-STEP 2 DETAIL: [2 - 3 sentences.]
+STEP 2 DETAIL: [2 - 3 sentences, 35 - 45 words.]
 STEP 3 TITLE: [Short step label]
-STEP 3 DETAIL: [2 - 3 sentences.]
+STEP 3 DETAIL: [2 - 3 sentences, 35 - 45 words.]
 STEP 4 TITLE: [Short step label  -  optional 4th step if genuinely needed]
-STEP 4 DETAIL: [2 - 3 sentences  -  only if genuinely needed]
+STEP 4 DETAIL: [2 - 3 sentences, 35 - 45 words  -  only if genuinely needed]
 VOICEOVER: [Copy all step content word for word in this exact format: "[STEP 1 TITLE]: [STEP 1 DETAIL] [STEP 2 TITLE]: [STEP 2 DETAIL] [STEP 3 TITLE]: [STEP 3 DETAIL]"  -  and so on for every step you wrote. Do NOT include TITLE  -  the player has already announced "How to Handle It: [your TITLE]" (Step 2). Start your VOICEOVER directly with Step 1 Title. Minimum 60 words covering all steps.]
 
 [CARD 4  -  APPLIED SCENARIO]
@@ -8340,7 +8487,7 @@ Displays: "Later that day..."  -  a continuation of Card 1, same job, new develo
 
 TITLE: [Short title that signals continuation  -  8 words max. e.g. "Later that morning  -  a second delivery arrives"]
 CONTENT: [3 - 4 paragraphs, minimum 150 words. Continue the SAME job situation from Card 1. Use "Later that day...", "On the same shift...", or "The same worker now..."  -  new complication or higher stakes. End with a moment of correct action or decision.]
-HIGHLIGHT: [1 - 2 sentences. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
+HIGHLIGHT: [1 - 2 sentences, 18 - 28 words. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
 VOICEOVER: [Copy CONTENT word for word then HIGHLIGHT word for word  -  verbatim, in that order. The player has already announced the PC/sub-topic heading (Step 1) and "On the Job: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "Later that day..." or "On the same shift..." as written in CONTENT. No preamble, no card label.]
 
 [CARD 5  -  COMMON MISTAKES]
@@ -8375,15 +8522,15 @@ VOICEOVER: [Copy all GOOD items then all BAD items word for word in this exact f
 Displays: An interactive question placing the learner inside the Card 1/4 story.
 
 TITLE: [Short title that places the learner in the story  -  10 words max. e.g. "You are the driver  -  what do you do?"]
-QUESTION: [1 - 2 sentences. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
+QUESTION: [1 - 2 sentences, 25 - 35 words. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
 OPTION A: [Specific action. Sounds reasonable  -  not obviously wrong.]
-FEEDBACK A: [2 - 3 sentences. What happens if they choose this. Specific, realistic consequence.]
+FEEDBACK A: [2 - 3 sentences, 28 - 38 words. What happens if they choose this. Specific, realistic consequence.]
 OPTION B: [Specific action  -  the correct or best action.]
-FEEDBACK B: [2 - 3 sentences. Why this is right and what it achieves.]
+FEEDBACK B: [2 - 3 sentences, 28 - 38 words. Why this is right and what it achieves.]
 OPTION C: [Specific action  -  a common shortcut or wrong assumption.]
-FEEDBACK C: [2 - 3 sentences. The consequence of this choice.]
+FEEDBACK C: [2 - 3 sentences, 28 - 38 words. The consequence of this choice.]
 OPTION D: [Specific action  -  another option that seems reasonable but misses something important.]
-FEEDBACK D: [2 - 3 sentences. What is missed and why it matters.]
+FEEDBACK D: [2 - 3 sentences, 28 - 38 words. What is missed and why it matters.]
 CORRECT: [Letter of the correct option  -  A, B, C or D]
 VOICEOVER: [Write in this exact format  -  copy each field verbatim: "[QUESTION text] Option A: [OPTION A text]. Option B: [OPTION B text]. Option C: [OPTION C text]. Option D: [OPTION D text]." Do NOT include any FEEDBACK text here  -  feedback only plays after the learner clicks an option, not in the voiceover. The player has already announced the PC/sub-topic heading (Step 1) and "Your Decision: [your TITLE]" (Step 2)  -  start directly with the QUESTION sentence, no preamble.]
 
@@ -8508,13 +8655,13 @@ Displays: A numbered step-by-step flow  -  how to handle exactly this type of si
 
 TITLE: [Short heading: the mental model or decision process  -  8 words max. e.g. "How to check it properly every time"]
 STEP 1 TITLE: [Short step label  -  4 words max]
-STEP 1 DETAIL: [2 - 3 sentences. What this step involves and why it matters.]
+STEP 1 DETAIL: [2 - 3 sentences, 35 - 45 words. What this step involves, what you are looking for, and what tells you it is done.]
 STEP 2 TITLE: [Short step label]
-STEP 2 DETAIL: [2 - 3 sentences.]
+STEP 2 DETAIL: [2 - 3 sentences, 35 - 45 words.]
 STEP 3 TITLE: [Short step label]
-STEP 3 DETAIL: [2 - 3 sentences.]
+STEP 3 DETAIL: [2 - 3 sentences, 35 - 45 words.]
 STEP 4 TITLE: [Short step label  -  optional 4th step if genuinely needed]
-STEP 4 DETAIL: [2 - 3 sentences  -  only if genuinely needed]
+STEP 4 DETAIL: [2 - 3 sentences, 35 - 45 words  -  only if genuinely needed]
 VOICEOVER: [Copy all step content word for word in this exact format: "[STEP 1 TITLE]: [STEP 1 DETAIL] [STEP 2 TITLE]: [STEP 2 DETAIL] [STEP 3 TITLE]: [STEP 3 DETAIL]"  -  and so on for every step you wrote. Do NOT include TITLE  -  the player has already announced "How to Handle It: [your TITLE]" (Step 2). Start your VOICEOVER directly with Step 1 Title. Minimum 60 words covering all steps.]
 
 [CARD 4  -  APPLIED SCENARIO]
@@ -8522,7 +8669,7 @@ Displays: "Later that day..."  -  a continuation of Card 1, same job, new develo
 
 TITLE: [Short title that signals continuation  -  8 words max. e.g. "Later that morning  -  a second delivery arrives"]
 CONTENT: [3 - 4 paragraphs, minimum 150 words. Continue the SAME job situation from Card 1. Use "Later that day...", "On the same shift...", or "The same worker now..."  -  new complication or higher stakes. End with a moment of correct action or decision.]
-HIGHLIGHT: [1 - 2 sentences. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
+HIGHLIGHT: [1 - 2 sentences, 18 - 28 words. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
 VOICEOVER: [Copy CONTENT word for word then HIGHLIGHT word for word  -  verbatim, in that order. The player has already announced the PC/sub-topic heading (Step 1) and "On the Job: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "Later that day..." or "On the same shift..." as written in CONTENT. No preamble, no card label.]
 
 [CARD 5  -  COMMON MISTAKES]
@@ -8557,15 +8704,15 @@ VOICEOVER: [Copy all GOOD items then all BAD items word for word in this exact f
 Displays: An interactive question placing the learner inside the Card 1/4 story.
 
 TITLE: [Short title that places the learner in the story  -  10 words max. e.g. "You are the driver  -  what do you do?"]
-QUESTION: [1 - 2 sentences. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
+QUESTION: [1 - 2 sentences, 25 - 35 words. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
 OPTION A: [Specific action. Sounds reasonable  -  not obviously wrong.]
-FEEDBACK A: [2 - 3 sentences. What happens if they choose this. Specific, realistic consequence.]
+FEEDBACK A: [2 - 3 sentences, 28 - 38 words. What happens if they choose this. Specific, realistic consequence.]
 OPTION B: [Specific action  -  the correct or best action.]
-FEEDBACK B: [2 - 3 sentences. Why this is right and what it achieves.]
+FEEDBACK B: [2 - 3 sentences, 28 - 38 words. Why this is right and what it achieves.]
 OPTION C: [Specific action  -  a common shortcut or wrong assumption.]
-FEEDBACK C: [2 - 3 sentences. The consequence of this choice.]
+FEEDBACK C: [2 - 3 sentences, 28 - 38 words. The consequence of this choice.]
 OPTION D: [Specific action  -  another option that seems reasonable but misses something important.]
-FEEDBACK D: [2 - 3 sentences. What is missed and why it matters.]
+FEEDBACK D: [2 - 3 sentences, 28 - 38 words. What is missed and why it matters.]
 CORRECT: [Letter of the correct option  -  A, B, C or D]
 VOICEOVER: [Write in this exact format  -  copy each field verbatim: "[QUESTION text] Option A: [OPTION A text]. Option B: [OPTION B text]. Option C: [OPTION C text]. Option D: [OPTION D text]." Do NOT include any FEEDBACK text here  -  feedback only plays after the learner clicks an option, not in the voiceover. The player has already announced the PC/sub-topic heading (Step 1) and "Your Decision: [your TITLE]" (Step 2)  -  start directly with the QUESTION sentence, no preamble.]
 
@@ -8690,13 +8837,13 @@ Displays: A numbered step-by-step flow  -  how to handle exactly this type of si
 
 TITLE: [Short heading: the mental model or decision process  -  8 words max. e.g. "How to check it properly every time"]
 STEP 1 TITLE: [Short step label  -  4 words max]
-STEP 1 DETAIL: [2 - 3 sentences. What this step involves and why it matters.]
+STEP 1 DETAIL: [2 - 3 sentences, 35 - 45 words. What this step involves, what you are looking for, and what tells you it is done.]
 STEP 2 TITLE: [Short step label]
-STEP 2 DETAIL: [2 - 3 sentences.]
+STEP 2 DETAIL: [2 - 3 sentences, 35 - 45 words.]
 STEP 3 TITLE: [Short step label]
-STEP 3 DETAIL: [2 - 3 sentences.]
+STEP 3 DETAIL: [2 - 3 sentences, 35 - 45 words.]
 STEP 4 TITLE: [Short step label  -  optional 4th step if genuinely needed]
-STEP 4 DETAIL: [2 - 3 sentences  -  only if genuinely needed]
+STEP 4 DETAIL: [2 - 3 sentences, 35 - 45 words  -  only if genuinely needed]
 VOICEOVER: [Copy all step content word for word in this exact format: "[STEP 1 TITLE]: [STEP 1 DETAIL] [STEP 2 TITLE]: [STEP 2 DETAIL] [STEP 3 TITLE]: [STEP 3 DETAIL]"  -  and so on for every step you wrote. Do NOT include TITLE  -  the player has already announced "How to Handle It: [your TITLE]" (Step 2). Start your VOICEOVER directly with Step 1 Title. Minimum 60 words covering all steps.]
 
 [CARD 4  -  APPLIED SCENARIO]
@@ -8704,7 +8851,7 @@ Displays: "Later that day..."  -  a continuation of Card 1, same job, new develo
 
 TITLE: [Short title that signals continuation  -  8 words max. e.g. "Later that morning  -  a second delivery arrives"]
 CONTENT: [3 - 4 paragraphs, minimum 150 words. Continue the SAME job situation from Card 1. Use "Later that day...", "On the same shift...", or "The same worker now..."  -  new complication or higher stakes. End with a moment of correct action or decision.]
-HIGHLIGHT: [1 - 2 sentences. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
+HIGHLIGHT: [1 - 2 sentences, 18 - 28 words. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
 VOICEOVER: [Copy CONTENT word for word then HIGHLIGHT word for word  -  verbatim, in that order. The player has already announced the PC/sub-topic heading (Step 1) and "On the Job: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "Later that day..." or "On the same shift..." as written in CONTENT. No preamble, no card label.]
 
 [CARD 5  -  COMMON MISTAKES]
@@ -8739,15 +8886,15 @@ VOICEOVER: [Copy all GOOD items then all BAD items word for word in this exact f
 Displays: An interactive question placing the learner inside the Card 1/4 story.
 
 TITLE: [Short title that places the learner in the story  -  10 words max. e.g. "You are the driver  -  what do you do?"]
-QUESTION: [1 - 2 sentences. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
+QUESTION: [1 - 2 sentences, 25 - 35 words. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
 OPTION A: [Specific action. Sounds reasonable  -  not obviously wrong.]
-FEEDBACK A: [2 - 3 sentences. What happens if they choose this. Specific, realistic consequence.]
+FEEDBACK A: [2 - 3 sentences, 28 - 38 words. What happens if they choose this. Specific, realistic consequence.]
 OPTION B: [Specific action  -  the correct or best action.]
-FEEDBACK B: [2 - 3 sentences. Why this is right and what it achieves.]
+FEEDBACK B: [2 - 3 sentences, 28 - 38 words. Why this is right and what it achieves.]
 OPTION C: [Specific action  -  a common shortcut or wrong assumption.]
-FEEDBACK C: [2 - 3 sentences. The consequence of this choice.]
+FEEDBACK C: [2 - 3 sentences, 28 - 38 words. The consequence of this choice.]
 OPTION D: [Specific action  -  another option that seems reasonable but misses something important.]
-FEEDBACK D: [2 - 3 sentences. What is missed and why it matters.]
+FEEDBACK D: [2 - 3 sentences, 28 - 38 words. What is missed and why it matters.]
 CORRECT: [Letter of the correct option  -  A, B, C or D]
 VOICEOVER: [Write in this exact format  -  copy each field verbatim: "[QUESTION text] Option A: [OPTION A text]. Option B: [OPTION B text]. Option C: [OPTION C text]. Option D: [OPTION D text]." Do NOT include any FEEDBACK text here  -  feedback only plays after the learner clicks an option, not in the voiceover. The player has already announced the PC/sub-topic heading (Step 1) and "Your Decision: [your TITLE]" (Step 2)  -  start directly with the QUESTION sentence, no preamble.]
 
@@ -9715,12 +9862,12 @@ The context and task details follow below.
                 jobTitle: jobTitle,
                 jobRoles: finalJobRoles,
                 jobTasks: finalJobTasks,
-                taskEquipment: (function() {
+                taskEquipment: (function () {
                     // v13.86: the prompt binds tasks to equipment; this was always {}.
                     const map = {};
                     if (finalEquipment.length) {
                         const equipStr = finalEquipment.join('; ');
-                        finalJobTasks.forEach(function(t) { map[t] = equipStr; });
+                        finalJobTasks.forEach(function (t) { map[t] = equipStr; });
                     }
                     return map;
                 })(),
@@ -9968,7 +10115,7 @@ The context and task details follow below.
         // within 30 seconds the generation has not started. Rather than leave a dead
         // screen, hand the controls back and say so. Cleared by the first onStatus.
         let _genStarted = false;
-        const _genWatchdog = setTimeout(function() {
+        const _genWatchdog = setTimeout(function () {
             if (_genStarted) { return; }
             ccError('[CC] generateContent() WATCHDOG: no status after 30s  -  generation never started');
             showError('Generation did not start. This is usually a dropped connection. '
@@ -9977,7 +10124,7 @@ The context and task details follow below.
             if (generateBtn) generateBtn.disabled = false;
             if (prevBtn) prevBtn.disabled = false;
         }, 30000);
-        const _clearGenWatchdog = function() {
+        const _clearGenWatchdog = function () {
             _genStarted = true;
             clearTimeout(_genWatchdog);
         };
@@ -9998,15 +10145,15 @@ The context and task details follow below.
             // v12.55: Gather additional student language selections
             const additionalLangs = Array.from(
                 document.querySelectorAll('#cc-additional-langs input[type="checkbox"]:checked')
-            ).map(function(cb) {
+            ).map(function (cb) {
                 return { code: cb.value, label: cb.parentElement.textContent.trim() };
-            }).filter(function(l) { return l.code !== voiceLanguage; });
+            }).filter(function (l) { return l.code !== voiceLanguage; });
             // CC-ML-DEBUG v13.3
             ccLog('%c[CC-ML BUILDER]',
                 'background:#7c3aed;color:#fff;padding:2px 6px;border-radius:3px;',
                 'voiceName=' + voiceName, '| voiceLanguage=' + voiceLanguage,
                 '| voiceoverEnabled=' + voiceoverEnabled,
-                '| additionalLangs (' + additionalLangs.length + '):', additionalLangs.map(function(l) { return l.code; }).join(', ') || '(none)');
+                '| additionalLangs (' + additionalLangs.length + '):', additionalLangs.map(function (l) { return l.code; }).join(', ') || '(none)');
 
             // v6.6.68: Gather images settings
             const imagesCheckbox = document.getElementById('cc-images-enabled');
@@ -10120,7 +10267,7 @@ The context and task details follow below.
                         var _voSkipBtn  = document.getElementById('cc-vo-skip-btn');
                         if (_voSkipWrap) _voSkipWrap.style.display = '';
                         if (_voSkipBtn) {
-                            _voSkipBtn.onclick = function() {
+                            _voSkipBtn.onclick = function () {
                                 _voSkipRequested = true;
                                 _voSkipBtn.disabled = true;
                                 _voSkipBtn.textContent = 'Skipping\u2026';
@@ -10167,7 +10314,7 @@ The context and task details follow below.
                         // and the player never substitutes another voice.
                         const pregenQuizFeedback = async (section) => {
                             if (_voSkipRequested) return;
-                            var dp = (section.cards || []).filter(function(c) {
+                            var dp = (section.cards || []).filter(function (c) {
                                 return c && c.cardType === 'decision-point';
                             })[0];
                             if (!dp || !Array.isArray(dp.options) || !dp.options.length) return;
@@ -10227,6 +10374,8 @@ The context and task details follow below.
                                 // eliminating the schema-version / word-count / hash mismatches that caused
                                 // every builder-pregenerated voiceover to be detected as "stale" and
                                 // re-synthesised on first play  -  wasting TTS API credits.
+                                // v13.94.6: narrate in the module's own language, not English.
+                                useNarrationLanguage(voiceLanguage);
                                 var voText = CcState.buildVoiceoverText(section, generatedManifest);
 
                                 if (!voText.trim()) return;
@@ -10249,7 +10398,7 @@ The context and task details follow below.
                                 // abort fires. Previously no timeout existed here, so a single stuck
                                 // section caused "Pre-generating voiceovers..." to appear forever.
                                 var _builderAbortCtrl = new AbortController();
-                                var _builderAbortTimer = setTimeout(function() {
+                                var _builderAbortTimer = setTimeout(function () {
                                     _builderAbortCtrl.abort();
                                     ccWarn('[VOICEOVER BUILDER v12.57] ABORT section ' + section.id + '  -  210s timeout exceeded on attempt ' + attempt);
                                 }, 210000);
@@ -10400,7 +10549,7 @@ The context and task details follow below.
                                     generatedManifest.topics,
                                     _mlLang.code,
                                     cmid,
-                                    function(p) {
+                                    function (p) {
                                         var pct = Math.round((p.current / p.total) * 100);
                                         document.getElementById('cc-gen-progress').style.width = pct + '%';
                                         document.getElementById('cc-gen-status').textContent =
@@ -10411,7 +10560,9 @@ The context and task details follow below.
                                                 _mlFailureTitles = p.translationFailureTitles;
                                             }
                                         }
-                                    }
+                                    },
+                                    (generatedManifest.context && generatedManifest.context.mode)
+                                        || generatedManifest.mode || selectedMode || 'vet'
                                 );
                             } catch (_mlTransErr) {
                                 ccError('[CC-ML TRANSLATE] translateTopicsForLanguage failed for ' + _mlLang.code + ':', _mlTransErr.message);
@@ -10431,7 +10582,7 @@ The context and task details follow below.
                             // CC-ML-DEBUG v13.3
                             if (_mlResult) {
                                 var _dbgTopics = (_mlResult.topics || []).length;
-                                var _dbgSects = (_mlResult.topics || []).reduce(function(a,t){return a+(t.sections||[]).length;},0);
+                                var _dbgSects = (_mlResult.topics || []).reduce(function (a,t){return a+(t.sections||[]).length;},0);
                                 ccLog('%c[CC-ML BUILDER CONTENT]',
                                     'background:#16a34a;color:#fff;padding:2px 6px;border-radius:3px;',
                                     _mlLang.code + ' generated: topics=' + _dbgTopics + ' sections=' + _dbgSects);
@@ -10446,8 +10597,8 @@ The context and task details follow below.
                                         'Pre-generating ' + _mlLang.label + ' voiceovers...';
                                     document.getElementById('cc-gen-progress').style.width = '0%';
                                     var _mlSections = [];
-                                    _mlResult.topics.forEach(function(t) {
-                                        (t.sections || []).forEach(function(s) {
+                                    _mlResult.topics.forEach(function (t) {
+                                        (t.sections || []).forEach(function (s) {
                                             // FIX-CC-ML-SECTION-FILTER (v13.15): Previously only collected sections
                                             // with s.cards — excluded description-only and legacy sections, leaving
                                             // them with no voiceover and causing the INCOMPLETE VOICEOVERS loop.
@@ -10467,10 +10618,12 @@ The context and task details follow below.
                                     // Fix: factory IIFE captures langCode as a true parameter (by value),
                                     // immune to outer-scope reassignment. The inner fn variable is used
                                     // for reliable self-reference in the recursive retry path.
-                                    var pregenLangOne = (function(langCode) {
-                                        var fn = async function(section, attempt) {
+                                    var pregenLangOne = (function (langCode) {
+                                        var fn = async function (section, attempt) {
                                             attempt = attempt || 1;
                                             try {
+                                                // v13.94.6: narrate this pack in ITS language.
+                                                useNarrationLanguage(langCode);
                                                 var voText = CcState.buildVoiceoverText(section, _mlResult);
                                                 if (!voText.trim()) { _mlDone++; return; }
                                                 var fd = new FormData();
@@ -10522,7 +10675,7 @@ The context and task details follow below.
                                                 } else { throw new Error(d.error || 'No audio'); }
                                             } catch (e) {
                                                 if (attempt < 3) {
-                                                    await new Promise(function(rr) { setTimeout(rr, attempt * 2000); });
+                                                    await new Promise(function (rr) { setTimeout(rr, attempt * 2000); });
                                                     return fn(section, attempt + 1);
                                                 }
                                                 ccWarn('[MULTI-LANG VO] ' + langCode + ' sec ' + (section.id || '?') + ' failed: ' + e.message);
@@ -10536,8 +10689,8 @@ The context and task details follow below.
                                     var _MLCONC = 3;
                                     while (_mlIdx2 < _mlSections.length) {
                                         while (_mlPromises2.length < _MLCONC && _mlIdx2 < _mlSections.length) {
-                                            (function(_sec2) {
-                                                var _p2 = pregenLangOne(_sec2, 1).then(function() {
+                                            (function (_sec2) {
+                                                var _p2 = pregenLangOne(_sec2, 1).then(function () {
                                                     _mlPromises2.splice(_mlPromises2.indexOf(_p2), 1);
                                                 });
                                                 _mlPromises2.push(_p2);
@@ -10551,8 +10704,8 @@ The context and task details follow below.
                                 }
                                 // CC-ML-DEBUG v13.3: audit voiceover coverage before pushing
                                 var _mlVoCount = 0, _mlVoMiss = 0;
-                                (_mlResult.topics || []).forEach(function(t) {
-                                    (t.sections || []).forEach(function(s) {
+                                (_mlResult.topics || []).forEach(function (t) {
+                                    (t.sections || []).forEach(function (s) {
                                         if (s.slideType === 'activity') { return; }
                                         if (s.voiceoverUrl && (s.voiceoverUrl.startsWith('http') || s.voiceoverUrl === 'pregenerated')) { _mlVoCount++; }
                                         else { _mlVoMiss++; }
@@ -10649,7 +10802,7 @@ The context and task details follow below.
             const parsed = JSON.parse(trimmed);
             const list = Array.isArray(parsed) ? parsed : [parsed];
             const msgs = list
-                .map(function(item) { return item && (item.message || item.error); })
+                .map(function (item) { return item && (item.message || item.error); })
                 .filter(Boolean);
             ccWarn('[BUILDER] vendor returned a structured error: ' + trimmed.slice(0, 400));
             if (msgs.length) {
@@ -10697,18 +10850,18 @@ The context and task details follow below.
         let qaResultsHtml = '';
         const topicResults = [];
         if (manifest.topics) {
-            manifest.topics.forEach(function(topic) {
+            manifest.topics.forEach(function (topic) {
                 const cards = [];
                 if (topic.sections) {
-                    topic.sections.forEach(function(section) {
+                    topic.sections.forEach(function (section) {
                         if (section.cards) {
-                            section.cards.forEach(function(card) { cards.push(card); });
+                            section.cards.forEach(function (card) { cards.push(card); });
                         }
                     });
                 }
                 if (cards.length > 0) {
-                    const passed = cards.some(function(c) { return c.qualityAction === 'VALIDITY_GATE_PASS'; });
-                    const failed = cards.some(function(c) { return c.qualityAction === 'FAILED'; });
+                    const passed = cards.some(function (c) { return c.qualityAction === 'VALIDITY_GATE_PASS'; });
+                    const failed = cards.some(function (c) { return c.qualityAction === 'FAILED'; });
                     topicResults.push({
                         title: topic.title || topic.name || 'Untitled Topic',
                         pass: passed && !failed
@@ -10719,7 +10872,7 @@ The context and task details follow below.
 
         if (topicResults.length > 0) {
             qaResultsHtml = '<div class="cc-qa-results"><h3 class="cc-qa-results-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>Structure Validation Results</h3><p class="cc-qa-results-desc">Each topic is checked for correct card count, required fields, and voiceover length. Broken structure triggers one targeted repair pass.</p>';
-            topicResults.forEach(function(t) {
+            topicResults.forEach(function (t) {
                 const badgeClass = 'cc-qa-badge-pass';
                 const badgeLabel = 'Valid';
                 qaResultsHtml += '<div class="cc-qa-topic-row">';

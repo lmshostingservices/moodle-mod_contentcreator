@@ -11,7 +11,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define([], function() {
+define([], function () {
     'use strict';
 
     /**
@@ -69,7 +69,7 @@ define([], function() {
      *                                    manifest.voiceSettings.language.
      * @returns {string} BCP-47 language code to send to the TTS API.
      */
-    var getEffectiveLang = function(activeLang, voiceLanguage) {
+    var getEffectiveLang = function (activeLang, voiceLanguage) {
         return (activeLang && activeLang.length > 0) ? activeLang : (voiceLanguage || 'en-AU');
     };
 
@@ -89,7 +89,7 @@ define([], function() {
      * @param {Object} section  A manifest section object.
      * @returns {boolean}
      */
-    var isSectionVoiceoverComplete = function(section) {
+    var isSectionVoiceoverComplete = function (section) {
         return section.slideType === 'activity' ||
             section.voiceoverUrl === 'pregenerated' ||
             (section.voiceoverStatus === 'complete' &&
@@ -103,7 +103,7 @@ define([], function() {
      * @param {Array} sections  Array of manifest section objects.
      * @returns {boolean}
      */
-    var allVoiceoversComplete = function(sections) {
+    var allVoiceoversComplete = function (sections) {
         return sections.every(isSectionVoiceoverComplete);
     };
 

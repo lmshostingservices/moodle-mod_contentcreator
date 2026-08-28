@@ -13,7 +13,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state'], function(Legislation, CcState) {
+define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state'], function (Legislation, CcState) {
     /**
      * v13.77 FIX-OBJECT-TEXT: entries in the card content arrays arrive as EITHER
      * plain strings or objects, depending on what the vendor API returns for that
@@ -24,7 +24,7 @@ define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state'], functi
      * @param {*} entry A string, or an object such as {title, text} / {error, consequence}.
      * @return {String} Readable text for the entry, or an empty string.
      */
-    var ccEntryText = function(entry) {
+    var ccEntryText = function (entry) {
         if (entry === null || entry === undefined) { return ''; }
         if (typeof entry === 'string') { return entry; }
         if (typeof entry !== 'object') { return String(entry); }
@@ -44,9 +44,9 @@ define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state'], functi
      * @param {Array} arr The array to flatten; anything non-array yields [].
      * @return {Array} Array of readable strings.
      */
-    var ccTextList = function(arr) {
+    var ccTextList = function (arr) {
         if (!Array.isArray(arr)) { return []; }
-        return arr.map(ccEntryText).filter(function(s) { return s; });
+        return arr.map(ccEntryText).filter(function (s) { return s; });
     };
 
     'use strict';
@@ -262,7 +262,23 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
         }
     };
 
+    // v13.94.3: Route 5 (Topics and Text) had no schema entry, so getCardSchemaForMode
+    // fell through to the 7-card VET schema. normalizeCards then saw 5 cards against an
+    // expected 7 and bailed out, which meant Route 5 never received the markdown
+    // stripping, slang substitution or doubled-word repair every other route gets.
+    const TOPICSTEXT_CARD_SCHEMA = {
+        cardTypes: ['overview', 'key-concepts', 'examples-application', 'key-takeaways', 'decision-point'],
+        contrastTypes: {
+            'overview':             'translation',
+            'key-concepts':         'translation',
+            'examples-application': 'workplace-scenario',
+            'key-takeaways':        'checklist',
+            'decision-point':       'checklist'
+        }
+    };
+
     const getCardSchemaForMode = (mode) => {
+        if (mode === 'topicstext') return TOPICSTEXT_CARD_SCHEMA;
         if (mode === 'university') return UNIVERSITY_CARD_SCHEMA;
         if (mode === 'workplace') return WORKPLACE_CARD_SCHEMA;
         if (mode === 'pd') return PD_CARD_SCHEMA;
@@ -308,6 +324,13 @@ DOMAIN: Match the unit topic. HLTAID  ->  DRSABCD, scene safety. WHS  ->  hazard
 
 VOICE: Supervisor coaching on the job. Sentences under 20 words. Use "you". Plain words: "check" not "evaluate", "make sure" not "ensure".
 
+LENGTH  -  NOT NEGOTIABLE: every card must carry 160-240 words of visible learner-facing text,
+not counting voiceoverText. Each field below states its own word range; hit it. A field written
+to the bottom of its range across a whole card produces a card that is too thin to teach from.
+Sentences stay under 20 words  -  reaching the word count means MORE sentences carrying more
+specifics, never longer ones. Add detail that does work: the actual step, the real consequence,
+the named tool, form, system or timeframe. Never pad with adjectives, restatement or filler.
+
 VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
 
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
@@ -320,25 +343,31 @@ clock  ->  deadlines, time pressure, urgency | calendar  ->  scheduling, dates
 lightbulb  ->  solution, idea, innovation | brain  ->  thinking, decision making, reflection | search  ->  checking, reviewing, inspecting | graduation-cap  ->  training, qualification | book-open  ->  learning, theory, study
 target  ->  goal, objective | dollar-sign  ->  cost, financial impact, budget | briefcase  ->  client, customer, service | trending-up  ->  escalation, growth
 ICON CONSISTENCY RULES:
-- hook-scenario + applied-scenario keyPoints  ->  prefer contextual (map-pin, users, zap, alert-triangle)
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
-- mistakes items  ->  prefer risk icons (alert-triangle, alert-circle, heartbeat)
-- concept-explainer insights  ->  prefer thinking icons (lightbulb, message-circle, clipboard-check)
 - If unsure: communication  ->  message-circle | risk  ->  alert-triangle | process  ->  list-checks | people  ->  users
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title, text(2 sentences, 2nd person, specific)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  keyPoints[3]{title, text(2-3 sentences)}, heading(the legislation or policy name), keyInfo(the obligation in plain English  -  no section numbers), summaryLine(1 sentence linking to Card 1), voiceoverText
-3. mental-model  -  steps[4-5]{step(verb-led), icon, detail(2-3 sentences with concrete nouns)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title, text(2 sentences)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Not..."), consequence(15+ words, specific impact)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 10+ words)}, errorItems[5]{error(verb or "Not...", 10+ words), consequence(10+ words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 15+ words, 2nd person), standardItems[1]{text(the ONE correct answer), consequence(15+ words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer), consequence(15+ words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(34-46 words, 2nd person, specific: name the place, the time of day, the equipment, what the learner can see or hear)}, highlightText(optional, max 20 words), voiceoverText
+2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(35-50 words)}, heading(the legislation or policy name), keyInfo(25-35 words  -  the obligation in plain English, no section numbers), summaryLine(15-20 words linking to Card 1), voiceoverText
+3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(35-45 words with concrete nouns: what you do, what you are looking for, what tells you it is done)}, voiceoverText
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(34-46 words)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), consequence(25-32 words: the specific impact, who it lands on, and how it shows up)}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 12-16 words)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 18-28 words, 2nd person), standardItems[1]{text(the ONE correct answer), consequence(28-38 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 8-12 words), consequence(25-35 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
 `;
 
     // ===========================================================================
     // UNIVERSITY 6-CARD SYSTEM PROMPT
+    //
+    // v13.94.3: card specs converted from open-ended minima ("30+ words", "20+ words
+    // each", "5+") to explicit per-field WORD RANGES, and given the same
+    // "LENGTH  -  NOT NEGOTIABLE" header VET got in v13.94.0. A "30+ words" floor is
+    // read by the model as a target, so every field landed on its floor and the card
+    // came in around 100-130 words  -  under the 150-word floor this route declares for
+    // itself. The per-field minima now SUM to at least 160 on all six cards and the
+    // maxima land near 240, so a card written to the bottom of every range still
+    // clears the floor. Field names, card count and voiceoverText rules are unchanged.
     // ===========================================================================
 
     const UNIVERSITY_SYSTEM_PROMPT = `You are generating university-level academic learning content.
@@ -351,18 +380,38 @@ REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve theory 
 
 VOICE: Clear academic mentor. Sentences under 25 words. Use "you". Technical terms are fine  -  define each one. Never use: learn, understand, know, be aware of, appreciate, explore.
 
+LENGTH  -  NOT NEGOTIABLE: every card must carry 160-240 words of visible learner-facing text,
+not counting voiceoverText. Each field below states its own word range; hit it. A field written
+to the bottom of its range across a whole card produces a card that is too thin to teach from.
+Sentences stay under 25 words  -  reaching the word count means MORE sentences carrying more
+specifics, never longer ones. Add detail that does work: the named theorist, the date, the
+institution, the actual finding, the exact boundary condition. Never pad with adjectives,
+restatement or filler.
+
 VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 60 words.
 
 CARDS (generate in this order):
-1. concept-anchor  -  conceptDefinition(30+ words), significance(30+ words), keyTerms[3]{term, definition}, voiceoverText
-2. theoretical-framework  -  frameworks[2-3]{name, originator, principle(20+ words), limitation(15+ words)}, voiceoverText
-3. analytical-lens  -  heading, cognitiveConsiderations[5+](15+ words each, with concrete example), voiceoverText
-4. ethics-considerations  -  heading, considerations[5+]{dimension(e.g. "Privacy"), description(20+ words)}, voiceoverText
-5. case-study-1  -  title, context(70+ words, 2nd person, specific details  -  names/dates/institutions), analysisPrompts[3](20+ words each), keyInsight(20+ words), voiceoverText
-6. case-study-2  -  title(DIFFERENT context from Card 5), context(70+ words, different setting), analysisPrompts[3](different questions from Card 5), criticalReflection(30+ words), voiceoverText`;
+1. concept-anchor  -  conceptDefinition(48-64 words), significance(46-62 words: who this matters to, what changes when it is applied), keyTerms[3]{term(1-4 words), definition(22-30 words)}, voiceoverText
+2. theoretical-framework  -  frameworks[2-3]{name(2-6 words), originator(2-5 words), principle, limitation}, voiceoverText
+   -  if you return 2 frameworks: principle(50-62 words), limitation(34-44 words)
+   -  if you return 3 frameworks: principle(34-42 words), limitation(22-28 words)
+   -  fewer frameworks means each one carries more; the card total does not shrink
+3. analytical-lens  -  heading(5-9 words), cognitiveConsiderations[5+](31-46 words each, each one carrying a concrete example), voiceoverText
+4. ethics-considerations  -  heading(5-9 words), considerations[5+]{dimension(1-3 words, e.g. "Privacy"), description(30-43 words)}, voiceoverText
+5. case-study-1  -  title(4-8 words), context(80-104 words, 2nd person, specific details  -  names/dates/institutions), analysisPrompts[3](22-30 words each), keyInsight(24-34 words), voiceoverText
+6. case-study-2  -  title(4-8 words, DIFFERENT context from Card 5), context(80-104 words, different setting), analysisPrompts[3](22-30 words each, different questions from Card 5), criticalReflection(30-38 words), voiceoverText`;
 
     // ===========================================================================
     // WORKPLACE 6-CARD SYSTEM PROMPT
+    //
+    // v13.94.3: card specs converted from SENTENCE counts ("2 sentences", "2-3
+    // sentences", "1 sentence") and open-ended minima ("15+ words", "10+ words") to
+    // explicit per-field WORD RANGES, and given the same "LENGTH  -  NOT NEGOTIABLE"
+    // header VET got in v13.94.0. Sentence counts do not constrain length  -  the model
+    // satisfied "2 sentences" with two short ones and produced roughly 40% of target
+    // card length, exactly the failure the VET conversion fixed. The per-field minima
+    // now SUM to at least 160 on all seven cards and the maxima land near 240. Field
+    // names, card count and voiceoverText rules are unchanged.
     // ===========================================================================
 
     const WORKPLACE_SYSTEM_PROMPT = `You are generating structured workplace training aligned to policy, SOP, or performance expectations.
@@ -375,6 +424,13 @@ REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve named s
 
 VOICE: Team leader coaching a colleague. Sentences under 20 words. Use "you". Focus on business impact: productivity, customer satisfaction, costs. No RTO audit language.
 
+LENGTH  -  NOT NEGOTIABLE: every card must carry 160-240 words of visible learner-facing text,
+not counting voiceoverText. Each field below states its own word range; hit it. A field written
+to the bottom of its range across a whole card produces a card that is too thin to teach from.
+Sentences stay under 20 words  -  reaching the word count means MORE sentences carrying more
+specifics, never longer ones. Add detail that does work: the actual step, the real cost, the
+named system, policy, form or timeframe. Never pad with adjectives, restatement or filler.
+
 VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
 
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
@@ -387,25 +443,30 @@ clock  ->  deadlines, time pressure, urgency | calendar  ->  scheduling, dates
 lightbulb  ->  solution, idea, innovation | brain  ->  thinking, decision making, reflection | search  ->  checking, reviewing, inspecting | graduation-cap  ->  training, qualification | book-open  ->  learning, theory, study
 target  ->  goal, objective | dollar-sign  ->  cost, financial impact, budget | briefcase  ->  client, customer, service | trending-up  ->  escalation, growth
 ICON CONSISTENCY RULES:
-- hook-scenario + applied-scenario keyPoints  ->  prefer contextual (map-pin, users, zap, alert-triangle)
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
-- mistakes items  ->  prefer risk icons (alert-triangle, alert-circle, heartbeat)
-- concept-explainer insights  ->  prefer thinking icons (lightbulb, message-circle, clipboard-check)
 - If unsure: communication  ->  message-circle | risk  ->  alert-triangle | process  ->  list-checks | people  ->  users
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title, text(2 sentences, 2nd person, specific)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  keyPoints[3]{title, text(2-3 sentences)}, heading(the legislation or policy name), keyInfo(the obligation in plain English  -  no section numbers), summaryLine(1 sentence linking to Card 1), voiceoverText
-3. mental-model  -  steps[4-5]{step(verb-led), icon, detail(2-3 sentences, specific tools/systems/forms)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title, text(2 sentences)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Not..."), consequence(15+ words, business/safety/regulatory impact)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 10+ words)}, errorItems[5]{error(verb or "Not...", 10+ words), consequence(10+ words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 15+ words, 2nd person, compliance stakes), standardItems[1]{text(the ONE correct answer), consequence(15+ words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer), consequence(15+ words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(37-52 words, 2nd person, specific: name the place, the time of day, the system or equipment, what the learner can see or hear)}, highlightText(optional, max 20 words), voiceoverText
+2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(36-52 words)}, heading(the legislation or policy name), keyInfo(28-40 words  -  the obligation in plain English, no section numbers), summaryLine(16-24 words linking to Card 1), voiceoverText
+3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(37-42 words with specific tools/systems/forms: what you do, what you are looking for, what tells you it is done)}, voiceoverText
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(37-52 words)}  -  DIFFERENT setting and time from Card 1, highlightText(optional, max 20 words), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), consequence(26-38 words: the specific business/safety/regulatory impact, who it lands on, and how it shows up)}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 12-16 words)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, compliance stakes), standardItems[1]{text(the ONE correct answer, 8-14 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 8-12 words), consequence(26-36 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
 `;
 
     // ===========================================================================
     // PD 6-CARD SYSTEM PROMPT
+    //
+    // v13.94.3: card specs converted from SENTENCE counts ("2 sentences", "2-3
+    // sentences", "1 sentence") and open-ended minima ("15+ words", "10+ words") to
+    // explicit per-field WORD RANGES, and given the same "LENGTH  -  NOT NEGOTIABLE"
+    // header VET got in v13.94.0  -  same under-production failure, same fix as the
+    // Workplace route above. The per-field minima now SUM to at least 160 on all seven
+    // cards and the maxima land near 240. Field names, card count and voiceoverText
+    // rules are unchanged.
     // ===========================================================================
 
     const PD_SYSTEM_PROMPT = `You are generating professional development learning content for working professionals building transferable skills.
@@ -418,6 +479,14 @@ REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve named f
 
 VOICE: Experienced colleague coaching a peer. Sentences under 25 words. Conversational but professional. Use "you" and "your team". No trade-specific or VET language.
 
+LENGTH  -  NOT NEGOTIABLE: every card must carry 160-240 words of visible learner-facing text,
+not counting voiceoverText. Each field below states its own word range; hit it. A field written
+to the bottom of its range across a whole card produces a card that is too thin to teach from.
+Sentences stay under 25 words  -  reaching the word count means MORE sentences carrying more
+specifics, never longer ones. Add detail that does work: the actual move, the words you would
+say, the real professional consequence, the named framework or timeframe. Never pad with
+adjectives, restatement or filler.
+
 VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
 
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
@@ -430,21 +499,18 @@ clock  ->  deadlines, time pressure, urgency | calendar  ->  scheduling, dates
 lightbulb  ->  solution, idea, innovation | brain  ->  thinking, decision making, reflection | search  ->  checking, reviewing, inspecting | graduation-cap  ->  training, qualification | book-open  ->  learning, theory, study
 target  ->  goal, objective | dollar-sign  ->  cost, financial impact, budget | briefcase  ->  client, customer, service | trending-up  ->  escalation, growth
 ICON CONSISTENCY RULES:
-- hook-scenario + applied-scenario keyPoints  ->  prefer contextual (map-pin, users, zap, alert-triangle)
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
-- mistakes items  ->  prefer risk icons (alert-triangle, alert-circle, heartbeat)
-- concept-explainer insights  ->  prefer thinking icons (lightbulb, message-circle, clipboard-check)
 - If unsure: communication  ->  message-circle | risk  ->  alert-triangle | process  ->  list-checks | people  ->  users
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title, text(2 sentences, 2nd person, specific professional detail)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  keyPoints[3]{title, text(2-3 sentences)}, heading(the legislation or policy name), keyInfo(the obligation in plain English  -  no section numbers), summaryLine(1 sentence linking to Card 1), voiceoverText
-3. mental-model  -  steps[4-5]{step(verb-led), icon, detail(2-3 sentences, practitioner-level guidance)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title, text(2 sentences)}  -  DIFFERENT professional setting from Card 1, highlightText(optional), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Assuming..."), consequence(15+ words, professional/relational/organisational impact)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 10+ words)}, errorItems[5]{error(verb or "Assuming...", 10+ words), consequence(10+ words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 15+ words, 2nd person, professional judgment), standardItems[1]{text(the ONE correct answer), consequence(15+ words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer), consequence(15+ words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(37-52 words, 2nd person, specific professional detail: who is in the room, the deadline, what was said, what is at stake)}, highlightText(optional, max 20 words), voiceoverText
+2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(36-52 words)}, heading(the name of the principle, model or professional standard this rests on  -  NOT a law, act or regulation), keyInfo(28-40 words  -  what that principle actually requires of the practitioner, in plain English), summaryLine(16-24 words linking to Card 1), voiceoverText
+3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(37-42 words of practitioner-level guidance: what you do, what you are looking for, what tells you it is done)}, voiceoverText
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(37-52 words)}  -  DIFFERENT professional setting from Card 1, highlightText(optional, max 20 words), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Assuming...", 6-10 words), consequence(26-38 words: the specific professional/relational/organisational impact, who it lands on, and how it shows up)}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 12-16 words)}, errorItems[5]{error(verb or "Assuming...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, professional judgment), standardItems[1]{text(the ONE correct answer, 8-14 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 8-12 words), consequence(26-36 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
 `;
 
     // ===========================================================================
@@ -831,13 +897,27 @@ Generate the full 6-card sequence.${langSuffix}`;
         const schema = getCardSchemaForMode(mode);
         const expectedCount = schema.cardTypes.length;
 
-        if (!Array.isArray(cards) || cards.length !== expectedCount) return cards;
+        if (!Array.isArray(cards)) return cards;
 
-        cards.forEach((card, i) => {
-            if (!card.cardType && card.type) { card.cardType = card.type; delete card.type; }
-            if (!card.cardType) card.cardType = schema.cardTypes[i];
-            if (!card.contrastType) card.contrastType = schema.contrastTypes[schema.cardTypes[i]];
-        });
+        // v13.94.3: positional backfill is only safe when the card count matches the
+        // schema exactly (e.g. activitiesEnabled === false drops the decision-point).
+        // Everything below - the per-route field repairs and the text cleanup at the
+        // bottom - keys off cardType, not position, and must run either way. Previously
+        // a count mismatch returned early and skipped all of it.
+        if (cards.length === expectedCount) {
+            cards.forEach((card, i) => {
+                if (!card.cardType && card.type) { card.cardType = card.type; delete card.type; }
+                if (!card.cardType) card.cardType = schema.cardTypes[i];
+                if (!card.contrastType) card.contrastType = schema.contrastTypes[schema.cardTypes[i]];
+            });
+        } else {
+            cards.forEach((card) => {
+                if (!card.cardType && card.type) { card.cardType = card.type; delete card.type; }
+                if (card.cardType && !card.contrastType && schema.contrastTypes[card.cardType]) {
+                    card.contrastType = schema.contrastTypes[card.cardType];
+                }
+            });
+        }
 
         if (mode === 'vet') {
             const actionCard = cards.find(c => c.cardType === 'action-breakdown');
@@ -1021,7 +1101,7 @@ Generate the full 6-card sequence.${langSuffix}`;
         // starved prompt, not these prompts. No word-count regression is established.
         const DOUBLE_WORD_ALLOWLIST = ['that', 'have', 'said', 'well', 'had', 'long'];
         const beforeDoubles = allText;
-        allText = allText.replace(/\b([A-Za-z]{4,})(\s+)\1\b/g, function(match, word, gap) {
+        allText = allText.replace(/\b([A-Za-z]{4,})(\s+)\1\b/g, function (match, word, gap) {
             if (DOUBLE_WORD_ALLOWLIST.indexOf(word.toLowerCase()) !== -1) { return match; }
             return word;
         });
@@ -1068,6 +1148,12 @@ Generate the full 6-card sequence.${langSuffix}`;
                 if (cards[1]?.frameworks?.length >= 2) structScore += 1;
                 if (cards[2]?.cognitiveConsiderations?.length >= 5) structScore += 1;
                 if (cards[3]?.considerations?.length >= 5) structScore += 1;
+            } else if (mode === 'topicstext') {
+                // v13.94.3: Route 5 is prose-first  -  four paragraph cards + decision-point.
+                if (cards[0]?.paragraphs?.length >= 2) structScore += 1;           // overview
+                if (cards[1]?.keyTerms?.length >= 3) structScore += 1;             // key-concepts
+                if (cards[2]?.paragraphs?.length >= 2) structScore += 1;           // examples-application
+                if (cards[3]?.goodItems?.length >= 3) structScore += 1;            // key-takeaways
             } else {
                 // VET, Workplace, PD  -  all use unified 7-card schema
                 if (cards[0]?.sceneParts?.length >= 4) structScore += 1;           // hook-scenario
@@ -1120,6 +1206,20 @@ Generate the full 6-card sequence.${langSuffix}`;
                 { val: cards?.[4]?.context, min: 70, label: 'case-study-1 context' },
                 { val: cards?.[5]?.context, min: 70, label: 'case-study-2 context' },
                 { val: cards?.[5]?.criticalReflection, min: 30, label: 'criticalReflection' }
+            ];
+            for (const check of floorChecks) {
+                const count = wc(check.val);
+                if (count < check.min) { floorFails++; details.wordFloors.issues.push(`${check.label}: ${count}w < ${check.min}w minimum`); }
+            }
+        } else if (mode === 'topicstext') {
+            // v13.94.3: Route 5 floors are measured on prose, not on the unified-schema fields.
+            const paraText = (c) => (c?.paragraphs || []).join(' ');
+            const floorChecks = [
+                { val: paraText(cards?.[0]), min: 120, label: 'overview paragraphs' },
+                { val: paraText(cards?.[1]), min: 120, label: 'key-concepts paragraphs' },
+                { val: paraText(cards?.[2]), min: 120, label: 'examples-application paragraphs' },
+                { val: paraText(cards?.[3]), min: 120, label: 'key-takeaways paragraphs' },
+                { val: cards?.[4]?.question, min: 15, label: 'decision-point question' }
             ];
             for (const check of floorChecks) {
                 const count = wc(check.val);
@@ -1512,7 +1612,7 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
 
         const wc = (str) => { const s = (typeof str === 'string') ? str : ((str === null || str === undefined) ? '' : String(str)); return s.trim().split(/\s+/).filter(w => w).length; };
 
-        const isVerbFirst = function(text) {
+        const isVerbFirst = function (text) {
             var t = (text || '').trim();
             if (!t) return false;
             var first = t.split(/\s+/)[0].toLowerCase();
@@ -1537,11 +1637,11 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         };
 
         // unified 7-card schema: competency-summary (card 6) has goodItems[] + badItems[]
-        var summaryCard = (cards || []).find(function(c) { return c && c.cardType === 'competency-summary'; });
+        var summaryCard = (cards || []).find(function (c) { return c && c.cardType === 'competency-summary'; });
         var goodItems = Array.isArray(summaryCard?.goodItems) ? summaryCard.goodItems : [];
         if (goodItems.length >= 5) {
             details.cardStructure.score += 5;
-            var verbFirstItems = goodItems.filter(function(s) {
+            var verbFirstItems = goodItems.filter(function (s) {
                 var t = (typeof s === 'string') ? s : (s?.text || s?.behaviour || s?.criterion || '');
                 return isVerbFirst(t);
             });
@@ -1555,11 +1655,11 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         }
 
         // unified 7-card schema: mental-model (card 3) has steps[].{step, icon, detail}
-        var mentalCard = (cards || []).find(function(c) { return c && c.cardType === 'mental-model'; });
+        var mentalCard = (cards || []).find(function (c) { return c && c.cardType === 'mental-model'; });
         var steps = Array.isArray(mentalCard?.steps) ? mentalCard.steps : [];
         if (steps.length >= 4) {
             details.cardStructure.score += 5;
-            var verbFirstSteps = steps.filter(function(s) {
+            var verbFirstSteps = steps.filter(function (s) {
                 return isVerbFirst(s?.step || s?.action || s?.title || '');
             });
             if (verbFirstSteps.length >= 3) {
@@ -1572,12 +1672,12 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         }
 
         // unified scenario cards: hook-scenario (card 1) and applied-scenario (card 4) use sceneParts[]
-        var auditScenCards = (cards || []).filter(function(c) {
+        var auditScenCards = (cards || []).filter(function (c) {
             return c && (c.cardType === 'hook-scenario' || c.cardType === 'applied-scenario');
         });
         for (var si = 0; si < auditScenCards.length; si++) {
             var sc = auditScenCards[si];
-            var scenText = (sc.sceneParts || []).map(function(p) { return p?.text || p?.content || p?.description || ''; }).join(' ').toLowerCase();
+            var scenText = (sc.sceneParts || []).map(function (p) { return p?.text || p?.content || p?.description || ''; }).join(' ').toLowerCase();
             var scenScore = 0;
             if (/\d{1,2}[:.]\d{2}|morning|afternoon|evening|am\b|pm\b/i.test(scenText)) scenScore += 2;
             else details.scenarioQuality.issues.push(sc.cardType + ' missing time of day');
@@ -1592,11 +1692,11 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         details.scenarioQuality.score = Math.min(15, details.scenarioQuality.score);
 
         // unified 7-card schema: mistakes (card 5) has items[].{mistake, consequence}
-        var mistakesCard = (cards || []).find(function(c) { return c && c.cardType === 'mistakes'; });
+        var mistakesCard = (cards || []).find(function (c) { return c && c.cardType === 'mistakes'; });
         var mistakeItems = Array.isArray(mistakesCard?.items) ? mistakesCard.items : [];
         if (mistakeItems.length >= 5) {
             details.contentDepth.score += 5;
-            var itemsWithConsequence = mistakeItems.filter(function(e) { return e && e.consequence && wc(e.consequence) >= 10; });
+            var itemsWithConsequence = mistakeItems.filter(function (e) { return e && e.consequence && wc(e.consequence) >= 10; });
             if (itemsWithConsequence.length >= 4) details.contentDepth.score += 5;
             else details.contentDepth.issues.push('Mistake items need consequences of 10+ words (' + itemsWithConsequence.length + '/5 pass)');
         } else {
@@ -1604,7 +1704,7 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         }
 
         // unified 7-card schema: concept-explainer (card 2) has conceptInsights[]
-        var conceptCard = (cards || []).find(function(c) { return c && c.cardType === 'concept-explainer'; });
+        var conceptCard = (cards || []).find(function (c) { return c && c.cardType === 'concept-explainer'; });
         if (conceptCard && Array.isArray(conceptCard.conceptInsights) && conceptCard.conceptInsights.length >= 3) {
             details.contentDepth.score += 5;
         } else {
@@ -1624,8 +1724,8 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         else details.voiceoverQuality.score = 0;
 
         // unified 7-card schema: hook-scenario (card 1) has sceneParts[4] + voiceoverText; decision-point (card 7) has question + options[4]
-        var hookCard = (cards || []).find(function(c) { return c && c.cardType === 'hook-scenario'; });
-        var dpCard = (cards || []).find(function(c) { return c && c.cardType === 'decision-point'; });
+        var hookCard = (cards || []).find(function (c) { return c && c.cardType === 'hook-scenario'; });
+        var dpCard = (cards || []).find(function (c) { return c && c.cardType === 'decision-point'; });
         if (hookCard) {
             if (Array.isArray(hookCard.sceneParts) && hookCard.sceneParts.length >= 4) details.fieldCompleteness.score += 3;
             else details.fieldCompleteness.issues.push('hook-scenario needs 4 sceneParts (got ' + (hookCard.sceneParts?.length || 0) + ')');
@@ -1637,7 +1737,7 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         if (dpCard) {
             if (dpCard.question && wc(dpCard.question) >= 15) details.fieldCompleteness.score += 2;
             else details.fieldCompleteness.issues.push('decision-point question missing or too short');
-            if (Array.isArray(dpCard.options) && dpCard.options.length === 4 && dpCard.options.filter(function(o) { return o?.correct; }).length === 1) details.fieldCompleteness.score += 2;
+            if (Array.isArray(dpCard.options) && dpCard.options.length === 4 && dpCard.options.filter(function (o) { return o?.correct; }).length === 1) details.fieldCompleteness.score += 2;
             else details.fieldCompleteness.issues.push('decision-point needs exactly 4 options with exactly 1 correct');
         } else {
             details.fieldCompleteness.issues.push('Missing decision-point card');
@@ -1651,13 +1751,13 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         ];
         var allConsequenceText = '';
         for (var ci = 0; ci < auditScenCards.length; ci++) {
-            allConsequenceText += ' ' + (auditScenCards[ci].sceneParts || []).map(function(p) { return p?.text || p?.content || p?.description || ''; }).join(' ');
+            allConsequenceText += ' ' + (auditScenCards[ci].sceneParts || []).map(function (p) { return p?.text || p?.content || p?.description || ''; }).join(' ');
         }
         for (var ei = 0; ei < mistakeItems.length; ei++) {
             allConsequenceText += ' ' + (mistakeItems[ei]?.consequence || '');
         }
         allConsequenceText = allConsequenceText.toLowerCase();
-        var specificConsequences = consequenceKeywords.filter(function(kw) { return allConsequenceText.indexOf(kw) !== -1; });
+        var specificConsequences = consequenceKeywords.filter(function (kw) { return allConsequenceText.indexOf(kw) !== -1; });
         if (specificConsequences.length >= 2) {
             details.consequenceSpecificity.score += 10;
         } else if (specificConsequences.length === 1) {
@@ -1720,7 +1820,7 @@ Keep existing cardType values. Return ONLY a valid JSON object with "cards" arra
         for (var cat in auditIssues) {
             if (Object.prototype.hasOwnProperty.call(auditIssues, cat)) {
                 var catIssues = auditIssues[cat]?.issues || [];
-                catIssues.forEach(function(issue) {
+                catIssues.forEach(function (issue) {
                     issueLines.push('- [' + cat + '] ' + issue);
                 });
             }
@@ -1759,7 +1859,7 @@ Return ONLY the rewritten JSON object with "cards" array.`;
             var issues = [];
             for (var cat in auditDetails) {
                 if (Object.prototype.hasOwnProperty.call(auditDetails, cat)) {
-                    (auditDetails[cat]?.issues || []).forEach(function(i) { issues.push(i); });
+                    (auditDetails[cat]?.issues || []).forEach(function (i) { issues.push(i); });
                 }
             }
             return buildUniversityContentRepairPrompt(cards, issues, topicTitle, context);
@@ -1768,7 +1868,7 @@ Return ONLY the rewritten JSON object with "cards" array.`;
             var wpIssues = [];
             for (var cat2 in auditDetails) {
                 if (Object.prototype.hasOwnProperty.call(auditDetails, cat2)) {
-                    (auditDetails[cat2]?.issues || []).forEach(function(i) { wpIssues.push(i); });
+                    (auditDetails[cat2]?.issues || []).forEach(function (i) { wpIssues.push(i); });
                 }
             }
             return buildWorkplaceContentRepairPrompt(cards, wpIssues, topicTitle, context);
@@ -1777,7 +1877,7 @@ Return ONLY the rewritten JSON object with "cards" array.`;
             var pdIssues = [];
             for (var cat3 in auditDetails) {
                 if (Object.prototype.hasOwnProperty.call(auditDetails, cat3)) {
-                    (auditDetails[cat3]?.issues || []).forEach(function(i) { pdIssues.push(i); });
+                    (auditDetails[cat3]?.issues || []).forEach(function (i) { pdIssues.push(i); });
                 }
             }
             return buildPDContentRepairPrompt(cards, pdIssues, topicTitle, context);

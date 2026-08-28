@@ -66,10 +66,15 @@ function contentcreator_response(array $data) {
  * @return void
  */
 function contentcreator_fail($key, $a = null, array $extra = []) {
-    contentcreator_response(array_merge([
-        'success' => false,
-        'error' => get_string($key, 'mod_contentcreator', $a),
-    ], $extra));
+    contentcreator_response(
+        array_merge(
+            [
+                'success' => false,
+                'error' => get_string($key, 'mod_contentcreator', $a),
+            ],
+            $extra
+        )
+    );
 }
 
 /**
@@ -89,7 +94,7 @@ function contentcreator_fail($key, $a = null, array $extra = []) {
  * @return void
  */
 function contentcreator_require_manage($context, $cm) {
-    // v13.86: this used to accept moodle/course:manageactivities in the COURSE context
+    // v13.86: This used to accept moodle/course:manageactivities in the COURSE context
     // as an alternative. That made the plugin's own capability advisory: prohibiting
     // mod/contentcreator:manage for a role did not deny anything, because the fallback
     // still let the request through. Moodle security review treats an OR-fallback on a
@@ -362,15 +367,17 @@ function contentcreator_api_call($url, $payload, $method = 'POST', array $option
     // TCP keepalive reduces per request SSL handshake overhead: each call previously opened a
     // fresh TCP and SSL connection to the vendor, costing roughly 200ms. Keepalive reuses the
     // socket for the life of the PHP process.
-    $curl->setopt([
-        'CURLOPT_TIMEOUT' => isset($options['timeout']) ? (int)$options['timeout'] : 180,
-        'CURLOPT_RETURNTRANSFER' => true,
-        'CURLOPT_SSL_VERIFYPEER' => true,
-        'CURLOPT_TCP_KEEPALIVE' => 1,
-        'CURLOPT_TCP_KEEPIDLE' => 30,
-        'CURLOPT_TCP_KEEPINTVL' => 15,
-        'CURLOPT_ENCODING' => 'gzip, deflate',
-    ]);
+    $curl->setopt(
+        [
+            'CURLOPT_TIMEOUT' => isset($options['timeout']) ? (int)$options['timeout'] : 180,
+            'CURLOPT_RETURNTRANSFER' => true,
+            'CURLOPT_SSL_VERIFYPEER' => true,
+            'CURLOPT_TCP_KEEPALIVE' => 1,
+            'CURLOPT_TCP_KEEPIDLE' => 30,
+            'CURLOPT_TCP_KEEPINTVL' => 15,
+            'CURLOPT_ENCODING' => 'gzip, deflate',
+        ]
+    );
 
     $multipart = isset($options['multipart']) ? $options['multipart'] : null;
     $raw = !empty($options['raw']);
@@ -379,10 +386,12 @@ function contentcreator_api_call($url, $payload, $method = 'POST', array $option
         // Let cURL set the multipart content type and boundary itself.
         $curl->setHeader(['Accept: application/json']);
     } else {
-        $curl->setHeader([
-            'Content-Type: application/json',
-            'Accept: ' . ($raw ? '*/*' : 'application/json'),
-        ]);
+        $curl->setHeader(
+            [
+                'Content-Type: application/json',
+                'Accept: ' . ($raw ? '*/*' : 'application/json'),
+            ]
+        );
     }
     if (!empty($options['headers'])) {
         $curl->setHeader($options['headers']);
@@ -454,58 +463,66 @@ function contentcreator_prepare_long_request($seconds = 300) {
  * translated JSON error rather than as an uncaught exception.
  *
  * @param string $bucket Logical bucket name, for example generate.
- * @param int $max Maximum calls permitted in the window.
+ * @param int $max Calls permitted in the window when the site has configured no limit.
  * @param int $window Window length in seconds.
  * @return void
  */
 function contentcreator_check_ratelimit($bucket, $max, $window) {
     global $USER;
 
-    // V13.81: the ceilings are admin-configurable so a site doing bulk authoring can raise
-    // them without a code change, and so an author who trips one can be unblocked from the
-    // settings page instead of waiting out the window or purging caches. A configured value
-    // of 0 disables that bucket. Unknown buckets keep the caller's default.
-    $settingmap = [
-        'generate' => 'ratelimitgenerate',
-        'vendor' => 'ratelimitvendor',
-        'voice' => 'ratelimitvoice',
-    ];
-    if (isset($settingmap[$bucket])) {
-        $configured = get_config('mod_contentcreator', $settingmap[$bucket]);
-        if ($configured !== false && $configured !== '' && is_numeric($configured)) {
-            $max = (int)$configured;
-        }
-    }
-
-    // v13.85: the aggregate ceiling. Checked BEFORE the per-user one so that a site
-    // that has hit its own limit reports that, rather than telling an individual user
-    // they personally made too many requests. Read-only buckets are exempt: they spend
-    // no credits and cost the vendor nothing.
-    $sitemap = [
-        'voice' => ['sitelimitvoice', 2000],
-        'generate' => ['sitelimitgenerate', 1000],
-        'vendor' => ['sitelimitgenerate', 1000],
-    ];
-    if (isset($sitemap[$bucket])) {
-        [$sitesetting, $sitedefault] = $sitemap[$bucket];
-        $sitemax = get_config('mod_contentcreator', $sitesetting);
-        $sitemax = ($sitemax !== false && $sitemax !== '' && is_numeric($sitemax))
-            ? (int)$sitemax
-            : $sitedefault;
-        try {
-            \mod_contentcreator\ratelimiter::check_site($bucket, $sitemax, $window);
-        } catch (\moodle_exception $e) {
-            debugging('mod_contentcreator SITE rate limit hit: ' . $e->getMessage(), DEBUG_DEVELOPER);
-            contentcreator_fail('errorsiteratelimited');
-        }
-    }
-
+    // v13.94.3: The setting lookup, the site ceiling and the per-user check that used to be
+    // written out here now live in \mod_contentcreator\ratelimiter::enforce(), because the
+    // two web-service entry points could not reach a function defined in this script and so
+    // ignored the admin settings entirely. This function keeps only what is specific to the
+    // AJAX transport: turning a limit breach into a translated JSON error instead of an
+    // uncaught exception. Behaviour is unchanged - the site ceiling is still reported in
+    // preference to the per-user one.
     try {
-        \mod_contentcreator\ratelimiter::check($USER->id, $bucket, $max, $window);
+        \mod_contentcreator\ratelimiter::enforce($USER->id, $bucket, $max, $window);
     } catch (\moodle_exception $e) {
         debugging('mod_contentcreator rate limit hit: ' . $e->getMessage(), DEBUG_DEVELOPER);
-        contentcreator_fail('errorratelimited');
+        contentcreator_fail($e->errorcode === 'errorsiteratelimited' ? 'errorsiteratelimited' : 'errorratelimited');
     }
+}
+
+/**
+ * Record that an asynchronous generation job belongs to the current user and course module.
+ *
+ * v13.94.3: job ids used to be unbound. poll_job checked only that the caller held :manage
+ * on the cmid the CALLER supplied, never that the job id had been issued to them, so any
+ * author on the site could read back another author's generated content by polling that
+ * author's job id. The binding is written here, at the one place a job id is issued.
+ *
+ * @param string $jobid Job id returned by the vendor.
+ * @param int $cmid Course module the job was started from.
+ * @return void
+ */
+function contentcreator_remember_job_owner($jobid, $cmid) {
+    global $USER;
+
+    // The job id is hashed into the cache key rather than used directly: the vendor's ids
+    // contain hyphens, and the definition declares simple keys, which permit only
+    // alphanumerics and underscores.
+    \cache::make('mod_contentcreator', 'jobowner')->set(md5($jobid), $USER->id . ':' . (int)$cmid);
+}
+
+/**
+ * Whether an asynchronous generation job was issued to the current user for this cmid.
+ *
+ * A job id whose binding has expired or was never recorded is treated as not owned. Job
+ * ids live for minutes, so the only requests this refuses in practice are polls for
+ * somebody else's job.
+ *
+ * @param string $jobid Job id supplied by the client.
+ * @param int $cmid Course module the client claims the job belongs to.
+ * @return bool True if this user started this job from this course module.
+ */
+function contentcreator_job_is_owned($jobid, $cmid) {
+    global $USER;
+
+    $owner = \cache::make('mod_contentcreator', 'jobowner')->get(md5($jobid));
+
+    return is_string($owner) && $owner === $USER->id . ':' . (int)$cmid;
 }
 
 /**
@@ -522,17 +539,24 @@ function contentcreator_clean_voice_text($text, $maxchars) {
     $text = strip_tags($text);
     $text = preg_replace('/\s+/', ' ', $text);
     $text = trim($text);
-    if (strlen($text) <= $maxchars) {
+    // v13.94.3: This counted and cut BYTES, not characters. The cap is documented as a
+    // character ceiling and the text is multilingual, so on any non-ASCII narration the
+    // limit bit early and, worse, the cut landed mid-sequence and produced invalid UTF-8
+    // that the speech service rejects - the learner then hears nothing. \core_text is
+    // multibyte-safe and is what generate_voiceover.php already uses for the same cap.
+    if (\core_text::strlen($text) <= $maxchars) {
         return $text;
     }
-    $trimmed = substr($text, 0, $maxchars);
+    $trimmed = \core_text::substr($text, 0, $maxchars);
+    // The boundary search is also character based, so the offset it returns is a valid
+    // cut point for \core_text::substr(). strrpos() would return a byte offset here.
     $boundary = max(
-        strrpos($trimmed, '. '),
-        strrpos($trimmed, '! '),
-        strrpos($trimmed, '? ')
+        \core_text::strrpos($trimmed, '. '),
+        \core_text::strrpos($trimmed, '! '),
+        \core_text::strrpos($trimmed, '? ')
     );
     if ($boundary !== false && $boundary > (int)($maxchars / 10)) {
-        return substr($trimmed, 0, $boundary + 1);
+        return \core_text::substr($trimmed, 0, $boundary + 1);
     }
     return $trimmed;
 }
@@ -548,16 +572,20 @@ function contentcreator_clean_voice_text($text, $maxchars) {
 function contentcreator_manageable_courseids() {
     global $USER;
 
+    // v13.94.3: This used to OR moodle/course:manageactivities with the plugin capability,
+    // which is the same advisory-capability defect v13.86 removed from every other check in
+    // the plugin: a role with mod/contentcreator:manage PROHIBITED still had activity names
+    // and image URLs enumerated for it, because the second capability let it through. The
+    // compatibility that fallback provided is handled once by the role-definition upgrade
+    // step in db/upgrade.php, so dropping it here costs no legitimate teacher anything.
     $courseids = [];
-    foreach (['moodle/course:manageactivities', 'mod/contentcreator:manage'] as $capability) {
-        $courses = get_user_capability_course($capability, $USER->id, true);
-        if (empty($courses)) {
-            continue;
-        }
-        foreach ($courses as $course) {
-            if ((int)$course->id !== SITEID) {
-                $courseids[(int)$course->id] = (int)$course->id;
-            }
+    $courses = get_user_capability_course('mod/contentcreator:manage', $USER->id, true);
+    if (empty($courses)) {
+        return [];
+    }
+    foreach ($courses as $course) {
+        if ((int)$course->id !== SITEID) {
+            $courseids[(int)$course->id] = (int)$course->id;
         }
     }
 
@@ -741,8 +769,11 @@ try {
             $callopts['raw'] = true;
             $result = contentcreator_api_call($vendorurl, $body, $endpoint['method'], $callopts);
             if (empty($result['success'])) {
-                debugging('mod_contentcreator vendor download failed: ' .
-                    (isset($result['error']) ? $result['error'] : ''), DEBUG_DEVELOPER);
+                debugging(
+                    'mod_contentcreator vendor download failed: ' .
+                        (isset($result['error']) ? $result['error'] : ''),
+                    DEBUG_DEVELOPER
+                );
                 contentcreator_fail('vendorerrorgeneric');
             }
             // Stream the vendor body with our own headers: the vendor controls neither the
@@ -791,26 +822,33 @@ try {
         contentcreator_require_manage($context, $cm);
 
         if (empty($siteid) || empty($apikey)) {
-            contentcreator_response([
-                'success' => true,
-                'configured' => false,
-                'error' => get_string('errornotconfigured', 'mod_contentcreator'),
-            ]);
+            contentcreator_response(
+                [
+                    'success' => true,
+                    'configured' => false,
+                    'error' => get_string('errornotconfigured', 'mod_contentcreator'),
+                ]
+            );
         }
 
         \core\session\manager::write_close();
 
         // Verify the credentials with the vendor.
-        $result = contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/check-config', [
-            'siteId' => $siteid,
-            'apiKey' => $apikey,
-        ]);
+        $result = contentcreator_api_call(
+            $apibaseurl . '/api/moodle/content-creator/check-config',
+            [
+                'siteId' => $siteid,
+                'apiKey' => $apikey,
+            ]
+        );
 
-        contentcreator_response([
-            'success' => true,
-            'configured' => $result['configured'] ?? false,
-            'credits' => $result['credits'] ?? 0,
-        ]);
+        contentcreator_response(
+            [
+                'success' => true,
+                'configured' => $result['configured'] ?? false,
+                'credits' => $result['credits'] ?? 0,
+            ]
+        );
     }
 
     // Generate content for a slide. State changing: uses credits.
@@ -844,29 +882,36 @@ try {
         // Translation passes cost 50 credits per section, primary generation costs 1.
         $creditsforaction = (strpos($slidetype, 'ml_translate_') === 0) ? 50 : 1;
 
-        $result = contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/prompt', [
-            'siteId' => $siteid,
-            'apiKey' => $apikey,
-            'systemPrompt' => $systemprompt,
-            'userPrompt' => $userprompt,
-            'contentType' => $slidetype,
-            'route' => $route,
-            'language' => $genlanguagesync,
-            'creditsToUse' => $creditsforaction,
-        ]);
+        $result = contentcreator_api_call(
+            $apibaseurl . '/api/moodle/content-creator/prompt',
+            [
+                'siteId' => $siteid,
+                'apiKey' => $apikey,
+                'systemPrompt' => $systemprompt,
+                'userPrompt' => $userprompt,
+                'contentType' => $slidetype,
+                'route' => $route,
+                'language' => $genlanguagesync,
+                'creditsToUse' => $creditsforaction,
+            ]
+        );
 
         if (!isset($result['success']) || !$result['success']) {
-            contentcreator_response([
-                'success' => false,
-                'error' => $result['error'] ?? get_string('errorgenerationfailed', 'mod_contentcreator'),
-            ]);
+            contentcreator_response(
+                [
+                    'success' => false,
+                    'error' => $result['error'] ?? get_string('errorgenerationfailed', 'mod_contentcreator'),
+                ]
+            );
         }
 
-        contentcreator_response([
-            'success' => true,
-            'content' => $result['content'],
-            'credits' => $result['credits'] ?? 0,
-        ]);
+        contentcreator_response(
+            [
+                'success' => true,
+                'content' => $result['content'],
+                'credits' => $result['credits'] ?? 0,
+            ]
+        );
     }
 
     // Asynchronous start: returns a job id immediately so there is no proxy timeout risk.
@@ -899,23 +944,32 @@ try {
         // Translation passes cost 50 credits per section.
         $creditsforasync = (strpos($slidetype, 'ml_translate_') === 0) ? 50 : 1;
 
-        $result = contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/prompt/start', [
-            'siteId' => $siteid,
-            'apiKey' => $apikey,
-            'systemPrompt' => $systemprompt,
-            'userPrompt' => $userprompt,
-            'contentType' => $slidetype,
-            'route' => $route,
-            'language' => $genlanguage,
-            'creditsToUse' => $creditsforasync,
-        ]);
+        $result = contentcreator_api_call(
+            $apibaseurl . '/api/moodle/content-creator/prompt/start',
+            [
+                'siteId' => $siteid,
+                'apiKey' => $apikey,
+                'systemPrompt' => $systemprompt,
+                'userPrompt' => $userprompt,
+                'contentType' => $slidetype,
+                'route' => $route,
+                'language' => $genlanguage,
+                'creditsToUse' => $creditsforasync,
+            ]
+        );
 
         if (empty($result['ok']) || empty($result['jobId'])) {
-            contentcreator_response([
-                'success' => false,
-                'error' => $result['error'] ?? get_string('errorjobstartfailed', 'mod_contentcreator'),
-            ]);
+            contentcreator_response(
+                [
+                    'success' => false,
+                    'error' => $result['error'] ?? get_string('errorjobstartfailed', 'mod_contentcreator'),
+                ]
+            );
         }
+
+        // v13.94.3: Bind the job id to this user and this course module before handing it
+        // to the browser, so poll_job can tell an author's own job from somebody else's.
+        contentcreator_remember_job_owner($result['jobId'], $cmid);
 
         contentcreator_response(['success' => true, 'jobId' => $result['jobId'], 'async' => true]);
     }
@@ -932,6 +986,18 @@ try {
         require_login($cm->course, false, $cm);
         contentcreator_require_manage($context, $cm);
 
+        // v13.94.3: The capability check above only proves the caller may manage the
+        // activity they nominated - it says nothing about the job id they sent, which was
+        // never bound to anyone. Polling a job id returns the vendor's generated content
+        // verbatim, so without this check any author on the site could read any other
+        // author's output by polling their job id against an activity of their own. The
+        // refusal reuses the existing "could not be checked" message deliberately: an
+        // unowned job must be indistinguishable from an unknown one.
+        if (!contentcreator_job_is_owned($jobid, $cmid)) {
+            debugging('mod_contentcreator poll_job refused: job id not issued to this user.', DEBUG_NORMAL);
+            contentcreator_fail('errorjobstatusfailed', null, ['ok' => false, 'status' => 'error']);
+        }
+
         // Do not hold the session lock open across the upstream status call.
         \core\session\manager::write_close();
 
@@ -944,11 +1010,13 @@ try {
         $result = json_decode($response, true);
 
         if (!$result) {
-            contentcreator_response([
-                'ok' => false,
-                'status' => 'error',
-                'error' => get_string('errorjobstatusfailed', 'mod_contentcreator'),
-            ]);
+            contentcreator_response(
+                [
+                    'ok' => false,
+                    'status' => 'error',
+                    'error' => get_string('errorjobstatusfailed', 'mod_contentcreator'),
+                ]
+            );
         }
 
         contentcreator_response($result);
@@ -990,34 +1058,13 @@ try {
             $voicename = ($voicegender === 'male') ? 'Puck' : 'Zephyr';
         }
 
-        // Map the language code for Chirp 3 HD. Note that nb-NO is deliberately not mapped:
-        // nb-NO-Chirp3-HD-Aoede is the correct voice and no-NO does not exist.
-        $languagemappings = [
-            'zh-CN' => 'cmn-CN',
-            'zh-TW' => 'cmn-TW',
-            'zh-HK' => 'yue-HK',
-        ];
-        $mappedlang = $languagemappings[$effectivelanguage] ?? $effectivelanguage;
-
-        // Languages offered in the additional languages list that Chirp 3 HD does not
-        // support. Without these fallbacks the speech API rejects the request and the
-        // student hears silence. Punjabi has no native Google voice, so Hindi is closest.
-        $nonchirp3voices = [
-            'ms-MY' => ['voiceid' => 'ms-MY-Standard-D', 'lang' => 'ms-MY'],
-            'pa-IN' => ['voiceid' => "hi-IN-Chirp3-HD-{$voicename}", 'lang' => 'hi-IN'],
-            'fil-PH' => ['voiceid' => 'fil-PH-Standard-A', 'lang' => 'fil-PH'],
-            'yue-HK' => ['voiceid' => 'yue-HK-Standard-D', 'lang' => 'yue-HK'],
-            'cmn-TW' => ['voiceid' => "cmn-CN-Chirp3-HD-{$voicename}", 'lang' => 'cmn-CN'],
-            'pt-PT' => ['voiceid' => "pt-BR-Chirp3-HD-{$voicename}", 'lang' => 'pt-BR'],
-            'ca-ES' => ['voiceid' => "es-ES-Chirp3-HD-{$voicename}", 'lang' => 'es-ES'],
-            'is-IS' => ['voiceid' => 'is-IS-Standard-A', 'lang' => 'is-IS'],
-        ];
-        if (isset($nonchirp3voices[$mappedlang])) {
-            $voiceid = $nonchirp3voices[$mappedlang]['voiceid'];
-            $effectivelanguage = $nonchirp3voices[$mappedlang]['lang'];
-        } else {
-            $voiceid = "{$mappedlang}-Chirp3-HD-{$voicename}";
-        }
+        // v13.94.3: The language mapping and the fallback table for the locales Chirp 3 HD
+        // does not cover used to live here as literals, with a shorter and wrong copy in
+        // external\generate_voiceover. They now live once in \mod_contentcreator\voice so
+        // the two paths cannot produce different voice ids for the same activity.
+        $resolvedvoice = \mod_contentcreator\voice::resolve($effectivelanguage, $voicename);
+        $voiceid = $resolvedvoice['voiceid'];
+        $effectivelanguage = $resolvedvoice['language'];
 
         // Check the Moodle file store for cached audio before spending any credits.
         // Identical text, voice and language combinations are otherwise regenerated on
@@ -1034,13 +1081,15 @@ try {
             $voicecachekey . '.ogg'
         );
         if ($voicecachefile) {
-            contentcreator_response([
-                'success' => true,
-                'audioContent' => base64_encode($voicecachefile->get_content()),
-                'audioType' => 'audio/ogg',
-                'credits' => 0,
-                'cached' => true,
-            ]);
+            contentcreator_response(
+                [
+                    'success' => true,
+                    'audioContent' => base64_encode($voicecachefile->get_content()),
+                    'audioType' => 'audio/ogg',
+                    'credits' => 0,
+                    'cached' => true,
+                ]
+            );
         }
 
         // Cache miss, so this request will call the speech service and spend credits. A
@@ -1077,35 +1126,45 @@ try {
             if ($ttslockfp) {
                 fclose($ttslockfp);
             }
-            debugging('mod_contentcreator generate_voice: concurrent request blocked for section ' .
-                $sectionid, DEBUG_DEVELOPER);
+            debugging(
+                'mod_contentcreator generate_voice: concurrent request blocked for section ' .
+                    $sectionid,
+                DEBUG_DEVELOPER
+            );
             contentcreator_fail('errorttsinprogress', null, ['pending' => true]);
         }
         // The response helper exits, so release the lock from a shutdown handler instead.
-        register_shutdown_function(function () use ($ttslockfp, $ttslockfile) {
-            if ($ttslockfp) {
-                flock($ttslockfp, LOCK_UN);
-                fclose($ttslockfp);
+        register_shutdown_function(
+            function () use ($ttslockfp, $ttslockfile) {
+                if ($ttslockfp) {
+                    flock($ttslockfp, LOCK_UN);
+                    fclose($ttslockfp);
+                }
+                @unlink($ttslockfile);
             }
-            @unlink($ttslockfile);
-        });
+        );
 
-        $result = contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/tts', [
-            'siteId' => $siteid,
-            'apiKey' => $apikey,
-            'text' => $text,
-            'languageCode' => $effectivelanguage,
-            'voiceId' => $voiceid,
-            // Send the actual voice name rather than the legacy gender.
-            'voiceGender' => $voicename,
-            'creditsToUse' => 5,
-        ]);
+        $result = contentcreator_api_call(
+            $apibaseurl . '/api/moodle/content-creator/tts',
+            [
+                'siteId' => $siteid,
+                'apiKey' => $apikey,
+                'text' => $text,
+                'languageCode' => $effectivelanguage,
+                'voiceId' => $voiceid,
+                // Send the actual voice name rather than the legacy gender.
+                'voiceGender' => $voicename,
+                'creditsToUse' => 5,
+            ]
+        );
 
         if (!isset($result['success']) || !$result['success']) {
-            contentcreator_response([
-                'success' => false,
-                'error' => $result['error'] ?? get_string('errorttsfailed', 'mod_contentcreator'),
-            ]);
+            contentcreator_response(
+                [
+                    'success' => false,
+                    'error' => $result['error'] ?? get_string('errorttsfailed', 'mod_contentcreator'),
+                ]
+            );
         }
 
         // Store the freshly generated audio so future requests for the same text, voice and
@@ -1140,12 +1199,14 @@ try {
             }
         }
 
-        contentcreator_response([
-            'success' => true,
-            'audioContent' => $result['audioContent'],
-            'audioType' => $result['audioType'] ?? 'audio/ogg',
-            'credits' => $result['credits'] ?? 0,
-        ]);
+        contentcreator_response(
+            [
+                'success' => true,
+                'audioContent' => $result['audioContent'],
+                'audioType' => $result['audioType'] ?? 'audio/ogg',
+                'credits' => $result['credits'] ?? 0,
+            ]
+        );
     }
 
     // Save completion progress to the Moodle database. State changing: writes to database.
@@ -1169,10 +1230,13 @@ try {
         }
 
         // Check whether the user already has a progress record.
-        $record = $DB->get_record('contentcreator_progress', [
-            'cmid' => $cmid,
-            'userid' => $USER->id,
-        ]);
+        $record = $DB->get_record(
+            'contentcreator_progress',
+            [
+                'cmid' => $cmid,
+                'userid' => $USER->id,
+            ]
+        );
 
         $data = [
             'cmid' => $cmid,
@@ -1201,10 +1265,13 @@ try {
         if ($completed) {
             // The custom_completion class checks contentcreator_attempts, not the progress table,
             // so the attempt row must be written here as well.
-            $attemptrecord = $DB->get_record('contentcreator_attempts', [
-                'contentcreatorid' => $cm->instance,
-                'userid' => $USER->id,
-            ]);
+            $attemptrecord = $DB->get_record(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $cm->instance,
+                    'userid' => $USER->id,
+                ]
+            );
 
             $attemptdata = new \stdClass();
             $attemptdata->contentcreatorid = $cm->instance;
@@ -1229,10 +1296,12 @@ try {
             }
         }
 
-        contentcreator_response([
-            'success' => true,
-            'message' => get_string('progresssaved', 'mod_contentcreator'),
-        ]);
+        contentcreator_response(
+            [
+                'success' => true,
+                'message' => get_string('progresssaved', 'mod_contentcreator'),
+            ]
+        );
     }
 
     // Load completion progress from the Moodle database.
@@ -1244,21 +1313,28 @@ try {
         require_login($cm->course, false, $cm);
         require_capability('mod/contentcreator:view', $context);
 
-        $record = $DB->get_record('contentcreator_progress', [
-            'cmid' => $cmid,
-            'userid' => $USER->id,
-        ]);
+        $record = $DB->get_record(
+            'contentcreator_progress',
+            [
+                'cmid' => $cmid,
+                'userid' => $USER->id,
+            ]
+        );
 
         if ($record) {
-            contentcreator_response([
-                'success' => true,
-                'progress' => json_decode($record->progress, true),
-            ]);
+            contentcreator_response(
+                [
+                    'success' => true,
+                    'progress' => json_decode($record->progress, true),
+                ]
+            );
         } else {
-            contentcreator_response([
-                'success' => true,
-                'progress' => null,
-            ]);
+            contentcreator_response(
+                [
+                    'success' => true,
+                    'progress' => null,
+                ]
+            );
         }
     }
 
@@ -1274,11 +1350,14 @@ try {
         require_login($cm->course, false, $cm);
         require_capability('mod/contentcreator:view', $context);
 
-        $existing = $DB->get_record('contentcreator_checklist', [
-            'cmid' => $cmid,
-            'userid' => $USER->id,
-            'topicid' => $topicid,
-        ]);
+        $existing = $DB->get_record(
+            'contentcreator_checklist',
+            [
+                'cmid' => $cmid,
+                'userid' => $USER->id,
+                'topicid' => $topicid,
+            ]
+        );
 
         if ($existing) {
             $existing->complete = (int)$complete;
@@ -1341,23 +1420,30 @@ try {
 
         contentcreator_prepare_long_request();
 
-        $result = contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/batch-generate-documents', [
-            'siteId' => $siteid,
-            'apiKey' => $apikey,
-            'documents' => $docsarray,
-            'context' => $contextdata,
-        ]);
+        $result = contentcreator_api_call(
+            $apibaseurl . '/api/moodle/content-creator/batch-generate-documents',
+            [
+                'siteId' => $siteid,
+                'apiKey' => $apikey,
+                'documents' => $docsarray,
+                'context' => $contextdata,
+            ]
+        );
 
         if (!empty($result['success'])) {
-            contentcreator_response([
-                'success' => true,
-                'documentExamples' => $result['documentExamples'] ?? [],
-            ]);
+            contentcreator_response(
+                [
+                    'success' => true,
+                    'documentExamples' => $result['documentExamples'] ?? [],
+                ]
+            );
         } else {
-            contentcreator_response([
-                'success' => false,
-                'error' => $result['error'] ?? get_string('errordocumentsfailed', 'mod_contentcreator'),
-            ]);
+            contentcreator_response(
+                [
+                    'success' => false,
+                    'error' => $result['error'] ?? get_string('errordocumentsfailed', 'mod_contentcreator'),
+                ]
+            );
         }
     }
 
@@ -1447,11 +1533,13 @@ try {
             }
         }
 
-        contentcreator_response([
-            'success' => true,
-            'images' => $siteimages,
-            'count' => count($siteimages),
-        ]);
+        contentcreator_response(
+            [
+                'success' => true,
+                'images' => $siteimages,
+                'count' => count($siteimages),
+            ]
+        );
     }
 
     // Generate an AI image for a slide. State changing: uses credits.
@@ -1500,37 +1588,44 @@ try {
         // raise the execution limits before starting.
         contentcreator_prepare_long_request();
 
-        $result = contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/generate-image', [
-            'siteId' => $siteid,
-            'apiKey' => $apikey,
-            'slideTitle' => $slidetitle,
-            'slideDescription' => $slidedescription,
-            'topicTitle' => $topictitle,
-            'unitCode' => $unitcode,
-            'unitTitle' => $unittitle,
-            'industry' => $industry,
-            'subIndustry' => $subindustry,
-            'workplace' => $workplace,
-            'jobRole' => $jobrole,
-            'country' => $imagecountry,
-            'state' => $state,
-            'requirements' => $requirements,
-            'route' => $route,
-            'scenarioContext' => $scenariocontext,
-        ]);
+        $result = contentcreator_api_call(
+            $apibaseurl . '/api/moodle/content-creator/generate-image',
+            [
+                'siteId' => $siteid,
+                'apiKey' => $apikey,
+                'slideTitle' => $slidetitle,
+                'slideDescription' => $slidedescription,
+                'topicTitle' => $topictitle,
+                'unitCode' => $unitcode,
+                'unitTitle' => $unittitle,
+                'industry' => $industry,
+                'subIndustry' => $subindustry,
+                'workplace' => $workplace,
+                'jobRole' => $jobrole,
+                'country' => $imagecountry,
+                'state' => $state,
+                'requirements' => $requirements,
+                'route' => $route,
+                'scenarioContext' => $scenariocontext,
+            ]
+        );
 
         if (!isset($result['success']) || !$result['success']) {
-            contentcreator_response([
-                'success' => false,
-                'error' => $result['error'] ?? get_string('errorimagefailed', 'mod_contentcreator'),
-            ]);
+            contentcreator_response(
+                [
+                    'success' => false,
+                    'error' => $result['error'] ?? get_string('errorimagefailed', 'mod_contentcreator'),
+                ]
+            );
         }
 
-        contentcreator_response([
-            'success' => true,
-            'images' => $result['images'] ?? [],
-            'creditsUsed' => $result['creditsUsed'] ?? 5,
-        ]);
+        contentcreator_response(
+            [
+                'success' => true,
+                'images' => $result['images'] ?? [],
+                'creditsUsed' => $result['creditsUsed'] ?? 5,
+            ]
+        );
     }
 
     // Persist pre-generated voiceover audio to the Moodle file store and return a pluginfile
@@ -1595,20 +1690,37 @@ try {
             $filename
         );
 
-        contentcreator_response([
-            'success' => true,
-            'url' => $url->out(false),
-        ]);
+        contentcreator_response(
+            [
+                'success' => true,
+                'url' => $url->out(false),
+            ]
+        );
     }
 
     // Unknown action.
     contentcreator_fail('errorunknownaction');
+} catch (\moodle_exception $e) {
+    // v13.94.3: A required_capability_exception, a require_login failure or an invalid
+    // parameter used to be swallowed by the catch-all below and answered with HTTP 200 and
+    // "The server could not complete your request". That made an access-control refusal
+    // indistinguishable from a vendor timeout in the browser, in the server log and in a
+    // support ticket. Moodle's own exception handler reports these correctly - with the
+    // right status, the right message and a log entry - so let it.
+    throw $e;
 } catch (\Throwable $e) {
     // Never leak internal detail to the browser: log it for developers instead.
-    debugging($e->getMessage(), DEBUG_DEVELOPER);
-    echo json_encode([
-        'success' => false,
-        'error' => get_string('errorgeneric', 'mod_contentcreator'),
-    ]);
+    // v13.94.3: raised from DEBUG_DEVELOPER to DEBUG_NORMAL. No production site runs
+    // developer debugging, so the cause of every generic failure was discarded on exactly
+    // the sites where it needed diagnosing. The client also now receives a stable errorcode
+    // it can quote in a support request; the visible message is unchanged.
+    debugging('mod_contentcreator ajax action failed: ' . $e->getMessage(), DEBUG_NORMAL);
+    echo json_encode(
+        [
+            'success' => false,
+            'error' => get_string('errorgeneric', 'mod_contentcreator'),
+            'errorcode' => 'ajaxrequestfailed',
+        ]
+    );
     exit;
 }

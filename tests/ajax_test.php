@@ -71,10 +71,13 @@ class ajax_test extends advanced_testcase {
 
         $this->course = $generator->create_course();
 
-        $this->contentcreator = $generator->create_module('contentcreator', [
-            'course' => $this->course->id,
-            'name' => 'Test Content Creator',
-        ]);
+        $this->contentcreator = $generator->create_module(
+            'contentcreator',
+            [
+                'course' => $this->course->id,
+                'name' => 'Test Content Creator',
+            ]
+        );
 
         $this->cm = get_coursemodule_from_instance('contentcreator', $this->contentcreator->id);
         $this->context = context_module::instance($this->cm->id);
@@ -315,10 +318,13 @@ class ajax_test extends advanced_testcase {
 
         $DB->insert_record('contentcreator_progress', $record);
 
-        $loadedrecord = $DB->get_record('contentcreator_progress', [
-            'cmid' => $this->cm->id,
-            'userid' => $this->student->id,
-        ]);
+        $loadedrecord = $DB->get_record(
+            'contentcreator_progress',
+            [
+                'cmid' => $this->cm->id,
+                'userid' => $this->student->id,
+            ]
+        );
 
         $this->assertNotEmpty($loadedrecord);
         $this->assertNotEmpty($loadedrecord->progress);
@@ -338,10 +344,13 @@ class ajax_test extends advanced_testcase {
 
         $newuser = $this->getDataGenerator()->create_user();
 
-        $record = $DB->get_record('contentcreator_progress', [
-            'cmid' => $this->cm->id,
-            'userid' => $newuser->id,
-        ]);
+        $record = $DB->get_record(
+            'contentcreator_progress',
+            [
+                'cmid' => $this->cm->id,
+                'userid' => $newuser->id,
+            ]
+        );
 
         $this->assertFalse($record);
     }

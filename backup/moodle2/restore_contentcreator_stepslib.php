@@ -190,7 +190,7 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
             return;
         }
 
-        // v13.85 FIX BUG-RESTORE-COMPRESSED: manifests at or above
+        // v13.85 FIX BUG-RESTORE-COMPRESSED: Manifests at or above
         // manifest_storage::COMPRESS_THRESHOLD are held as gzip+base64 behind a 'gz:'
         // prefix, and real packs reach 6-10 MB. The URL rewrite below was applied
         // directly to that blob, matched nothing, and wrote it back unchanged - so the
@@ -201,7 +201,7 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
         $wascompressed = (substr($stored, 0, 3) === 'gz:');
         $manifest = \mod_contentcreator\manifest_storage::decompress($stored);
         if ($wascompressed && $manifest === $stored) {
-            // decompress() returns the input unchanged when it cannot decode it. Rewriting
+            // The decompress() helper returns the input unchanged when it cannot decode it. Rewriting
             // an undecodable blob would corrupt it, so stop and say why.
             debugging(
                 'Content Creator restore: could not decompress manifest for instance ' . $instanceid .

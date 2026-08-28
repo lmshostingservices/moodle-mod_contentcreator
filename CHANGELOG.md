@@ -1,5 +1,547 @@
 # Changelog
 
+## 13.94.6 - 28 August 2026
+
+Everything the four cross-route audits found, fixed. The theme running through most of it:
+a control or a resolution path changes what the learner is looking at, and does not tell the
+other subsystem.
+
+### Fixed - the v13.94.3 translation work never reached the audio
+
+The single most valuable fix in this release. `buildVoiceoverText()` resolves its ~47
+headings and connectors through a label resolver that whoever is about to use it registers.
+v13.94.3 removed the hardcoded English from that function and translated every key into all
+53 languages. **But the only registration site was the player.** The BUILDER, which is what
+actually synthesises the .ogg files, registered nothing - so the resolver was null there and
+every key fell back to its English default. The English was still being baked permanently
+into the audio of every non-English module. The translations existed; nothing consulted them.
+
+There was a second cost. The player *did* register a resolver, so it computed different text
+from what the builder had synthesised - `isHashStale` fired on every section of every
+non-English module and re-synthesised the whole pack on the teacher's first open. A second
+full TTS bill per module, every time.
+
+Fixing it properly needed a new export. `translations.js` prunes `UI_LABELS` to the PAGE
+language plus English at load, which is right for the player's chrome and wrong for
+narration: the builder synthesises for the CONTENT language of each pack, possibly several
+packs in one build, none of them the page language. So the 47 narration keys are now exported
+in full for all 53 languages as `NARRATION_LABELS` - about 2,500 short strings, small enough
+to keep without undoing the heap saving the compact export was written for.
+
+Both the builder and the player now resolve narration against that one table, keyed on the
+content language. Verified by computing the narration on both paths for a Japanese pack on an
+English page and comparing the hashes: identical, no English in the output, and materially
+different from the old no-resolver result.
+
+The player deliberately does NOT use `getLabel` for this. `getLabel` is correct for the
+screen - it lets a site customise wording through the lang file - but a site's custom wording
+is something the builder never saw, and on an English Moodle serving a Japanese pack it
+returns English because `UI_LABELS['ja']` was pruned away. Either would diverge the hash.
+
+### Fixed - the active language never reached the label layer
+
+`setCurrentLanguage` was called exactly once, at init, with the PRIMARY language.
+`setActiveLang` swapped the topics, flushed the audio cache, re-rendered and re-preloaded -
+and never updated it. With an English primary and a Vietnamese pack active, every label
+resolved English, including the resolver handed to cc-state.
+
+### Fixed - narration could play over the wrong slide, or two at once
+
+`playCachedVoiceover` is now the single choke point for starting narration, and enforces two
+things nothing enforced before.
+
+It pauses and dereferences the previous element. The old code assigned
+`this.currentAudio = new Audio(...)` straight over a PLAYING element; the discarded element
+kept itself alive through its own listeners and went on talking with nothing left pointing at
+it that could stop it.
+
+And it checks the request is still current. `playVoiceover`'s guards all run BEFORE its fetch
+is issued, and that fetch can take 200s on-demand or 230s on the wait-poll. A learner who
+clicked Play, gave up and moved on had the abandoned request resolve minutes later and start
+narrating the slide they left - on Route 5, arming a timeline sync from that audio onto the
+DOM of the slide they were now looking at.
+
+`render()` now stops the audio too, not merely the sync - it replaces the DOM wholesale, so
+"Retry activities" mid-narration left a voice describing card 3 while the reveal sat frozen
+on card 1, and saving a slide edit narrated the old text over the new.
+
+### Fixed - the quiz feedback clip was owned by nothing
+
+`_quizFbAudio` was referenced by exactly one handler and by nothing else - not navigation, not
+teardown, not focus loss. Answering a quiz mid-narration produced two Chirp voices at once,
+the same narrator reading different sentences, and the feedback clip then survived the slide
+transition and played over the next slide. It is now stopped everywhere the narration is.
+
+### Fixed - "must listen to voiceover" could be skipped entirely, and could also trap a learner
+
+**Skipped:** `.cc5-challenge-continue-btn` stripped `cc5-disabled` from the Next chevron and
+triggered a click on it. jQuery evaluates delegated selectors at dispatch time, so removing
+the class immediately beforehand made the `:not(.cc5-disabled)` guard match - and
+`canNavigateNext()` was never consulted on that path at all. A learner could ignore the
+narration, complete the activities, click Continue and advance. The compliance guarantee the
+mode exists to provide was void on all five routes.
+
+**Trapped:** when audio failed to load, the error handler enabled the chevron but did not set
+`voiceoverPlayed`, so `canNavigateNext` still returned false and `updateActivityNavState`
+re-disabled it the moment the learner touched anything. A slide whose audio 404s handed back
+a Next that went permanently grey, with no control on the page able to clear it. Audio that
+cannot play cannot be listened to, so the requirement is now satisfied by definition.
+
+### Fixed - the voiceover cache was never validated
+
+The cache lookup was the FIRST return path in `playVoiceover`; the entire staleness apparatus
+below it - schema version, word count, text hash - only ever guarded `section.voiceoverUrl`.
+The cache is also persisted to `sessionStorage` and restored on a 30-minute window. So a
+teacher edits a slide and saves, the edit correctly evicts the cache in that tab, and a second
+tab restores the pre-edit audio and serves it ahead of every check. Entries are now
+fingerprinted when written and validated on replay; an unstamped entry is discarded rather
+than trusted.
+
+### Fixed - PDF and text export printed `[object Object]`
+
+`keyPoints` on hook-scenario, concept-explainer and applied-scenario is an array of
+`{title, text}` objects, and `fixGrammar` coerces with `String()`. Latent until v13.89 stopped
+deleting `keyPoints` after aliasing it. Every export on VET, Workplace and PD printed 11
+`[object Object]` bullets per section - directly below the `sceneParts`/`conceptInsights`
+content they were duplicating anyway. The block is now skipped when either of those is
+present, and handles the object shape when it is not.
+
+### Fixed - HTML reached the speech engine
+
+`fixGrammar`/`_fg` stripped markdown and nothing else, so a field holding `<br>` or `<strong>`
+was read aloud as "less than b r greater than". The renderers escape those tags for display,
+which is why nobody saw them on screen. Both copies changed identically - they are contractually
+byte-identical, because the player's hash must match the builder's.
+
+### Fixed - the Route 5 paragraph sync was uncorrelated with the audio in CJK and Thai
+
+Segment weights were whitespace word counts. Japanese, Mandarin, Cantonese and Thai are all
+offered in the voice list and none of them spaces its words, so a 65-word-equivalent paragraph
+counted as 1. Every segment got equal weight and the card reveal and paragraph lift landed
+essentially at random - and in the fallback path `duration = totalWeight / WPS` put a
+three-minute section at five seconds. Weighting now falls back to characters when the
+whitespace count is implausible for the length. English counts are unchanged.
+
+### Fixed - content that was generated, billed, rendered and never spoken
+
+On VET, Workplace and PD the entire "What the law says" panel was silent - the legislation
+name, the plain-English obligation and the link back to the scenario, which is the compliance
+payload of the route. `badItems[].consequence` was displayed and not narrated. Every
+section-level field - Key Takeaway, Pro Tip, Key Information, Expert Insight, Key Terms, the
+requirements grid - was narrated ONLY on sections with no cards, because the block sat in the
+wrong branch.
+
+On University the narration order was inverted against the render order on every legacy card
+type: `bodyText` was spoken before the structured lists but rendered after them, so on
+case-study-1 the learner was asked three analysis questions about a case they had not yet been
+told, then finally heard the case. `frameworks[].application` and `consequences[]` were silent,
+and analytical-lens narrated the same list twice.
+
+Three renderer/narrator alias mismatches meant content rendered and was silent. And "Now,
+complete the activity below." was narrated twice, because the prompt requires the card to end
+with it and the code appended it again.
+
+### Fixed - CSS: the v13.92.2 remediation was itself the bug, 30 times over
+
+Every `/* v13.92.2: pinned - theme button:hover forces #fff */` comment asserted a pin the
+selector could not deliver. The block's own reasoning - *"a class plus a pseudo-class is
+(0,2,0)"* - is true against `button:hover` and false against `#region-main button:hover`
+(1,1,1). That one sentence is why 30 sites were "fixed" without `!important`. All now pinned,
+and the analysis comment corrected to state the real rule.
+
+The work had also only ever considered `:hover`. Boost's selector list includes `button:focus`
+and `button:active`, and 69 button-bearing classes had no rule for either - so their base rules
+lost outright, with no ID needed. `.cc5-back-btn` and `.cc5-nav-chevron`, the two most-clicked
+controls in the player, went grey after every click and stayed there. The sort activity's
+good/bad colour coding collapsed the moment a learner used it.
+
+Also fixed: the focus-halo defect plugin-wide (`:focus` → `:focus-visible`, with the keyboard
+ring preserved); `builder.css` having no dark mode at all on Moodle 4.4+ because it keys off
+`.dark` and never `data-bs-theme`; `.cc5-dos-donts--single` dead at every viewport ≥640px,
+leaving the competency-summary card with a blank half; missing `overflow-wrap` on card body
+text, which CLIPPED long unbroken strings invisibly rather than wrapping them; wide tables
+scrolling only below 640px; 65 media queries normalised so the 480/640/768 boundaries stop
+double-matching.
+
+### Fixed - controls that looked disabled but were not
+
+Locked quiz options, decision options, and the Route 5 locked and spent "Next Card" buttons
+were held only by `pointer-events: none` and opacity, which does not stop a keyboard Enter -
+a learner could Tab to a locked option and answer again after submitting. All now carry a real
+`disabled` property and `aria-disabled`.
+
+### Fixed - smaller items
+
+- `cc5-prose-active` was added on reveal and removed only by the next reveal, so after the last
+  Route 5 card it stayed on forever - a persistent ring implying that card was still being
+  narrated. Its three sibling state classes were cleared on teardown and it was not.
+- An empty prose card was narrated as a bare heading while the renderer showed "no content yet".
+- `--cc5-bg-hover` and `--border` were referenced but defined nowhere.
+
+## 13.94.5 - 28 August 2026
+
+Four parallel audits of voiceover and CSS across all five routes. This release lands the
+critical findings; the remainder are recorded in the project audit note.
+
+### Fixed - Route 5 Challenge Mode sat flush against the cards
+
+Reported with a screenshot. On the other four routes the activity block is a `.cc5-card`
+sibling and inherits the 2.5rem `margin-bottom` that spaces every card. Route 5 deliberately
+zeroes that on its grid children, because the grid gap handles spacing BETWEEN cards - but
+nothing replaced it ABOVE the activity block, so the orange Challenge Mode panel butted
+straight against the last prose card and its 3px top border read as a divider rather than
+as the start of a new section. `.cc5-prose-activities` now carries the same 2.5rem the
+other four routes get.
+
+### Fixed - a ReferenceError on every section-audio end, on four of five routes
+
+Introduced earlier the same day, in v13.94.4. The gate handlers added to Route 5's
+narration sync were also copied into `setupCardVoiceoverSync`, where they called
+`applyProseGate($grid, ...)` - but `$grid` is declared in `setupVoiceoverSync`, not there;
+that function's element set is `$cards`. Under `'use strict'` this threw out of the `ended`
+and `error` listeners on every section of VET, Workplace, University and PD.
+
+The fix is not to pass `$cards`. The reveal gate is a Route 5 concept and those routes have
+no prose buttons to unlock, so the handlers should never have been there at all; they are
+removed.
+
+### Fixed - `animation-fill-mode: both` had killed every card hover across the plugin
+
+`animation-fill-mode: both` retains the final keyframe indefinitely, and animation
+declarations outrank normal author declarations in the cascade. Every entrance animation in
+the player ended at `transform: translateY(0)`, so that retained identity transform
+permanently beat every `:hover` transform on the element beneath it. `.cc5-card:hover`
+(`translateY(-2px)`) and `.cc5-topic-card:hover` (`translateY(-4px) scale(1.01)`) have been
+dead code on all five routes.
+
+`cc5-flip-card-enter` was the worst of them: a retained `scale(1) translateY(0)` on a card
+whose whole purpose is to flip.
+
+A retained transform also establishes a containing block and a stacking context on every
+card, which re-anchors any `position: fixed` descendant - and the doc and content popups
+open from inside card body text.
+
+The stylesheet already diagnosed this hazard correctly in v13.92 and documented it at
+length - but the fix was applied only to Route 5's prose grid and never swept back through
+the base rules. All 33 entrance animations now use `backwards`. `cc5-progress-fill` keeps
+`both`, because it is the one animation whose final state is a value the base rule does not
+otherwise provide.
+
+### Fixed - the empty `<h3>` was still live in Challenge Mode
+
+v13.94.3 guarded six card renderers against emitting `<h3 class="cc5-unified-title">` from a
+`title` field no prompt produces. `renderDecisionChallenge` was missed - and it is the
+PRIMARY decision-point path; the guarded `renderDecisionPoint` is only reached when a
+section has neither flip nor sort items. Only Route 5's prompt asks for `title` on
+`decision-point`, and nothing in the generator ever assigns it, so every activity block on
+VET, Workplace and PD carried the same 14px phantom gap the earlier fix was meant to
+remove.
+
+## 13.94.4 - 28 August 2026
+
+### Fixed - narration kept playing after "Next Card" on Topics and Text
+
+Topics and Text narrates a whole section from one audio file and reveals each card from
+that timeline. The "Next Card" handler never touched the audio, so a learner who clicked it
+while card 1 was being read got card 2 on screen with card 1 still playing over it - and the
+sync then dragged the reveal back as the timeline caught up. Clicking the button is the
+learner saying they are reading rather than listening, so the narration now stops and the
+reveal becomes theirs to drive.
+
+### Added - "Must listen to voiceover" now gates the card reveal
+
+The progression setting was enforced on the slide-level Next control but not on the prose
+reveal, so on Topics and Text a learner could click straight through all five cards without
+hearing any of it. Each card's button now unlocks only once the narration has finished
+reading that card, with a "listen to unlock" hint on the locked state. A failed or missing
+audio file unlocks everything rather than stranding the learner behind narration that is
+never going to arrive.
+
+In this mode the narration is deliberately NOT stopped on click: the button is only unlocked
+for a card already read, and stopping the audio would strand the slide-level Next control,
+which waits on the narration reaching its end.
+
+### Fixed - "Next Card" button styling under Moodle themes
+
+The v13.92.2 fix pinned the hover colour but without `!important`, which does not actually
+win: `.cc5-prose-next-btn:hover` scores (0,2,0) while Boost's `#region-main button:hover`
+scores (1,1,1) and takes it - the theme's white hover text on this button's white hover
+background, the button vanishing under the cursor. Colour, background, border and decoration
+are now pinned on both states.
+
+The selected state is fixed too. Boost puts `box-shadow: 0 0 0 0.2rem` on `button:focus`,
+which on a pill this small reads as a thick halo stuck to the button after every click. A
+pointer click now gets a brief inset press and no ring; the visible ring is reserved for
+`:focus-visible`, which is the keyboard case that actually needs it.
+
+The spent-button state no longer fades to 35% opacity, which took the border and label down
+with it and left a smudge reading as a rendering fault rather than a finished step - and put
+the label under 3:1 contrast. It is now a flat, quiet dashed pill at full strength.
+
+A used button was also only retired by `pointer-events: none`, which does not stop a
+keyboard Enter. Both used and locked states are now guarded in the handler rather than by
+styling alone.
+
+### Fixed - Topics and Text image requests were missing their subject framing
+
+Found by capturing the outgoing request payload rather than by reading the code.
+
+`generateTopicImage()` resolves `topicTitle` as
+`section.topicTitle || context.unitTitle || section.title`. Nothing sets `section.topicTitle`
+and Topics and Text has no `unitTitle`, so it fell through to `section.title` - the vendor
+received the same string twice, as both `slideTitle` and `topicTitle`, and never received the
+parent topic at all. On a route whose images are editorial rather than workplace that is the
+most useful framing there is: "Sleep stages and what each one does" is a very different
+picture under "Foundations of Sleep Science" than under "Shift Rostering". The parent topic
+is now sent.
+
+`scenarioContext` had the same shape of problem. It is built as title plus content, but prose
+cards carry no title or heading - the four headings are supplied by the platform and
+deliberately stripped from the card - so it came out byte-identical to `slideDescription`,
+sending the same paragraph twice under two names. It now leads with the section title.
+
+## 13.94.3 - 28 August 2026
+
+A full defect sweep across the plugin, run as seven parallel audits by defect class.
+Everything below was found by that sweep and fixed in one release.
+
+### Fixed - two Topics and Text defects that made earlier fixes unreachable
+
+The four "Download ChatGPT Prompt File" handlers bound to hard-coded mode literals.
+The button is rendered by a step shared by **both** the PD route and Topics and Text,
+so a Route 5 author was handed the PD prompt - and the `topicstext` template added in
+13.94.1 was dead code that nothing could ever reach. The route is now resolved at click
+time.
+
+Separately, `getCardSchemaForMode()` had no `topicstext` branch, so Route 5 fell through
+to the seven-card VET schema. `normalizeCards()` then saw five cards against an expected
+seven and returned early, which meant Route 5 never received the markdown stripping, slang
+substitution or doubled-word repair every other route gets. A `TOPICSTEXT_CARD_SCHEMA` now
+exists, with matching structure and word-floor branches in the quality gate. The same early
+return also skipped clean-up on VET, Workplace and PD whenever activities were disabled;
+the card-count check now gates only the positional backfill, not the clean-up.
+
+### Fixed - learner progress and completions could be lost silently
+
+`saveMoodleProgress()` had an empty `.then` **and** an empty `.catch`. A server-side
+rejection returns HTTP 200 with `success: false`, so a failed save was discarded with no
+trace anywhere - no log, no message, no retry. Failures are now recorded, and the learner
+is told once when the save that failed was the one carrying completion.
+
+### Fixed - English narration in translated courses
+
+The plugin generates content in 53 languages and pre-renders narration to Google Chirp 3 HD
+audio. `buildVoiceoverText()` was pushing English literals into that text: seven card
+headings, five label prefixes, "Now, complete the activity below.", "You are {role}" and
+"{term} means {definition}". A Japanese course had English phrases spoken mid-sentence in a
+Japanese voice, baked permanently into the audio files. All of it now routes through the
+label bundle, with the two sentence-splices handled as whole parameterised phrases rather
+than concatenated fragments.
+
+Around 22 renderer headings and the entire Route 5 activity block were hard-coded English
+too, in every case where a correct translated key already existed and was simply not being
+used.
+
+### Added - complete translation coverage
+
+`en` grew from 372 to 415 labels, and **all 53 language tables now have exact key parity**
+at 415 each. 6,164 missing strings were written. Thirteen tables also carried between 135
+and 271 filler keys referenced by nothing, which have been removed.
+
+`lang/en/contentcreator.php` now mirrors that set exactly - 415 `cclabel_*` strings, with
+nothing orphaned in either direction - so an administrator can reword any player label
+through Moodle's normal language customisation.
+
+### Changed - Workplace, PD and University now specify length in words
+
+VET moved to explicit word ranges in 13.94.0 after producing roughly 40% of target length;
+the other three routes were still specifying sentence counts and under-producing for the
+same reason. All three now carry the same "LENGTH - NOT NEGOTIABLE" contract, with per-card
+arithmetic verified: every card's minimum sums to at least 160 visible words and maximums
+land between 228 and 243. All six University cards now clear their own 150-word floor,
+which four of them previously did not.
+
+### Fixed - PD invented legal obligations
+
+PD's `concept-explainer` prompt was byte-identical to Workplace's and asked for "the
+legislation or policy name". That fed a panel headed **"What the law says"** - so a PD module
+about giving feedback grew a legal panel over a fabricated requirement, on the one route
+explicitly documented as non-regulatory. PD now asks for a principle or professional
+standard, and the panel is labelled accordingly.
+
+### Fixed - PDF export produced a stray file, or nothing at all
+
+The HTML fallback block sat *inside* the success branch. Every successful export therefore
+also downloaded an unwanted `.html` file, and an export blocked by the pop-up blocker did
+nothing whatsoever - no file, no message. The fallback now runs only when the print window
+is actually blocked, and says so.
+
+### Security
+
+**Job polling was not bound to its owner.** `poll_job` accepted any job id from any caller
+holding `:manage` on any Content Creator activity and returned the vendor's raw payload for
+it, so one author could read another author's generated content by replaying an id. Job ids
+are now bound to the user and course module they were issued to, via a short-lived cache,
+and a poll that does not match is refused.
+
+**A legacy manifest could break every slide edit.** `$section['scenario']` could hold a flat
+string that was then written as an array - a fatal `TypeError` on PHP 8, surfaced to the
+teacher as a generic "save failed". A second instance of the same pattern was found and
+fixed alongside it.
+
+**Capability and error handling.** Four external functions wrapped `require_capability()`
+and `validate_context()` inside `catch (\Throwable)`, so a permission failure, a database
+error and a fatal were all reported identically at HTTP 200. Capability checks now sit
+outside the try, and the remaining catches log properly and return a machine-readable error
+code. The `moodle/course:manageactivities` fallback was also removed from activity
+enumeration, matching the change made everywhere else in 13.86.
+
+### Fixed - voice and rate limits differed between the web and mobile paths
+
+The web service path was missing the eight-locale fallback table the web path carries, so it
+built Chirp voice ids that do not exist and those learners heard silence. Both paths now
+share one helper. Rate limits likewise now honour the `ratelimit*` administrator settings on
+every path, not just the web one. Chirp 3 HD remains the only voice engine; the fallbacks
+cover only locales where Chirp 3 HD has no voice at all.
+
+### Fixed - accessibility
+
+The language switcher's `aria-label` - the only text a screen-reader user hears from that
+control - was hard-coded English, inside a widget whose entire purpose is switching language.
+It is now translated. The same control declared `role="tablist"` with `role="tab"` children
+but had no tabpanel and no `aria-controls` anywhere, so assistive technology announced tabs
+pointing at nothing. They are toggle buttons, and are now a labelled group using
+`aria-pressed`.
+
+### Fixed - smaller defects
+
+- `manifest.builder` called `onComplete()` without awaiting it, so `build()` reported success
+  while voiceover pre-generation and manifest saving were still running, and any rejection
+  surfaced as an unhandled promise.
+- The translation pass hard-coded `'vet'` as the route, so all five routes were attributed
+  to VET.
+- The SCORM exporter shipped two silent `catch (e) {}` blocks into customer LMS packages,
+  hiding failed initialisation and failed completion writes.
+- Five of seven card types emitted an empty `<h3>` carrying a 14px margin, because no prompt
+  asks for `title` on those types - a phantom gap under the flow badge on every VET,
+  Workplace and PD card.
+- The `LANGUAGE OVERRIDE` block was emitted twice, back to back, at the top of every
+  non-English prompt.
+- Icon rules were being sent for `keyPoints` and `errorItems`, which have no icon field,
+  costing roughly 16 lines of prompt per call on three routes for nothing.
+- `CC_VERSION` had been left at `13.65` while the plugin shipped 13.94.x, so every support
+  log claimed a version 29 releases old.
+- `contentcreator_clean_voice_text()` truncated by bytes rather than characters, so a cut
+  could split a multibyte character and send invalid UTF-8 to the speech service.
+
+### Changed - coding standards
+
+Full Moodle coding-standards pass: multi-line call formatting across 22 files, comment
+capitalisation across 14, and `function (` spacing across 1,353 occurrences in 25 AMD
+modules. The PHP reformatting was verified by comparing each file's token stream before and
+after with `token_get_all()`, whitespace and comments excluded - all 25 files identical,
+proving no behavioural change.
+
+## 13.94.2 - 26 August 2026
+
+### Fixed - Topics and Text printed as headings with nothing under them
+
+`exportAsPdf()` reads 45 different card fields - sceneParts, conceptInsights, items,
+keyTerms, goodItems, badItems, options, steps, standardItems, errorItems and the rest.
+**`paragraphs` was the only one missing**, and it is the only field Topics and Text uses for
+its content. A Route 5 pack therefore printed as four empty headings and an activity block.
+
+Worse, the heading itself was wrong: on this route the four headings are supplied by the
+platform and deliberately deleted from the card, so `card.heading || card.cardType` printed
+the raw type - "overview", "key-concepts". Print now falls back to `CcState.PROSE_HEADINGS`,
+giving the same fixed headings the learner sees, and renders each paragraph beneath them.
+
+This was recorded as a known open item in the v13.92 route spec and has been outstanding
+since the route shipped. Printing is how many clients produce a workbook, so for those
+customers the route's entire content was missing from the deliverable.
+
+## 13.94.1 - 26 August 2026
+
+### Fixed - Topics and Text had no ChatGPT prompt file and was handing out the VET one
+
+The route offers a "Download ChatGPT Prompt File" button, but `PROMPT_TEMPLATES` had no
+`topicstext` key, so the lookup fell through its `|| PROMPT_TEMPLATES.vet` default. An author
+on Topics and Text downloaded **the VET seven-card prompt**, under the generic filename
+`ChatGPT-Prompt.txt`, and any content produced from it was the wrong shape for the route
+entirely. The context block and topics list were not built for this mode either, so even the
+wrong prompt arrived with no course details in it.
+
+A Topics and Text template now exists. It asks for the route's real contract - four fixed
+headings, exactly two paragraphs of 55-70 words a card, keyTerms, goodItems/badItems, a
+four-option decision point, and explicitly no voiceoverText - and it asks for JSON output
+separated by `=== NEXT ===`, which routes through the existing JSON fast-parse rather than
+the legacy text-label parser. The context block and topics header are now built for this mode
+by sharing the PD branch, which reads the same `cc-pd-*` fields the route already uses.
+
+**Verified by round trip, not by reading.** A synthetic ChatGPT response in exactly the shape
+the template asks for was fed through `generate()`: both sections parsed, five cards each,
+two paragraphs on every prose card, keyTerms 3, goodItems 3, badItems 3, four options with
+exactly one correct - and **zero AI calls**, confirming the fast-parse handled it rather than
+silently falling back to paid generation.
+
+### Changed - the prompt file had the same sentence-count weakness as the API prompts
+
+Ten fields per template specified length as a sentence count with no word count - the same
+pattern that produced 40% length on the API path. Forty replacements across the four
+templates: step details now 35-45 words, highlights 18-28, decision questions 25-35, and each
+of the four feedback fields 28-38. The prompt file and the API prompt now ask for the same
+thing, so content pasted back from ChatGPT is the same length as content generated directly.
+
+## 13.94.0 - 26 August 2026
+
+### Changed - VET cards were coming out at 40% of their intended length
+
+Measured on two independent VET runs (HLTAID011 and BSBTWK301). A section produced 679
+words against a `CC_DEPTH_TARGET.vet` of floor 140 / band 160-240 a card - roughly
+1,100-1,700 for seven cards:
+
+| Card | Measured | Target band |
+|---|---:|---|
+| hook-scenario | 88 | 160-240 |
+| concept-explainer | 104 | 160-240 |
+| mental-model | 69 | 160-240 |
+| applied-scenario | 77 | 160-240 |
+| mistakes | 89 | 160-240 |
+| **competency-summary** | **176** | 160-240 |
+| decision-point | 76 | 160-240 |
+
+**Card 6 is the tell.** It is the only card that hit its target, and the only card whose
+prompt stated *word* minimums rather than sentence counts. Every other card asked for
+`text(2 sentences)` or `detail(2-3 sentences)`, and every one of those fields came back at
+12-20 words - one short sentence. A sentence count does not constrain length; a word count
+does.
+
+Three systems disagreed about what "long enough" meant and the lowest number won:
+
+- **the prompt** asked for sentence counts, which bind nothing;
+- **the vendor's token guard**, appended after our prompt and marked CRITICAL, ends "Being
+  concise within populated fields is correct" - so the last instruction the model reads is
+  an instruction to be brief;
+- **the vendor's expansion floors** are 10 words for `keyPoints[].text`, 12 for
+  `steps[].detail`, 12 for `errorItems[].consequence`. Output at 13-17 words clears all of
+  them, so the expansion pass never fired.
+
+Our own depth check measured the same cards against 140/160-240 and flagged them, but depth
+has been report-only since 13.89, so nothing acted on it.
+
+Every text field in the VET prompt now carries a word range instead of a sentence count,
+sized so each card lands in the 160-240 band, with a LENGTH block stating the per-card
+requirement outright. The ranges are arithmetically checked against the band rather than
+guessed: worst case 132-184 a card at the bottom of every range, 204-238 at the top.
+Sentences stay under 20 words - the extra length is more sentences carrying more specifics,
+never longer ones.
+
+Expected effect: roughly 1,065-1,537 words a section, against 679 today.
+
+The two vendor-side contributors are not fixed by this release and need changes on
+lms-labs.com: the "being concise is correct" sentence in the token guard, and the expansion
+floors that are set well below what the prompts ask for.
+
 ## 13.93.3 - 26 August 2026
 
 ### Fixed - no request the plugin makes had a deadline, so any stall was permanent

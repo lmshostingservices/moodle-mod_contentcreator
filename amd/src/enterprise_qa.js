@@ -9,7 +9,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function() {
+define([], function () {
     /**
      * v13.77 FIX-OBJECT-TEXT: entries in the card content arrays arrive as EITHER
      * plain strings or objects, depending on what the vendor API returns for that
@@ -20,7 +20,7 @@ define([], function() {
      * @param {*} entry A string, or an object such as {title, text} / {error, consequence}.
      * @return {String} Readable text for the entry, or an empty string.
      */
-    var ccEntryText = function(entry) {
+    var ccEntryText = function (entry) {
         if (entry === null || entry === undefined) { return ''; }
         if (typeof entry === 'string') { return entry; }
         if (typeof entry !== 'object') { return String(entry); }
@@ -40,9 +40,9 @@ define([], function() {
      * @param {Array} arr The array to flatten; anything non-array yields [].
      * @return {Array} Array of readable strings.
      */
-    var ccTextList = function(arr) {
+    var ccTextList = function (arr) {
         if (!Array.isArray(arr)) { return []; }
-        return arr.map(ccEntryText).filter(function(s) { return s; });
+        return arr.map(ccEntryText).filter(function (s) { return s; });
     };
 
     'use strict';
@@ -168,7 +168,7 @@ define([], function() {
     }
 
     function countWords(str) {
-        return (str || '').trim().split(/\s+/).filter(function(w) { return w; }).length;
+        return (str || '').trim().split(/\s+/).filter(function (w) { return w; }).length;
     }
 
     function inRange(val, min, max) {
@@ -190,7 +190,7 @@ define([], function() {
         var cards = Array.isArray(content) ? content : null;
         if (!cards || cards.length === 0) return chunks;
 
-        cards.forEach(function(card) {
+        cards.forEach(function (card) {
             if (!card) return;
 
             if (card.voiceoverText) chunks.push(card.voiceoverText);
@@ -206,7 +206,7 @@ define([], function() {
                     break;
                 case 'action-breakdown':
                     if (Array.isArray(card.actions)) {
-                        card.actions.forEach(function(action) {
+                        card.actions.forEach(function (action) {
                             if (!action) return;
                             if (action.heading) chunks.push(action.heading);
                             if (Array.isArray(action.bullets)) chunks = chunks.concat(action.bullets);
@@ -225,7 +225,7 @@ define([], function() {
                     break;
                 case 'common-errors':
                     if (Array.isArray(card.errorItems)) {
-                        card.errorItems.forEach(function(item) {
+                        card.errorItems.forEach(function (item) {
                             if (!item) return;
                             if (item.error) chunks.push(item.error);
                             if (item.consequence) chunks.push(item.consequence);
@@ -237,7 +237,7 @@ define([], function() {
                     if (card.conceptDefinition) chunks.push(card.conceptDefinition);
                     if (card.significance) chunks.push(card.significance);
                     if (Array.isArray(card.keyTerms)) {
-                        card.keyTerms.forEach(function(t) {
+                        card.keyTerms.forEach(function (t) {
                             if (!t) return;
                             if (typeof t === 'string') { chunks.push(t); return; }
                             if (t.term) chunks.push(t.term);
@@ -248,7 +248,7 @@ define([], function() {
                 case 'theoretical-framework':
                     if (card.bodyText) chunks.push(card.bodyText);
                     if (Array.isArray(card.frameworks)) {
-                        card.frameworks.forEach(function(f) {
+                        card.frameworks.forEach(function (f) {
                             if (!f) return;
                             if (f.name) chunks.push(f.name);
                             if (f.principle) chunks.push(f.principle);
@@ -263,7 +263,7 @@ define([], function() {
                 case 'ethics-considerations':
                     if (card.bodyText) chunks.push(card.bodyText);
                     if (Array.isArray(card.considerations)) {
-                        card.considerations.forEach(function(c) {
+                        card.considerations.forEach(function (c) {
                             if (!c) return;
                             if (c.dimension) chunks.push(c.dimension);
                             if (c.description) chunks.push(c.description);
@@ -281,7 +281,7 @@ define([], function() {
                     if (card.bodyText) chunks.push(card.bodyText);
                     if (card.impactStatement) chunks.push(card.impactStatement);
                     if (Array.isArray(card.keyMetrics)) {
-                        card.keyMetrics.forEach(function(m) {
+                        card.keyMetrics.forEach(function (m) {
                             if (!m) return;
                             if (typeof m === 'string') { chunks.push(m); return; }
                             if (m.metric) chunks.push(m.metric);
@@ -293,7 +293,7 @@ define([], function() {
                     break;
                 case 'action-framework':
                     if (Array.isArray(card.steps)) {
-                        card.steps.forEach(function(s) {
+                        card.steps.forEach(function (s) {
                             if (!s) return;
                             if (typeof s === 'string') { chunks.push(s); return; }
                             if (s.action) chunks.push(s.action);
@@ -303,7 +303,7 @@ define([], function() {
                     break;
                 case 'risk-card':
                     if (Array.isArray(card.risks)) {
-                        card.risks.forEach(function(r) {
+                        card.risks.forEach(function (r) {
                             if (!r) return;
                             if (r.risk) chunks.push(r.risk);
                             if (r.impact) chunks.push(r.impact);
@@ -314,7 +314,7 @@ define([], function() {
                     break;
                 case 'policy-alignment':
                     if (Array.isArray(card.policyItems)) {
-                        card.policyItems.forEach(function(p) {
+                        card.policyItems.forEach(function (p) {
                             if (!p) return;
                             if (p.policy) chunks.push(p.policy);
                             if (p.requirement) chunks.push(p.requirement);
@@ -330,7 +330,7 @@ define([], function() {
                 case 'core-framework':
                     if (card.keyPrinciple) chunks.push(card.keyPrinciple);
                     if (Array.isArray(card.frameworkSteps)) {
-                        card.frameworkSteps.forEach(function(s) {
+                        card.frameworkSteps.forEach(function (s) {
                             if (!s) return;
                             if (s.step) chunks.push(s.step);
                             if (s.explanation) chunks.push(s.explanation);
@@ -341,7 +341,7 @@ define([], function() {
                 case 'application-guide':
                     if (card.bodyText) chunks.push(card.bodyText);
                     if (Array.isArray(card.applications)) {
-                        card.applications.forEach(function(a) {
+                        card.applications.forEach(function (a) {
                             if (!a) return;
                             if (a.situation) chunks.push(a.situation);
                             if (a.action) chunks.push(a.action);
@@ -351,7 +351,7 @@ define([], function() {
                     break;
                 case 'common-pitfalls':
                     if (Array.isArray(card.pitfallItems)) {
-                        card.pitfallItems.forEach(function(p) {
+                        card.pitfallItems.forEach(function (p) {
                             if (!p) return;
                             if (p.pitfall) chunks.push(p.pitfall);
                             if (p.consequence) chunks.push(p.consequence);
@@ -362,7 +362,7 @@ define([], function() {
                 case 'hook-scenario':
                 case 'applied-scenario':
                     if (Array.isArray(card.sceneParts)) {
-                        card.sceneParts.forEach(function(part) {
+                        card.sceneParts.forEach(function (part) {
                             if (!part) return;
                             var t = part.text || part.content || part.description || '';
                             if (t) chunks.push(t);
@@ -374,7 +374,7 @@ define([], function() {
                     break;
                 case 'concept-explainer':
                     if (Array.isArray(card.conceptInsights)) {
-                        card.conceptInsights.forEach(function(insight) {
+                        card.conceptInsights.forEach(function (insight) {
                             if (!insight) return;
                             var t = insight.text || insight.content || insight.description || '';
                             if (t) chunks.push(t);
@@ -384,7 +384,7 @@ define([], function() {
                     break;
                 case 'mental-model':
                     if (Array.isArray(card.steps)) {
-                        card.steps.forEach(function(s) {
+                        card.steps.forEach(function (s) {
                             if (!s) return;
                             var heading = s.step || s.action || s.title || '';
                             if (heading) chunks.push(heading);
@@ -395,7 +395,7 @@ define([], function() {
                     break;
                 case 'mistakes':
                     if (Array.isArray(card.items)) {
-                        card.items.forEach(function(item) {
+                        card.items.forEach(function (item) {
                             if (!item) return;
                             if (typeof item === 'string') { chunks.push(item); return; }
                             var m = item.mistake || item.error || item.pitfall || '';
@@ -406,14 +406,14 @@ define([], function() {
                     break;
                 case 'competency-summary':
                     if (Array.isArray(card.goodItems)) {
-                        card.goodItems.forEach(function(item) {
+                        card.goodItems.forEach(function (item) {
                             if (!item) return;
                             var t = typeof item === 'string' ? item : (item.text || item.behaviour || item.criterion || '');
                             if (t) chunks.push(t);
                         });
                     }
                     if (Array.isArray(card.badItems)) {
-                        card.badItems.forEach(function(item) {
+                        card.badItems.forEach(function (item) {
                             if (!item) return;
                             var t = typeof item === 'string' ? item : (item.text || '');
                             if (t) chunks.push(t);
@@ -423,7 +423,7 @@ define([], function() {
                 case 'decision-point':
                     if (card.question) chunks.push(card.question);
                     if (Array.isArray(card.options)) {
-                        card.options.forEach(function(opt) {
+                        card.options.forEach(function (opt) {
                             if (!opt) return;
                             if (opt.text) chunks.push(opt.text);
                             if (opt.feedback) chunks.push(opt.feedback);
@@ -433,22 +433,22 @@ define([], function() {
             }
         });
 
-        return chunks.filter(function(c) { return typeof c === 'string' && c.length > 0; });
+        return chunks.filter(function (c) { return typeof c === 'string' && c.length > 0; });
     }
 
     function jaccardSimilarity(a, b) {
-        var setA = new Set((a || '').split(/\s+/).filter(function(w) { return w.length > 3; }));
-        var setB = new Set((b || '').split(/\s+/).filter(function(w) { return w.length > 3; }));
+        var setA = new Set((a || '').split(/\s+/).filter(function (w) { return w.length > 3; }));
+        var setB = new Set((b || '').split(/\s+/).filter(function (w) { return w.length > 3; }));
         if (setA.size === 0 || setB.size === 0) return 0;
         var intersection = 0;
-        setA.forEach(function(w) { if (setB.has(w)) intersection++; });
+        setA.forEach(function (w) { if (setB.has(w)) intersection++; });
         var union = new Set([...setA, ...setB]).size;
         return union > 0 ? intersection / union : 0;
     }
 
     function startsWithAny(text, prefixes) {
         if (!text || !prefixes) return false;
-        return prefixes.some(function(p) { return text.startsWith(p); });
+        return prefixes.some(function (p) { return text.startsWith(p); });
     }
 
     function validateEnterpriseContent(cards, routeType, languageCode, policy) {
@@ -469,7 +469,7 @@ define([], function() {
         checkFillerLanguage(cards, results);
         checkDuplication(cards, policy, results);
 
-        var scenarioCards = cards.filter(function(c) {
+        var scenarioCards = cards.filter(function (c) {
             return c && (c.cardType === 'scenario-1' || c.cardType === 'scenario-2' || c.cardType === 'case-study-1' || c.cardType === 'case-study-2' || c.cardType === 'hook-scenario' || c.cardType === 'applied-scenario');
         });
         checkScenarioFriction(scenarioCards, results);
@@ -496,7 +496,7 @@ define([], function() {
             }
         }
 
-        cards.forEach(function(card, idx) {
+        cards.forEach(function (card, idx) {
             if (!card) return;
             switch (card.cardType) {
                 case 'competence-standard':
@@ -671,7 +671,7 @@ define([], function() {
     }
 
     function checkCardWordBudgets(cards, routeType, results) {
-        cards.forEach(function(card, idx) {
+        cards.forEach(function (card, idx) {
             if (!card) return;
             switch (card.cardType) {
                 case 'performance-anchor':
@@ -821,7 +821,7 @@ define([], function() {
 
         var chunks = collectLearnerTextChunks(cards);
         var allText = chunks.join(' ').toLowerCase();
-        var foundCount = concreteIndicators.filter(function(word) { return allText.includes(word); }).length;
+        var foundCount = concreteIndicators.filter(function (word) { return allText.includes(word); }).length;
 
         if (foundCount < 2) {
             results.warnings.push("Content may lack concrete nouns. Found only " + foundCount + " indicators for " + routeType + " route.");
@@ -838,10 +838,10 @@ define([], function() {
             "short-staffed", "broken", "malfunct", "overflow", "backlog"
         ];
 
-        scenarioCards.forEach(function(card, idx) {
+        scenarioCards.forEach(function (card, idx) {
             if (!card) return;
             var t = JSON.stringify(card).toLowerCase();
-            var has = frictionSignals.some(function(s) { return t.includes(s); });
+            var has = frictionSignals.some(function (s) { return t.includes(s); });
             if (!has) {
                 results.errors.push("Card (" + card.cardType + ") lacks friction (hazard/time pressure/ambiguity/stakeholder tension).");
                 results.score -= 10;
@@ -852,7 +852,7 @@ define([], function() {
     function checkRouteSignals(cards, routeType, results) {
         var t = stringifyLower(cards);
         var signals = ROUTE_SIGNALS[routeType] || [];
-        var count = signals.reduce(function(acc, w) { return acc + (t.includes(w) ? 1 : 0); }, 0);
+        var count = signals.reduce(function (acc, w) { return acc + (t.includes(w) ? 1 : 0); }, 0);
         if (count < 2) {
             results.warnings.push("Route signal weak for \"" + routeType + "\" (tone/intent may drift).");
             results.score -= 3;
@@ -862,7 +862,7 @@ define([], function() {
     function checkAntiDuplication(cards, results) {
         if (!cards || cards.length < 2) return;
 
-        var cardTexts = cards.map(function(card) {
+        var cardTexts = cards.map(function (card) {
             if (!card) return '';
             var texts = [];
             if (card.bodyText) texts.push(card.bodyText);
@@ -879,7 +879,7 @@ define([], function() {
             if (Array.isArray(card.keyPoints)) texts = texts.concat(ccTextList(card.keyPoints));
             if (Array.isArray(card.keyIndicators)) texts = texts.concat(ccTextList(card.keyIndicators));
             if (Array.isArray(card.steps)) {
-                card.steps.forEach(function(s) {
+                card.steps.forEach(function (s) {
                     if (!s) return;
                     if (typeof s === 'string') { texts.push(s); return; }
                     if (s.step) texts.push(s.step);
@@ -891,63 +891,63 @@ define([], function() {
             if (Array.isArray(card.consequences)) texts = texts.concat(ccTextList(card.consequences));
             if (Array.isArray(card.analysisPrompts)) texts = texts.concat(ccTextList(card.analysisPrompts));
             if (Array.isArray(card.risks)) {
-                card.risks.forEach(function(r) {
+                card.risks.forEach(function (r) {
                     if (r && r.risk) texts.push(r.risk);
                     if (r && r.impact) texts.push(r.impact);
                     if (r && r.mitigation) texts.push(r.mitigation);
                 });
             }
             if (Array.isArray(card.policyItems)) {
-                card.policyItems.forEach(function(p) {
+                card.policyItems.forEach(function (p) {
                     if (p && p.policy) texts.push(p.policy);
                     if (p && p.requirement) texts.push(p.requirement);
                 });
             }
             if (Array.isArray(card.frameworks)) {
-                card.frameworks.forEach(function(f) {
+                card.frameworks.forEach(function (f) {
                     if (f && f.name) texts.push(f.name);
                     if (f && f.principle) texts.push(f.principle);
                     if (f && f.limitation) texts.push(f.limitation);
                 });
             }
             if (Array.isArray(card.considerations)) {
-                card.considerations.forEach(function(c) {
+                card.considerations.forEach(function (c) {
                     if (c && c.dimension) texts.push(c.dimension);
                     if (c && c.description) texts.push(c.description);
                 });
             }
             if (Array.isArray(card.frameworkSteps)) {
-                card.frameworkSteps.forEach(function(s) {
+                card.frameworkSteps.forEach(function (s) {
                     if (s && s.step) texts.push(s.step);
                     if (s && s.explanation) texts.push(s.explanation);
                 });
             }
             if (Array.isArray(card.applications)) {
-                card.applications.forEach(function(a) {
+                card.applications.forEach(function (a) {
                     if (a && a.situation) texts.push(a.situation);
                     if (a && a.action) texts.push(a.action);
                 });
             }
             if (Array.isArray(card.actions)) {
-                card.actions.forEach(function(a) {
+                card.actions.forEach(function (a) {
                     if (a && a.heading) texts.push(a.heading);
                     if (a && Array.isArray(a.bullets)) texts = texts.concat(a.bullets);
                 });
             }
             if (Array.isArray(card.errorItems)) {
-                card.errorItems.forEach(function(e) {
+                card.errorItems.forEach(function (e) {
                     if (e && e.error) texts.push(e.error);
                     if (e && e.consequence) texts.push(e.consequence);
                 });
             }
             if (Array.isArray(card.pitfallItems)) {
-                card.pitfallItems.forEach(function(p) {
+                card.pitfallItems.forEach(function (p) {
                     if (p && p.pitfall) texts.push(p.pitfall);
                     if (p && p.consequence) texts.push(p.consequence);
                 });
             }
             if (Array.isArray(card.sceneParts)) {
-                card.sceneParts.forEach(function(part) {
+                card.sceneParts.forEach(function (part) {
                     if (!part) return;
                     var t = part.text || part.content || part.description || '';
                     if (t) texts.push(t);
@@ -955,7 +955,7 @@ define([], function() {
                 });
             }
             if (Array.isArray(card.conceptInsights)) {
-                card.conceptInsights.forEach(function(insight) {
+                card.conceptInsights.forEach(function (insight) {
                     if (!insight) return;
                     var t = insight.text || insight.content || insight.description || '';
                     if (t) texts.push(t);
@@ -963,7 +963,7 @@ define([], function() {
                 });
             }
             if (Array.isArray(card.items)) {
-                card.items.forEach(function(item) {
+                card.items.forEach(function (item) {
                     if (!item) return;
                     if (typeof item === 'string') { texts.push(item); return; }
                     var m = item.mistake || item.error || item.pitfall || '';
@@ -972,14 +972,14 @@ define([], function() {
                 });
             }
             if (Array.isArray(card.goodItems)) {
-                card.goodItems.forEach(function(item) {
+                card.goodItems.forEach(function (item) {
                     if (!item) return;
                     var t = typeof item === 'string' ? item : (item.text || item.behaviour || item.criterion || '');
                     if (t) texts.push(t);
                 });
             }
             if (Array.isArray(card.badItems)) {
-                card.badItems.forEach(function(item) {
+                card.badItems.forEach(function (item) {
                     if (!item) return;
                     var t = typeof item === 'string' ? item : (item.text || '');
                     if (t) texts.push(t);
@@ -987,7 +987,7 @@ define([], function() {
             }
             if (card.question) texts.push(card.question);
             if (Array.isArray(card.options)) {
-                card.options.forEach(function(opt) {
+                card.options.forEach(function (opt) {
                     if (!opt) return;
                     if (opt.text) texts.push(opt.text);
                     if (opt.feedback) texts.push(opt.feedback);
@@ -1015,7 +1015,7 @@ define([], function() {
 
         if (policy.checkEnglishLeakage && !isEnglishVariant(languageCode)) {
             var t = stringifyLower(cards);
-            var hits = ENGLISH_LEAK_TOKENS.filter(function(tok) { return t.includes(tok); }).length;
+            var hits = ENGLISH_LEAK_TOKENS.filter(function (tok) { return t.includes(tok); }).length;
             if (hits >= 6) {
                 results.warnings.push("Possible English leakage (mixed language). Make sure all learner-visible text is in the selected language.");
                 results.score -= 5;
@@ -1023,15 +1023,15 @@ define([], function() {
         }
 
         if (policy.enforceUnsafePrefix && langPack) {
-            var commonErrorCards = cards.filter(function(c) { return c && (c.cardType === 'common-errors' || c.cardType === 'mistakes'); });
-            commonErrorCards.forEach(function(card) {
+            var commonErrorCards = cards.filter(function (c) { return c && (c.cardType === 'common-errors' || c.cardType === 'mistakes'); });
+            commonErrorCards.forEach(function (card) {
                 var isMistakes = card.cardType === 'mistakes';
                 var errorItems = isMistakes
-                    ? (card.items || []).map(function(item) { return { error: typeof item === 'string' ? item : (item.mistake || item.error || item.pitfall || '') }; })
+                    ? (card.items || []).map(function (item) { return { error: typeof item === 'string' ? item : (item.mistake || item.error || item.pitfall || '') }; })
                     : (card.errorItems || []);
                 if (!Array.isArray(errorItems)) return;
                 var startStrict = !(languageCode === 'ja-JP' || languageCode === 'ko-KR');
-                errorItems.forEach(function(item) {
+                errorItems.forEach(function (item) {
                     if (!item || !item.error) return;
                     if (startStrict) {
                         if (!startsWithAny(item.error, langPack.doNot)) {
@@ -1045,7 +1045,7 @@ define([], function() {
                             }
                         }
                     } else {
-                        var ok = langPack.doNot.some(function(p) { return (item.error || '').includes(p); });
+                        var ok = langPack.doNot.some(function (p) { return (item.error || '').includes(p); });
                         if (!ok) {
                             results.warnings.push("Error item may be missing a clear negative imperative for " + languageCode + ".");
                             results.score -= 3;
@@ -1057,7 +1057,7 @@ define([], function() {
 
         if (policy.enforceModalityStrength && langPack && (routeType === "workplace" || routeType === "vocational")) {
             var tMod = stringifyLower(cards);
-            var hasMust = langPack.must.some(function(m) { return tMod.includes(m.toLowerCase()); });
+            var hasMust = langPack.must.some(function (m) { return tMod.includes(m.toLowerCase()); });
             if (!hasMust) {
                 results.warnings.push("Compliance modality may be weak in " + languageCode + " (no strong \"must/required\" equivalents detected).");
                 results.score -= 4;
@@ -1066,7 +1066,7 @@ define([], function() {
 
         if (policy.enforceEscalationPresence && langPack && (routeType === "workplace" || routeType === "vocational")) {
             var tEsc = stringifyLower(cards);
-            var hasEsc = langPack.escalation.some(function(e) { return tEsc.includes(e.toLowerCase()); });
+            var hasEsc = langPack.escalation.some(function (e) { return tEsc.includes(e.toLowerCase()); });
             if (!hasEsc) {
                 results.warnings.push("Escalation/notification language may be missing in " + languageCode + ".");
                 results.score -= 3;
@@ -1103,8 +1103,8 @@ define([], function() {
         var expectedCount = EXPECTED_CARD_COUNTS[routeType] || 6;
 
         var issueLines = [];
-        (issues.errors || []).forEach(function(e) { issueLines.push("ERROR: " + e); });
-        (issues.warnings || []).slice(0, 5).forEach(function(w) { issueLines.push("WARNING: " + w); });
+        (issues.errors || []).forEach(function (e) { issueLines.push("ERROR: " + e); });
+        (issues.warnings || []).slice(0, 5).forEach(function (w) { issueLines.push("WARNING: " + w); });
 
         var instruction = mode === 'REGENERATE'
             ? 'Content quality is too low (score below ' + DEFAULT_POLICY.hardFailScore + '). COMPLETELY REGENERATE all ' + expectedCount + ' cards from scratch.'

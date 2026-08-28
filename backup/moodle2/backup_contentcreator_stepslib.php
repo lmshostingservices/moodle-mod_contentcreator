@@ -39,49 +39,65 @@ class backup_contentcreator_activity_structure_step extends backup_activity_stru
 
         $userinfo = $this->get_setting_value('userinfo');
 
-        $contentcreator = new backup_nested_element('contentcreator', ['id'], [
-            'name',
-            'intro',
-            'introformat',
-            'manifestjson',
-            'manifestversion',
-            'completionviewallslides',
-            'completionallactivities',
-            'timecreated',
-            'timemodified',
-        ]);
+        $contentcreator = new backup_nested_element(
+            'contentcreator',
+            ['id'],
+            [
+                'name',
+                'intro',
+                'introformat',
+                'manifestjson',
+                'manifestversion',
+                'completionviewallslides',
+                'completionallactivities',
+                'timecreated',
+                'timemodified',
+            ]
+        );
 
         $attempts = new backup_nested_element('attempts');
-        $attempt = new backup_nested_element('attempt', ['id'], [
-            'contentcreatorid',
-            'userid',
-            'score',
-            'maxscore',
-            'completed',
-            'responses',
-            'attemptdata',
-            'timecreated',
-            'timemodified',
-        ]);
+        $attempt = new backup_nested_element(
+            'attempt',
+            ['id'],
+            [
+                'contentcreatorid',
+                'userid',
+                'score',
+                'maxscore',
+                'completed',
+                'responses',
+                'attemptdata',
+                'timecreated',
+                'timemodified',
+            ]
+        );
 
         $progresses = new backup_nested_element('progresses');
-        $progress = new backup_nested_element('progress', ['id'], [
-            'cmid',
-            'userid',
+        $progress = new backup_nested_element(
             'progress',
-            'timecreated',
-            'timemodified',
-        ]);
+            ['id'],
+            [
+                'cmid',
+                'userid',
+                'progress',
+                'timecreated',
+                'timemodified',
+            ]
+        );
 
         $checklists = new backup_nested_element('checklists');
-        $checklist = new backup_nested_element('checklist', ['id'], [
-            'cmid',
-            'userid',
-            'topicid',
-            'complete',
-            'timecreated',
-            'timemodified',
-        ]);
+        $checklist = new backup_nested_element(
+            'checklist',
+            ['id'],
+            [
+                'cmid',
+                'userid',
+                'topicid',
+                'complete',
+                'timecreated',
+                'timemodified',
+            ]
+        );
 
         $contentcreator->add_child($attempts);
         $attempts->add_child($attempt);

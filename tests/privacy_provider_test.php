@@ -154,9 +154,15 @@ class privacy_provider_test extends provider_testcase {
 
         provider::delete_data_for_all_users_in_context($this->context);
 
-        $this->assertEquals(0, $DB->count_records('contentcreator_attempts', [
-            'contentcreatorid' => $this->contentcreator->id,
-        ]));
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $this->contentcreator->id,
+                ]
+            )
+        );
         $this->assertEquals(0, $DB->count_records('contentcreator_progress', ['cmid' => $this->cm->id]));
         $this->assertEquals(0, $DB->count_records('contentcreator_checklist', ['cmid' => $this->cm->id]));
     }
@@ -170,31 +176,67 @@ class privacy_provider_test extends provider_testcase {
         $contextlist = new approved_contextlist($this->usera, 'mod_contentcreator', [$this->context->id]);
         provider::delete_data_for_user($contextlist);
 
-        $this->assertEquals(0, $DB->count_records('contentcreator_attempts', [
-            'contentcreatorid' => $this->contentcreator->id,
-            'userid' => $this->usera->id,
-        ]));
-        $this->assertEquals(0, $DB->count_records('contentcreator_progress', [
-            'cmid' => $this->cm->id,
-            'userid' => $this->usera->id,
-        ]));
-        $this->assertEquals(0, $DB->count_records('contentcreator_checklist', [
-            'cmid' => $this->cm->id,
-            'userid' => $this->usera->id,
-        ]));
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $this->contentcreator->id,
+                    'userid' => $this->usera->id,
+                ]
+            )
+        );
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'contentcreator_progress',
+                [
+                    'cmid' => $this->cm->id,
+                    'userid' => $this->usera->id,
+                ]
+            )
+        );
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'contentcreator_checklist',
+                [
+                    'cmid' => $this->cm->id,
+                    'userid' => $this->usera->id,
+                ]
+            )
+        );
 
-        $this->assertEquals(1, $DB->count_records('contentcreator_attempts', [
-            'contentcreatorid' => $this->contentcreator->id,
-            'userid' => $this->userb->id,
-        ]));
-        $this->assertEquals(1, $DB->count_records('contentcreator_progress', [
-            'cmid' => $this->cm->id,
-            'userid' => $this->userb->id,
-        ]));
-        $this->assertEquals(1, $DB->count_records('contentcreator_checklist', [
-            'cmid' => $this->cm->id,
-            'userid' => $this->userb->id,
-        ]));
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $this->contentcreator->id,
+                    'userid' => $this->userb->id,
+                ]
+            )
+        );
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'contentcreator_progress',
+                [
+                    'cmid' => $this->cm->id,
+                    'userid' => $this->userb->id,
+                ]
+            )
+        );
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'contentcreator_checklist',
+                [
+                    'cmid' => $this->cm->id,
+                    'userid' => $this->userb->id,
+                ]
+            )
+        );
     }
 
     /**
@@ -206,26 +248,56 @@ class privacy_provider_test extends provider_testcase {
         $userlist = new approved_userlist($this->context, 'mod_contentcreator', [$this->userb->id]);
         provider::delete_data_for_users($userlist);
 
-        $this->assertEquals(0, $DB->count_records('contentcreator_attempts', [
-            'contentcreatorid' => $this->contentcreator->id,
-            'userid' => $this->userb->id,
-        ]));
-        $this->assertEquals(0, $DB->count_records('contentcreator_progress', [
-            'cmid' => $this->cm->id,
-            'userid' => $this->userb->id,
-        ]));
-        $this->assertEquals(0, $DB->count_records('contentcreator_checklist', [
-            'cmid' => $this->cm->id,
-            'userid' => $this->userb->id,
-        ]));
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $this->contentcreator->id,
+                    'userid' => $this->userb->id,
+                ]
+            )
+        );
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'contentcreator_progress',
+                [
+                    'cmid' => $this->cm->id,
+                    'userid' => $this->userb->id,
+                ]
+            )
+        );
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'contentcreator_checklist',
+                [
+                    'cmid' => $this->cm->id,
+                    'userid' => $this->userb->id,
+                ]
+            )
+        );
 
-        $this->assertEquals(1, $DB->count_records('contentcreator_attempts', [
-            'contentcreatorid' => $this->contentcreator->id,
-            'userid' => $this->usera->id,
-        ]));
-        $this->assertEquals(1, $DB->count_records('contentcreator_checklist', [
-            'cmid' => $this->cm->id,
-            'userid' => $this->usera->id,
-        ]));
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $this->contentcreator->id,
+                    'userid' => $this->usera->id,
+                ]
+            )
+        );
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'contentcreator_checklist',
+                [
+                    'cmid' => $this->cm->id,
+                    'userid' => $this->usera->id,
+                ]
+            )
+        );
     }
 }

@@ -49,10 +49,13 @@ class custom_completion extends activity_custom_completion {
         $cm = $this->cm;
 
         if ($rule === 'completionviewallslides') {
-            $attempt = $DB->get_record('contentcreator_attempts', [
-                'contentcreatorid' => $cm->instance,
-                'userid' => $userid,
-            ]);
+            $attempt = $DB->get_record(
+                'contentcreator_attempts',
+                [
+                    'contentcreatorid' => $cm->instance,
+                    'userid' => $userid,
+                ]
+            );
 
             if ($attempt && $attempt->completed) {
                 return COMPLETION_COMPLETE;
@@ -95,10 +98,13 @@ class custom_completion extends activity_custom_completion {
                 return COMPLETION_COMPLETE;
             }
 
-            $progressrecord = $DB->get_record('contentcreator_progress', [
-                'cmid' => $cm->id,
-                'userid' => $userid,
-            ]);
+            $progressrecord = $DB->get_record(
+                'contentcreator_progress',
+                [
+                    'cmid' => $cm->id,
+                    'userid' => $userid,
+                ]
+            );
 
             if (!$progressrecord || empty($progressrecord->progress)) {
                 return COMPLETION_INCOMPLETE;

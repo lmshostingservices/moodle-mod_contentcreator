@@ -11,7 +11,7 @@
  * @module mod_contentcreator/document_generator/industryProfiles
  */
 
-define([], function() {
+define([], function () {
     'use strict';
 
     const industryProfiles = {
@@ -330,14 +330,14 @@ define([], function() {
         /**
          * Get industry profile by key
          */
-        getProfile: function(industryKey) {
+        getProfile: function (industryKey) {
             return industryProfiles[industryKey] || null;
         },
 
         /**
          * Get sub-industry profile
          */
-        getSubProfile: function(industryKey, subKey) {
+        getSubProfile: function (industryKey, subKey) {
             if (!subIndustryProfiles[industryKey]) return null;
             return subIndustryProfiles[industryKey][subKey] || null;
         },
@@ -345,7 +345,7 @@ define([], function() {
         /**
          * Get merged document lists for industry + sub-industry
          */
-        getMergedDocuments: function(industryKey, subKey) {
+        getMergedDocuments: function (industryKey, subKey) {
             var industry = industryProfiles[industryKey];
             if (!industry) return { core: [], optional: [], suppressed: [] };
 
@@ -357,13 +357,13 @@ define([], function() {
             if (subKey && subIndustryProfiles[industryKey] && subIndustryProfiles[industryKey][subKey]) {
                 var sub = subIndustryProfiles[industryKey][subKey];
                 if (sub.addCoreDocuments) {
-                    sub.addCoreDocuments.forEach(function(d) { core.add(d); });
+                    sub.addCoreDocuments.forEach(function (d) { core.add(d); });
                 }
                 if (sub.addOptionalDocuments) {
-                    sub.addOptionalDocuments.forEach(function(d) { optional.add(d); });
+                    sub.addOptionalDocuments.forEach(function (d) { optional.add(d); });
                 }
                 if (sub.suppressDocuments) {
-                    sub.suppressDocuments.forEach(function(d) {
+                    sub.suppressDocuments.forEach(function (d) {
                         core.delete(d);
                         optional.delete(d);
                         suppressed.add(d);
@@ -381,7 +381,7 @@ define([], function() {
         /**
          * Check if document is relevant for industry
          */
-        isDocumentRelevant: function(docId, industryKey, subKey) {
+        isDocumentRelevant: function (docId, industryKey, subKey) {
             var merged = this.getMergedDocuments(industryKey, subKey);
             if (merged.suppressed.includes(docId)) return false;
             return merged.core.includes(docId) || merged.optional.includes(docId) || 
@@ -391,7 +391,7 @@ define([], function() {
         /**
          * Get document priority (core=2, optional=1, other=0)
          */
-        getDocumentPriority: function(docId, industryKey, subKey) {
+        getDocumentPriority: function (docId, industryKey, subKey) {
             var merged = this.getMergedDocuments(industryKey, subKey);
             if (merged.core.includes(docId)) return 2;
             if (merged.optional.includes(docId)) return 1;

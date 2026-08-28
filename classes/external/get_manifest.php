@@ -44,9 +44,11 @@ class get_manifest extends external_api {
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
-            'cmid' => new external_value(PARAM_INT, 'Course module ID'),
-        ]);
+        return new external_function_parameters(
+            [
+                'cmid' => new external_value(PARAM_INT, 'Course module ID'),
+            ]
+        );
     }
 
     /**
@@ -84,13 +86,15 @@ class get_manifest extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'manifest' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'JSON manifest',
-            ),
-            'version' => new external_value(PARAM_TEXT, 'Manifest version'),
-        ]);
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'manifest' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'JSON manifest',
+                ),
+                'version' => new external_value(PARAM_TEXT, 'Manifest version'),
+            ]
+        );
     }
 }

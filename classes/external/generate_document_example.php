@@ -50,21 +50,23 @@ class generate_document_example extends external_api {
      * @return external_function_parameters
      */
     public static function execute_parameters(): external_function_parameters {
-        return new external_function_parameters([
-            'cmid' => new external_value(PARAM_INT, 'Course module ID'),
-            'docId' => new external_value(PARAM_ALPHANUMEXT, 'Document type ID'),
-            'docName' => new external_value(PARAM_TEXT, 'Document display name'),
-            'country' => new external_value(PARAM_ALPHA, 'Country code', VALUE_DEFAULT, 'AU'),
-            'state' => new external_value(PARAM_TEXT, 'State/region', VALUE_DEFAULT, ''),
-            'industry' => new external_value(PARAM_TEXT, 'Industry name', VALUE_DEFAULT, 'general'),
-            'subIndustry' => new external_value(PARAM_TEXT, 'Sub-industry', VALUE_DEFAULT, ''),
-            'jobLevel' => new external_value(PARAM_ALPHANUMEXT, 'Job level', VALUE_DEFAULT, 'worker'),
-            'jobTitle' => new external_value(PARAM_TEXT, 'Job title', VALUE_DEFAULT, 'Worker'),
-            'route' => new external_value(PARAM_ALPHANUMEXT, 'Content route', VALUE_DEFAULT, 'workplace'),
-            // Version 7.1.5: Unit of competency context for relevant documents.
-            'unitCode' => new external_value(PARAM_TEXT, 'Unit code', VALUE_DEFAULT, ''),
-            'unitTitle' => new external_value(PARAM_TEXT, 'Unit title', VALUE_DEFAULT, ''),
-        ]);
+        return new external_function_parameters(
+            [
+                'cmid' => new external_value(PARAM_INT, 'Course module ID'),
+                'docId' => new external_value(PARAM_ALPHANUMEXT, 'Document type ID'),
+                'docName' => new external_value(PARAM_TEXT, 'Document display name'),
+                'country' => new external_value(PARAM_ALPHA, 'Country code', VALUE_DEFAULT, 'AU'),
+                'state' => new external_value(PARAM_TEXT, 'State/region', VALUE_DEFAULT, ''),
+                'industry' => new external_value(PARAM_TEXT, 'Industry name', VALUE_DEFAULT, 'general'),
+                'subIndustry' => new external_value(PARAM_TEXT, 'Sub-industry', VALUE_DEFAULT, ''),
+                'jobLevel' => new external_value(PARAM_ALPHANUMEXT, 'Job level', VALUE_DEFAULT, 'worker'),
+                'jobTitle' => new external_value(PARAM_TEXT, 'Job title', VALUE_DEFAULT, 'Worker'),
+                'route' => new external_value(PARAM_ALPHANUMEXT, 'Content route', VALUE_DEFAULT, 'workplace'),
+                // Version 7.1.5: Unit of competency context for relevant documents.
+                'unitCode' => new external_value(PARAM_TEXT, 'Unit code', VALUE_DEFAULT, ''),
+                'unitTitle' => new external_value(PARAM_TEXT, 'Unit title', VALUE_DEFAULT, ''),
+            ]
+        );
     }
 
     /**
@@ -100,20 +102,23 @@ class generate_document_example extends external_api {
     ): array {
         global $CFG, $USER;
 
-        $params = self::validate_parameters(self::execute_parameters(), [
-            'cmid' => $cmid,
-            'docId' => $docid,
-            'docName' => $docname,
-            'country' => $country,
-            'state' => $state,
-            'industry' => $industry,
-            'subIndustry' => $subindustry,
-            'jobLevel' => $joblevel,
-            'jobTitle' => $jobtitle,
-            'route' => $route,
-            'unitCode' => $unitcode,
-            'unitTitle' => $unittitle,
-        ]);
+        $params = self::validate_parameters(
+            self::execute_parameters(),
+            [
+                'cmid' => $cmid,
+                'docId' => $docid,
+                'docName' => $docname,
+                'country' => $country,
+                'state' => $state,
+                'industry' => $industry,
+                'subIndustry' => $subindustry,
+                'jobLevel' => $joblevel,
+                'jobTitle' => $jobtitle,
+                'route' => $route,
+                'unitCode' => $unitcode,
+                'unitTitle' => $unittitle,
+            ]
+        );
 
         $cm = get_coursemodule_from_id('contentcreator', $params['cmid'], 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
@@ -121,7 +126,7 @@ class generate_document_example extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
-        // v13.85: this call SPENDS SITE CREDITS. Gating it on :view alone meant every
+        // v13.85: This call SPENDS SITE CREDITS. Gating it on :view alone meant every
         // enrolled learner in every course could draw on the same paid balance, with no
         // administrative control beyond disabling the feature site-wide. The new
         // capability is granted to student by default, so behaviour is unchanged until a
@@ -131,13 +136,11 @@ class generate_document_example extends external_api {
         // This endpoint spends site credits and is available to any user who can view the
         // activity, so abuse control is enforced by a per-user sliding-window rate limit
         // rather than by the capability gate. Do not remove it without a replacement.
-        \mod_contentcreator\ratelimiter::check($USER->id, 'generate', 60, HOURSECS);
-        // v13.85: aggregate ceiling. The per-user limit above cannot bound total spend on
-        // an endpoint every enrolled learner may call; with a large cohort it has no
-        // effective ceiling at all. Configurable, generous by default, 0 disables.
-        $sitemax = get_config('mod_contentcreator', 'sitelimitgenerate');
-        $sitemax = ($sitemax !== false && $sitemax !== '' && is_numeric($sitemax)) ? (int)$sitemax : 1000;
-        \mod_contentcreator\ratelimiter::check_site('generate', $sitemax, HOURSECS);
+        // v13.94.3: the per-user ceiling was hardcoded at 60 here, so the ratelimitgenerate
+        // admin setting applied only to the AJAX path - an administrator who lowered it, or
+        // set it to 0 to disable the bucket, changed nothing for this web service. enforce()
+        // reads the setting and applies the site ceiling in one place, shared with ajax.php.
+        \mod_contentcreator\ratelimiter::enforce($USER->id, 'generate', 60, HOURSECS);
 
 
         // Central Config integration with fallback.
@@ -175,15 +178,19 @@ class generate_document_example extends external_api {
 
         // Call EssayGraderAI API for document generation.
         $curl = new \curl();
-        $curl->setopt([
-            'CURLOPT_TIMEOUT' => 60,
-            'CURLOPT_RETURNTRANSFER' => true,
-            'CURLOPT_SSL_VERIFYPEER' => true,
-        ]);
-        $curl->setHeader([
-            'Content-Type: application/json',
-            'Accept: application/json',
-        ]);
+        $curl->setopt(
+            [
+                'CURLOPT_TIMEOUT' => 60,
+                'CURLOPT_RETURNTRANSFER' => true,
+                'CURLOPT_SSL_VERIFYPEER' => true,
+            ]
+        );
+        $curl->setHeader(
+            [
+                'Content-Type: application/json',
+                'Accept: application/json',
+            ]
+        );
 
         $payload = [
             'siteId' => $siteid,
@@ -235,7 +242,7 @@ class generate_document_example extends external_api {
 
         return [
             'success' => true,
-            // v13.86: this HTML is injected straight into the player's DOM (player5.js
+            // v13.86: This HTML is injected straight into the player's DOM (player5.js
             // renders it with innerHTML, deliberately, because it is a rendered
             // workplace document). Everything else in that file is escaped, which makes
             // this the exception rather than a design decision. clean_text() strips
@@ -256,17 +263,19 @@ class generate_document_example extends external_api {
      * @return external_single_structure
      */
     public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'content' => new external_value(
-                PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
-                'Generated document HTML content',
-            ),
-            'docId' => new external_value(PARAM_TEXT, 'Document type ID'),
-            'docName' => new external_value(PARAM_TEXT, 'Document display name'),
-            'domain' => new external_value(PARAM_TEXT, 'Document domain category'),
-            'renderProfile' => new external_value(PARAM_TEXT, 'Render profile used'),
-            'error' => new external_value(PARAM_TEXT, 'Error message if any', VALUE_DEFAULT, ''),
-        ]);
+        return new external_single_structure(
+            [
+                'success' => new external_value(PARAM_BOOL, 'Success status'),
+                'content' => new external_value(
+                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    'Generated document HTML content',
+                ),
+                'docId' => new external_value(PARAM_TEXT, 'Document type ID'),
+                'docName' => new external_value(PARAM_TEXT, 'Document display name'),
+                'domain' => new external_value(PARAM_TEXT, 'Document domain category'),
+                'renderProfile' => new external_value(PARAM_TEXT, 'Render profile used'),
+                'error' => new external_value(PARAM_TEXT, 'Error message if any', VALUE_DEFAULT, ''),
+            ]
+        );
     }
 }

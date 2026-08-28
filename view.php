@@ -36,7 +36,11 @@ $context = context_module::instance($cm->id);
 require_capability('mod/contentcreator:view', $context);
 
 $PAGE->set_url('/mod/contentcreator/view.php', ['id' => $id]);
-$PAGE->set_title($contentcreator->name);
+// v13.94.3: The raw name was passed straight to set_title(). Activity names are plain text
+// but may legitimately contain characters such as & or <, which then reached the page title
+// unescaped. format_string() also applies the site's multilang filters, so a name using the
+// {mlang} syntax now renders in the user's language instead of showing the markup.
+$PAGE->set_title(format_string($contentcreator->name));
 $PAGE->set_heading($course->fullname);
 $PAGE->set_context($context);
 
@@ -132,11 +136,15 @@ if ($canmanage && (!$islocked || $editmode)) {
     $enablevoice = get_config('mod_contentcreator', 'enablevoice') ?: 1;
     $voicelanguage = get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU';
 
-    $PAGE->requires->js_call_amd('mod_contentcreator/builder', 'init', [[
-        'cmid' => $cm->id,
-        'enableVoice' => (bool)$enablevoice,
-        'voiceLanguage' => $voicelanguage,
-    ]]);
+    $PAGE->requires->js_call_amd(
+        'mod_contentcreator/builder',
+        'init',
+        [[
+            'cmid' => $cm->id,
+            'enableVoice' => (bool)$enablevoice,
+            'voiceLanguage' => $voicelanguage,
+        ]]
+    );
 } else {
     // Show the player for students, and for teachers when content is locked and edit mode is off.
     $requirefocus = get_config('mod_contentcreator', 'requirefocus') ?: 0;
@@ -147,13 +155,17 @@ if ($canmanage && (!$islocked || $editmode)) {
     // $USER->editing globally, so check that instead.
     $caneditslides = $canmanage && !empty($USER->editing);
 
-    $PAGE->requires->js_call_amd('mod_contentcreator/player5', 'init', [[
-        'cmid' => $cm->id,
-        'canEdit' => $caneditslides,
-        'isTeacher' => (bool)$isstaff,
-        'requireFocus' => (bool)$requirefocus,
-        'courseUrl' => (new moodle_url('/course/view.php', ['id' => $cm->course]))->out(false),
-    ]]);
+    $PAGE->requires->js_call_amd(
+        'mod_contentcreator/player5',
+        'init',
+        [[
+            'cmid' => $cm->id,
+            'canEdit' => $caneditslides,
+            'isTeacher' => (bool)$isstaff,
+            'requireFocus' => (bool)$requirefocus,
+            'courseUrl' => (new moodle_url('/course/view.php', ['id' => $cm->course]))->out(false),
+        ]]
+    );
 }
 
 // FIX-CC-COMPLETION-SPLIT (v13.12): Event trigger only — no write_close() inside,

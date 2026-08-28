@@ -17,7 +17,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function() {
+define([], function () {
     'use strict';
 
     var getLabel, escapeHtml, fixGrammar, getIcon, resolveScenePartIcon, formatTextWithDocLinks;
@@ -39,6 +39,20 @@ define([], function() {
             var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
         }
         return a;
+    }
+
+    // v13.94.3: getLabel() ends `return labels[key] || UI_LABELS['en'][key] || key`, so
+    // it never returns a falsy value and `getLabel('x') || 'Fallback'` is dead code (see
+    // the TOPICSTEXT_HEADINGS note below). Call it directly. _lbl() exists only for the
+    // handful of strings that carry runtime values, which cannot be built by
+    // concatenating translated fragments: word order differs by language, so the whole
+    // sentence is one key with {placeholders} substituted in.
+    function _lbl(key, params) {
+        var s = getLabel(key);
+        Object.keys(params || {}).forEach(function (k) {
+            s = s.split('{' + k + '}').join(params[k]);
+        });
+        return s;
     }
 
     function init(helpers) {
@@ -73,7 +87,7 @@ define([], function() {
         if (beats.length <= 1) {
             var excParts = raw.split(/[!?]\s+(?=[A-Z])/);
             if (excParts.length >= 2) {
-                beats = excParts.map(function(p) { return p.trim(); }).filter(function(p) { return p.length > 12; });
+                beats = excParts.map(function (p) { return p.trim(); }).filter(function (p) { return p.length > 12; });
             }
         }
         return beats.length >= 2 ? beats : [raw];
@@ -107,7 +121,7 @@ define([], function() {
             var kpColors = ['orange', 'green', 'blue', 'purple'];
             var kpIcons  = ['lightbulb', 'check-circle', 'award', 'brain'];
             html += '<div class="cc5-kp-grid">';
-            section.keyPoints.forEach(function(pt, idx) {
+            section.keyPoints.forEach(function (pt, idx) {
                 var ptText = typeof pt === 'string' ? pt : (pt.text || '');
                 if (!ptText) return;
                 var colorClass = 'cc5-req-' + kpColors[idx % kpColors.length];
@@ -133,12 +147,12 @@ define([], function() {
         html += '<div class="cc5-card-header">' + getIcon('list-checks') + '<h4>' + escapeHtml(fixGrammar(section.heading || 'Action Breakdown')) + '</h4></div>';
         html += '<div class="cc5-card-body"><div class="cc5-action-grid">';
         if (section.actions && section.actions.length) {
-            section.actions.forEach(function(action) {
+            section.actions.forEach(function (action) {
                 html += '<div class="cc5-action-item">';
                 html += '<h5>' + escapeHtml(fixGrammar(action.heading || '')) + '</h5>';
                 if (action.bullets && action.bullets.length) {
                     html += '<ul>';
-                    action.bullets.forEach(function(b) { html += '<li>' + escapeHtml(fixGrammar(b)) + '</li>'; });
+                    action.bullets.forEach(function (b) { html += '<li>' + escapeHtml(fixGrammar(b)) + '</li>'; });
                     html += '</ul>';
                 }
                 html += '</div>';
@@ -158,7 +172,7 @@ define([], function() {
         html += '<div class="cc5-card-body">';
         if (section.standardItems && section.standardItems.length) {
             html += '<ul class="cc5-standard-checklist">';
-            section.standardItems.forEach(function(item) {
+            section.standardItems.forEach(function (item) {
                 html += '<li>' + getIcon('check-circle') + ' <span>' + escapeHtml(fixGrammar(typeof item === 'string' ? item : (item.text || ''))) + '</span></li>';
             });
             html += '</ul>';
@@ -181,7 +195,7 @@ define([], function() {
         if (section.consequence) html += '<div class="cc5-scenario-consequence"><strong>Consequence:</strong> ' + escapeHtml(fixGrammar(section.consequence)) + '</div>';
         if (section.optimisationTips && section.optimisationTips.length) {
             html += '<div class="cc5-scenario-tips"><h5>' + (getLabel('tipsForHandling') || 'Tips for Handling This') + '</h5><ul class="cc5-tips-list">';
-            section.optimisationTips.forEach(function(tip) { html += '<li>' + escapeHtml(fixGrammar(tip)) + '</li>'; });
+            section.optimisationTips.forEach(function (tip) { html += '<li>' + escapeHtml(fixGrammar(tip)) + '</li>'; });
             html += '</ul></div>';
         }
         html += '</div></div>';
@@ -197,7 +211,7 @@ define([], function() {
         html += '<div class="cc5-card-body">';
         if (section.errorItems && section.errorItems.length) {
             html += '<div class="cc5-error-items">';
-            section.errorItems.forEach(function(item) {
+            section.errorItems.forEach(function (item) {
                 html += '<div class="cc5-error-item">';
                 html += '<div class="cc5-error-text">' + getIcon('x-circle') + ' <span>' + escapeHtml(fixGrammar(item.error || '')) + '</span></div>';
                 if (item.consequence) html += '<div class="cc5-error-consequence">' + escapeHtml(fixGrammar(item.consequence)) + '</div>';
@@ -218,17 +232,20 @@ define([], function() {
         html += '<div class="cc5-card-header">' + getIcon('lightbulb') + '<h4>' + escapeHtml(fixGrammar(section.heading || 'Core Concept')) + '</h4></div>';
         html += '<div class="cc5-card-body">';
         if (section.conceptDefinition) {
-            html += '<div class="cc5-concept-definition"><h5>Definition</h5>';
+            // v13.94.3: hard-coded English sub-heading over translated body text.
+            html += '<div class="cc5-concept-definition"><h5>' + escapeHtml(getLabel('definition')) + '</h5>';
             html += '<p>' + escapeHtml(fixGrammar(section.conceptDefinition)) + '</p></div>';
         }
         if (section.significance) {
-            html += '<div class="cc5-concept-significance"><h5>Why It Matters</h5>';
+            // v13.94.3: whyItMatters already existed in translations.js, unused here.
+            html += '<div class="cc5-concept-significance"><h5>' + escapeHtml(getLabel('whyItMatters')) + '</h5>';
             html += '<p>' + escapeHtml(fixGrammar(section.significance)) + '</p></div>';
         }
         var terms = section.keyTerms || [];
         if (terms.length) {
-            html += '<div class="cc5-concept-terms"><h5>Key Terms</h5><dl>';
-            terms.forEach(function(t) {
+            // v13.94.3: keyTerms already existed in translations.js, unused here.
+            html += '<div class="cc5-concept-terms"><h5>' + escapeHtml(getLabel('keyTerms')) + '</h5><dl>';
+            terms.forEach(function (t) {
                 html += '<dt>' + escapeHtml(fixGrammar(t.term || '')) + '</dt>';
                 html += '<dd>' + escapeHtml(fixGrammar(t.definition || '')) + '</dd>';
             });
@@ -248,7 +265,7 @@ define([], function() {
         html += '<div class="cc5-card-header">' + getIcon('layers') + '<h4>' + escapeHtml(fixGrammar(section.heading || 'Theoretical Framework')) + '</h4></div>';
         html += '<div class="cc5-card-body">';
         if (section.frameworks && section.frameworks.length) {
-            section.frameworks.forEach(function(fw) {
+            section.frameworks.forEach(function (fw) {
                 html += '<div class="cc5-framework-item"><h5>' + escapeHtml(fixGrammar(fw.name || '')) + '</h5>';
                 if (fw.originator)  html += '<p class="cc5-fw-originator"><em>' + escapeHtml(fixGrammar(fw.originator)) + '</em></p>';
                 html += '<p>' + escapeHtml(fixGrammar(fw.principle || fw.description || '')) + '</p>';
@@ -278,12 +295,12 @@ define([], function() {
         var items = section.cognitiveConsiderations || section.considerations || [];
         if (items.length) {
             html += '<ul class="cc5-considerations-list">';
-            items.forEach(function(c) { html += '<li>' + escapeHtml(fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))) + '</li>'; });
+            items.forEach(function (c) { html += '<li>' + escapeHtml(fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))) + '</li>'; });
             html += '</ul>';
         }
         if (section.analysisPrompts && section.analysisPrompts.length) {
             html += '<div class="cc5-analysis-prompts"><h5>' + (getLabel('analysisQuestions') || 'Analysis Questions') + ':</h5><ul>';
-            section.analysisPrompts.forEach(function(p) { html += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
+            section.analysisPrompts.forEach(function (p) { html += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -300,7 +317,7 @@ define([], function() {
         html += '<div class="cc5-card-body">';
         if (section.considerations && section.considerations.length) {
             html += '<div class="cc5-ethics-list">';
-            section.considerations.forEach(function(c) {
+            section.considerations.forEach(function (c) {
                 if (typeof c === 'object' && c.dimension) {
                     html += '<div class="cc5-ethics-item"><strong>' + escapeHtml(fixGrammar(c.dimension)) + ':</strong> ';
                     html += escapeHtml(fixGrammar(c.description || '')) + '</div>';
@@ -327,15 +344,17 @@ define([], function() {
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
         if (section.analysisPrompts && section.analysisPrompts.length) {
             html += '<div class="cc5-analysis-prompts"><h5>Analysis Questions:</h5><ul>';
-            section.analysisPrompts.forEach(function(p) { html += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
+            section.analysisPrompts.forEach(function (p) { html += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.keyInsight) {
-            html += '<div class="cc5-key-insight"><h5>Key Insight</h5><p>' + escapeHtml(fixGrammar(section.keyInsight)) + '</p></div>';
+            // v13.94.3: hard-coded English sub-heading.
+            html += '<div class="cc5-key-insight"><h5>' + escapeHtml(getLabel('keyInsight')) + '</h5><p>' + escapeHtml(fixGrammar(section.keyInsight)) + '</p></div>';
         }
         var reflectionText = section.criticalReflection ||
             'How does this case connect to your own professional context? What would you do differently?';
-        html += '<div class="cc5-critical-reflection"><h5>Critical Reflection</h5><p>' + escapeHtml(fixGrammar(reflectionText)) + '</p></div>';
+        // v13.94.3: hard-coded English sub-heading.
+        html += '<div class="cc5-critical-reflection"><h5>' + escapeHtml(getLabel('criticalReflection')) + '</h5><p>' + escapeHtml(fixGrammar(reflectionText)) + '</p></div>';
         html += '</div></div>';
         return html;
     }
@@ -351,13 +370,14 @@ define([], function() {
             html += '<div class="cc5-impact-statement"><p>' + escapeHtml(fixGrammar(section.impactStatement)) + '</p></div>';
         }
         if (section.keyMetrics && section.keyMetrics.length) {
-            html += '<div class="cc5-key-metrics"><h5>Key Metrics</h5><ul>';
-            section.keyMetrics.forEach(function(m) { html += '<li>' + escapeHtml(fixGrammar(m)) + '</li>'; });
+            // v13.94.3: hard-coded English sub-heading.
+            html += '<div class="cc5-key-metrics"><h5>' + escapeHtml(getLabel('keyMetrics')) + '</h5><ul>';
+            section.keyMetrics.forEach(function (m) { html += '<li>' + escapeHtml(fixGrammar(m)) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.consequences && section.consequences.length) {
             html += '<ul class="cc5-consequences-list">';
-            section.consequences.forEach(function(c) { html += '<li>' + escapeHtml(fixGrammar(c)) + '</li>'; });
+            section.consequences.forEach(function (c) { html += '<li>' + escapeHtml(fixGrammar(c)) + '</li>'; });
             html += '</ul>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -374,7 +394,7 @@ define([], function() {
         html += '<div class="cc5-card-body">';
         if (section.steps && section.steps.length) {
             html += '<ol class="cc5-action-steps">';
-            section.steps.forEach(function(s) {
+            section.steps.forEach(function (s) {
                 if (typeof s === 'string') {
                     html += '<li>' + escapeHtml(fixGrammar(s)) + '</li>';
                 } else {
@@ -401,7 +421,7 @@ define([], function() {
         html += '<div class="cc5-card-body">';
         if (section.risks && section.risks.length) {
             html += '<div class="cc5-risk-items">';
-            section.risks.forEach(function(r) {
+            section.risks.forEach(function (r) {
                 html += '<div class="cc5-risk-item">';
                 html += '<div class="cc5-risk-text">' + getIcon('alert-circle') + ' <span>' + escapeHtml(fixGrammar(r.risk || r.text || '')) + '</span></div>';
                 if (r.likelihood)  html += '<div class="cc5-risk-likelihood"><strong>Likelihood:</strong> ' + escapeHtml(fixGrammar(r.likelihood)) + '</div>';
@@ -427,7 +447,7 @@ define([], function() {
         var pols = section.policyItems || section.policies || [];
         if (pols.length) {
             html += '<div class="cc5-policy-items">';
-            pols.forEach(function(p) {
+            pols.forEach(function (p) {
                 if (typeof p === 'string') {
                     html += '<div class="cc5-policy-item"><p>' + escapeHtml(fixGrammar(p)) + '</p></div>';
                 } else {
@@ -457,13 +477,15 @@ define([], function() {
             html += '<div class="cc5-skill-statement"><p>' + escapeHtml(fixGrammar(section.skillStatement)) + '</p></div>';
         }
         if (section.relevance) {
-            html += '<div class="cc5-skill-relevance"><h5>Why This Matters</h5>';
+            // v13.94.3: hard-coded English sub-heading.
+            html += '<div class="cc5-skill-relevance"><h5>' + escapeHtml(getLabel('whyThisMatters')) + '</h5>';
             html += '<p>' + escapeHtml(fixGrammar(section.relevance)) + '</p></div>';
         }
         var indicators = section.keyIndicators || [];
         if (indicators.length) {
-            html += '<div class="cc5-skill-indicators"><h5>Key Indicators</h5><ul>';
-            indicators.forEach(function(ind) { html += '<li>' + escapeHtml(fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''))) + '</li>'; });
+            // v13.94.3: hard-coded English sub-heading.
+            html += '<div class="cc5-skill-indicators"><h5>' + escapeHtml(getLabel('keyIndicators')) + '</h5><ul>';
+            indicators.forEach(function (ind) { html += '<li>' + escapeHtml(fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''))) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -481,7 +503,7 @@ define([], function() {
         var steps = section.frameworkSteps || [];
         if (steps.length) {
             html += '<ol class="cc5-framework-steps">';
-            steps.forEach(function(s) {
+            steps.forEach(function (s) {
                 html += '<li class="cc5-framework-step"><div class="cc5-framework-step-content">';
                 html += '<strong>' + escapeHtml(fixGrammar(s.step || '')) + '</strong>';
                 html += '<p>' + (s.explanation ? escapeHtml(fixGrammar(s.explanation)) : '') + '</p>';
@@ -491,7 +513,8 @@ define([], function() {
             html += '</ol>';
         }
         if (section.keyPrinciple) {
-            html += '<div class="cc5-key-principle"><h5>Key Principle</h5>';
+            // v13.94.3: keyPrinciple already existed in translations.js, unused here.
+            html += '<div class="cc5-key-principle"><h5>' + escapeHtml(getLabel('keyPrinciple')) + '</h5>';
             html += '<p>' + escapeHtml(fixGrammar(section.keyPrinciple)) + '</p></div>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -509,7 +532,7 @@ define([], function() {
         var apps = section.applications || [];
         if (apps.length) {
             html += '<div class="cc5-application-items">';
-            apps.forEach(function(a, idx) {
+            apps.forEach(function (a, idx) {
                 html += '<div class="cc5-application-item">';
                 html += '<div class="cc5-application-scenario-label">';
                 html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -537,7 +560,7 @@ define([], function() {
         var pitfalls = section.pitfallItems || [];
         if (pitfalls.length) {
             html += '<div class="cc5-pitfall-items">';
-            pitfalls.forEach(function(p) {
+            pitfalls.forEach(function (p) {
                 html += '<div class="cc5-pitfall-item"><div class="cc5-pitfall-cols">';
                 html += '<div class="cc5-pitfall-negative">';
                 html += '<div class="cc5-pitfall-text">' + getIcon('x-circle') + ' <span>' + escapeHtml(fixGrammar(p.pitfall || '')) + '</span></div>';
@@ -571,7 +594,7 @@ define([], function() {
                 html += '<div class="cc5-scenario-reflection"><strong>Reflection:</strong> ' + escapeHtml(fixGrammar(section.reflection.question)) + '</div>';
                 if (section.reflection.sampleAnswers && Array.isArray(section.reflection.sampleAnswers)) {
                     html += '<ul class="cc5-scenario-reflection-answers">';
-                    section.reflection.sampleAnswers.forEach(function(ans) { html += '<li>' + escapeHtml(fixGrammar(ans)) + '</li>'; });
+                    section.reflection.sampleAnswers.forEach(function (ans) { html += '<li>' + escapeHtml(fixGrammar(ans)) + '</li>'; });
                     html += '</ul>';
                 }
             } else {
@@ -580,7 +603,7 @@ define([], function() {
         }
         if (section.optimisationTips && section.optimisationTips.length) {
             html += '<div class="cc5-optimisation-tips"><h5>' + (getLabel('optimisationTips') || 'Optimisation Tips') + '</h5><ul>';
-            section.optimisationTips.forEach(function(tip) { html += '<li>' + escapeHtml(fixGrammar(tip)) + '</li>'; });
+            section.optimisationTips.forEach(function (tip) { html += '<li>' + escapeHtml(fixGrammar(tip)) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -601,14 +624,25 @@ define([], function() {
 
     function renderHookScenario(section) {
         var html = '<div class="cc5-card cc5-hook-scenario-card">';
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-hook">Scene Setting</span></div>';
-        html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title || '')) + '</h3>';
+        // v13.94.3: flow-badge text was a hard-coded English literal, so a Japanese
+        // module showed an English pill above translated prose. Same key the narration
+        // uses in cc-state.js buildVoiceoverText().
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-hook">' + escapeHtml(getLabel('sceneSetting')) + '</span></div>';
+        // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
+        // type and no code assigns one - only card 6 gets a title. So this rendered a
+        // literal <h3></h3> on every hook-scenario card of every VET/Workplace/PD
+        // module, and .cc5-unified-title carries `margin: 0 0 14px 0`, i.e. a 14px
+        // phantom gap under the flow badge. Guarded the way renderCompetencySummary
+        // already guards its own title.
+        if (section.title) {
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title)) + '</h3>';
+        }
 
         // v10.43: sceneParts[]  -  named subsection cards with icons (preferred path)
         if (section.sceneParts && section.sceneParts.length) {
             html += '<div class="cc5-scene-parts cc5-scene-parts-hook">';
             var hookUsedIcons = new Set();
-            section.sceneParts.forEach(function(part, idx) {
+            section.sceneParts.forEach(function (part, idx) {
                 var partText = part.text || part.content || part.description || part.detail || part.body || part.narrative || '';
                 var resolvedIcon = resolveScenePartIcon(part.icon, part.title, partText, idx, 'hook-scenario', hookUsedIcons);
                 html += '<div class="cc5-scene-part">';
@@ -627,7 +661,7 @@ define([], function() {
             if (content) {
                 var beats = splitIntoBeats(content);
                 html += '<div class="cc5-scene-parts cc5-scene-parts-hook">';
-                beats.forEach(function(beat, idx) {
+                beats.forEach(function (beat, idx) {
                     html += '<div class="cc5-scene-part">';
                     html += '<div class="cc5-scene-part-icon" style="font-size:0.82rem;font-weight:700;">' + (idx + 1) + '</div>';
                     html += '<div class="cc5-scene-part-body">';
@@ -648,15 +682,24 @@ define([], function() {
 
     function renderConceptExplainer(section) {
         var html = '<div class="cc5-card cc5-concept-explainer-card">';
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-concept">What This Means</span></div>';
-        html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title || '')) + '</h3>';
+        // v13.94.3: hard-coded English flow badge - see renderHookScenario.
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-concept">' + escapeHtml(getLabel('whatThisMeans')) + '</span></div>';
+        // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
+        // type and no code assigns one - only card 6 gets a title. So this rendered a
+        // literal <h3></h3> on every concept-explainer card of every VET/Workplace/PD
+        // module, and .cc5-unified-title carries `margin: 0 0 14px 0`, i.e. a 14px
+        // phantom gap under the flow badge. Guarded the way renderCompetencySummary
+        // already guards its own title.
+        if (section.title) {
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title)) + '</h3>';
+        }
 
         // v10.43: conceptInsights[]  -  named insight cards with icons (preferred path)
         // v11.54: Added colour-cycling (blue  ->  green  ->  orange  ->  purple) for visual hierarchy
         if (section.conceptInsights && section.conceptInsights.length) {
             var ciPalette = ['cc5-ci-blue', 'cc5-ci-green', 'cc5-ci-orange', 'cc5-ci-purple'];
             html += '<div class="cc5-concept-insights">';
-            section.conceptInsights.forEach(function(insight, idx) {
+            section.conceptInsights.forEach(function (insight, idx) {
                 var colorClass = ciPalette[idx % ciPalette.length];
                 html += '<div class="cc5-concept-insight ' + colorClass + '">';
                 html += '<div class="cc5-ci-icon">';
@@ -677,7 +720,7 @@ define([], function() {
             if (content) {
                 var beats = splitIntoBeats(content);
                 html += '<div class="cc5-insight-chips">';
-                beats.forEach(function(beat, idx) {
+                beats.forEach(function (beat, idx) {
                     html += '<div class="cc5-insight-chip ' + chipPalette[idx % chipPalette.length] + '">';
                     html += '<div class="cc5-insight-icon">' + getIcon('chevron-right') + '</div>';
                     html += '<p>' + escapeHtml(fixGrammar(beat)) + '</p>';
@@ -687,7 +730,7 @@ define([], function() {
             }
             if (section.conceptItems && section.conceptItems.length) {
                 html += '<div class="cc5-concept-items-grid">';
-                section.conceptItems.forEach(function(item) {
+                section.conceptItems.forEach(function (item) {
                     html += '<div class="cc5-concept-item">';
                     if (item.icon) html += '<div class="cc5-concept-item-icon">' + getIcon(item.icon) + '</div>';
                     html += '<div class="cc5-concept-item-body">';
@@ -702,7 +745,9 @@ define([], function() {
         // v10.97: Legal Link panel  -  audit-visible legislation anchor
         if (section.legalLink && section.legalLink.legislationName) {
             html += '<div class="cc5-legal-link">';
-            html += '<div class="cc5-legal-link-header">' + getIcon('shield-check') + '<span class="cc5-legal-link-label">What the law says</span></div>';
+            // v13.94.3: PD carries labelKey 'whatThePrincipleRequires' - see generator.js.
+            var _llKey = section.legalLink.labelKey || 'whatTheLawSays';
+            html += '<div class="cc5-legal-link-header">' + getIcon(_llKey === 'whatTheLawSays' ? 'shield-check' : 'award') + '<span class="cc5-legal-link-label">' + escapeHtml(getLabel(_llKey)) + '</span></div>';
             html += '<div class="cc5-legal-link-body">';
             html += '<p class="cc5-legal-link-legislation"><strong>' + escapeHtml(fixGrammar(section.legalLink.legislationName)) + '</strong></p>';
             if (section.legalLink.legalObligation) {
@@ -721,15 +766,24 @@ define([], function() {
 
     function renderMentalModel(section) {
         var html = '<div class="cc5-card cc5-mental-model-card">';
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-mental">How to Handle It</span></div>';
-        html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title || '')) + '</h3>';
+        // v13.94.3: hard-coded English flow badge - see renderHookScenario.
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-mental">' + escapeHtml(getLabel('howToHandleIt')) + '</span></div>';
+        // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
+        // type and no code assigns one - only card 6 gets a title. So this rendered a
+        // literal <h3></h3> on every mental-model card of every VET/Workplace/PD
+        // module, and .cc5-unified-title carries `margin: 0 0 14px 0`, i.e. a 14px
+        // phantom gap under the flow badge. Guarded the way renderCompetencySummary
+        // already guards its own title.
+        if (section.title) {
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title)) + '</h3>';
+        }
         var steps = section.steps || [];
         if (steps.length) {
             // v10.83: Card layout  -  mirrors scene-parts style with purple palette.
             // Numbers (1, 2, 3) or icons appear in the left icon circle; step title
             // is the uppercase label; detail is the body text.
             html += '<div class="cc5-scene-parts cc5-scene-parts-mental">';
-            steps.forEach(function(s, idx) {
+            steps.forEach(function (s, idx) {
                 html += '<div class="cc5-scene-part">';
                 html += '<div class="cc5-scene-part-icon">';
                 if (s.icon) {
@@ -754,17 +808,27 @@ define([], function() {
 
     function renderAppliedScenario(section) {
         var html = '<div class="cc5-card cc5-applied-scenario-card">';
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-applied">On the Job</span></div>';
+        // v13.94.3: hard-coded English flow badge - see renderHookScenario.
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-applied">' + escapeHtml(getLabel('onTheJob')) + '</span></div>';
         html += '<div class="cc5-continuity-banner">';
         html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
-        html += '<span>Continuing the scenario\u2026</span>';
+        // v13.94.3: hard-coded English continuity banner.
+        html += '<span>' + escapeHtml(getLabel('continuingTheScenario')) + '</span>';
         html += '</div>';
-        html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title || '')) + '</h3>';
+        // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
+        // type and no code assigns one - only card 6 gets a title. So this rendered a
+        // literal <h3></h3> on every applied-scenario card of every VET/Workplace/PD
+        // module, and .cc5-unified-title carries `margin: 0 0 14px 0`, i.e. a 14px
+        // phantom gap under the flow badge. Guarded the way renderCompetencySummary
+        // already guards its own title.
+        if (section.title) {
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title)) + '</h3>';
+        }
 
         if (section.sceneParts && section.sceneParts.length) {
             html += '<div class="cc5-scene-parts cc5-scene-parts-applied">';
             var appliedUsedIcons = new Set();
-            section.sceneParts.forEach(function(part, idx) {
+            section.sceneParts.forEach(function (part, idx) {
                 var partText = part.text || part.content || part.description || part.detail || part.body || part.narrative || '';
                 var resolvedIcon = resolveScenePartIcon(part.icon, part.title, partText, idx, 'applied-scenario', appliedUsedIcons);
                 html += '<div class="cc5-scene-part">';
@@ -783,7 +847,7 @@ define([], function() {
             if (content) {
                 var beats = splitIntoBeats(content);
                 html += '<div class="cc5-scene-parts cc5-scene-parts-applied">';
-                beats.forEach(function(beat, idx) {
+                beats.forEach(function (beat, idx) {
                     html += '<div class="cc5-scene-part">';
                     html += '<div class="cc5-scene-part-icon" style="font-size:0.82rem;font-weight:700;">' + (idx + 1) + '</div>';
                     html += '<div class="cc5-scene-part-body">';
@@ -804,12 +868,19 @@ define([], function() {
 
     function renderDecisionPoint(section) {
         var html = '<div class="cc5-card cc5-decision-point-card">';
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-decision">Your Decision</span></div>';
+        // v13.94.3: yourDecision already existed in translations.js, unused here.
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-decision">' + escapeHtml(getLabel('yourDecision')) + '</span></div>';
         html += '<div class="cc5-continuity-banner cc5-activity-banner">';
         html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
-        html += '<span>Now complete the activity below\u2026 confirm your answer.</span>';
+        // v13.94.3: hard-coded English activity banner.
+        html += '<span>' + escapeHtml(getLabel('nowCompleteActivityConfirm')) + '</span>';
         html += '</div>';
-        html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title || '')) + '</h3>';
+        // v13.94.3: same unconditional empty <h3> as the other five 7-card renderers -
+        // no prompt asks for `title` here either, so this shipped a 14px phantom gap
+        // under the flow badge. Guarded to match renderCompetencySummary.
+        if (section.title) {
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title)) + '</h3>';
+        }
         if (section.question) {
             html += '<p class="cc5-dp-question">' + escapeHtml(fixGrammar(section.question)) + '</p>';
         }
@@ -817,7 +888,7 @@ define([], function() {
         var letters = ['A', 'B', 'C', 'D'];
         if (opts.length) {
             html += '<div class="cc5-dp-options" data-answered="false">';
-            opts.forEach(function(opt, idx) {
+            opts.forEach(function (opt, idx) {
                 var letter = letters[idx] || String.fromCharCode(65 + idx);
                 var isCorrect = !!(opt.correct || opt.isCorrect);
                 // v13.86: correctness was conveyed by a background colour plus a CSS ::after
@@ -843,9 +914,11 @@ define([], function() {
             html += '</div>';
             // v10.36: Try Again button  -  shown only after an incorrect answer; hidden by default
             html += '<div class="cc5-dp-try-again" style="display:none;">';
-            html += '<button type="button" class="cc5-dp-try-again-btn" aria-label="Try again">';
+            // v13.94.3: hard-coded English label AND aria-label; tryAgain already
+            // existed in translations.js, unused here.
+            html += '<button type="button" class="cc5-dp-try-again-btn" aria-label="' + escapeHtml(getLabel('tryAgain')) + '">';
             html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>';
-            html += ' Try Again</button>';
+            html += ' ' + escapeHtml(getLabel('tryAgain')) + '</button>';
             html += '</div>';
         }
         html += '</div>';
@@ -854,14 +927,23 @@ define([], function() {
 
     function renderMistakesCard(section) {
         var html = '<div class="cc5-card cc5-mistakes-card">';
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-mistakes">Watch Out For</span></div>';
-        html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title || '')) + '</h3>';
+        // v13.94.3: hard-coded English flow badge - see renderHookScenario.
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-mistakes">' + escapeHtml(getLabel('watchOutFor')) + '</span></div>';
+        // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
+        // type and no code assigns one - only card 6 gets a title. So this rendered a
+        // literal <h3></h3> on every mistakes card of every VET/Workplace/PD
+        // module, and .cc5-unified-title carries `margin: 0 0 14px 0`, i.e. a 14px
+        // phantom gap under the flow badge. Guarded the way renderCompetencySummary
+        // already guards its own title.
+        if (section.title) {
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title)) + '</h3>';
+        }
         html += '<div class="cc5-mistakes-list">';
         var items = section.items || [];
         var legacyItems = section.errorItems || section.pitfallItems || [];
         var allItems = items.length ? items : legacyItems;
         var mistakesUsedIcons = new Set();
-        allItems.forEach(function(item, idx) {
+        allItems.forEach(function (item, idx) {
             var mistake = typeof item === 'string' ? item : (item.mistake || item.error || item.pitfall || '');
             var consequence = typeof item === 'string' ? '' : (item.consequence || '');
             var aiIcon = typeof item === 'string' ? '' : (item.icon || '');
@@ -919,10 +1001,11 @@ define([], function() {
                 html += '<div class="cc5-dos-column">';
                 html += '<div class="cc5-column-header cc5-dos-header">';
                 html += '<span class="cc5-list-icon">' + getIcon('check-circle') + '</span>';
-                html += '<strong>What Good Looks Like</strong>';
+                // v13.94.3: hard-coded English column header. Same key the narration uses.
+                html += '<strong>' + escapeHtml(getLabel('whatGoodLooksLike')) + '</strong>';
                 html += '</div>';
                 html += '<ul class="cc5-dos-list">';
-                goodItems.forEach(function(item) {
+                goodItems.forEach(function (item) {
                     var text = typeof item === 'string' ? item : (item.text || item.behaviour || item.criterion || '');
                     html += '<li class="cc5-do-item">';
                     html += '<span class="cc5-list-icon">' + getIcon('check') + '</span>';
@@ -936,10 +1019,11 @@ define([], function() {
                 html += '<div class="cc5-donts-column">';
                 html += '<div class="cc5-column-header cc5-donts-header">';
                 html += '<span class="cc5-list-icon">' + getIcon('x-circle') + '</span>';
-                html += '<strong>What to Avoid</strong>';
+                // v13.94.3: hard-coded English column header. Same key the narration uses.
+                html += '<strong>' + escapeHtml(getLabel('whatToAvoid')) + '</strong>';
                 html += '</div>';
                 html += '<ul class="cc5-donts-list">';
-                badItems.forEach(function(item) {
+                badItems.forEach(function (item) {
                     var text = typeof item === 'string' ? item : (item.text || '');
                     // v13.85: the prompt asks for a 10+ word consequence on every one of
                     // these, and the normaliser now keeps it. Previously only the label
@@ -992,11 +1076,14 @@ define([], function() {
 
         html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-decision">';
         html += '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
-        html += ' Challenge Mode</span></div>';
+        // v13.94.3: hard-coded English badge.
+        html += ' ' + escapeHtml(getLabel('challengeMode')) + '</span></div>';
 
         html += '<div class="cc5-continuity-banner cc5-activity-banner">';
         html += '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-        html += '<span>Complete <strong>' + totalActivities + ' activities</strong> to prove your mastery</span>';
+        // v13.94.3: hard-coded English banner wrapped around a count - one parameterised
+        // key, since the number does not sit in the same place in every language.
+        html += '<span>' + _lbl('completeNActivities', {count: '<strong>' + totalActivities + '</strong>'}) + '</span>';
         html += '</div>';
 
         // Progress stepper with icons
@@ -1005,7 +1092,8 @@ define([], function() {
         // Quiz step
         html += '<div class="cc5-challenge-step cc5-active" data-step="' + quizIdx + '">';
         html += '<span class="cc5-step-num"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>';
-        html += '<span class="cc5-step-label">Quiz</span>';
+        // v13.94.3: hard-coded English progress-stepper label.
+        html += '<span class="cc5-step-label">' + escapeHtml(getLabel('quiz')) + '</span>';
         html += '<span class="cc5-step-status"></span>';
         html += '</div>';
 
@@ -1014,7 +1102,8 @@ define([], function() {
             html += '<div class="cc5-challenge-step-line"></div>';
             html += '<div class="cc5-challenge-step" data-step="' + flipIdx + '">';
             html += '<span class="cc5-step-num"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>';
-            html += '<span class="cc5-step-label">Flip &amp; Learn</span>';
+            // v13.94.3: hard-coded English progress-stepper label.
+            html += '<span class="cc5-step-label">' + escapeHtml(getLabel('flipAndLearn')) + '</span>';
             html += '<span class="cc5-step-status"></span>';
             html += '</div>';
         }
@@ -1024,7 +1113,8 @@ define([], function() {
             html += '<div class="cc5-challenge-step-line"></div>';
             html += '<div class="cc5-challenge-step" data-step="' + sortIdx + '">';
             html += '<span class="cc5-step-num"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="16" y1="3" x2="16" y2="21"/><polyline points="12 7 16 3 20 7"/><line x1="8" y1="21" x2="8" y2="3"/><polyline points="4 17 8 21 12 17"/></svg></span>';
-            html += '<span class="cc5-step-label">Category Sort</span>';
+            // v13.94.3: hard-coded English progress-stepper label.
+            html += '<span class="cc5-step-label">' + escapeHtml(getLabel('categorySort')) + '</span>';
             html += '<span class="cc5-step-status"></span>';
             html += '</div>';
         }
@@ -1035,7 +1125,8 @@ define([], function() {
         html += '<div class="cc5-panel-header">';
         html += '<span class="cc5-panel-badge cc5-badge-quiz">';
         html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-        html += ' Activity ' + quizIdx + '</span>';
+        // v13.94.3: hard-coded English panel badge.
+        html += ' ' + escapeHtml(_lbl('activityNumber', {number: quizIdx})) + '</span>';
         // v13.32: Show "Questions & feedback are read aloud" notice when quiz voiceover is enabled
         if (quizVoiceEnabled) {
             html += '<span class="cc5-quiz-voice-badge">';
@@ -1044,7 +1135,17 @@ define([], function() {
             html += '</span>';
         }
         html += '</div>';
-        html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(dpCard.title || '')) + '</h3>';
+        // v13.94.4: guarded, matching the six sibling renderers fixed in v13.94.3.
+        // renderDecisionChallenge was missed in that sweep - and it is the PRIMARY
+        // decision-point path (renderDecisionPoint is only reached when there are neither
+        // flip nor sort items). Only Route 5's prompt asks for `title` on decision-point;
+        // VET, Workplace and PD do not, and nothing in the generator assigns it. So every
+        // activity block on those three routes emitted an empty <h3> carrying
+        // `margin: 0 0 14px 0` - a phantom gap between the Challenge Mode pill and the
+        // banner beneath it.
+        if (dpCard.title) {
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(dpCard.title)) + '</h3>';
+        }
         if (dpCard.question) {
             html += '<p class="cc5-dp-question">' + escapeHtml(fixGrammar(dpCard.question)) + '</p>';
         }
@@ -1052,7 +1153,7 @@ define([], function() {
         var letters = ['A', 'B', 'C', 'D'];
         if (opts.length) {
             html += '<div class="cc5-dp-options" data-answered="false">';
-            opts.forEach(function(opt, idx) {
+            opts.forEach(function (opt, idx) {
                 var letter = letters[idx] || String.fromCharCode(65 + idx);
                 var isCorrect = !!(opt.correct || opt.isCorrect);
                 // v13.86: correctness was conveyed by a background colour plus a CSS ::after
@@ -1077,15 +1178,18 @@ define([], function() {
             });
             html += '</div>';
             html += '<div class="cc5-dp-try-again" style="display:none;">';
-            html += '<button type="button" class="cc5-dp-try-again-btn" aria-label="Try again">';
+            // v13.94.3: hard-coded English label AND aria-label; tryAgain already
+            // existed in translations.js, unused here.
+            html += '<button type="button" class="cc5-dp-try-again-btn" aria-label="' + escapeHtml(getLabel('tryAgain')) + '">';
             html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>';
-            html += ' Try Again</button>';
+            html += ' ' + escapeHtml(getLabel('tryAgain')) + '</button>';
             html += '</div>';
         }
         if (totalActivities > 1) {
             html += '<button type="button" class="cc5-challenge-next-btn" data-next="' + (quizIdx + 1) + '" disabled>';
             html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-            html += ' Next Activity';
+            // v13.94.3: hard-coded English button label.
+            html += ' ' + escapeHtml(getLabel('nextActivity'));
             html += '</button>';
         }
         html += '</div>';
@@ -1096,12 +1200,19 @@ define([], function() {
             html += '<div class="cc5-panel-header">';
             html += '<span class="cc5-panel-badge cc5-badge-flip">';
             html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
-            html += ' Activity ' + flipIdx + '</span>';
+            // v13.94.3: hard-coded English panel badge.
+            html += ' ' + escapeHtml(_lbl('activityNumber', {number: flipIdx})) + '</span>';
             html += '</div>';
-            html += '<h3 class="cc5-unified-title">Flip &amp; Learn</h3>';
-            html += '<p class="cc5-challenge-instruction">Tap each card to reveal the insight behind it. Explore all ' + flipItems.length + ' cards to unlock the next step.</p>';
+            // v13.94.3: the whole Route 5 activity block was hard-coded English - title,
+            // instruction, card face labels, progress text and buttons - so a learner on a
+            // Japanese module hit a wall of English the moment the prose cards ended. The
+            // instruction carries a count, so it is one parameterised key rather than
+            // English fragments concatenated around a number.
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(getLabel('flipAndLearn')) + '</h3>';
+            html += '<p class="cc5-challenge-instruction">'
+                 +  escapeHtml(_lbl('flipInstruction', {count: flipItems.length})) + '</p>';
             html += '<div class="cc5-flip-grid" data-total="' + flipItems.length + '" data-flipped="0">';
-            flipItems.forEach(function(item, idx) {
+            flipItems.forEach(function (item, idx) {
                 var flipIcon = resolveScenePartIcon(item.icon || '', item.front || '', item.back || '', idx);
                 html += '<div class="cc5-flip-card" data-flip-idx="' + idx + '" data-flipped="false" role="button" tabindex="0" style="animation-delay:' + (idx * 0.08) + 's">';
                 html += '<div class="cc5-flip-inner">';
@@ -1109,13 +1220,15 @@ define([], function() {
                 html += '<div class="cc5-flip-front-icon">' + getIcon(flipIcon) + '</div>';
                 html += '<div class="cc5-flip-label">';
                 html += '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 13"/></svg>';
-                html += ' Tap to reveal</div>';
+                // v13.94.3: hard-coded English card-front label.
+                html += ' ' + escapeHtml(getLabel('tapToReveal')) + '</div>';
                 html += '<p class="cc5-flip-front-text">' + escapeHtml(fixGrammar(item.front || '')) + '</p>';
                 html += '</div>';
                 html += '<div class="cc5-flip-back">';
                 html += '<div class="cc5-flip-back-label">';
                 html += '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>';
-                html += ' Insight</div>';
+                // v13.94.3: hard-coded English card-back label.
+                html += ' ' + escapeHtml(getLabel('insight')) + '</div>';
                 html += '<p class="cc5-flip-back-text">' + escapeHtml(fixGrammar(item.back || '')) + '</p>';
                 html += '</div>';
                 html += '</div></div>';
@@ -1123,38 +1236,55 @@ define([], function() {
             html += '</div>';
             html += '<div class="cc5-flip-progress-row">';
             html += '<div class="cc5-flip-progress-bar"><div class="cc5-flip-progress-fill" style="width:0%"></div></div>';
-            html += '<span class="cc5-flip-progress-text"><span class="cc5-flip-count">0</span> / ' + flipItems.length + ' explored</span>';
+            // v13.94.3: 'explored' was a bare English word appended after a number.
+            html += '<span class="cc5-flip-progress-text"><span class="cc5-flip-count">0</span> / '
+                 +  flipItems.length + ' ' + escapeHtml(getLabel('explored')) + '</span>';
             html += '</div>';
             html += '<div class="cc5-flip-complete-msg cc5-hidden">';
             html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-            html += ' All cards explored! You\'re ready for the next step.';
+            // v13.94.3: hard-coded English completion message.
+            html += ' ' + escapeHtml(getLabel('allCardsExplored'));
             html += '</div>';
             var nextAfterFlip = hasSort ? sortIdx : -1;
             if (nextAfterFlip > 0) {
                 html += '<button type="button" class="cc5-challenge-next-btn" data-next="' + nextAfterFlip + '" disabled>';
                 html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
-                html += ' Next Activity';
+                // v13.94.3: hard-coded English button label.
+            html += ' ' + escapeHtml(getLabel('nextActivity'));
                 html += '</button>';
             } else {
                 html += '<button type="button" class="cc5-challenge-finish-btn" disabled>';
                 html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-                html += ' See Results</button>';
+                // v13.94.3: hard-coded English button label.
+            html += ' ' + escapeHtml(getLabel('seeResults')) + '</button>';
             }
             html += '</div>';
         }
 
         // -- Activity 3: Category Sort -----------------------------------------
         if (hasSort) {
-            var posLabel = (sortLabels && sortLabels.positive) || 'Good Practice';
-            var negLabel = (sortLabels && sortLabels.negative) || 'Avoid';
+            // v13.94.3: when the manifest carries no contrast labels these fell back to
+            // English literals, so the two sort columns and both tap buttons read
+            // "Good Practice" / "Avoid" in every language.
+            var posLabel = (sortLabels && sortLabels.positive) || getLabel('goodPractice');
+            var negLabel = (sortLabels && sortLabels.negative) || getLabel('avoidLabel');
             html += '<div class="cc5-challenge-panel" data-panel="' + sortIdx + '">';
             html += '<div class="cc5-panel-header">';
             html += '<span class="cc5-panel-badge cc5-badge-sort">';
             html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="16" y1="3" x2="16" y2="21"/><polyline points="12 7 16 3 20 7"/><line x1="8" y1="21" x2="8" y2="3"/><polyline points="4 17 8 21 12 17"/></svg>';
-            html += ' Activity ' + sortIdx + '</span>';
+            // v13.94.3: hard-coded English panel badge.
+            html += ' ' + escapeHtml(_lbl('activityNumber', {number: sortIdx})) + '</span>';
             html += '</div>';
-            html += '<h3 class="cc5-unified-title">Category Sort</h3>';
-            html += '<p class="cc5-challenge-instruction">Read each item carefully and decide: does it belong to <strong>' + escapeHtml(posLabel) + '</strong> or <strong>' + escapeHtml(negLabel) + '</strong>?</p>';
+            // v13.94.3: hard-coded English title and instruction. The instruction embeds
+            // both category names mid-sentence, so it is one parameterised key - the
+            // English word order it assumed does not survive translation.
+            html += '<h3 class="cc5-unified-title">' + escapeHtml(getLabel('categorySort')) + '</h3>';
+            html += '<p class="cc5-challenge-instruction">'
+                 +  _lbl('sortInstruction', {
+                        positive: '<strong>' + escapeHtml(posLabel) + '</strong>',
+                        negative: '<strong>' + escapeHtml(negLabel) + '</strong>'
+                    })
+                 +  '</p>';
             html += '<div class="cc5-sort-arena" data-total="' + sortItems.length + '" data-current="0" data-score="0">';
 
             // Columns
@@ -1177,7 +1307,12 @@ define([], function() {
 
             // Current item card
             html += '<div class="cc5-sort-current-item" style="display:none;">';
-            html += '<div class="cc5-sort-item-badge">Item <span class="cc5-sort-idx">1</span> of ' + sortItems.length + '</div>';
+            // v13.94.3: hard-coded English "Item n of N" wrapped around live markup. The
+            // <span> the sort handler updates is substituted in as {current}, so the two
+            // numbers can be ordered however the language needs.
+            html += '<div class="cc5-sort-item-badge">'
+                 +  _lbl('itemXofY', {current: '<span class="cc5-sort-idx">1</span>', total: sortItems.length})
+                 +  '</div>';
             html += '<div class="cc5-sort-item-text"></div>';
             html += '<div class="cc5-sort-tap-btns">';
             html += '<button type="button" class="cc5-sort-tap cc5-sort-tap-good" data-tap="good">';
@@ -1193,13 +1328,15 @@ define([], function() {
 
             // Score + progress
             html += '<div class="cc5-sort-score-row">';
-            html += '<span class="cc5-sort-score-label">Score: <strong class="cc5-sort-score">0</strong> / ' + sortItems.length + '</span>';
+            // v13.94.3: hard-coded English score label.
+            html += '<span class="cc5-sort-score-label">' + escapeHtml(getLabel('scoreLabel'))
+                 +  ': <strong class="cc5-sort-score">0</strong> / ' + sortItems.length + '</span>';
             html += '</div>';
             html += '<div class="cc5-sort-progress-bar"><div class="cc5-sort-progress-fill"></div></div>';
 
             // Hidden data
             html += '<div class="cc5-sort-items-data" style="display:none;">';
-            sortItems.forEach(function(item, idx) {
+            sortItems.forEach(function (item, idx) {
                 html += '<div data-sort-item="' + idx + '" data-category="' + escapeHtml(item.category) + '">' + escapeHtml(item.text) + '</div>';
             });
             html += '</div>';
@@ -1207,7 +1344,8 @@ define([], function() {
 
             html += '<button type="button" class="cc5-challenge-finish-btn" disabled>';
             html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-            html += ' See Results</button>';
+            // v13.94.3: hard-coded English button label.
+            html += ' ' + escapeHtml(getLabel('seeResults')) + '</button>';
             html += '</div>';
         }
 
@@ -1228,14 +1366,19 @@ define([], function() {
         html += '<svg viewBox="0 0 120 120" class="cc5-score-svg"><circle class="cc5-score-track" cx="60" cy="60" r="52"/><circle class="cc5-score-fill" cx="60" cy="60" r="52"/></svg>';
         html += '<div class="cc5-challenge-percentage">0%</div>';
         html += '</div>';
-        html += '<div class="cc5-challenge-result-text"><span class="cc5-result-correct">0</span> / ' + totalActivities + ' Activities Complete</div>';
+        // v13.94.3: hard-coded English completion tally.
+        html += '<div class="cc5-challenge-result-text">'
+             +  _lbl('nActivitiesComplete', {current: '<span class="cc5-result-correct">0</span>', total: totalActivities})
+             +  '</div>';
         html += '<div class="cc5-challenge-actions">';
         html += '<button type="button" class="cc5-challenge-retry-btn">';
         html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>';
-        html += ' Try Again</button>';
+        // v13.94.3: tryAgain already existed in translations.js, unused here.
+        html += ' ' + escapeHtml(getLabel('tryAgain')) + '</button>';
         html += '<button type="button" class="cc5-challenge-review-btn">';
         html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
-        html += ' Review Answers</button>';
+        // v13.94.3: hard-coded English button label.
+        html += ' ' + escapeHtml(getLabel('reviewAnswers')) + '</button>';
         // v12.57 FIX-CC-CHALLENGE-NEXT: "Continue" button so students can progress to Content 2
         // (the next topic) after completing the Challenge Mode activity. Previously the
         // completion screen only offered "Try Again" and "Review Answers"  -  there was no
@@ -1244,7 +1387,8 @@ define([], function() {
         // player5.js if there is no next slide to navigate to).
         html += '<button type="button" class="cc5-challenge-continue-btn">';
         html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>';
-        html += ' Continue</button>';
+        // v13.94.3: hard-coded English button label.
+        html += ' ' + escapeHtml(getLabel('continueLabel')) + '</button>';
         html += '</div>';
         html += '</div>';
 
@@ -1282,23 +1426,26 @@ define([], function() {
     //   .cc5-prose-para[data-para-index]  one per paragraph
     //   .cc5-prose-para.cc5-para-focus    the paragraph being read right now
     // ===========================================================================
-    var TOPICSTEXT_HEADINGS = {
-        'overview':             'Overview',
-        'key-concepts':         'Key Concepts',
-        'examples-application': 'Examples & Application',
-        'key-takeaways':        'Key Takeaways',
-        // v13.91 slots. Four of the five map onto the nearest of the current headings so
-        // saved modules built on the old Explanatory Spine still read correctly.
-        // 'mechanism' keeps a heading of its own: it sat between Key Concepts and
-        // Examples, and folding it into either would put two identically-headed cards in
-        // the same saved module. Nothing generates it any more, so this is a
-        // legacy-rendering label only - the generated route still has exactly four.
-        'orientation':          'Overview',
-        'foundations':          'Key Concepts',
-        'mechanism':            'How It Works',
-        'in-practice':          'Examples & Application',
-        'boundaries':           'Key Takeaways'
-    };
+    // v13.94.3: TOPICSTEXT_HEADINGS - an English heading table that sat behind
+    // `(_headKey && getLabel(_headKey)) || TOPICSTEXT_HEADINGS[cardType] || 'Overview'`
+    // - has been DELETED, along with those two fallback arms. It was unreachable.
+    // getLabel() ends `return labels[key] || UI_LABELS['en'][key] || key`, and a key is
+    // always a non-empty string, so getLabel() can never return a falsy value and no
+    // `|| fallback` after it can ever run. The table looked like a safety net and was
+    // not one: if a key were ever missing from translations.js the card would render the
+    // raw key name, and the table would not have stopped it. The fix for a missing key
+    // is to add it to translations.js.
+    //
+    // NOTE the difference from cc-state.js's PROSE_HEADINGS, which is deliberately kept:
+    // there the fallback is REACHABLE, because cc-state reaches the label bundle through
+    // a resolver the player registers at init, and that resolver is null until it does
+    // (and stays null on build-time paths that never start the player).
+    //
+    // The v13.91 slot names still need mapping, so the key table below keeps them:
+    // four map onto the nearest current heading so saved modules built on the old
+    // Explanatory Spine still read correctly, and 'mechanism' keeps a heading of its own
+    // because folding it into either neighbour would put two identically-headed cards in
+    // one saved module. Nothing generates it any more.
 
     var TOPICSTEXT_ICONS = {
         // Every value here is verified present in cc-icons.js. Do not add one without
@@ -1352,13 +1499,13 @@ define([], function() {
             paras = fallback ? [fallback] : [];
         }
         var out = [];
-        paras.forEach(function(p) {
+        paras.forEach(function (p) {
             var t = typeof p === 'string' ? p : ((p && (p.text || p.paragraph || p.body)) || '');
             if (!t) { return; }
             t.replace(/\\r\\n|\\n|\\r/g, '\n')
              .replace(/<br\s*\/?>/gi, '\n')
              .split(/\n+/)
-             .forEach(function(part) {
+             .forEach(function (part) {
                 var c = part.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')
                             .replace(/\*\*(.+?)\*\*/g, '$1')
                             .replace(/\s{2,}/g, ' ')
@@ -1387,7 +1534,22 @@ define([], function() {
         var icon = TOPICSTEXT_ICONS[cardType] || 'book-open';
         var tone = TOPICSTEXT_TONES[cardType] || 'blue';
         // The heading is never taken from the card. See the block comment above.
-        var heading = TOPICSTEXT_HEADINGS[cardType] || 'Overview';
+        // v13.94.3: the heading was returned as a hard-coded English string, so a module
+        // generated in another language rendered (and had TTS read) an English heading
+        // over translated prose. Prefer the translated label; fall back to English.
+        var _headKeys = {
+            'overview': 'proseOverview',
+            'key-concepts': 'proseKeyConcepts',
+            'examples-application': 'proseExamplesApplication',
+            'key-takeaways': 'proseKeyTakeaways',
+            'orientation': 'proseOverview',
+            'foundations': 'proseKeyConcepts',
+            'mechanism': 'proseHowItWorks',
+            'in-practice': 'proseExamplesApplication',
+            'boundaries': 'proseKeyTakeaways'
+        };
+        // v13.94.3: dead fallback arms removed - getLabel() cannot return falsy.
+        var heading = getLabel(_headKeys[cardType] || 'proseOverview');
 
         var cls = 'cc5-card cc5-prose-card cc5-prose-' + tone
                 + ' cc5-' + escapeHtml(cardType || 'prose') + '-card';
@@ -1416,7 +1578,7 @@ define([], function() {
             // Never render an empty shell - name the problem so the author sees which card.
             html += '<p class="cc5-prose-empty">' + escapeHtml(getLabel('noContentYet')) + '</p>';
         } else {
-            paras.forEach(function(p, pi) {
+            paras.forEach(function (p, pi) {
                 html += '<p class="cc5-prose-para" data-para-index="' + pi + '">'
                      +  escapeHtml(fixGrammar(p)) + '</p>';
             });
@@ -1522,7 +1684,7 @@ define([], function() {
         html += (getLabel('checkAllItems') || 'Tick each box to confirm you have completed these pre-start checks');
         html += '</p>';
         html += '<ul class="cc5-checklist-items">';
-        checklistItems.forEach(function(item, idx) {
+        checklistItems.forEach(function (item, idx) {
             var itemId   = 'cc5-checklist-' + Date.now() + '-' + idx;
             var itemText = escapeHtml(fixGrammar(typeof item === 'string' ? item : item.text || item.item || ''));
             html += '<li class="cc5-checklist-item cc5-checklist-interactive" data-checked="false">';
@@ -1570,7 +1732,7 @@ define([], function() {
 
         if (docActivity.questions && docActivity.questions.length > 0) {
             html += '<div class="cc5-docactivity-questions">';
-            docActivity.questions.forEach(function(q, idx) {
+            docActivity.questions.forEach(function (q, idx) {
                 html += '<div class="cc5-docactivity-question" data-question-index="' + idx + '">';
                 html += '<div class="cc5-question-number">Q' + (idx + 1) + '</div>';
                 html += '<div class="cc5-question-content">';
@@ -1581,8 +1743,8 @@ define([], function() {
                     // Only fall back to q.correctAnswer index when NO option has explicit flags.
                     // Prevents AI generating correctAnswer:0 (A) AND isCorrect:true on D from
                     // marking both A and D correct, causing inverted green/red highlight.
-                    var anyExplicitCorrect = q.options.some(function(o) { return o.isCorrect || o.correct; });
-                    q.options.forEach(function(opt, optIdx) {
+                    var anyExplicitCorrect = q.options.some(function (o) { return o.isCorrect || o.correct; });
+                    q.options.forEach(function (opt, optIdx) {
                         var isCorrect = anyExplicitCorrect
                             ? !!(opt.isCorrect || opt.correct)
                             : (q.correctAnswer === optIdx);
@@ -1675,14 +1837,12 @@ define([], function() {
 
     return {
         init:                      init,
-        // v10.27 unified 7-card flow renderers
-        renderHookScenario:        renderHookScenario,
-        renderConceptExplainer:    renderConceptExplainer,
-        renderMentalModel:         renderMentalModel,
-        renderAppliedScenario:     renderAppliedScenario,
-        renderDecisionPoint:       renderDecisionPoint,
-        renderMistakesCard:        renderMistakesCard,
-        renderCompetencySummary:   renderCompetencySummary,
+        // v13.94.3: the seven unified 7-card renderers and renderProseSection were
+        // exported here with ZERO callers anywhere in amd/src - every one of them is
+        // reached through renderRouteCard(), which dispatches on cardType internally.
+        // Exporting them advertised an entry point nobody used and that nobody should
+        // use: calling one directly bypasses the dispatch and the seqOpts renderRouteCard
+        // threads into renderProseSection. The functions themselves are untouched.
         // legacy renderers (backward compat)
         renderPerformanceAnchor:   renderPerformanceAnchor,
         renderPlainEnglish:        renderPlainEnglish,
@@ -1704,7 +1864,6 @@ define([], function() {
         renderApplicationGuide:    renderApplicationGuide,
         renderCommonPitfalls:      renderCommonPitfalls,
         renderPDScenarioCard:      renderPDScenarioCard,
-        renderProseSection:        renderProseSection,
         renderRouteCard:           renderRouteCard,
         renderDecisionChallenge:   renderDecisionChallenge,
         renderBeforeYouStartCard:  renderBeforeYouStartCard,
