@@ -25,7 +25,7 @@ define([], function () {
     // v13.94.3: this had been left at '13.65' while the plugin shipped 13.94.x, so every
     // diagnostic line in a support log claimed to come from a version 29 releases old.
     // Keep it in step with $plugin->release in version.php.
-    var CC_VERSION = '13.94.6';
+    var CC_VERSION = '13.94.7';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was

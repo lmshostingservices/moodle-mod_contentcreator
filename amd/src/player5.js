@@ -4517,22 +4517,72 @@ define([
          *
          * @return {void}
          */
-        stopProseNarration: function () {
-            if (this.currentAudio) {
-                try {
-                    this.currentAudio.pause();
-                    // Rewind so a later replay starts the section from the top rather
-                    // than resuming mid-card, which reads as a glitch.
-                    this.currentAudio.currentTime = 0;
-                } catch (e) {
-                    ccWarn('[CC] could not stop narration on manual advance: '
-                        + (e && e.message ? e.message : e));
-                }
+        /**
+         * v13.94.7: SEEK the narration to a card, instead of stopping it.
+         *
+         * This replaces stopProseNarration(), which was wrong and is removed.
+         *
+         * v13.94.4 fixed a real complaint - clicking "Next Card" advanced the reveal while
+         * card 1 was still being read over the top of card 2 - by stopping the audio. But
+         * Topics and Text narrates the WHOLE section from ONE file, so stopping it left the
+         * learner with no narration at all for cards 2 onward, and nothing to restart it.
+         * A worse bug than the one it fixed.
+         *
+         * The audio is one continuous track with per-card boundaries already computed for
+         * the reveal sync, so the correct behaviour was always to jump the playhead to
+         * where that card's narration begins and keep playing. The learner skips ahead;
+         * the voice follows them.
+         *
+         * @param {Object} $grid     The prose grid.
+         * @param {Number} cardIndex Card the learner has just revealed.
+         * @return {void}
+         */
+        seekProseNarrationToCard: function ($grid, cardIndex) {
+            var sync = this._proseSync;
+            var audio = this.currentAudio;
+            if (!sync || !audio || !sync.segments || !sync.segments.length) {
+                // No narration running - nothing to follow. The reveal still happened.
+                return;
             }
-            this.teardownVoiceoverSync();
-            if (this.container) {
-                this.container.find('.cc5-prose-card').removeClass('cc5-prose-speaking');
-                this.container.find('.cc5-prose-next-btn').removeClass('cc5-prose-btn-ready');
+            try {
+                // Bounds are cumulative END times per segment, so the START of segment i
+                // is bounds[i - 1]. Recompute if the sync has not built them yet (it does
+                // so lazily on the first timeupdate, which may not have fired).
+                if (!sync.bounds && typeof sync.computeBounds === 'function') {
+                    sync.bounds = sync.computeBounds();
+                }
+                if (!sync.bounds || !sync.bounds.length) { return; }
+
+                var target = -1;
+                for (var i = 0; i < sync.segments.length; i++) {
+                    if (sync.segments[i] && sync.segments[i].cardIndex === cardIndex) {
+                        target = i;
+                        break;
+                    }
+                }
+                if (target < 0) { return; }
+
+                var startAt = (target === 0) ? 0 : sync.bounds[target - 1];
+                if (!isFinite(startAt) || startAt < 0) { return; }
+
+                // Only ever jump FORWARD. If the narration is already past this card the
+                // learner has heard it, and yanking the audio backwards would replay
+                // content they have moved on from.
+                if (startAt <= audio.currentTime) { return; }
+
+                audio.currentTime = startAt;
+                sync.lastSeg = target - 1;   // let the next tick re-enter the target segment
+                if (audio.paused) {
+                    var p = audio.play();
+                    if (p && typeof p.catch === 'function') {
+                        p.catch(function (e) {
+                            ccWarn('[CC] could not resume narration after seek: '
+                                + (e && e.message ? e.message : e));
+                        });
+                    }
+                }
+            } catch (e) {
+                ccWarn('[CC] narration seek failed: ' + (e && e.message ? e.message : e));
             }
         },
 
@@ -4837,6 +4887,11 @@ define([
                 }
                 return bounds;
             };
+
+            // v13.94.7: expose the bounds builder so seekProseNarrationToCard() can force
+            // it. Bounds are built lazily on the first timeupdate, and a learner can click
+            // "Next Card" before that has fired.
+            state.computeBounds = computeBounds;
 
             state.onTick = function () {
                 // Recompute while the bounds are only an estimate: Chrome reports
@@ -9696,28 +9751,25 @@ define([
                 var $grid = $btn.closest('.cc5-prose-grid');
                 $btn.removeClass('cc5-prose-btn-ready');
 
-                // v13.94.4: advancing by hand stops the narration.
-                //
-                // Topics and Text narrates a whole section from one audio file and reveals
-                // each card from that timeline. Nothing here touched the audio, so a
-                // learner who clicked "Next Card" while card 1 was being read got card 2
-                // on screen with card 1 still playing over it - and the sync then dragged
-                // the reveal back as the timeline caught up. Clicking the button is the
-                // learner saying they are reading rather than listening, so the narration
-                // stops and the reveal becomes theirs to drive.
-                //
-                // Deliberately NOT done in "must listen to voiceover" mode: there the
-                // button is only unlocked for a card the narration has already finished,
-                // and stopping the audio would strand the slide-level Next control, which
-                // waits on the narration reaching its end.
-                if (self.progressionMode !== PROGRESSION_MODES.VOICEOVER) {
-                    self.stopProseNarration();
-                }
-
                 if (target === 'activities') {
                     self.revealProseActivities($grid);
                 } else {
-                    self.revealProseCard($grid, parseInt(target, 10), true);
+                    var _targetCard = parseInt(target, 10);
+                    self.revealProseCard($grid, _targetCard, true);
+                    // v13.94.7: the narration FOLLOWS the learner.
+                    //
+                    // v13.94.4 stopped the audio here. That fixed the reported symptom -
+                    // card 1 still being read over card 2 - but Topics and Text narrates
+                    // the whole section from ONE file, so stopping it meant cards 2 onward
+                    // had no narration at all and nothing could restart it. Seeking the
+                    // playhead to where this card's narration begins fixes the original
+                    // complaint AND keeps the voice going.
+                    //
+                    // Applies in every progression mode, including "must listen": there
+                    // the button only unlocks for a card already read, so the seek is a
+                    // no-op (it never jumps backwards) and the audio runs on to the end,
+                    // which is what the slide-level Next control waits for.
+                    self.seekProseNarrationToCard($grid, _targetCard);
                 }
             });
 

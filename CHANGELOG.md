@@ -1,5 +1,34 @@
 # Changelog
 
+## 13.94.7 - 28 August 2026
+
+### Fixed - CRITICAL regression: Topics and Text lost its narration after "Next Card"
+
+v13.94.4 fixed a real complaint - clicking "Next Card" advanced the reveal while card 1 was
+still being read over the top of card 2 - by STOPPING the audio. That was the wrong fix.
+Topics and Text narrates the whole section from ONE file, so stopping it left cards 2 onward
+with no narration at all and nothing able to restart it. A worse bug than the one it fixed,
+and my error.
+
+The audio is one continuous track with per-card boundaries already computed to drive the
+reveal, so the correct behaviour was always to move the playhead rather than kill it.
+"Next Card" now SEEKS the narration to where that card's audio begins and keeps playing -
+the learner skips ahead and the voice follows them.
+
+Guarded so it only ever jumps forward: if the narration has already passed the card being
+revealed, the learner has heard it and the audio is left alone rather than replaying content
+they have moved on from. It also forces the boundary calculation if the learner clicks
+before the first timeupdate has fired, and resumes a paused element after the seek.
+
+This now applies in every progression mode including "must listen to voiceover", where the
+button only unlocks for a card already narrated - so the seek is a no-op there and the audio
+runs on to the end, which is what the slide-level Next control waits for.
+
+### Fixed - credit estimate was labelled AUD
+
+The generation cost estimate in the builder read "($80 AUD)". Pricing is quoted in USD.
+Corrected in all four places the estimate is rendered.
+
 ## 13.94.6 - 28 August 2026
 
 Everything the four cross-route audits found, fixed. The theme running through most of it:

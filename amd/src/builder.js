@@ -3606,16 +3606,17 @@ define([
         const baseCredits = subtopicCount * creditsPerSubtopic;
         const extraCredits = subtopicCount * creditsPerExtraLang * extraLangs;
         const totalCredits = baseCredits + extraCredits;
-        const audAmount = (totalCredits / 10).toFixed(0); // $10 AUD = 100 credits
+        // v13.94.7: pricing is quoted in USD, not AUD.
+        const usdAmount = (totalCredits / 10).toFixed(0); // $10 USD = 100 credits
 
         if (subtopicCount === 0) {
             return '<span class="cc-credit-amount" id="cc-credit-estimation">100 credits per subtopic</span>';
         }
 
         if (extraLangs > 0) {
-            return `<span class="cc-credit-amount" id="cc-credit-estimation">${subtopicCount} subtopics x ${creditsPerSubtopic} credits + ${extraLangs} extra language${extraLangs > 1 ? 's' : ''} x ${creditsPerExtraLang} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${audAmount} AUD)</span>`;
+            return `<span class="cc-credit-amount" id="cc-credit-estimation">${subtopicCount} subtopics x ${creditsPerSubtopic} credits + ${extraLangs} extra language${extraLangs > 1 ? 's' : ''} x ${creditsPerExtraLang} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${usdAmount} USD)</span>`;
         }
-        return `<span class="cc-credit-amount" id="cc-credit-estimation">${subtopicCount} subtopics  x  ${creditsPerSubtopic} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${audAmount} AUD)</span>`;
+        return `<span class="cc-credit-amount" id="cc-credit-estimation">${subtopicCount} subtopics  x  ${creditsPerSubtopic} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${usdAmount} USD)</span>`;
     };
     
     // v6.9.22: Update credit estimation display dynamically
@@ -3634,9 +3635,9 @@ define([
 
             if (subtopicCount > 0) {
                 if (extraLangs > 0) {
-                    estimationEl.innerHTML = `${subtopicCount} subtopics x ${creditsPerSubtopic} credits + ${extraLangs} extra language${extraLangs > 1 ? 's' : ''} x ${creditsPerExtraLang} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${audAmount} AUD)`;
+                    estimationEl.innerHTML = `${subtopicCount} subtopics x ${creditsPerSubtopic} credits + ${extraLangs} extra language${extraLangs > 1 ? 's' : ''} x ${creditsPerExtraLang} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${usdAmount} USD)`;
                 } else {
-                    estimationEl.innerHTML = `${subtopicCount} subtopics  x  ${creditsPerSubtopic} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${audAmount} AUD)`;
+                    estimationEl.innerHTML = `${subtopicCount} subtopics  x  ${creditsPerSubtopic} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${usdAmount} USD)`;
                 }
             } else {
                 estimationEl.textContent = '100 credits per subtopic';
