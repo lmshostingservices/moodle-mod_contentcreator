@@ -1,5 +1,150 @@
 # Changelog
 
+## 13.96.0 - 2026-09-02
+
+The content-quality release. Every change here exists to make generated cards land with a
+learner rather than merely meet a word count.
+
+### Changed - a third of every generation was being written, billed and thrown away
+
+Each card on the four card-based routes was asked for 70+ words of `voiceoverText`, roughly
+490 words per subtopic. None of it was ever used. `cc-state.js` builds narration from the
+visible card fields and skips `voiceoverText` whenever structural content exists - which is
+always - and `generator.js` already blanked the field for all thirteen card types before the
+manifest was written. The model was competing against itself for budget: 490 words of dead
+narration against 1,700 words of visible content in the same completion.
+
+The four system prompts now tell the model not to return the field at all, and every
+`voiceoverText` token is gone from the card specs and the repair prompts. Route 5 already did
+this correctly and was the model for the change. Narration is unaffected - it never came from
+this field. Verified across all thirteen card types, the University legacy path, the
+section-level promotion, SCORM export, print and the multi-language pre-generation loop.
+
+The LENGTH block is rewritten to match: the per-field ranges are now stated as authoritative
+and the card band (180-300) is derived from them, rather than a 160-240 band sitting above
+field arithmetic that summed past it.
+
+### Changed - VET, Workplace and Professional Development are now three products
+
+They were one. `prompts.js` assigned all three the same schema object, and their system
+prompts measured 86-91% identical - the whole difference was a persona line, a voice line and
+one clause about what kind of detail to name. Card 6 was word-for-word identical across all
+three. A learner shown a VET module and a Workplace module on the same topic could not have
+told you which was which.
+
+Each route now carries an explicit identity block stating what it is and, more usefully, what
+it must NOT contain: VET may not write about strategy, culture or "the business"; Workplace may
+not use RTO or assessment language; PD may not reduce a judgement call to a checklist or name
+equipment and worksites. Cards 2, 3 and 6 were rewritten per route - the authority a card 2
+cites (an Act, an internal SOP, a professional standard), the evidence a card 3 step ends on
+(a sign-off, a system record, a read of the other person), and what "ready" means on card 6.
+Pairwise prompt overlap is now 0.735-0.754, and what remains shared is the boilerplate that
+should be.
+
+Workplace card 2 asks for an internal policy or SOP rather than legislation, so its panel no
+longer renders "What the law says" over an SOP name - a third label, "What the policy
+requires", is added alongside the existing legal and principle variants.
+
+### Changed - consequences and benefits now land on a person
+
+Card 5's `consequence` requires exactly two sentences: the operational impact, then who
+actually carries it, in the words a colleague would use. Each route carries its own worked
+example, because the person is different - the apprentice on the other end of the load, the
+customer who waited three days for a callback, the team member who stopped raising problems six
+months ago.
+
+Card 6's `benefit` gets the same treatment, with the owner's own sentence written in as the
+target: "As the nurse on an emergency ward, asking for feedback early is how a small mistake
+stays small."
+
+A shared MAKE IT LAND block now sits in all four card-based system prompts and all four repair
+prompts: every card must contain at least one sentence a person could picture, drawn from that
+route's own world. It also bans the obvious failure mode - no manufactured drama, no
+exaggerated risk, no fear used to make a point.
+
+### Fixed - every subtopic in a course read the same
+
+Nothing recorded what a previous subtopic had done, and the system prompt is cached and reused
+byte-identically across a batch, so the only thing that varied between twelve subtopics was the
+title. They came back as twelve cards of the same shape opening the same way.
+
+Each section now receives a variety block pinning Cards 1 and 4 to different opening situations,
+drawn from a per-route pool (PD's is written in a register its own identity block permits). The
+pin is derived from the topic title rather than a section index, so regenerating one subtopic
+gives it the same opening back rather than silently reshuffling a course the author has already
+reviewed.
+
+### Fixed - every card in every course carried the same four icons in the same order
+
+No prompt asked for an icon on scene parts or mistake items, so the resolver always fell to its
+fixed positional pool: map-pin, users, message-circle, flame, in that order, on every
+hook-scenario ever generated. Meanwhile thirty lines of icon taxonomy sat in three prompts
+serving one field. Cards 1, 4 and 5 now request an icon per item.
+
+### Fixed - Card 4 promised continuity and delivered a different scenario
+
+The applied-scenario card renders under a "Continuing the scenario" banner over content the
+prompt explicitly required to be a different setting with different people. Card 4 now keeps
+Card 1's job and people and moves the time and place, which is what the banner has always
+claimed. The author-facing card descriptions in the wizard, which still described the old rule,
+are corrected too.
+
+### Fixed - the depth measurement was inflated 2-3x
+
+`harvestCardText` walked every field, and `normalizeCardSchema` deliberately retains both copies
+of every aliased array. A genuinely 75-word card measured 150 and cleared a 140 floor, so the
+telemetry added in v13.87 specifically to detect thin packs could not detect them, and
+`contentWords` stamped on every shipped card was wrong.
+
+Duplicate keys are now skipped, but per card type rather than by a flat list: `items` is an alias
+on competency-summary and the CANONICAL field on the mistakes card, so excluding it outright
+made the whole mistakes card measure zero. The derived `legalLink` panel, which re-states
+heading, keyInfo and summaryLine, is excluded too. Floors are recalibrated against the corrected
+count and the thinnest compliant card on each route, which is the four-step mental-model card at
+about 152 words. These checks remain report-only.
+
+### Fixed - author instructions were dead on four routes out of five
+
+VET, PD, Topics-and-Text and University all interpolated `additionalInstructions` into their
+prompts, but only Workplace ever collected it. Three routes had a promise in the prompt and no
+field on screen. All five now have the field, and all five populate the context.
+
+Topics-and-Text borrowed PD's form wholesale, so someone writing an article on Renaissance
+painting was asked for their "Industry" and a target audience of "New starters / Team leaders /
+Contractors". Both fields are genuinely used by that route - they become the subject area and
+the reader - so they are relabelled for it rather than hidden. University's jurisdiction is now
+passed through for legal and professional-body references instead of being collected and
+discarded.
+
+`mechanismType` and `readingLevel` were read from elements that do not exist and interpolated
+from values never set; both removed.
+
+### Fixed - word surgery corrupted Topics-and-Text
+
+Blind phrase replacement turned "landscape painting" into "environment painting" and "critical
+theory" into "important theory" on the one route whose premise is an unconstrained subject.
+University was already exempt; Topics-and-Text now is too, and nine further rules covering
+ordinary English words (journey, landscape, foster, robust, navigate, realm, tapestry, pivotal,
+empower) are marked safe on both.
+
+### Removed - about 2,600 lines of specification that contradicted the live prompts
+
+`enterprise_qa.js`, `quality_scoring.js`, `scoreQualityGate`, `scoreAuditDefensibility`, the
+audit-repair prompt and its three dispatchers, the expansion and banned-word rewrite prompts,
+the story-QA prompt, and `training_packages.js`. All were exported, built and shipped, and all
+were called from nowhere - some since v11.73.
+
+They had also drifted: they described six legacy card types on routes that generate seven
+unified ones, demanded 70+ word voiceover scripts, still asserted the old "different setting"
+rule for card 4, and scored any card mentioning "email" or "meeting" as a failure. Four of the
+seven specifications for card 6 in this repository were unreachable, and nothing indicated which
+three were real. That is how the three unified routes were able to drift into each other without
+anyone noticing.
+
+The live repair machinery is untouched and every `Prompts.*` call in `generator.js` was verified
+against the export list.
+
+
 ## 13.95.8 - 2026-09-02
 
 ### Changed - content prompts rewritten so cards carry a moment, not just a word count

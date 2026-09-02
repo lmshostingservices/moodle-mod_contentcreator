@@ -339,16 +339,26 @@ DOMAIN: Match the unit topic. HLTAID  ->  DRSABCD, scene safety. WHS  ->  hazard
 
 VOICE: Supervisor coaching on the job. Sentences under 20 words. Use "you". Plain words: "check" not "evaluate", "make sure" not "ensure".
 
-LENGTH  -  NOT NEGOTIABLE: every card must carry 160-240 words of visible learner-facing text,
-not counting voiceoverText. Each field below states its own word range; hit it. A field written
-to the bottom of its range across a whole card produces a card that is too thin to teach from.
+THIS ROUTE IS VOCATIONAL  -  it is not workplace training and not professional development.
+Everything on these cards has to be assessable. Write what the learner DOES with their hands, tools,
+vehicles, systems or paperwork, in a place you have named. Every card should contain something an
+assessor could observe or a supervisor could sign. Prefer the physical and the procedural: the check
+before you start, the reading you take, the form you complete, the person you tell.
+Do NOT write about strategy, culture, engagement, stakeholder management, career development or
+"the business". Do NOT write a card that could only be read at a desk.
+
+LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
+authoritative. Hit every one of them. Summed across a card that lands between 180 and 300 words of
+visible learner-facing text, which is the whole budget - there is no separate narration field to
+write. A field written to the bottom of its range across a whole card produces a card that is too
+thin to teach from, so write to the middle of each range or above.
 Sentences stay under 20 words  -  reaching the word count means MORE sentences carrying more
 specifics, never longer ones. Add detail that does work: the actual step, the real consequence,
 the named tool, form, system or timeframe. Never pad with adjectives, restatement or filler.
 
-VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
+VOICEOVER: Do NOT return a voiceoverText field on any card. The narration is built from the visible card fields and read verbatim, so a separate script is never used - it would desynchronise the audio from the panel being highlighted. Every word you write must be a word the learner sees, so spend the whole budget on the visible fields below.
 
-MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time: "the handover sheet nobody signed" over "documentation gaps"; "the apprentice who copies what you do" over "workforce culture". Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
+MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time  -  name the object, the record or the person, not the category. Draw the example from THIS route's own world, never from another one: if this route has told you not to write about equipment or worksites, do not reach for them here either. Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
 
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
 map-pin  ->  location, site, workplace | users  ->  team, people, staff, group | user-check  ->  supervisor, approval, responsibility | handshake  ->  agreement, coordination, working together
@@ -363,15 +373,18 @@ ICON CONSISTENCY RULES:
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
 - If unsure: communication  ->  message-circle | risk  ->  alert-triangle | process  ->  list-checks | people  ->  users
 - Every icon within a single card MUST be different from all others in that same card.
+- Cards 1, 4 and 5 also take an icon per item. Choose it from the MEANING of that item, so two
+  sections of the same course do not open with the same four icons in the same order. An item with
+  no icon falls back to a fixed positional default, which is why every card looked identical before.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific: name the place, the time of day, the equipment, what the learner can see or hear. The first sentence sets the scene, the second says what is happening or what it means for you  -  never one long run-on sentence)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(35-50 words)}, heading(the legislation or policy name), keyInfo(25-35 words  -  the obligation in plain English, no section numbers), summaryLine(15-20 words linking to Card 1), voiceoverText
-3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(35-45 words with concrete nouns: what you do, what you are looking for, what tells you it is done)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific operational impact. Sentence two makes it land on a real person in this job: name who is standing there when it goes wrong and what it costs them, in plain words a worker would use  -  "The apprentice on the other end of the load is the one who wears it.")}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  say what it changes for a real person in this role, the way a colleague would put it. "As the nurse on an emergency ward, asking for feedback early is how a small mistake stays small." Where it fits naturally, make it the moment the learner recognises, not a principle they already agree with)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 18-28 words, 2nd person), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(28-38 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(25-35 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific: name the place, the time of day, the equipment, what the learner can see or hear. The first sentence sets the scene, the second says what is happening or what it means for you  -  never one long run-on sentence)}, highlightText(optional, max 20 words)
+2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(35-50 words)}, heading(the Act, regulation or code of practice this sits under  -  name it as a worker would say it, not by section number), keyInfo(25-35 words  -  the duty it places on this learner, in plain English. What a WORKER must do, not what the RTO must evidence), summaryLine(15-20 words linking to Card 1)
+3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(35-45 words with concrete nouns: the physical action, the thing you are looking at while you do it, and what tells you it is done to standard. Name the tool, the form, the reading or the sign-off  -  an assessor watching would have to be able to tick this off from what you wrote)}
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  the SAME job and the SAME people as Card 1, later the same day or on the next shift. The place may move (a different bay, room, vehicle, client or site) but the learner and the task carry over, and this card must open by naming what has changed since Card 1. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake, highlightText(optional, max 20 words)
+5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), icon, consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific operational impact. Sentence two makes it land on a real person in this job: name who is standing there when it goes wrong and what it costs them, in plain words a worker would use  -  "The apprentice on the other end of the load is the one who wears it.")}
+6. competency-summary  -  title(topic-specific, phrased as the competency itself  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  what it looks like on the job when this is done properly, in the words a supervisor would use signing it off. "The apprentice who follows you through the gate copies whatever you just did, so do it the way you would want it copied." This is the standard an assessor would accept, said plainly)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}
+7. decision-point  -  heading(the question itself, 18-28 words, 2nd person), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(28-38 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(25-35 words explaining why it is wrong)}
    ANSWER-LENGTH PARITY (all routes): the correct answer and all three wrong answers MUST be the same length and the same level of detail  -  every option 10-16 words, each naming a specific action. A learner must not be able to pick the answer by spotting the longest or most detailed option. Wrong answers are complete, plausible strategies that a reasonable person might choose, never two-word stubs ("Offer training") and never absurd ("Do everything at once"). Do not append a justification, benefit or outcome clause to the correct answer that the wrong answers do not also have  -  that reasoning belongs in consequence, not in text.
 `;
 
@@ -385,7 +398,8 @@ CARDS (generate in this order):
     // came in around 100-130 words  -  under the 150-word floor this route declares for
     // itself. The per-field minima now SUM to at least 160 on all six cards and the
     // maxima land near 240, so a card written to the bottom of every range still
-    // clears the floor. Field names, card count and voiceoverText rules are unchanged.
+    // clears the floor. Field names and card count are unchanged. v13.96: voiceoverText
+    // is no longer requested on this route - narration is built from the visible fields.
     // ===========================================================================
 
     const UNIVERSITY_SYSTEM_PROMPT = `You are generating university-level academic learning content.
@@ -398,28 +412,30 @@ REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve theory 
 
 VOICE: Clear academic mentor. Sentences under 25 words. Use "you". Technical terms are fine  -  define each one. Never use: learn, understand, know, be aware of, appreciate, explore.
 
-LENGTH  -  NOT NEGOTIABLE: every card must carry 160-240 words of visible learner-facing text,
-not counting voiceoverText. Each field below states its own word range; hit it. A field written
-to the bottom of its range across a whole card produces a card that is too thin to teach from.
+LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
+authoritative. Hit every one of them. Summed across a card that lands between 180 and 300 words of
+visible learner-facing text, which is the whole budget - there is no separate narration field to
+write. A field written to the bottom of its range across a whole card produces a card that is too
+thin to teach from, so write to the middle of each range or above.
 Sentences stay under 25 words  -  reaching the word count means MORE sentences carrying more
 specifics, never longer ones. Add detail that does work: the named theorist, the date, the
 institution, the actual finding, the exact boundary condition. Never pad with adjectives,
 restatement or filler.
 
-VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 60 words.
+VOICEOVER: Do NOT return a voiceoverText field on any card. The narration is built from the visible card fields and read verbatim, so a separate script is never used - it would desynchronise the audio from the panel being highlighted. Every word you write must be a word the learner sees, so spend the whole budget on the visible fields below.
 
-MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time: "the handover sheet nobody signed" over "documentation gaps"; "the apprentice who copies what you do" over "workforce culture". Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
+MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time  -  name the object, the record or the person, not the category. Draw the example from THIS route's own world, never from another one: if this route has told you not to write about equipment or worksites, do not reach for them here either. Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
 
 CARDS (generate in this order):
-1. concept-anchor  -  conceptDefinition(48-64 words), significance(46-62 words: who this matters to, what changes when it is applied), keyTerms[3]{term(1-4 words), definition(22-30 words)}, voiceoverText
-2. theoretical-framework  -  frameworks[2-3]{name(2-6 words), originator(2-5 words), principle, limitation}, voiceoverText
+1. concept-anchor  -  conceptDefinition(48-64 words), significance(46-62 words: who this matters to, what changes when it is applied), keyTerms[3]{term(1-4 words), definition(22-30 words)}
+2. theoretical-framework  -  frameworks[2-3]{name(2-6 words), originator(2-5 words), principle, limitation}
    -  if you return 2 frameworks: principle(50-62 words), limitation(34-44 words)
    -  if you return 3 frameworks: principle(34-42 words), limitation(22-28 words)
    -  fewer frameworks means each one carries more; the card total does not shrink
-3. analytical-lens  -  heading(5-9 words), cognitiveConsiderations[5+](31-46 words each, each one carrying a concrete example), voiceoverText
-4. ethics-considerations  -  heading(5-9 words), considerations[5+]{dimension(1-3 words, e.g. "Privacy"), description(30-43 words)}, voiceoverText
-5. case-study-1  -  title(4-8 words), context(80-104 words, 2nd person, specific details  -  names/dates/institutions), analysisPrompts[3](22-30 words each), keyInsight(24-34 words), voiceoverText
-6. case-study-2  -  title(4-8 words, DIFFERENT context from Card 5), context(80-104 words, different setting), analysisPrompts[3](22-30 words each, different questions from Card 5), criticalReflection(30-38 words), voiceoverText`;
+3. analytical-lens  -  heading(5-9 words), cognitiveConsiderations[5+](31-46 words each, each one carrying a concrete example)
+4. ethics-considerations  -  heading(5-9 words), considerations[5+]{dimension(1-3 words, e.g. "Privacy"), description(30-43 words)}
+5. case-study-1  -  title(4-8 words), context(80-104 words, 2nd person, specific details  -  names/dates/institutions), analysisPrompts[3](22-30 words each), keyInsight(24-34 words)
+6. case-study-2  -  title(4-8 words, DIFFERENT context from Card 5), context(80-104 words, different setting), analysisPrompts[3](22-30 words each, different questions from Card 5), criticalReflection(30-38 words)`;
 
     // ===========================================================================
     // WORKPLACE 6-CARD SYSTEM PROMPT
@@ -431,7 +447,7 @@ CARDS (generate in this order):
     // satisfied "2 sentences" with two short ones and produced roughly 40% of target
     // card length, exactly the failure the VET conversion fixed. The per-field minima
     // now SUM to at least 160 on all seven cards and the maxima land near 240. Field
-    // names, card count and voiceoverText rules are unchanged.
+    // names and card count are unchanged. v13.96: voiceoverText is no longer requested.
     // ===========================================================================
 
     const WORKPLACE_SYSTEM_PROMPT = `You are generating structured workplace training aligned to policy, SOP, or performance expectations.
@@ -444,16 +460,26 @@ REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve named s
 
 VOICE: Team leader coaching a colleague. Sentences under 20 words. Use "you". Focus on business impact: productivity, customer satisfaction, costs. No RTO audit language.
 
-LENGTH  -  NOT NEGOTIABLE: every card must carry 160-240 words of visible learner-facing text,
-not counting voiceoverText. Each field below states its own word range; hit it. A field written
-to the bottom of its range across a whole card produces a card that is too thin to teach from.
+THIS ROUTE IS WORKPLACE TRAINING  -  it is not VET and not professional development.
+The organisation is the reason this training exists, so every card should connect to something the
+business measures or promises: the customer, the cost, the turnaround, the standard, the system of
+record. Name real internal artefacts  -  the policy, the SOP, the queue, the ticket, the report.
+Do NOT use RTO or assessment language: no units of competency, no performance criteria, no evidence,
+no assessor, no "competent". Do NOT drift into personal growth or leadership philosophy either  -
+this is how the work gets done here, to this standard, for this reason.
+
+LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
+authoritative. Hit every one of them. Summed across a card that lands between 180 and 300 words of
+visible learner-facing text, which is the whole budget - there is no separate narration field to
+write. A field written to the bottom of its range across a whole card produces a card that is too
+thin to teach from, so write to the middle of each range or above.
 Sentences stay under 20 words  -  reaching the word count means MORE sentences carrying more
 specifics, never longer ones. Add detail that does work: the actual step, the real cost, the
 named system, policy, form or timeframe. Never pad with adjectives, restatement or filler.
 
-VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
+VOICEOVER: Do NOT return a voiceoverText field on any card. The narration is built from the visible card fields and read verbatim, so a separate script is never used - it would desynchronise the audio from the panel being highlighted. Every word you write must be a word the learner sees, so spend the whole budget on the visible fields below.
 
-MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time: "the handover sheet nobody signed" over "documentation gaps"; "the apprentice who copies what you do" over "workforce culture". Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
+MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time  -  name the object, the record or the person, not the category. Draw the example from THIS route's own world, never from another one: if this route has told you not to write about equipment or worksites, do not reach for them here either. Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
 
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
 map-pin  ->  location, site, workplace | users  ->  team, people, staff, group | user-check  ->  supervisor, approval, responsibility | handshake  ->  agreement, coordination, working together
@@ -468,15 +494,18 @@ ICON CONSISTENCY RULES:
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
 - If unsure: communication  ->  message-circle | risk  ->  alert-triangle | process  ->  list-checks | people  ->  users
 - Every icon within a single card MUST be different from all others in that same card.
+- Cards 1, 4 and 5 also take an icon per item. Choose it from the MEANING of that item, so two
+  sections of the same course do not open with the same four icons in the same order. An item with
+  no icon falls back to a fixed positional default, which is why every card looked identical before.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific: name the place, the time of day, the system or equipment, what the learner can see or hear. The first sentence sets the scene, the second says what is happening or what it costs you  -  never one long run-on sentence)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(36-52 words)}, heading(the legislation or policy name), keyInfo(28-40 words  -  the obligation in plain English, no section numbers), summaryLine(16-24 words linking to Card 1), voiceoverText
-3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(37-42 words with specific tools/systems/forms: what you do, what you are looking for, what tells you it is done)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  DIFFERENT setting and time from Card 1, highlightText(optional, max 20 words), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific business, safety or regulatory impact. Sentence two makes it land on a real person: name the customer, colleague or team member standing in it and what it costs them, in plain words  -  "The customer who waited three days for that callback is the one who tells forty people about it.")}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  say what it changes for a real person in this role, the way a colleague would put it. "As the nurse on an emergency ward, asking for feedback early is how a small mistake stays small." Where it fits naturally, make it the moment the learner recognises, not a principle they already agree with)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, compliance stakes), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(26-36 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific: name the place, the time of day, the system or equipment, what the learner can see or hear. The first sentence sets the scene, the second says what is happening or what it costs you  -  never one long run-on sentence)}, highlightText(optional, max 20 words)
+2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(36-52 words)}, heading(the internal policy, SOP or service standard this sits under  -  the document a colleague would actually be sent to, by its real name), keyInfo(28-40 words  -  what the business requires and what it is protecting: the cost, the customer commitment or the risk it exists to prevent), summaryLine(16-24 words linking to Card 1)
+3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(37-42 words naming the system, screen, form or report the work actually happens in: what you do in it, what you check before moving on, and what tells you it is done. The test is whether a colleague could follow it without asking where anything lives)}
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  the SAME job and the SAME people as Card 1, later the same day or on the next shift. The place may move (a different bay, room, vehicle, client or site) but the learner and the task carry over, and this card must open by naming what has changed since Card 1. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake, highlightText(optional, max 20 words)
+5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), icon, consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific business, safety or regulatory impact. Sentence two makes it land on a real person: name the customer, colleague or team member standing in it and what it costs them, in plain words  -  "The customer who waited three days for that callback is the one who tells forty people about it.")}
+6. competency-summary  -  title(topic-specific, phrased as the standard the team is held to  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  what it saves, prevents or protects, named concretely: the callback that never happens, the escalation that stops at you, the customer who stays. "The order you check twice is the one nobody has to apologise for on Monday.")}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}
+7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, compliance stakes), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(26-36 words explaining why it is wrong)}
    ANSWER-LENGTH PARITY (all routes): the correct answer and all three wrong answers MUST be the same length and the same level of detail  -  every option 10-16 words, each naming a specific action. A learner must not be able to pick the answer by spotting the longest or most detailed option. Wrong answers are complete, plausible strategies that a reasonable person might choose, never two-word stubs ("Offer training") and never absurd ("Do everything at once"). Do not append a justification, benefit or outcome clause to the correct answer that the wrong answers do not also have  -  that reasoning belongs in consequence, not in text.
 `;
 
@@ -488,8 +517,8 @@ CARDS (generate in this order):
     // explicit per-field WORD RANGES, and given the same "LENGTH  -  NOT NEGOTIABLE"
     // header VET got in v13.94.0  -  same under-production failure, same fix as the
     // Workplace route above. The per-field minima now SUM to at least 160 on all seven
-    // cards and the maxima land near 240. Field names, card count and voiceoverText
-    // rules are unchanged.
+    // cards and the maxima land near 240. Field names and card count are unchanged;
+    // v13.96: voiceoverText is no longer requested.
     // ===========================================================================
 
     const PD_SYSTEM_PROMPT = `You are generating professional development learning content for working professionals building transferable skills.
@@ -502,17 +531,27 @@ REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve named f
 
 VOICE: Experienced colleague coaching a peer. Sentences under 25 words. Conversational but professional. Use "you" and "your team". No trade-specific or VET language.
 
-LENGTH  -  NOT NEGOTIABLE: every card must carry 160-240 words of visible learner-facing text,
-not counting voiceoverText. Each field below states its own word range; hit it. A field written
-to the bottom of its range across a whole card produces a card that is too thin to teach from.
+THIS ROUTE IS PROFESSIONAL DEVELOPMENT  -  it is not VET and not workplace training.
+The subject is judgement, not procedure. These cards live in conversations, decisions and
+relationships: what you notice, what you say next, what you choose not to say, how you read the room,
+how you repair it when it goes wrong. Give the learner words they could actually use.
+Do NOT use VET language (units, competency, evidence, assessor) and do NOT reduce this to a compliance
+step or a system to follow. Do NOT name equipment, PPE or worksites unless the topic is genuinely
+about them. If a card could be satisfied by following a checklist, it is the wrong card.
+
+LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
+authoritative. Hit every one of them. Summed across a card that lands between 180 and 300 words of
+visible learner-facing text, which is the whole budget - there is no separate narration field to
+write. A field written to the bottom of its range across a whole card produces a card that is too
+thin to teach from, so write to the middle of each range or above.
 Sentences stay under 25 words  -  reaching the word count means MORE sentences carrying more
 specifics, never longer ones. Add detail that does work: the actual move, the words you would
 say, the real professional consequence, the named framework or timeframe. Never pad with
 adjectives, restatement or filler.
 
-VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
+VOICEOVER: Do NOT return a voiceoverText field on any card. The narration is built from the visible card fields and read verbatim, so a separate script is never used - it would desynchronise the audio from the panel being highlighted. Every word you write must be a word the learner sees, so spend the whole budget on the visible fields below.
 
-MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time: "the handover sheet nobody signed" over "documentation gaps"; "the apprentice who copies what you do" over "workforce culture". Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
+MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time  -  name the object, the record or the person, not the category. Draw the example from THIS route's own world, never from another one: if this route has told you not to write about equipment or worksites, do not reach for them here either. Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
 
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
 map-pin  ->  location, site, workplace | users  ->  team, people, staff, group | user-check  ->  supervisor, approval, responsibility | handshake  ->  agreement, coordination, working together
@@ -527,15 +566,18 @@ ICON CONSISTENCY RULES:
 - mental-model steps  ->  prefer process icons (list-checks, clipboard-check, repeat)
 - If unsure: communication  ->  message-circle | risk  ->  alert-triangle | process  ->  list-checks | people  ->  users
 - Every icon within a single card MUST be different from all others in that same card.
+- Cards 1, 4 and 5 also take an icon per item. Choose it from the MEANING of that item, so two
+  sections of the same course do not open with the same four icons in the same order. An item with
+  no icon falls back to a fixed positional default, which is why every card looked identical before.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific professional detail: who is in the room, the deadline, what was said, what is at stake. The first sentence sets the scene, the second says what is happening or what it costs you  -  never one long run-on sentence)}, highlightText(optional, max 20 words), voiceoverText
-2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(36-52 words)}, heading(the name of the principle, model or professional standard this rests on  -  NOT a law, act or regulation), keyInfo(28-40 words  -  what that principle actually requires of the practitioner, in plain English), summaryLine(16-24 words linking to Card 1), voiceoverText
-3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(37-42 words of practitioner-level guidance: what you do, what you are looking for, what tells you it is done)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  DIFFERENT professional setting and time from Card 1, highlightText(optional, max 20 words), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Assuming...", 6-10 words), consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific professional or relational impact. Sentence two makes it land on a real person: name the colleague, report or client who carries it and what it costs them, in plain words  -  "The team member who stopped raising problems six months ago did not go quiet by accident.")}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  say what it changes for a real person in this role, the way a colleague would put it. "As the nurse on an emergency ward, asking for feedback early is how a small mistake stays small." Where it fits naturally, make it the moment the learner recognises, not a principle they already agree with)}, errorItems[5]{error(verb or "Assuming...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, professional judgment), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(26-36 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific professional detail: who is in the room, the deadline, what was said, what is at stake. The first sentence sets the scene, the second says what is happening or what it costs you  -  never one long run-on sentence)}, highlightText(optional, max 20 words)
+2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(36-52 words)}, heading(the name of the principle, model or professional standard this rests on  -  NOT a law, act or regulation), keyInfo(28-40 words  -  what that principle actually requires of the practitioner, in plain English), summaryLine(16-24 words linking to Card 1)
+3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(37-42 words of what this looks like in a real interaction: the move you make, roughly the words you would use, and how you know it landed. Judgement calls, not procedure  -  say what you are reading in the other person)}
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  the SAME role and the SAME people as Card 1, later the same day or the next time this comes up. The place may move (a different meeting, call, one-to-one or client) but the learner and the situation carry over, and this card must open by naming what has changed since Card 1. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake, highlightText(optional, max 20 words)
+5. mistakes  -  errorItems[5]{error(verb or "Assuming...", 6-10 words), icon, consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific professional or relational impact. Sentence two makes it land on a real person: name the colleague, report or client who carries it and what it costs them, in plain words  -  "The team member who stopped raising problems six months ago did not go quiet by accident.")}
+6. competency-summary  -  title(topic-specific, phrased as the capability being built  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  what it changes in the relationship or the room, the way a trusted colleague would put it. "As the nurse on an emergency ward, asking for feedback early is how a small mistake stays small." Make it the moment the learner recognises, not a principle they already agree with)}, errorItems[5]{error(verb or "Assuming...", 10-12 words), consequence(14-18 words)}
+7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, professional judgment), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(26-36 words explaining why it is wrong)}
    ANSWER-LENGTH PARITY (all routes): the correct answer and all three wrong answers MUST be the same length and the same level of detail  -  every option 10-16 words, each naming a specific action. A learner must not be able to pick the answer by spotting the longest or most detailed option. Wrong answers are complete, plausible strategies that a reasonable person might choose, never two-word stubs ("Offer training") and never absurd ("Do everything at once"). Do not append a justification, benefit or outcome clause to the correct answer that the wrong answers do not also have  -  that reasoning belongs in consequence, not in text.
 `;
 
@@ -724,23 +766,104 @@ Do NOT use English for any card content. Ignore any English writing style or spe
         if (topic.outcome) { lines.push(`- What the reader should understand: ${topic.outcome}`); }
         if (context.subjectArea) { lines.push(`- Subject area: ${context.subjectArea}`); }
         if (context.targetAudience) { lines.push(`- Written for: ${context.targetAudience}`); }
-        if (context.readingLevel) { lines.push(`- Reading level: ${context.readingLevel}`); }
         if (context.courseName) { lines.push(`- Part of: ${context.courseName}`); }
 
         // v13.92: the v13.91 mechanism-structure pin is gone with the card it pinned.
         // Card 3 is now examples-and-application, which has no structure to choose.
-        const forcedLine = '';
 
         return `${langPrefix}Write a short-course text module: 4 short prose cards plus 1 question card.
 
 CONTEXT:
 ${lines.join('\n')}
-${topic.keyPoints?.length ? `\nPOINTS THAT MUST BE COVERED: ${ccTextList(topic.keyPoints).join('; ')}` : ''}${forcedLine}
+${topic.keyPoints?.length ? `\nPOINTS THAT MUST BE COVERED: ${ccTextList(topic.keyPoints).join('; ')}` : ''}
 ${context.additionalInstructions ? `\nAUTHOR INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
 Write all 5 cards in order: overview, key-concepts, examples-application, key-takeaways, decision-point.
 Remember: no heading fields on cards 1-4, exactly two paragraphs each, 55-70 words per paragraph, and never the characters backslash-n anywhere.${langSuffix}`;
+    };
+
+    /**
+     * v13.96 FIX-CC-SAMENESS: pick a scenario opening for this section.
+     *
+     * Nothing in the pipeline recorded what a previous subtopic used, and the system
+     * prompt is cached and reused byte-identically across every section in a batch, so
+     * the only thing that varied was the topic title. Twelve subtopics therefore came
+     * back as twelve cards of the same shape, opening the same way - which is the single
+     * most common complaint about AI-generated course content.
+     *
+     * The pin is derived from the topic title rather than a section index so that it
+     * needs no change to any call signature, and so that regenerating one subtopic gives
+     * it the SAME opening rather than silently reshuffling a course the author has
+     * already reviewed.
+     *
+     * @param {string} title The subtopic title.
+     * @param {Array} pool The openings to choose from.
+     * @returns {string} One opening from the pool.
+     */
+    const ccVarietyPick = (title, pool) => {
+        const t = String(title || '');
+        let h = 0;
+        for (let i = 0; i < t.length; i++) {
+            h = ((h << 5) - h + t.charCodeAt(i)) | 0;
+        }
+        return pool[Math.abs(h) % pool.length];
+    };
+
+    /**
+     * v13.96: scenario openings.
+     *
+     * Split by route: the shop-floor entries (equipment, shift, handover) contradict the
+     * PD identity block, which forbids naming equipment or worksites and says a card that
+     * could be satisfied by a checklist is the wrong card. One shared pool would have
+     * ordered roughly three PD sections in eight to open on something its own system
+     * prompt bans.
+     */
+    const CC_SCENARIO_OPENINGS = [
+        'a handover, where something has not been passed on',
+        'an interruption partway through a task',
+        'a piece of equipment or a system behaving in a way it should not',
+        'a document, reading or record that does not match what is actually there',
+        'a request from someone outside the immediate team',
+        'a routine step that is about to be skipped because everyone is busy',
+        'the end of a shift or day, with something still outstanding',
+        'a new person watching, and copying, how it gets done'
+    ];
+
+    /** v13.96: the same idea in a register Professional Development can actually use. */
+    const CC_SCENARIO_OPENINGS_PD = [
+        'a handover of work, where something has not been passed on',
+        'an interruption partway through a conversation that mattered',
+        'a message or email that reads worse than it was meant to',
+        'a decision someone has already made that you disagree with',
+        'a request from outside your team that cuts across your priorities',
+        'a difficult point everyone is avoiding raising',
+        'the end of a week, with something still unsaid',
+        'a newer colleague watching how you handle it'
+    ];
+
+    /**
+     * v13.96: the per-section variety block appended to the three unified user prompts.
+     *
+     * @param {string} title The subtopic title.
+     * @param {string} mode The route id, so PD gets a register it is allowed to use.
+     * @returns {string} The variety instruction.
+     */
+    const ccVarietyBlock = (title, mode) => {
+        const pool = (mode === 'pd') ? CC_SCENARIO_OPENINGS_PD : CC_SCENARIO_OPENINGS;
+        const open1 = ccVarietyPick(title, pool);
+        let open2 = ccVarietyPick(title + '~4', pool);
+        if (open2 === open1) {
+            open2 = pool[(pool.indexOf(open1) + 3) % pool.length];
+        }
+        return `
+
+VARIETY  -  this section sits alongside others in the same course and must not read like them.
+Open Card 1 on ${open1}. Open Card 4 on ${open2}.
+Do not open either card with "It is", "You are", "As a" or "Imagine". Name people by their job role
+rather than "the worker" or "the employee". Card 4 keeps Card 1's people and task by design, so vary
+the TIME and the PLACE between them, not who is there. Pick the per-item icons from what each item
+actually means, so two sections do not carry the same four icons in the same order.`;
     };
 
     const buildFiveCardUserPrompt = (context, topic) => {
@@ -784,7 +907,7 @@ ${topic.keyPoints?.length ? `\nKEY POINTS: ${ccTextList(topic.keyPoints).join(';
 ${context.additionalInstructions ? `\nTEACHER INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
-Generate the full 7-card sequence.${langSuffix}`;
+Generate the full 7-card sequence.${ccVarietyBlock(topic.title || topic.name || '', context.mode)}${langSuffix}`;
     };
 
     const buildWorkplaceFiveCardUserPrompt = (context, topic) => {
@@ -811,7 +934,7 @@ ${topic.keyPoints?.length ? `\nKEY POINTS: ${ccTextList(topic.keyPoints).join(';
 ${context.additionalInstructions ? `\nTRAINER INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
-Generate the full 7-card sequence.${langSuffix}`;
+Generate the full 7-card sequence.${ccVarietyBlock(topic.title || topic.name || '', context.mode)}${langSuffix}`;
     };
 
     const buildPDFiveCardUserPrompt = (context, topic) => {
@@ -836,7 +959,7 @@ ${topic.keyPoints?.length ? `\nKEY POINTS: ${ccTextList(topic.keyPoints).join(';
 ${context.additionalInstructions ? `\nFACILITATOR INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
-Generate the full 7-card sequence.${langSuffix}`;
+Generate the full 7-card sequence.${ccVarietyBlock(topic.title || topic.name || '', context.mode)}${langSuffix}`;
     };
 
     const BLOOMS_LEVEL_INSTRUCTIONS = {
@@ -906,8 +1029,10 @@ CONTEXT:
 - Discipline: ${context.industryContext || context.industry || 'General'}
 - Academic Level: ${context.courseLevel || 'Undergraduate'}
 - Bloom's Level: ${bloomsInfo.verb} (use verbs: ${bloomsInfo.verbs})
+${context.location || context.country ? `- Jurisdiction for any legal, regulatory or professional-body reference: ${context.location || context.country}${context.state ? `, ${context.state}` : ''}` : ''}
 ${topic.outcome ? `\nLEARNING OUTCOME: ${topic.outcome}` : ''}
 ${topic.keyPoints?.length ? `\nKEY POINTS: ${ccTextList(topic.keyPoints).join('; ')}` : ''}
+${context.additionalInstructions ? `\nAUTHOR INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${context.priorityContent.substring(0, 12000)}` : ''}
 
 BLOOM'S TARGETING: ${bloomsInfo.scenarioFocus} ${bloomsInfo.decisionFocus || ''} ${bloomsInfo.feedbackFocus || ''}
@@ -1150,218 +1275,6 @@ Generate the full 6-card sequence.${langSuffix}`;
     // QUALITY GATE (route-aware)
     // ===========================================================================
 
-    const scoreQualityGate = (cards, context, options) => {
-        if (!(options && options.skipNormalize)) { cards = normalizeCards(cards, context); }
-        const mode = context?.mode || 'vet';
-        const schema = getCardSchemaForMode(mode);
-        const expectedCount = schema.cardTypes.length;
-        const wc = (str) => { const s = (typeof str === 'string') ? str : ((str === null || str === undefined) ? '' : String(str)); return s.trim().split(/\s+/).filter(w => w).length; };
-        const details = {
-            schema: { score: 0, max: 20, issues: [] },
-            content: { score: 0, max: 25, issues: [] },
-            wordFloors: { score: 0, max: 15, issues: [] },
-            coherence: { score: 0, max: 25, issues: [] },
-            realism: { score: 0, max: 15, issues: [] }
-        };
-
-        if (Array.isArray(cards) && cards.length === expectedCount) {
-            details.schema.score += 8;
-            if (schema.cardTypes.every((t, i) => cards[i]?.cardType === t)) details.schema.score += 8;
-            else details.schema.issues.push('Wrong card types or order');
-
-            let structScore = 0;
-            if (mode === 'university') {
-                if (cards[0]?.conceptDefinition && cards[0]?.significance) structScore += 1;
-                if (cards[1]?.frameworks?.length >= 2) structScore += 1;
-                if (cards[2]?.cognitiveConsiderations?.length >= 5) structScore += 1;
-                if (cards[3]?.considerations?.length >= 5) structScore += 1;
-            } else if (mode === 'topicstext') {
-                // v13.94.3: Route 5 is prose-first  -  four paragraph cards + decision-point.
-                if (cards[0]?.paragraphs?.length >= 2) structScore += 1;           // overview
-                if (cards[1]?.keyTerms?.length >= 3) structScore += 1;             // key-concepts
-                if (cards[2]?.paragraphs?.length >= 2) structScore += 1;           // examples-application
-                if (cards[3]?.goodItems?.length >= 3) structScore += 1;            // key-takeaways
-            } else {
-                // VET, Workplace, PD  -  all use unified 7-card schema
-                if (cards[0]?.sceneParts?.length >= 4) structScore += 1;           // hook-scenario
-                if (cards[1]?.conceptInsights?.length >= 3) structScore += 1;      // concept-explainer
-                if (cards[2]?.steps?.length >= 4) structScore += 1;                // mental-model
-                if (cards[3]?.sceneParts?.length >= 4) structScore += 1;           // applied-scenario
-            }
-            details.schema.score += structScore;
-        } else {
-            details.schema.issues.push(`Not an array of ${expectedCount} cards`);
-        }
-
-        let contentScore = 25;
-
-        const bannedHits = validateBannedWords(cards);
-        if (bannedHits.length >= 3) { contentScore -= 10; details.content.issues.push(`Banned words (${bannedHits.length}): ${bannedHits.slice(0, 5).join(', ')}`); }
-        else if (bannedHits.length >= 1) { contentScore -= Math.min(5, bannedHits.length * 2); details.content.issues.push(`Banned words: ${bannedHits.join(', ')}`); }
-
-        let voiceoverFails = 0;
-        if (Array.isArray(cards)) {
-            cards.forEach((card, i) => {
-                const voWc = wc(card?.voiceoverText);
-                if (voWc < 60) {
-                    voiceoverFails++;
-                    details.content.issues.push(`Card ${i + 1} (${card?.cardType || 'unknown'}) voiceoverText: ${voWc}w < 60w minimum`);
-                }
-            });
-        }
-        if (voiceoverFails > 0) contentScore -= Math.min(15, voiceoverFails * 3);
-
-        if (mode === 'vet' || mode === 'workplace' || mode === 'pd') {
-            // unified 7-card schema: card 5 is 'mistakes' with items[].{mistake, consequence}
-            const mistakesCard = cards?.find(c => c?.cardType === 'mistakes');
-            if (mistakesCard?.items) {
-                const badItems = mistakesCard.items.filter(e => !e?.consequence || wc(e.consequence) < 10);
-                if (badItems.length > 0) { contentScore -= 3; details.content.issues.push(`${badItems.length} mistake items missing adequate consequence`); }
-            }
-        }
-
-        details.content.score = Math.max(0, contentScore);
-
-        let floorScore = 15;
-        let floorFails = 0;
-
-        const getPartsText = (card, field) => (card?.[field] || []).map(p => p?.text || p?.content || p?.description || '').join(' ');
-        if (mode === 'university') {
-            const floorChecks = [
-                { val: cards?.[0]?.conceptDefinition, min: 30, label: 'conceptDefinition' },
-                { val: cards?.[0]?.significance, min: 30, label: 'significance' },
-                { val: cards?.[4]?.context, min: 70, label: 'case-study-1 context' },
-                { val: cards?.[5]?.context, min: 70, label: 'case-study-2 context' },
-                { val: cards?.[5]?.criticalReflection, min: 30, label: 'criticalReflection' }
-            ];
-            for (const check of floorChecks) {
-                const count = wc(check.val);
-                if (count < check.min) { floorFails++; details.wordFloors.issues.push(`${check.label}: ${count}w < ${check.min}w minimum`); }
-            }
-        } else if (mode === 'topicstext') {
-            // v13.94.3: Route 5 floors are measured on prose, not on the unified-schema fields.
-            const paraText = (c) => (c?.paragraphs || []).join(' ');
-            const floorChecks = [
-                { val: paraText(cards?.[0]), min: 120, label: 'overview paragraphs' },
-                { val: paraText(cards?.[1]), min: 120, label: 'key-concepts paragraphs' },
-                { val: paraText(cards?.[2]), min: 120, label: 'examples-application paragraphs' },
-                { val: paraText(cards?.[3]), min: 120, label: 'key-takeaways paragraphs' },
-                { val: cards?.[4]?.question, min: 15, label: 'decision-point question' }
-            ];
-            for (const check of floorChecks) {
-                const count = wc(check.val);
-                if (count < check.min) { floorFails++; details.wordFloors.issues.push(`${check.label}: ${count}w < ${check.min}w minimum`); }
-            }
-        } else {
-            // VET, Workplace, PD  -  all use unified 7-card schema
-            const mistakesConsequenceText = (cards?.[4]?.items || []).map(i => i?.consequence || '').join(' ');
-            const stepsDetailText = (cards?.[2]?.steps || []).map(s => s?.detail || s?.description || s?.explanation || '').join(' ');
-            const floorChecks = [
-                { val: getPartsText(cards?.[0], 'sceneParts'), min: 40, label: 'hook-scenario sceneParts' },
-                { val: getPartsText(cards?.[1], 'conceptInsights'), min: 40, label: 'concept-explainer insights' },
-                { val: stepsDetailText, min: 50, label: 'mental-model steps detail' },
-                { val: mistakesConsequenceText, min: 50, label: 'mistakes consequences' },
-                { val: (cards?.[5]?.goodItems || []).map(function (g) {
-                    // v13.95.8: goodItems are {text, benefit} objects; joining them raw
-                    // yields "[object Object]" and fails this floor on every generation.
-                    return typeof g === 'string' ? g : ((g && g.text) || '') + ' ' + ((g && g.benefit) || '');
-                }).join(' '), min: 30, label: 'competency-summary goodItems' },
-                { val: cards?.[6]?.question, min: 15, label: 'decision-point question' }
-            ];
-            for (const check of floorChecks) {
-                const count = wc(check.val);
-                if (count < check.min) { floorFails++; details.wordFloors.issues.push(`${check.label}: ${count}w < ${check.min}w minimum`); }
-            }
-        }
-
-        if (floorFails === 0) floorScore = 15;
-        else if (floorFails <= 2) floorScore = 10;
-        else if (floorFails <= 4) floorScore = 5;
-        else floorScore = 0;
-        details.wordFloors.score = floorScore;
-
-        // Build scenario cards and extract their readable text (unified vs university schemas differ)
-        const getScenCardText = (sc) => {
-            if (sc.cardType === 'hook-scenario' || sc.cardType === 'applied-scenario') {
-                return (sc.sceneParts || []).map(p => p?.text || p?.content || p?.description || '').join(' ');
-            }
-            return sc.context || '';
-        };
-        let cohScore = 0;
-        const scenarioCards = (cards || []).filter(c => {
-            if (!c?.cardType) return false;
-            if (mode === 'university') return c.cardType.startsWith('case-study-');
-            return c.cardType === 'hook-scenario' || c.cardType === 'applied-scenario';
-        });
-        for (const sc of scenarioCards) {
-            const scenText = getScenCardText(sc).toLowerCase();
-            if (/\d{1,2}[:.]\d{2}|morning|afternoon|evening|am\b|pm\b|week \d|semester/i.test(scenText)) cohScore += 3;
-            else details.coherence.issues.push(`${sc.cardType} missing time context`);
-            if (/site|warehouse|office|floor|area|zone|room|workshop|kitchen|clinic|store|vehicle|lab|reception|campus|lecture|tutorial|field/i.test(scenText)) cohScore += 3;
-            else details.coherence.issues.push(`${sc.cardType} missing location detail`);
-            if (/busy|unavailable|urgent|pressure|waiting|rushing|missing|unclear|conflict|deadline|noise|heat|cold|rain|dark|crowded/i.test(scenText)) cohScore += 2;
-            else details.coherence.issues.push(`${sc.cardType} missing environmental friction`);
-        }
-        if (scenarioCards.length >= 2) {
-            const ctx1 = getScenCardText(scenarioCards[0]).toLowerCase();
-            const ctx2 = getScenCardText(scenarioCards[1]).toLowerCase();
-            const words1 = new Set(ctx1.split(/\W+/).filter(w => w.length > 4));
-            const words2 = new Set(ctx2.split(/\W+/).filter(w => w.length > 4));
-            const shared = [...words1].filter(w => words2.has(w));
-            const overlap = words1.size > 0 ? shared.length / words1.size : 0;
-            if (overlap < 0.4) cohScore += 4;
-            else { cohScore += 1; details.coherence.issues.push('Scenarios too similar  -  need different settings'); }
-        }
-        details.coherence.score = Math.max(0, Math.min(25, cohScore));
-
-        let realScore = 0;
-        const allScenText = scenarioCards.map(sc => getScenCardText(sc)).join(' ').toLowerCase();
-        if (mode === 'university') {
-            if (/conflict|contradict|complex|challeng|debate|limit|uncertain|competing|ambig/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing intellectual challenge');
-            if (/research|data|study|evidence|finding|method|theory|model/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing academic/research context');
-            if (/ethic|consent|privacy|bias|fair|equit|professional/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing ethical dimension');
-        } else if (mode === 'pd') {
-            if (/turning|choice|decide|moment|crossroads|dilemma|tension/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing turning point or decision moment');
-            if (/team|colleague|manager|client|stakeholder|direct report|peer/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing interpersonal context');
-            if (/trust|credib|reputation|relationship|career|promotion|influence/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing professional stakes');
-        } else {
-            if (/\d{1,2}[:.]\d{2}|morning|afternoon|evening|am\b|pm\b/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing time of day');
-            if (/site|warehouse|office|floor|area|zone|room|workshop|kitchen|clinic|store|vehicle|lab|reception/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing location');
-            if (/busy|unavailable|urgent|pressure|waiting|rushing|missing|unclear/i.test(allScenText)) realScore += 5;
-            else details.realism.issues.push('Missing pressure/obstacle');
-        }
-        details.realism.score = realScore;
-
-        const maxScore = 100;
-        const totalScore = Math.min(maxScore, details.schema.score + details.content.score + details.wordFloors.score + details.coherence.score + details.realism.score);
-
-        let action = 'PUBLISH';
-        let passed = true;
-        if (totalScore < 65) { action = 'REGENERATE'; passed = false; }
-        else if (totalScore < 80) { action = 'REWRITE_PASS'; passed = true; }
-        if (bannedHits.length >= 3) { action = 'REWRITE_PASS'; }
-
-        return {
-            score: totalScore,
-            maxScore,
-            percentage: Math.round((totalScore / maxScore) * 100),
-            passed,
-            action,
-            details,
-            bannedWordHits: bannedHits,
-            hardFailPenalty: 0,
-            summary: `${totalScore}/${maxScore} (${action})`
-        };
-    };
-
     // ===========================================================================
     // REPAIR PROMPT BUILDERS (route-aware)
     // ===========================================================================
@@ -1379,12 +1292,12 @@ Generate the full 6-card sequence.${langSuffix}`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, text, and details exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)), voiceoverText (70+ words)
-- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
-- mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)), voiceoverText (70+ words)
-- mistakes: errorItems[] (5 objects: error (6-10 words) / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
-- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / icon / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)) (70+ words)
+- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine (70+ words)
+- mental-model: steps[] (4-5 objects: step/icon/detail) (70+ words)
+- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / icon / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)). Same job and same people as hook-scenario, later the same day  -  it renders under a "Continuing the scenario" banner (70+ words)
+- mistakes: errorItems[] (5 objects: error (6-10 words) / icon / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
+- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence) (70+ words, ends "Now, complete the activity below.")
 - decision-point: heading (the question, 18-30 words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers). All four option texts must be 10-16 words and equally detailed  -  the correct answer must not stand out by length
 
 MAKE IT LAND: any field you rewrite must keep at least one sentence a person could picture  -  a named role
@@ -1476,12 +1389,12 @@ Return ONLY a valid JSON object with "cards" array of exactly 6 cards.`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, text, and details exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)), voiceoverText (70+ words)
-- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
-- mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)), voiceoverText (70+ words)
-- mistakes: errorItems[] (5 objects: error (6-10 words) / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
-- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / icon / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)) (70+ words)
+- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine (70+ words)
+- mental-model: steps[] (4-5 objects: step/icon/detail) (70+ words)
+- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / icon / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)). Same job and same people as hook-scenario, later the same day  -  it renders under a "Continuing the scenario" banner (70+ words)
+- mistakes: errorItems[] (5 objects: error (6-10 words) / icon / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
+- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence) (70+ words, ends "Now, complete the activity below.")
 - decision-point: heading (the question, 18-30 words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers). All four option texts must be 10-16 words and equally detailed  -  the correct answer must not stand out by length
 
 MAKE IT LAND: any field you rewrite must keep at least one sentence a person could picture  -  a named role
@@ -1525,12 +1438,12 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, frameworks, and text exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)), voiceoverText (70+ words)
-- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
-- mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)), voiceoverText (70+ words)
-- mistakes: errorItems[] (5 objects: error (6-10 words) / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
-- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / icon / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)) (70+ words)
+- concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine (70+ words)
+- mental-model: steps[] (4-5 objects: step/icon/detail) (70+ words)
+- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / icon / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)). Same job and same people as hook-scenario, later the same day  -  it renders under a "Continuing the scenario" banner (70+ words)
+- mistakes: errorItems[] (5 objects: error (6-10 words) / icon / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
+- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence) (70+ words, ends "Now, complete the activity below.")
 - decision-point: heading (the question, 18-30 words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers). All four option texts must be 10-16 words and equally detailed  -  the correct answer must not stand out by length
 
 MAKE IT LAND: any field you rewrite must keep at least one sentence a person could picture  -  a named role
@@ -1629,408 +1542,19 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
     // AUDIT DEFENSIBILITY (route-aware)
     // ===========================================================================
 
-    const scoreAuditDefensibility = (cards, context) => {
-        const mode = context?.mode || 'vet';
-        const isUniversity = (mode === 'university');
-        const isWorkplace = (mode === 'workplace');
-        const isPD = (mode === 'pd');
-        const maxScore = 80;
-
-        if (isUniversity || isWorkplace || isPD) {
-            const modeLabel = isPD ? 'pd' : isUniversity ? 'university' : 'workplace';
-            return {
-                score: maxScore,
-                maxScore: maxScore,
-                percentage: 100,
-                passed: true,
-                action: 'AUDIT_PASS',
-                details: {
-                    cardStructure: { score: 15, max: 15, issues: [] },
-                    scenarioQuality: { score: 15, max: 15, issues: [] },
-                    contentDepth: { score: 15, max: 15, issues: [] },
-                    voiceoverQuality: { score: 15, max: 15, issues: [] },
-                    fieldCompleteness: { score: 10, max: 10, issues: [] },
-                    consequenceSpecificity: { score: 10, max: 10, issues: [] }
-                },
-                summary: maxScore + '/' + maxScore + ' (' + modeLabel + ' mode - auto pass)'
-            };
-        }
-
-        const details = {
-            cardStructure: { score: 0, max: 15, issues: [] },
-            scenarioQuality: { score: 0, max: 15, issues: [] },
-            contentDepth: { score: 0, max: 15, issues: [] },
-            voiceoverQuality: { score: 0, max: 15, issues: [] },
-            fieldCompleteness: { score: 0, max: 10, issues: [] },
-            consequenceSpecificity: { score: 0, max: 10, issues: [] }
-        };
-
-        const wc = (str) => { const s = (typeof str === 'string') ? str : ((str === null || str === undefined) ? '' : String(str)); return s.trim().split(/\s+/).filter(w => w).length; };
-
-        const isVerbFirst = function (text) {
-            var t = (text || '').trim();
-            if (!t) return false;
-            var first = t.split(/\s+/)[0].toLowerCase();
-            var verbs = [
-                'identify','check','confirm','record','report','ensure','use','follow','complete',
-                'assess','recognise','recognize','call','notify','stop','apply','clean','wear','remove',
-                'communicate','review','position','monitor','locate','inspect','select','prepare',
-                'label','sign','tag','lock','isolate','test','measure','adjust','calibrate','verify',
-                'document','file','store','dispose','lift','carry','push','pull','operate','maintain',
-                'connect','disconnect','install','replace','tighten','secure','mark','flag','escalate',
-                'demonstrate','arrange','transfer','supervise','coordinate','delegate','implement',
-                'conduct','perform','administer','allocate','analyse','analyze','calculate','classify',
-                'compare','construct','create','define','describe','design','develop','distribute',
-                'evaluate','examine','explain','formulate','gather','handle','interpret','investigate',
-                'manage','organise','organize','plan','present','prioritise','prioritize','process',
-                'provide','recommend','resolve','respond','schedule','set','sort','submit','support',
-                'train','update','validate','wipe','wrap','weigh','warn','walk','troubleshoot',
-                'scan','rinse','raise','place','pack','open','observe','list','inform','greet',
-                'enter','display','count','collect','close','clear','brief','attach','assist','assemble'
-            ];
-            return verbs.indexOf(first) !== -1;
-        };
-
-        // unified 7-card schema: competency-summary (card 6) has goodItems[] + badItems[]
-        var summaryCard = (cards || []).find(function (c) { return c && c.cardType === 'competency-summary'; });
-        var goodItems = Array.isArray(summaryCard?.goodItems) ? summaryCard.goodItems : [];
-        if (goodItems.length >= 5) {
-            details.cardStructure.score += 5;
-            var verbFirstItems = goodItems.filter(function (s) {
-                var t = (typeof s === 'string') ? s : (s?.text || s?.behaviour || s?.criterion || '');
-                return isVerbFirst(t);
-            });
-            if (verbFirstItems.length >= 4) {
-                details.cardStructure.score += 5;
-            } else {
-                details.cardStructure.issues.push('Competency summary goodItems must start with action verbs (' + verbFirstItems.length + '/' + goodItems.length + ' pass)');
-            }
-        } else {
-            details.cardStructure.issues.push('Need at least 5 competency-summary goodItems (got ' + goodItems.length + ')');
-        }
-
-        // unified 7-card schema: mental-model (card 3) has steps[].{step, icon, detail}
-        var mentalCard = (cards || []).find(function (c) { return c && c.cardType === 'mental-model'; });
-        var steps = Array.isArray(mentalCard?.steps) ? mentalCard.steps : [];
-        if (steps.length >= 4) {
-            details.cardStructure.score += 5;
-            var verbFirstSteps = steps.filter(function (s) {
-                return isVerbFirst(s?.step || s?.action || s?.title || '');
-            });
-            if (verbFirstSteps.length >= 3) {
-                details.cardStructure.score += 0;
-            } else {
-                details.cardStructure.issues.push('Mental-model steps should start with action verbs (' + verbFirstSteps.length + '/' + steps.length + ' pass)');
-            }
-        } else {
-            details.cardStructure.issues.push('Need at least 4 mental-model steps (got ' + steps.length + ')');
-        }
-
-        // unified scenario cards: hook-scenario (card 1) and applied-scenario (card 4) use sceneParts[]
-        var auditScenCards = (cards || []).filter(function (c) {
-            return c && (c.cardType === 'hook-scenario' || c.cardType === 'applied-scenario');
-        });
-        for (var si = 0; si < auditScenCards.length; si++) {
-            var sc = auditScenCards[si];
-            var scenText = (sc.sceneParts || []).map(function (p) { return p?.text || p?.content || p?.description || ''; }).join(' ').toLowerCase();
-            var scenScore = 0;
-            if (/\d{1,2}[:.]\d{2}|morning|afternoon|evening|am\b|pm\b/i.test(scenText)) scenScore += 2;
-            else details.scenarioQuality.issues.push(sc.cardType + ' missing time of day');
-            if (/site|warehouse|office|floor|area|zone|room|workshop|kitchen|clinic|store|vehicle|lab|reception/i.test(scenText)) scenScore += 2;
-            else details.scenarioQuality.issues.push(sc.cardType + ' missing location');
-            if (/busy|unavailable|urgent|pressure|waiting|rushing|missing|unclear|noise|heat|cold|rain|dark|crowded/i.test(scenText)) scenScore += 2;
-            else details.scenarioQuality.issues.push(sc.cardType + ' missing environmental friction');
-            if (wc(scenText) >= 60) scenScore += 1;
-            else details.scenarioQuality.issues.push(sc.cardType + ' scene text too short (need 60+ words total)');
-            details.scenarioQuality.score += scenScore;
-        }
-        details.scenarioQuality.score = Math.min(15, details.scenarioQuality.score);
-
-        // unified 7-card schema: mistakes (card 5) has items[].{mistake, consequence}
-        var mistakesCard = (cards || []).find(function (c) { return c && c.cardType === 'mistakes'; });
-        var mistakeItems = Array.isArray(mistakesCard?.items) ? mistakesCard.items : [];
-        if (mistakeItems.length >= 5) {
-            details.contentDepth.score += 5;
-            var itemsWithConsequence = mistakeItems.filter(function (e) { return e && e.consequence && wc(e.consequence) >= 10; });
-            if (itemsWithConsequence.length >= 4) details.contentDepth.score += 5;
-            else details.contentDepth.issues.push('Mistake items need consequences of 10+ words (' + itemsWithConsequence.length + '/5 pass)');
-        } else {
-            details.contentDepth.issues.push('Need at least 5 mistake items (got ' + mistakeItems.length + ')');
-        }
-
-        // unified 7-card schema: concept-explainer (card 2) has conceptInsights[]
-        var conceptCard = (cards || []).find(function (c) { return c && c.cardType === 'concept-explainer'; });
-        if (conceptCard && Array.isArray(conceptCard.conceptInsights) && conceptCard.conceptInsights.length >= 3) {
-            details.contentDepth.score += 5;
-        } else {
-            details.contentDepth.issues.push('Concept-explainer card needs 3+ conceptInsights');
-        }
-
-        var voiceoverPasses = 0;
-        if (Array.isArray(cards)) {
-            for (var vi = 0; vi < cards.length; vi++) {
-                if (cards[vi] && wc(cards[vi].voiceoverText) >= 60) voiceoverPasses++;
-                else details.voiceoverQuality.issues.push('Card ' + (vi + 1) + ' (' + (cards[vi]?.cardType || 'unknown') + ') voiceoverText under 60 words');
-            }
-        }
-        if (voiceoverPasses >= 7) details.voiceoverQuality.score = 15;
-        else if (voiceoverPasses >= 5) details.voiceoverQuality.score = 10;
-        else if (voiceoverPasses >= 3) details.voiceoverQuality.score = 5;
-        else details.voiceoverQuality.score = 0;
-
-        // unified 7-card schema: hook-scenario (card 1) has sceneParts[4] + voiceoverText; decision-point (card 7) has question + options[4]
-        var hookCard = (cards || []).find(function (c) { return c && c.cardType === 'hook-scenario'; });
-        var dpCard = (cards || []).find(function (c) { return c && c.cardType === 'decision-point'; });
-        if (hookCard) {
-            if (Array.isArray(hookCard.sceneParts) && hookCard.sceneParts.length >= 4) details.fieldCompleteness.score += 3;
-            else details.fieldCompleteness.issues.push('hook-scenario needs 4 sceneParts (got ' + (hookCard.sceneParts?.length || 0) + ')');
-            if (wc(hookCard.voiceoverText) >= 60) details.fieldCompleteness.score += 3;
-            else details.fieldCompleteness.issues.push('hook-scenario voiceoverText under 60 words');
-        } else {
-            details.fieldCompleteness.issues.push('Missing hook-scenario card');
-        }
-        if (dpCard) {
-            if (dpCard.question && wc(dpCard.question) >= 15) details.fieldCompleteness.score += 2;
-            else details.fieldCompleteness.issues.push('decision-point question missing or too short');
-            if (Array.isArray(dpCard.options) && dpCard.options.length === 4 && dpCard.options.filter(function (o) { return o?.correct; }).length === 1) details.fieldCompleteness.score += 2;
-            else details.fieldCompleteness.issues.push('decision-point needs exactly 4 options with exactly 1 correct');
-        } else {
-            details.fieldCompleteness.issues.push('Missing decision-point card');
-        }
-
-        var consequenceKeywords = [
-            'breach','notifiable','liability','warranty','insurance','disciplinary',
-            'contract','removal from site','non-compliance','duty of care','workcover',
-            'fine','prosecution','prohibition notice','improvement notice','infringement',
-            'coronial','investigation','suspension','termination','legal action'
-        ];
-        var allConsequenceText = '';
-        for (var ci = 0; ci < auditScenCards.length; ci++) {
-            allConsequenceText += ' ' + (auditScenCards[ci].sceneParts || []).map(function (p) { return p?.text || p?.content || p?.description || ''; }).join(' ');
-        }
-        for (var ei = 0; ei < mistakeItems.length; ei++) {
-            allConsequenceText += ' ' + (mistakeItems[ei]?.consequence || '');
-        }
-        allConsequenceText = allConsequenceText.toLowerCase();
-        var specificConsequences = consequenceKeywords.filter(function (kw) { return allConsequenceText.indexOf(kw) !== -1; });
-        if (specificConsequences.length >= 2) {
-            details.consequenceSpecificity.score += 10;
-        } else if (specificConsequences.length === 1) {
-            details.consequenceSpecificity.score += 6;
-            details.consequenceSpecificity.issues.push('Only 1 specific legal/operational consequence term found  -  aim for 2+');
-        } else {
-            details.consequenceSpecificity.issues.push('No specific legal/operational consequence language detected');
-        }
-
-        var totalScore = 0;
-        for (var cat in details) {
-            if (Object.prototype.hasOwnProperty.call(details, cat)) {
-                totalScore += details[cat].score;
-            }
-        }
-        totalScore = Math.min(maxScore, totalScore);
-
-        var action = 'AUDIT_PASS';
-        var passed = true;
-        if (totalScore < 40) { action = 'AUDIT_REGENERATE'; passed = false; }
-        else if (totalScore < 55) { action = 'AUDIT_REPAIR'; passed = false; }
-        else if (totalScore < 65) { action = 'AUDIT_POLISH'; passed = true; }
-
-        return {
-            score: totalScore,
-            maxScore: maxScore,
-            percentage: Math.round((totalScore / maxScore) * 100),
-            passed: passed,
-            action: action,
-            details: details,
-            summary: totalScore + '/' + maxScore + ' (' + action + ')'
-        };
-    };
-
     // ===========================================================================
     // AUDIT REPAIR PROMPTS
     // ===========================================================================
 
-    const AUDIT_REPAIR_PROMPT = `You are rewriting workplace training content to meet Australian RTO audit defensibility standards. COMPLETELY REWRITE weak areas.
-
-UNIFIED 7-CARD AUDIT RULES:
-- hook-scenario (card 1): sceneParts array of 4 objects (title/icon/text), each text exactly 2 sentences with specific time of day, named location, and environmental pressure. voiceoverText 70+ words.
-- concept-explainer (card 2): conceptInsights array of 3 objects (title/icon/text), each insight concrete and jargon-free. voiceoverText 70+ words.
-- mental-model (card 3): steps array of 4-5 objects (step/icon/detail), each step verb-led and consequence-linked. voiceoverText 70+ words.
-- applied-scenario (card 4): sceneParts array of 4 objects (title/icon/text), each text exactly 2 sentences, different setting and time from hook-scenario. voiceoverText 70+ words.
-- mistakes (card 5): items array of 5 objects (mistake + icon + consequence 25-38 words each). voiceoverText 70+ words.
-- competency-summary (card 6): goodItems array of 5 objects {text: verb-first label 6-10 words, benefit: 14-18 words}, badItems array of 5 objects {text, consequence}. voiceoverText ends with "Now, complete the activity below."
-- decision-point (card 7): question (18-30 words), options array of exactly 4 (text/feedback/correct), exactly one correct:true. Every option text is 10-16 words and equally detailed - the correct answer must not be identifiable by being the longest, the most specific, or the only one carrying a justification clause.
-- Every card must have voiceoverText of at least 70 words.
-- Scenario text must include legal/operational consequence terms where appropriate.
-
-Keep existing cardType values. Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
-
-    const buildAuditRepairPrompt = (cards, auditIssues, topicTitle, context) => {
-        var industry = context?.industrySector || context?.industry || 'Australian workplace';
-        var unitCode = context?.unitCode || '';
-        var unitTitle = context?.unitTitle || '';
-
-        var issueLines = [];
-        for (var cat in auditIssues) {
-            if (Object.prototype.hasOwnProperty.call(auditIssues, cat)) {
-                var catIssues = auditIssues[cat]?.issues || [];
-                catIssues.forEach(function (issue) {
-                    issueLines.push('- [' + cat + '] ' + issue);
-                });
-            }
-        }
-
-        return `AUDIT REPAIR for: ${topicTitle || 'workplace training'}
-Unit: ${unitCode} ${unitTitle}
-Industry: ${industry}
-Role: ${context?.jobLevel || context?.learnerRole || 'worker'}
-
-ISSUES TO FIX:
-${issueLines.slice(0, 12).join('\n')}
-
-CURRENT CONTENT:
-${JSON.stringify(cards, null, 2)}
-
-Return ONLY the rewritten JSON object with "cards" array.`;
-    };
-
-    const getAuditRepairPromptForMode = (mode, context) => {
-        if (mode === 'university') {
-            return buildUniversityContentRepairSystemPrompt(context);
-        }
-        if (mode === 'workplace') {
-            return buildWorkplaceContentRepairSystemPrompt(context);
-        }
-        if (mode === 'pd') {
-            return buildPDContentRepairSystemPrompt(context);
-        }
-        return AUDIT_REPAIR_PROMPT;
-    };
-
-    const buildAuditRepairPromptForMode = (cards, auditDetails, topicTitle, context) => {
-        var mode = context?.mode || 'vet';
-        if (mode === 'university') {
-            var issues = [];
-            for (var cat in auditDetails) {
-                if (Object.prototype.hasOwnProperty.call(auditDetails, cat)) {
-                    (auditDetails[cat]?.issues || []).forEach(function (i) { issues.push(i); });
-                }
-            }
-            return buildUniversityContentRepairPrompt(cards, issues, topicTitle, context);
-        }
-        if (mode === 'workplace') {
-            var wpIssues = [];
-            for (var cat2 in auditDetails) {
-                if (Object.prototype.hasOwnProperty.call(auditDetails, cat2)) {
-                    (auditDetails[cat2]?.issues || []).forEach(function (i) { wpIssues.push(i); });
-                }
-            }
-            return buildWorkplaceContentRepairPrompt(cards, wpIssues, topicTitle, context);
-        }
-        if (mode === 'pd') {
-            var pdIssues = [];
-            for (var cat3 in auditDetails) {
-                if (Object.prototype.hasOwnProperty.call(auditDetails, cat3)) {
-                    (auditDetails[cat3]?.issues || []).forEach(function (i) { pdIssues.push(i); });
-                }
-            }
-            return buildPDContentRepairPrompt(cards, pdIssues, topicTitle, context);
-        }
-        return buildAuditRepairPrompt(cards, auditDetails, topicTitle, context);
-    };
-
     // ===========================================================================
     // EXPANSION & BANNED WORD PROMPTS
     // ===========================================================================
-
-    const EXPANSION_PASS_SYSTEM_PROMPT = `You are expanding content fields to meet minimum word counts. Keep scenario context UNCHANGED. Only expand the fields listed below. Write in plain, direct language. Return the same JSON structure.`;
-
-    const buildExpansionPassPrompt = (cards, underFields) => {
-        const fieldList = underFields.map(f => `- ${f.label}: currently ${f.current}w, need at least ${f.min}w`).join('\n');
-        return `Expand these fields to meet minimums:\n${fieldList}\n\nContent:\n${JSON.stringify(cards, null, 2)}`;
-    };
-
-    const BANNED_WORD_REWRITE_SYSTEM_PROMPT = `Replace banned words in the following content. Only change sentences containing the flagged words. Keep everything else identical. Use plain, direct language. Return the same JSON structure.`;
-
-    const buildBannedWordRewritePrompt = (cards, bannedHits) => {
-        return `Replace these banned words: ${bannedHits.join(', ')}\n\nContent:\n${JSON.stringify(cards, null, 2)}`;
-    };
 
     // ===========================================================================
     // v10.38: STORY QA PASS  -  polish story continuity, decision quality, language
     // Runs after all quality gates pass. Improves the 7-card unified flow without
     // changing the JSON structure. Silent fallback to original cards on failure.
     // ===========================================================================
-
-    const STORY_QA_SYSTEM_PROMPT = `You are an expert vocational training instructional designer improving AI-generated course content.
-
-You will receive a JSON array of learning cards representing a 7-card story-driven sequence.
-
-Your job is to elevate the content to elite quality. Review and improve across these dimensions:
-
-STORY FLOW
-- All cards must follow one continuous job scenario  -  same setting, same people, same task
-- The applied-scenario card must feel like a direct continuation of the hook-scenario card
-- Each card should transition naturally into the next  -  no abrupt topic jumps
-- The mistakes/Watch Out For card should tie back to a specific moment in the scenario
-- The competency-summary card uses two arrays of OBJECTS: "goodItems" (4 - 6 items of {text: a concrete verb-first label 6-10 words, benefit: 14-18 words on what it gets you}) and "badItems" (4 - 6 items of {text: a specific realistic failure 10-12 words, consequence: 14-18 words on what it costs}); both columns carry the same two-part shape; keep both arrays; do NOT merge them into "items" and never return either as bare strings
-- Every goodItems entry should describe observable, scenario-specific excellence  -  not generic principles
-- Every badItems entry should name a realistic mistake a real worker in the scenario could plausibly make
-
-DECISION QUALITY (decision-point card)
-- All 4 answer options must feel like realistic workplace decisions a real worker might consider
-- Wrong answers must reflect believable mistakes  -  the kind where you can see why someone would make them
-- Avoid obviously absurd distractors ("just ignore it", "break the rules")
-- The correct answer should require genuine thinking, not be instantly obvious
-- ANSWER-LENGTH PARITY: all four option texts must be 10-16 words and the same level of detail. If the correct answer is longer, more specific, or the only one that explains itself, rewrite it to match the others  -  a learner must not be able to pick it by shape alone. Any justification belongs in the feedback, never in the option text.
-- Each wrong answer needs specific, realistic feedback explaining the real consequence, and all four feedback texts are the same length (28-36 words)
-
-CONCEPT CLARITY (concept-explainer card)
-- Explain the concept once, clearly  -  don't restate the same idea in different words
-- Link the explanation directly to the scenario  -  anchor it in what the characters are experiencing
-- Tighten wordy or padded sections; aim for impact over length
-
-MENTAL MODEL (mental-model card)
-- Each step must reflect what a real worker is actually thinking or doing in that moment
-- Replace generic instructions like "identify the issue" with story-specific, concrete actions
-- Aim for 4 - 6 steps only
-
-LANGUAGE
-- Natural, human, workplace tone throughout
-- No robotic phrases: "it is important to", "it is essential that", "ensure that you", "in order to"
-- Should sound like someone experienced in the industry explaining the job to a colleague
-
-REALISM
-- Scenarios must feel like situations a worker would immediately recognise from real experience
-- Include believable pressure: time, client expectations, safety stakes, chain of responsibility
-
-RULES  -  FOLLOW THESE EXACTLY
-- Return the SAME JSON array  -  same number of cards, same cardType for each card
-- Keep all field names exactly as received  -  do NOT rename, add, or remove fields
-- Do NOT add or remove cards from the array
-- Do NOT output scores, commentary, or any text outside the JSON
-- Return ONLY valid JSON
-
-CRITICAL SCHEMA PRESERVATION  -  these structured arrays MUST be kept as arrays, never collapsed to a string:
-- hook-scenario: keep keyPoints as an array of exactly 4 objects (title, text)  -  do NOT replace with a content field
-- applied-scenario: keep keyPoints as an array of exactly 4 objects (title, text)  -  do NOT replace with a content field
-- concept-explainer: keep keyPoints as an array of exactly 3 objects (title, text)  -  do NOT replace with a content field
-- mental-model: keep steps as an array of objects (step, icon, detail)  -  do NOT replace with a content field
-- mistakes: keep errorItems as an array of objects (error, consequence)  -  do NOT replace with a content field
-- competency-summary: keep standardItems and errorItems as separate arrays  -  do NOT merge them
-- decision-point: keep heading, standardItems (the correct answer) and errorItems (the wrong answers)`;
-
-    const buildStoryQAUserPrompt = (cards, context, topicTitle) => {
-        const industry = (context && context.industry) ? context.industry : '';
-        const role = (context && (context.role || context.jobRole)) ? (context.role || context.jobRole) : '';
-        const header = [
-            topicTitle ? 'Topic: ' + topicTitle : '',
-            industry  ? 'Industry: ' + industry : '',
-            role      ? 'Role: ' + role : ''
-        ].filter(Boolean).join('\n');
-        return (header ? header + '\n\nImprove this content:\n\n' : '') + JSON.stringify(cards);
-    };
 
     // ===========================================================================
     // EXPORTS
@@ -2043,15 +1567,11 @@ CRITICAL SCHEMA PRESERVATION  -  these structured arrays MUST be kept as arrays,
         buildTopicsTextUserPrompt: buildTopicsTextUserPrompt,
         getFiveCardSystemPromptForMode: getFiveCardSystemPromptForMode,
         buildFiveCardUserPrompt: buildFiveCardUserPrompt,
-        scoreQualityGate: scoreQualityGate,
-        scoreAuditDefensibility: scoreAuditDefensibility,
         normalizeCards: normalizeCards,
         validateBannedWords: validateBannedWords,
         BANNED_WORDS: BANNED_WORDS,
         getContentRepairPromptForMode: getContentRepairPromptForMode,
         buildContentRepairPromptForMode: buildContentRepairPromptForMode,
-        getAuditRepairPromptForMode: getAuditRepairPromptForMode,
-        buildAuditRepairPromptForMode: buildAuditRepairPromptForMode,
         VET_SYSTEM_PROMPT: VET_SYSTEM_PROMPT,
         WORKPLACE_SYSTEM_PROMPT: WORKPLACE_SYSTEM_PROMPT,
         UNIVERSITY_SYSTEM_PROMPT: UNIVERSITY_SYSTEM_PROMPT,
@@ -2060,18 +1580,10 @@ CRITICAL SCHEMA PRESERVATION  -  these structured arrays MUST be kept as arrays,
         WORKPLACE_FIVE_CARD_SYSTEM_PROMPT: WORKPLACE_SYSTEM_PROMPT,
         UNIVERSITY_FIVE_CARD_SYSTEM_PROMPT: UNIVERSITY_SYSTEM_PROMPT,
         PD_FIVE_CARD_SYSTEM_PROMPT: PD_SYSTEM_PROMPT,
-        AUDIT_REPAIR_PROMPT: AUDIT_REPAIR_PROMPT,
-        EXPANSION_PASS_SYSTEM_PROMPT: EXPANSION_PASS_SYSTEM_PROMPT,
-        buildExpansionPassPrompt: buildExpansionPassPrompt,
-        BANNED_WORD_REWRITE_SYSTEM_PROMPT: BANNED_WORD_REWRITE_SYSTEM_PROMPT,
-        buildBannedWordRewritePrompt: buildBannedWordRewritePrompt,
-        STORY_QA_SYSTEM_PROMPT: STORY_QA_SYSTEM_PROMPT,
-        buildStoryQAUserPrompt: buildStoryQAUserPrompt,
         buildContentRepairPrompt: buildContentRepairPrompt,
         buildWorkplaceContentRepairPrompt: buildWorkplaceContentRepairPrompt,
         buildUniversityContentRepairPrompt: buildUniversityContentRepairPrompt,
         buildPDContentRepairPrompt: buildPDContentRepairPrompt,
-        buildAuditRepairPrompt: buildAuditRepairPrompt,
         getSpellingInstructions: getSpellingInstructions,
         getLanguageInstructions: getLanguageInstructions,
         getLanguageName: getLanguageName,

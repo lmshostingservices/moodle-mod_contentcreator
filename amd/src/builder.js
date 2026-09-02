@@ -555,14 +555,14 @@ define([
         msgcardvethookscenario: '<strong>Hook Scenario</strong> &ndash; a real moment on the job that puts the learner in the situation',
         msgcardvetconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the rule or obligation behind it, in plain English',
         msgcardvetmentalmodel: '<strong>Mental Model</strong> &ndash; the four or five steps, in order, with the reasoning',
-        msgcardvetappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same skill in a different setting and time',
+        msgcardvetappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same job, later the same day, when it gets harder',
         msgcardvetmistakes: '<strong>Mistakes</strong> &ndash; five things that go wrong, each with its consequence',
         msgcardvetcompetencysummary: '<strong>Competency Summary</strong> &ndash; what they can now do, and what failing looks like',
         msgcardvetdecisionpoint: '<strong>Decision Point</strong> &ndash; one question, four answers, feedback on each',
         msgcardworkplacehookscenario: '<strong>Hook Scenario</strong> &ndash; a moment at work where this matters',
         msgcardworkplaceconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the policy or obligation, in plain English',
         msgcardworkplacementalmodel: '<strong>Mental Model</strong> &ndash; the steps, naming your actual tools, systems and forms',
-        msgcardworkplaceappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same situation somewhere else in the business',
+        msgcardworkplaceappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same people and the same task, on a harder day',
         msgcardworkplacemistakes: '<strong>Mistakes</strong> &ndash; five errors, each with its business or compliance cost',
         msgcardworkplacecompetencysummary: '<strong>Competency Summary</strong> &ndash; the standard, and what falling short looks like',
         msgcardworkplacedecisionpoint: '<strong>Decision Point</strong> &ndash; one question with compliance stakes, four answers',
@@ -576,7 +576,7 @@ define([
         msgcardpdhookscenario: '<strong>Hook Scenario</strong> &ndash; a professional moment where the skill is tested',
         msgcardpdconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the principle underneath, in plain English',
         msgcardpdmentalmodel: '<strong>Mental Model</strong> &ndash; the steps, as practitioner-level guidance',
-        msgcardpdappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same skill in a different professional setting',
+        msgcardpdappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same people, next time it comes up',
         msgcardpdmistakes: '<strong>Mistakes</strong> &ndash; five errors and their professional or relational cost',
         msgcardpddecisionpoint: '<strong>Decision Point</strong> &ndash; one judgement call, four answers, feedback on each',
         msggenerates4cardspersectionplus3activities: 'Generates 4 cards per section, plus 3 activities',
@@ -649,6 +649,8 @@ define([
         msgjoblevel: 'Job Level',
         msgscenariosforlevel: 'AI creates scenarios appropriate for this level',
         msgadditionalinstructions: 'Additional Instructions',
+        msgwrittenfor: 'Written for',
+        msgsubjectarea: 'Subject area',
         msgdoccontexttargeted: 'Document + Context = Targeted Training',
         msgbuilddirectwp: 'AI will build your slides directly from your uploaded document, topics, and context. Click <strong>Continue</strong> below to generate your slides now.',
         msgwhentousewp: '<strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>review and edit the content before slides are generated</strong>, or when you want to provide <strong>additional documents as guides</strong> beyond your uploaded training document.',
@@ -5299,6 +5301,12 @@ define([
                         </div>
                     </div>
 
+                    <div class="cc-form-group" style="margin-top:12px;">
+                        <label class="cc-form-label">${s('msgadditionalinstructions')}</label>
+                        <input type="text" class="cc-input" id="cc-vet-instructions"
+                               placeholder="${s('msgphinstructions')}" data-testid="input-vet-instructions">
+                    </div>
+
                     <div class="cc-ai-info-banner">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="cc-info-icon">
                             <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1-1.275 1.275L12 3Z"/>
@@ -5825,6 +5833,12 @@ define([
                         <small class="cc-form-hint">${s('msgmajortopichint')}</small>
                     </div>
 
+                    <div class="cc-form-group">
+                        <label class="cc-form-label">${s('msgadditionalinstructions')}</label>
+                        <input type="text" class="cc-input" id="cc-uni-instructions"
+                               placeholder="${s('msgphinstructions')}" data-testid="input-uni-instructions">
+                    </div>
+
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
                             <label class="cc-form-label">${s('msgcourselevelrequired')}</label>
@@ -6007,8 +6021,17 @@ define([
                         <small class="cc-form-hint">${s('msgmajortopichint')}</small>
                     </div>
                     <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
+                        <!-- v13.96 FIX-CC-DEAD-INPUTS: Topics-and-Text shares this form with PD, so an
+                             author writing an article on Renaissance painting was asked for their
+                             "Industry" and a target audience of "New starters / Team leaders /
+                             Contractors". Both fields ARE used on that route - the industry box
+                             becomes context.subjectArea and the audience becomes
+                             context.targetAudience, and buildTopicsTextUserPrompt sends both - so
+                             they are RELABELLED for the route rather than hidden. Hiding the
+                             industry box would have taken away the only way to tell the model the
+                             subject, on the one route whose whole premise is an open subject. -->
                         <div class="cc-form-group">
-                            <label class="cc-label" for="cc-pd-audience">${s('msgtargetaudience')}</label>
+                            <label class="cc-label" for="cc-pd-audience">${selectedMode === 'topicstext' ? s('msgwrittenfor') : s('msgtargetaudience')}</label>
                             <select id="cc-pd-audience" class="cc-select" data-testid="select-pd-audience">
                                 <option value="all-staff">${s('msgtaallstaff')}</option>
                                 <option value="new-starters">${s('msgpdaudnewstarters')}</option>
@@ -6021,9 +6044,14 @@ define([
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-label" for="cc-pd-industry">${s('msgindustryoptional')}</label>
-                            <input type="text" id="cc-pd-industry" class="cc-input" placeholder="${s('msgphpdindustry')}" data-testid="input-pd-industry" />
+                            <label class="cc-label" for="cc-pd-industry">${selectedMode === 'topicstext' ? s('msgsubjectarea') : s('msgindustryoptional')}</label>
+                            <input type="text" id="cc-pd-industry" class="cc-input" placeholder="${selectedMode === 'topicstext' ? s('msgphsubjectarea') : s('msgphpdindustry')}" data-testid="input-pd-industry" />
                         </div>
+                    </div>
+                    <div class="cc-form-group" style="margin-top:12px;">
+                        <label class="cc-form-label">${s('msgadditionalinstructions')}</label>
+                        <input type="text" class="cc-input" id="cc-pd-instructions"
+                               placeholder="${s('msgphinstructions')}" data-testid="input-pd-instructions">
                     </div>
                     <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
                         <div class="cc-form-group">
@@ -10407,6 +10435,26 @@ The context and task details follow below.
         }
     };
 
+    /**
+     * v13.96 FIX-CC-DEAD-INPUTS: read the author's free-text steer, whichever route is active.
+     *
+     * VET, PD and Topics-and-Text all interpolate context.additionalInstructions into their
+     * user prompts ("TEACHER INSTRUCTIONS", "TRAINER INSTRUCTIONS", "AUTHOR INSTRUCTIONS"),
+     * but only Workplace ever collected it - so on three of the five routes the author had no
+     * way to steer the model and the interpolation was dead. The other two forms now carry the
+     * same field, and this reads whichever one is on screen.
+     *
+     * @returns {string} The author's instructions, or an empty string.
+     */
+    const ccAuthorInstructions = () => {
+        const ids = ['cc-wp-instructions', 'cc-vet-instructions', 'cc-pd-instructions', 'cc-uni-instructions'];
+        for (const id of ids) {
+            const v = document.getElementById(id)?.value;
+            if (v && v.trim()) { return v.trim(); }
+        }
+        return '';
+    };
+
     const gatherContext = () => {
         if (selectedMode === 'vet') {
             const countryCode = document.getElementById('cc-country')?.value || 'AU';
@@ -10493,6 +10541,7 @@ The context and task details follow below.
             
             const contextObj = {
                 mode: 'vet',
+                additionalInstructions: ccAuthorInstructions(),
                 country: countryCode,
                 language: getCountryLang(countryCode),
                 state: state,
@@ -10602,7 +10651,7 @@ The context and task details follow below.
                     return map;
                 })(),
                 equipmentList: finalEquipment,
-                additionalInstructions: document.getElementById('cc-wp-instructions')?.value || '',
+                additionalInstructions: ccAuthorInstructions(),
                 learnerRole: learnerRole,
                 location: state ? `${state}, ${countryCode}` : countryCode,
                 pastedContent: workplacePastedContent || '',
@@ -10624,6 +10673,7 @@ The context and task details follow below.
             const ttSubject = document.getElementById('cc-pd-industry')?.value || '';
             return {
                 mode: 'topicstext',
+                additionalInstructions: ccAuthorInstructions(),
                 country: ttCountry,
                 language: getCountryLang(ttCountry),
                 state: '',
@@ -10636,9 +10686,6 @@ The context and task details follow below.
                 industryContext: ttSubject || 'General',
                 industry: ttSubject,
                 location: ttCountry,
-                // mechanismType pins card 3's structure. Empty means the model chooses,
-                // which is the default. See TOPICSTEXT_SYSTEM_PROMPT card 3.
-                mechanismType: document.getElementById('cc-tt-mechanism')?.value || '',
                 learningOutcomes: gatherOutcomes() || [],
                 pastedContent: pdPastedContent || '',
                 priorityContent: pdPastedContent || null
@@ -10652,6 +10699,7 @@ The context and task details follow below.
 
             return {
                 mode: 'pd',
+                additionalInstructions: ccAuthorInstructions(),
                 country: countryCode,
                 language: getCountryLang(countryCode),
                 state: '',
@@ -10675,6 +10723,7 @@ The context and task details follow below.
             const industryContext = subjectArea ? `${subjectArea} (${courseLevel})` : `${courseLevel} education`;
             return {
                 mode: 'university',
+                additionalInstructions: ccAuthorInstructions(),
                 country: countryCode,
                 language: getCountryLang(countryCode),
                 state: state,

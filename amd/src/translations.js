@@ -492,6 +492,7 @@ define([], function () {
             keyIndicators: 'Key Indicators',
             whatTheLawSays: 'What the law says',
             whatThePrincipleRequires: 'What the principle requires',
+            whatThePolicyRequires: 'What the policy requires',
             selectContentLanguage: 'Select content language',
             listenToUnlock: 'listen to unlock',
             challengeMode: 'Challenge Mode',

@@ -760,9 +760,10 @@ define([], function () {
         // v10.97: Legal Link panel  -  audit-visible legislation anchor
         if (section.legalLink && section.legalLink.legislationName) {
             html += '<div class="cc5-legal-link">';
-            // v13.94.3: PD carries labelKey 'whatThePrincipleRequires' - see generator.js.
+            // v13.94.3: PD carries labelKey 'whatThePrincipleRequires'; v13.96: Workplace
+            // carries 'whatThePolicyRequires'. Both set in generator.js.
             var _llKey = section.legalLink.labelKey || 'whatTheLawSays';
-            html += '<div class="cc5-legal-link-header">' + getIcon(_llKey === 'whatTheLawSays' ? 'shield-check' : 'award') + '<span class="cc5-legal-link-label">' + escapeHtml(getLabel(_llKey)) + '</span></div>';
+            html += '<div class="cc5-legal-link-header">' + getIcon(_llKey === 'whatTheLawSays' ? 'shield-check' : (_llKey === 'whatThePolicyRequires' ? 'clipboard-check' : 'award')) + '<span class="cc5-legal-link-label">' + escapeHtml(getLabel(_llKey)) + '</span></div>';
             html += '<div class="cc5-legal-link-body">';
             html += '<p class="cc5-legal-link-legislation"><strong>' + escapeHtml(fixGrammar(section.legalLink.legislationName)) + '</strong></p>';
             if (section.legalLink.legalObligation) {

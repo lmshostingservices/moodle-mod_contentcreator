@@ -138,25 +138,25 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         { pattern: /\bdive into\b/gi, replace: "look at" },
         { pattern: /\bunpack\b/gi, replace: "explain" },
         { pattern: /\bexplore\b/gi, replace: "examine", academicSafe: true },
-        { pattern: /\bjourney\b/gi, replace: "process" },
-        { pattern: /\blandscape\b/gi, replace: "environment" },
+        { pattern: /\bjourney\b/gi, replace: "process" , academicSafe: true},
+        { pattern: /\blandscape\b/gi, replace: "environment" , academicSafe: true},
         { pattern: /\bleverage\b/gi, replace: "use" },
         { pattern: /\butilize\b/gi, replace: "use" },
         { pattern: /\butilise\b/gi, replace: "use" },
-        { pattern: /\bfoster\b/gi, replace: "support" },
+        { pattern: /\bfoster\b/gi, replace: "support" , academicSafe: true},
         { pattern: /\bholistic\b/gi, replace: "complete", academicSafe: true },
-        { pattern: /\brobust\b/gi, replace: "strong" },
+        { pattern: /\brobust\b/gi, replace: "strong" , academicSafe: true},
         { pattern: /\bsynergy\b/gi, replace: "cooperation" },
         { pattern: /\bparadigm\b/gi, replace: "approach", academicSafe: true },
-        { pattern: /\bnavigate\b/gi, replace: "manage" },
-        { pattern: /\brealm\b/gi, replace: "area" },
-        { pattern: /\btapestry\b/gi, replace: "mix" },
+        { pattern: /\bnavigate\b/gi, replace: "manage" , academicSafe: true},
+        { pattern: /\brealm\b/gi, replace: "area" , academicSafe: true},
+        { pattern: /\btapestry\b/gi, replace: "mix" , academicSafe: true},
         { pattern: /\bmultifaceted\b/gi, replace: "complex", academicSafe: true },
         { pattern: /\bnuanced\b/gi, replace: "detailed", academicSafe: true },
-        { pattern: /\bpivotal\b/gi, replace: "important" },
+        { pattern: /\bpivotal\b/gi, replace: "important" , academicSafe: true},
         { pattern: /\bcutting-edge\b/gi, replace: "modern" },
         { pattern: /\bgame-changer\b/gi, replace: "improvement" },
-        { pattern: /\bempower\b/gi, replace: "enable" },
+        { pattern: /\bempower\b/gi, replace: "enable" , academicSafe: true},
         { pattern: /\bstreamline\b/gi, replace: "simplify" },
         { pattern: /\bstakeholder engagement\b/gi, replace: "working with people involved" },
         { pattern: /\bbest practice\b/gi, replace: "proven method" },
@@ -742,7 +742,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         if (!Array.isArray(cards)) return cards;
         const mode = context?.mode || 'vet';
         const useVerbFirst = (mode === 'vet' || mode === 'workplace');
-        const isAcademicMode = (mode === 'university');
+        // v13.96 FIX-CC-PROSE-WORDSURGERY: Topics-and-Text writes articles on any subject,
+        // so the blind phrase replacements turn "landscape painting" into "environment
+        // painting" and "critical theory" into "important theory". University was already
+        // exempted from the same rules for the same reason; this route needs it more, because
+        // its whole selling point is that the subject is unconstrained.
+        const isAcademicMode = (mode === 'university' || mode === 'topicstext');
         let fixed = [...cards];
         fixed = deepCleanBannedPhrases(fixed, isAcademicMode);
         for (const card of fixed) {
@@ -1361,7 +1366,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                         // giving feedback would grow a legal panel. The PD prompt now
                         // asks for a principle or professional standard instead, and this
                         // tells the renderer which banner to use.
-                        labelKey: (mode === 'pd') ? 'whatThePrincipleRequires' : 'whatTheLawSays'
+                        // v13.96: Workplace card 2 now asks for the internal policy, SOP or
+                        // service standard rather than legislation, so "What the law says" over
+                        // an internal SOP name was simply wrong. Third key added.
+                        labelKey: (mode === 'pd') ? 'whatThePrincipleRequires'
+                            : ((mode === 'workplace') ? 'whatThePolicyRequires' : 'whatTheLawSays')
                     };
                 }
                 if (Array.isArray(card.conceptInsights)) {
@@ -2040,24 +2049,30 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     // ===================================================================
     // v11.73: VALIDITY GATE  -  replaces the old dual scoring system.
     // ChatGPT analysis: the engineered prompt already guarantees quality.
-    // The old scorer (scoreQualityGate + scoreAuditDefensibility + EQA)
-    // was double-marking the prompt's output, triggering unnecessary retries
-    // and hard failures on content that was perfectly usable.
+    // The old scorer was double-marking the prompt's output, triggering unnecessary
+    // retries and hard failures on content that was perfectly usable.
     // This validator only blocks genuinely broken content:
-    //   wrong card count, missing required fields, empty content/voiceover,
+    //   wrong card count, missing required fields, empty content,
     //   broken decision-point structure, mental-model with <3 steps.
     // ===================================================================
     // ===================================================================
     // v13.85: MEASURED CONTENT QUALITY
     //
-    // Until now the only live gate was validateCards() below, which checks card
-    // count, cardType presence, a title on three card types, decision-point
-    // options and mental-model step count. The scoring machinery that was
-    // supposed to check anything else - scoreQualityGate, scoreAuditDefensibility
-    // and the whole of enterprise_qa.js and quality_scoring.js - is exported,
-    // built and shipped, and called from nowhere since v11.73.
+    // The only live gate is validateCards() below, which checks card count, cardType
+    // presence, a title on three card types, decision-point options and mental-model
+    // step count.
     //
-    // That is why the 24 August proof run passed 190 of 190 cards while shipping
+    // v13.96 UPDATE: the dead scoring machinery this comment used to describe -
+    // scoreQualityGate, scoreAuditDefensibility, enterprise_qa.js and
+    // quality_scoring.js - has been DELETED. It had been exported, built and shipped
+    // while called from nowhere since v11.73, and it had drifted: it described card
+    // shapes that no longer existed (six legacy card types on routes that generate
+    // seven unified ones) and scoring rules that failed good content (any card
+    // mentioning "email" or "meeting" scored zero as "not office-safe"). Four of the
+    // seven specifications for card 6 in this repo were unreachable, which is how the
+    // three unified routes were able to drift apart without anyone noticing.
+    //
+    // That drift is why the 24 August proof run passed 190 of 190 cards while shipping
     // doubled words, US spellings, unexpanded acronyms, 43-word sentences,
     // 411-word screens and sentences duplicated across cards: nothing in the
     // shipping pipeline looked for any of them.
@@ -2073,7 +2088,57 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     // ===================================================================
 
     /** Fields that hold markup, identifiers or media rather than learner-facing prose. */
+    // v13.96 FIX-CC-DEPTH-DOUBLECOUNT: the four names after attemptCount are the VENDOR
+    // spellings that normalizeCardSchema() aliases and then deliberately RETAINS -
+    // keyPoints -> sceneParts/conceptInsights, standardItems -> goodItems,
+    // errorItems -> badItems, and items -> a copy of one of those. Both copies were
+    // walked, so every card measured roughly twice its real length: a genuinely 75-word
+    // card reported 150 and cleared a 140 floor. The telemetry added in v13.87 to detect
+    // thin packs could not detect them, and contentWords stamped on every shipped card
+    // has been inflated the same way. Excluding the vendor-name copies counts each
+    // string exactly once. The floors below are recalibrated to match.
     const CC_NON_PROSE_KEYS = /^(voiceoverText|voiceover|audioUrl|imageUrl|imagePrompt|image|icon|id|cardType|type|contrastType|slideHtml|html|url|src|class|className|topicId|topicTitle|qualityAction|failureReason|correct|isCorrect|generatedAt|cardIndex|attemptCount)$/;
+
+    /**
+     * v13.96: the retained VENDOR-name copies, excluded so each string is counted once.
+     *
+     * normalizeCardSchema() aliases the vendor field names onto the internal ones and
+     * then deliberately RETAINS both copies (the v13.86 deletes were reverted in v13.89
+     * because dropping them was implicated in content loss). Walking both meant every
+     * card measured roughly twice its real length.
+     *
+     * `items` is NOT in this list, because it is not always an alias: on the mistakes
+     * card it is the canonical field that the renderer and the narrator both read, built
+     * from errorItems. Excluding it flatly made the entire mistakes card measure zero.
+     * It is handled per card type in ccDedupeKeysFor() below instead.
+     */
+    const CC_ALIAS_KEYS = /^(keyPoints|standardItems|errorItems)$/;
+
+    /**
+     * v13.96: the legalLink panel is assembled from heading + keyInfo + summaryLine that
+     * are already counted on the card, so counting the panel too triple-counts card 2.
+     */
+    const CC_DERIVED_KEYS = /^(legalLink)$/;
+
+    /**
+     * v13.96: which duplicate keys to skip for a given card.
+     *
+     * @param {Object} card The card being measured.
+     * @return {Function} Predicate: true when the key is a duplicate and must be skipped.
+     */
+    const ccDedupeKeysFor = function (card) {
+        // competency-summary is the one card where `items` is a copy of standardItems
+        // (see normalizeCardSchema). Everywhere else - mistakes above all - it is the
+        // only copy of the content and must be counted.
+        const itemsIsAlias = !!(card && card.cardType === 'competency-summary');
+        return function (key) {
+            if (CC_NON_PROSE_KEYS.test(key)) { return true; }
+            if (CC_ALIAS_KEYS.test(key)) { return true; }
+            if (CC_DERIVED_KEYS.test(key)) { return true; }
+            if (itemsIsAlias && key === 'items') { return true; }
+            return false;
+        };
+    };
 
     /**
      * Collect every learner-facing string on a card into one block of prose.
@@ -2082,18 +2147,21 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
      * @param {Number} depth Recursion guard.
      * @return {String} Space-joined prose.
      */
-    const harvestCardText = function (node, depth) {
+    const harvestCardText = function (node, depth, skipKey) {
         depth = depth || 0;
         if (depth > 6 || node === null || node === undefined) { return ''; }
         if (typeof node === 'string') { return node; }
+        // v13.96: the skip predicate is decided once, from the CARD, and carried down.
+        if (depth === 0) { skipKey = ccDedupeKeysFor(node); }
+        if (!skipKey) { skipKey = function (k) { return CC_NON_PROSE_KEYS.test(k); }; }
         if (Array.isArray(node)) {
-            return node.map(function (item) { return harvestCardText(item, depth + 1); })
+            return node.map(function (item) { return harvestCardText(item, depth + 1, skipKey); })
                 .filter(Boolean).join(' ');
         }
         if (typeof node !== 'object') { return ''; }
         return Object.keys(node).map(function (key) {
-            if (CC_NON_PROSE_KEYS.test(key)) { return ''; }
-            return harvestCardText(node[key], depth + 1);
+            if (skipKey(key)) { return ''; }
+            return harvestCardText(node[key], depth + 1, skipKey);
         }).filter(Boolean).join(' ');
     };
 
@@ -2191,10 +2259,19 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     };
 
     /** Minimum and target visible words per card, by route. */
+    // v13.96: recalibrated against the de-duplicated count above. The old floors were set
+    // when the measurement was running roughly 2x, so 140 was really asking for ~70 real
+    // words - a third of what the prompt specifies. These are set just under the bottom of
+    // each route's summed field ranges, so a card that hits its per-field minima passes and
+    // only a genuinely short card trips.
     const CC_DEPTH_TARGET = {
-        vet: { floor: 140, band: '160-240' },
-        workplace: { floor: 140, band: '160-240' },
-        pd: { floor: 140, band: '160-240' },
+        // v13.96: floors sit just below the THINNEST compliant card on each route, so a
+        // pack written to the per-field minima passes and only genuinely short content
+        // trips. The binding card is mental-model: 4 steps x (3-6 + 35-45 words) counts
+        // about 152, which is why 165 was wrong. Re-derive these if the field ranges move.
+        vet: { floor: 145, band: '180-300' },
+        workplace: { floor: 145, band: '180-300' },
+        pd: { floor: 145, band: '180-300' },
         university: { floor: 150, band: '170-260' },
         // v13.92: Topics-and-Text is deliberately the SHORT route. Two paragraphs of
         // 55-70 words is 110-140 visible words a card, so the floor sits below that
