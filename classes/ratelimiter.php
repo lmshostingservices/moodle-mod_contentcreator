@@ -119,7 +119,13 @@ class ratelimiter {
         }
 
         $cache = \cache::make('mod_contentcreator', 'ratelimit');
-        $key = $userid . ':' . $bucket;
+        // FIX-CC-CACHE-SIMPLEKEY (v13.95.7): this was $userid . ':' . $bucket. The ratelimit
+        // cache declares simplekeys, and cache_helper::hash_key() rejects any key containing a
+        // character outside [a-zA-Z0-9_] - a colon is invalid. The check is wrapped in
+        // debugging(), so the key worked silently on production sites and threw a fatal
+        // coding_exception on any site with developer debugging on, killing every rate-limited
+        // action. Underscore is a legal simple-key character.
+        $key = $userid . '_' . $bucket;
         $now = time();
 
         $timestamps = $cache->get($key);
@@ -174,7 +180,9 @@ class ratelimiter {
         }
 
         $cache = \cache::make('mod_contentcreator', 'ratelimit');
-        $key = 'site:' . $bucket;
+        // FIX-CC-CACHE-SIMPLEKEY (v13.95.7): was 'site:' . $bucket - see the note in check().
+        // 'site_' is still a reserved prefix that cannot collide with a numeric user id.
+        $key = 'site_' . $bucket;
         $now = time();
 
         $timestamps = $cache->get($key);

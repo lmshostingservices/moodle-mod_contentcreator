@@ -1,5 +1,43 @@
 # Changelog
 
+## 13.95.7 - 2026-09-01
+
+### Fixed - rate-limited actions crashed on any site with developer debugging enabled
+
+Reported from a live site: clicking Suggest Topics returned
+
+    Coding error detected, it must be fixed by a programmer: Cache definition
+    mod_contentcreator/ratelimit requires simple keys. Invalid key provided. (site:vendor)
+
+The `ratelimit` cache declares `simplekeys`, and `cache_helper::hash_key()` rejects any key
+containing a character outside `[a-zA-Z0-9_]`. Both keys this plugin built joined with a
+colon - `5:vendor` for the per-user bucket and `site:vendor` for the site-wide ceiling.
+
+The reason it went unnoticed is that Moodle wraps that check in `debugging()`. On a
+production site with debugging off the key was accepted and everything worked; on any site
+with developer debugging on it threw a fatal `coding_exception` and killed **every**
+rate-limited action - topic suggestions, generation, voiceover, images - because the site
+ceiling is checked before anything else runs.
+
+Both keys now join with an underscore (`5_vendor`, `site_vendor`). `site_` remains a prefix
+that cannot collide with a numeric user id. The change resets existing counters once, which
+is harmless.
+
+`jobowner`, the plugin's other simplekeys cache, was checked and is fine: its key is an md5
+hash, and the colon it carries is in the value, not the key.
+
+### Added - tests/ratelimiter_test.php
+
+Three tests, including a regression test that exercises every bucket through both the
+per-user and site-wide paths. Moodle's PHPUnit runs with debugging enabled, so merely calling
+the limiter reproduces the fault - this was verified by restoring the colon and watching the
+test fail, then restoring the fix and watching it pass.
+
+The two behavioural tests set `ratelimitgenerate` explicitly, because `enforce()` prefers the
+admin setting over the caller's default and the plugin ships a default of 60 - without that,
+the tests would have passed while asserting nothing.
+
+
 ## 13.95.6 - 2026-09-01
 
 ### Fixed - the plugin could not have passed its own Moodle Plugin CI
