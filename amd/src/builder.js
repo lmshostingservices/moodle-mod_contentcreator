@@ -686,7 +686,7 @@ define([
         msgvoiceexcitablebold: 'Excitable &amp; Bold',
         msgvoicefirmdirect: 'Firm &amp; Direct',
         msgvoiceoverlanguage: 'Voiceover Language',
-        msgcreditnote: '<strong>Note:</strong> Primary language costs 100 credits per subtopic. Each additional language costs 50 credits per subtopic (translation pass). A full set of slides and voiceovers is created for each language selected. The credit estimate above updates automatically as you select languages.',
+        msgcreditnote: '<strong>Note:</strong> Primary language costs 50 credits per subtopic. Each additional language costs 50 credits per subtopic (translation pass). A full set of slides and voiceovers is created for each language selected. The credit estimate above updates automatically as you select languages.',
         msgimagecredits: 'When enabled, AI will generate images for each learning slide (5 credits per image)',
         msgchallengehint: 'Include the 3-activity challenge (quiz, flip cards, category sort) at the end of each topic',
         msgfreenavigation: 'Free Navigation',
@@ -715,7 +715,7 @@ define([
         // FIX-CC-AMD-HARDCODED-STRINGS pass 3 (v13.95.3)
         msgselectoptional: 'Select (optional)...',
         msgothercustom: 'Other (custom)...',
-        msgcreditspersubtopic: '100 credits per subtopic',
+        msgcreditspersubtopic: '50 credits per subtopic',
         msginitializing: 'Initializing...',
         msgmodevettitle: 'Vocational (RTO)',
         msgcountryrequired: 'Country *',
@@ -4331,14 +4331,49 @@ define([
      * tariff, which is server side. The two must move together: quoting 50 while the
      * server still charges 100 shows the author a number and takes another.
      */
-    // NOT YET 50. The owner has approved 50, but the debit happens in the LMS Labs
-    // tariff and that has not changed yet - quoting 50 while the server charges 100
-    // shows the author one number and takes another, which is the failure this comment
-    // exists to prevent. Flip this to 50 in the same release that the server tariff
-    // changes, and not before. See claude/lms-labs-credit-tariff-spec.md.
-    const CC_CREDITS_PER_SUBTOPIC = 100;
+    // 50 as of v13.97.1, on the owner's instruction.
+    //
+    // A previous revision held this at 100 on the reasoning that the server still
+    // charged 100 and a lower quote would under-state the real cost. That reasoning was
+    // wrong: ajax.php sends creditsToUse = 1 for primary generation and the vendor
+    // honours the caller's number, so a subtopic is debited ONE credit today whatever
+    // this says. The quote does not drive the charge, so lowering it cannot overcharge
+    // anyone. The genuine mismatch is 1-charged against whatever is displayed, and that
+    // is fixed server-side by the grants table in claude/lms-labs-credit-tariff-spec.md.
+    const CC_CREDITS_PER_SUBTOPIC = 50;
     const CC_CREDITS_PER_EXTRA_LANG = 50; // translation pass, unchanged
     const CC_CREDITS_PER_USD = 10;        // $10 USD = 100 credits
+
+    /**
+     * v13.97.1: the cost of the run as currently configured.
+     *
+     * The estimate line and the balance card were each doing this arithmetic in their own
+     * way, and the balance card only did it on a language-checkbox change - so on first
+     * paint it rendered literal dashes and nothing recomputed them. Both now read this.
+     *
+     * @return {Number} Total credits for the run, 0 when nothing is selected yet.
+     */
+    const ccRunTotalCredits = () => {
+        const subtopicCount = countTotalSubtopics();
+        if (!subtopicCount) { return 0; }
+        const extraLangs = countCheckedAdditionalLangs();
+        return (subtopicCount * CC_CREDITS_PER_SUBTOPIC)
+            + (subtopicCount * CC_CREDITS_PER_EXTRA_LANG * extraLangs);
+    };
+
+    /**
+     * v13.97.1: the three balance figures, rendered at first paint rather than patched in.
+     *
+     * @param {String} which 'cost' or 'after'.
+     * @return {String} The figure, or an em dash when it cannot be known yet.
+     */
+    const ccBalanceFigure = (which) => {
+        const total = ccRunTotalCredits();
+        if (!total || currentCredits === null) { return '\u2014'; }
+        return which === 'cost'
+            ? total.toLocaleString()
+            : (currentCredits - total).toLocaleString();
+    };
 
     const getCreditEstimationHtml = () => {
         const subtopicCount = countTotalSubtopics();
@@ -4369,21 +4404,16 @@ define([
      *
      * @param {Number} totalCredits The cost of the run as currently configured.
      */
-    const updateBalanceAfter = (totalCredits) => {
+    const updateBalanceAfter = () => {
         const costEl  = document.getElementById('cc-bal-cost');
         const afterEl = document.getElementById('cc-bal-after');
         if (!costEl || !afterEl) { return; }
-        if (!totalCredits || currentCredits === null) {
-            costEl.textContent = '\u2014';
-            afterEl.textContent = '\u2014';
-            afterEl.classList.remove('cc-bal-value-short');
-            return;
-        }
-        const after = currentCredits - totalCredits;
-        costEl.textContent = totalCredits.toLocaleString();
-        afterEl.textContent = after.toLocaleString();
+        costEl.textContent = ccBalanceFigure('cost');
+        afterEl.textContent = ccBalanceFigure('after');
         // A negative balance after is the one thing here the author must not miss.
-        afterEl.classList.toggle('cc-bal-value-short', after < 0);
+        const total = ccRunTotalCredits();
+        afterEl.classList.toggle('cc-bal-value-short',
+            total > 0 && currentCredits !== null && (currentCredits - total) < 0);
     };
 
     const updateCreditEstimation = () => {
@@ -4402,7 +4432,7 @@ define([
             // credit estimate silently froze at its initial value.
             const usdAmount = (totalCredits / CC_CREDITS_PER_USD).toFixed(0);
 
-            updateBalanceAfter(totalCredits);
+            updateBalanceAfter();
             if (subtopicCount > 0) {
                 if (extraLangs > 0) {
                     estimationEl.innerHTML = `${subtopicCount} subtopics x ${creditsPerSubtopic} credits + ${extraLangs} extra language${extraLangs > 1 ? 's' : ''} x ${creditsPerExtraLang} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${usdAmount} USD)`;
@@ -7314,12 +7344,12 @@ define([
                                     <span class="cc-bal-op">&minus;</span>
                                     <div class="cc-bal-item">
                                         <span class="cc-bal-label">${s('msgbalthisrun')}</span>
-                                        <span class="cc-bal-value cc-bal-value-cost" id="cc-bal-cost">&mdash;</span>
+                                        <span class="cc-bal-value cc-bal-value-cost" id="cc-bal-cost">${ccBalanceFigure('cost')}</span>
                                     </div>
                                     <span class="cc-bal-op">=</span>
                                     <div class="cc-bal-item">
                                         <span class="cc-bal-label">${s('msgbalafter')}</span>
-                                        <span class="cc-bal-value cc-bal-value-after" id="cc-bal-after">&mdash;</span>
+                                        <span class="cc-bal-value cc-bal-value-after${currentCredits !== null && ccRunTotalCredits() > currentCredits ? ' cc-bal-value-short' : ''}" id="cc-bal-after">${ccBalanceFigure('after')}</span>
                                     </div>
                                 </div>
                                 <a href="https://lms-labs.com/pricing" target="_blank" class="cc-buy-credits-link" data-testid="link-buy-credits">
@@ -7371,7 +7401,13 @@ define([
                 </div>
 
                 <!-- v7.5.xx: Credit Cost Estimation Panel -->
-                <div id="cc-credit-estimation" class="cc-credit-estimation" style="margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 8px; display: none;">
+                <!-- v13.97.1: this legacy panel carried id="cc-credit-estimation", the SAME id as
+                     the live estimate span above it. Duplicate ids are invalid HTML and
+                     getElementById returns whichever comes first in the document - so a single
+                     reordering would have made updateCreditEstimation() overwrite this whole
+                     panel instead of the estimate line. It is display:none and referenced by
+                     nothing, so the id is simply removed. -->
+                <div class="cc-credit-estimation" style="margin-bottom: 16px; padding: 12px 16px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #f59e0b; border-radius: 8px; display: none;">
                     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" style="width: 20px; height: 20px;">

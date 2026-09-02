@@ -1,5 +1,35 @@
 # Changelog
 
+## 13.97.1 - 2026-09-02
+
+### Changed - the quote is now 50 credits per subtopic
+
+On the owner's instruction. A previous revision held it at 100 on the reasoning that the
+server still charged 100 and a lower quote would under-state the real cost. That reasoning was
+wrong, and the code says so: `ajax.php` sends `creditsToUse = 1` for primary generation and the
+vendor honours the caller's number, so a subtopic is debited ONE credit today whatever the
+quote says. Lowering the quote cannot overcharge anyone.
+
+### Fixed - the balance card showed dashes instead of figures
+
+"This generation" and "Balance after" were rendered as literal em dashes and only filled in by
+`updateCreditEstimation()`, which runs when an additional-language checkbox changes. On first
+paint nothing called it, so the card sat on dashes beside an estimate line that correctly read
+800 credits.
+
+Both figures are now computed by the markup itself, from one `ccRunTotalCredits()` helper the
+estimate line and the card share, so the first paint is correct regardless of what runs after.
+The negative-balance flag is applied at first paint too.
+
+### Fixed - two elements shared one id
+
+The legacy credit panel carried `id="cc-credit-estimation"`, the same id as the live estimate
+span above it. Duplicate ids are invalid HTML and `getElementById` returns whichever comes
+first in the document, so a single reordering would have made `updateCreditEstimation()`
+overwrite the whole panel instead of the estimate line. The panel is `display:none` and
+referenced by nothing, so the id is removed.
+
+
 ## 13.97.0 - 2026-09-02
 
 ### Added - a row per subtopic while the course is being built

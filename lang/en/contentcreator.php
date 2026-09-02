@@ -1322,7 +1322,7 @@ $string['msgvoiceinformativecalm'] = 'Informative &amp; Calm';
 $string['msgvoiceexcitablebold'] = 'Excitable &amp; Bold';
 $string['msgvoicefirmdirect'] = 'Firm &amp; Direct';
 $string['msgvoiceoverlanguage'] = 'Voiceover Language';
-$string['msgcreditnote'] = '<strong>Note:</strong> Primary language costs 100 credits per subtopic. Each additional language costs 50 credits per subtopic (translation pass). A full set of slides and voiceovers is created for each language selected. The credit estimate above updates automatically as you select languages.';
+$string['msgcreditnote'] = '<strong>Note:</strong> Primary language costs 50 credits per subtopic. Each additional language costs 50 credits per subtopic (translation pass). A full set of slides and voiceovers is created for each language selected. The credit estimate above updates automatically as you select languages.';
 $string['msgimagecredits'] = 'When enabled, AI will generate images for each learning slide (5 credits per image)';
 $string['msgchallengehint'] = 'Include the 3-activity challenge (quiz, flip cards, category sort) at the end of each topic';
 $string['msgfreenavigation'] = 'Free Navigation';
@@ -1353,7 +1353,7 @@ $string['msgreasonstalesections'] = '{$a} sections hold voiceover produced by an
 // third and final migration pass out of amd/src/builder.js.
 $string['msgselectoptional'] = 'Select (optional)...';
 $string['msgothercustom'] = 'Other (custom)...';
-$string['msgcreditspersubtopic'] = '100 credits per subtopic';
+$string['msgcreditspersubtopic'] = '50 credits per subtopic';
 $string['msginitializing'] = 'Initializing...';
 $string['msgmodevettitle'] = 'Vocational (RTO)';
 $string['msgcountryrequired'] = 'Country *';
