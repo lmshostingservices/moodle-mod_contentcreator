@@ -562,13 +562,19 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
             }
             if (obj.goodItems && obj.goodItems.length) {
                 var goodTexts = obj.goodItems.map(function (item) {
-                    return typeof item === 'string' ? item : (item.text || item.behaviour || item.criterion || '');
+                    // v13.95.8: carry the benefit into the export, matching the
+                    // consequence on badItems below.
+                    if (typeof item === 'string') { return item; }
+                    var _t = item.text || item.behaviour || item.criterion || '';
+                    return item.benefit ? (_t + '. ' + item.benefit) : _t;
                 }).filter(Boolean);
                 if (goodTexts.length) paras.push(goodTexts.join(' \u2022 '));
             }
             if (obj.badItems && obj.badItems.length) {
                 var badTexts = obj.badItems.map(function (item) {
-                    return typeof item === 'string' ? item : (item.text || '');
+                    if (typeof item === 'string') { return item; }
+                    var _t = item.text || '';
+                    return item.consequence ? (_t + '. ' + item.consequence) : _t;
                 }).filter(Boolean);
                 if (badTexts.length) paras.push(badTexts.join(' \u2022 '));
             }

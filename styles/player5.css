@@ -203,6 +203,12 @@
     --cc5-blue-light: hsl(217deg 91% 97%);
     --cc5-green: hsl(142deg 71% 45%);
     --cc5-green-light: hsl(142deg 76% 97%);
+    /* v13.95.8 FIX-CC-OKBUTTON-HUE: white needs 4.5:1, and --cc5-green above carries it
+       at only 2.30:1, so a solid control with a white label needs a darker step. These
+       two stay on the card green's own hue (142) rather than the teal ramp (168), which
+       read as a different, muddier colour beside the green cards. */
+    --cc5-green-solid: hsl(142deg 71% 29%);       /* white on this: 5.11:1 */
+    --cc5-green-solid-dark: hsl(142deg 74% 23%);  /* white on this: 7.08:1 */
     --cc5-amber: hsl(38deg 92% 50%);
     --cc5-amber-light: hsl(38deg 92% 97%);
     --cc5-rose: hsl(350deg 89% 60%);
@@ -222,10 +228,9 @@
     --cc5-yellow-light: hsl(48deg 96% 97%);
     --cc5-teal: hsl(168deg 76% 42%);
     --cc5-teal-dark: hsl(168deg 76% 35%);
-    /* v13.95: white text needs 4.5:1; the teal ramp above tops out around 2.4:1 under
-       white, so anything that puts a white label on teal uses these two. */
-    --cc5-teal-darker: hsl(168deg 80% 22%);
-    --cc5-teal-darkest: hsl(168deg 82% 18%);
+    /* v13.95.8: --cc5-teal-darker / --cc5-teal-darkest are gone. Their only consumer
+       was the focus-modal OK button, which now uses the card-green ramp
+       (--cc5-green-solid / --cc5-green-solid-dark) so it matches the cards beside it. */
     --cc5-emerald: hsl(158deg 64% 52%);
     --cc5-teal-light: hsl(168deg 76% 97%);
     --cc5-purple-dark: hsl(262deg 83% 48%);
@@ -2770,7 +2775,7 @@ body[data-bs-theme="dark"] .cc5-pitfall-positive {
     position: relative;
 }
 .cc5-tips-list li::before {
-    content: '✓';
+    content: '\2713';
     position: absolute;
     left: 0;
     color: hsl(142 72% 42%);
@@ -2807,7 +2812,7 @@ body[data-bs-theme="dark"] .cc5-pitfall-positive {
 }
 
 .cc5-scenario-reflection-answers li::before {
-    content: '→ ';
+    content: '\2192\20 ';
     color: hsl(212 96% 52%);
     font-weight: 600;
 }
@@ -3341,7 +3346,10 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 
 /* v13.85: the consequence attached to each "What to Avoid" item. Flat, no accent
    rail - it reads as a second line of the same item, not a nested panel. */
-.cc5-dont-consequence {
+/* v13.95.8: the benefit attached to each "What Good Looks Like" item. Identical to
+   .cc5-dont-consequence so the two Card 6 columns read as one consistent layout. */
+.cc5-dont-consequence,
+.cc5-do-benefit {
     display: block;
     margin-top: var(--cc5-space-1);
     font-size: var(--cc5-text-sm);
@@ -3977,7 +3985,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 .cc5-incorrect-details[open] .cc5-incorrect-summary::after {
-    content: '−';
+    content: '\2212';
 }
 
 .cc5-incorrect-list {
@@ -4145,7 +4153,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 .cc5-consequences-details[open] .cc5-consequences-summary::after {
-    content: '−';
+    content: '\2212';
 }
 
 .cc5-consequences-body {
@@ -5319,7 +5327,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 .cc5-step-why[open] summary::before {
-    content: '−';
+    content: '\2212';
 }
 
 .cc5-step-why p {
@@ -6989,11 +6997,14 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     margin: 0 0 var(--cc5-space-lg);
 }
 
-/* v13.95 FIX-CC-FOCUSMODAL-CONTRAST: --cc5-teal carries white at 2.41:1 and the
-   hover gradient at 2.30:1. Use the dark end of the teal ramp for the fill so the
-   white label clears AA; the light teal stays for accents elsewhere. */
+/* v13.95.8 FIX-CC-OKBUTTON-HUE: white on --cc5-teal is 2.41:1, so v13.95 darkened this
+   button down the teal ramp (hue 168). That cleared AA but put a muddy blue-green button
+   in the middle of green cards. The fill is now the card green's own hue at a darker
+   step: 5.11:1 resting, 7.08:1 on hover. Same accessibility, right colour. */
 .cc5-focus-modal-btn {
-    background: linear-gradient(135deg, var(--cc5-teal-darker), var(--cc5-teal-darkest));
+    /* v13.95.8 FIX-CC-OKBUTTON-HUE: was the teal ramp (hue 168), which sat beside the
+       green cards as a separate, muddy colour. Same contrast headroom, card-green hue. */
+    background: linear-gradient(135deg, var(--cc5-green-solid), var(--cc5-green-solid-dark));
     color: white !important;
     border: none;
     padding: var(--cc5-space-4) var(--cc5-space-8);
@@ -7009,7 +7020,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 .cc5-focus-modal-btn:hover,
 .cc5-focus-modal-btn:focus,
 .cc5-focus-modal-btn:active {
-    background: linear-gradient(135deg, var(--cc5-teal-darkest), hsl(160 82% 16%)) !important;
+    background: linear-gradient(135deg, var(--cc5-green-solid-dark), hsl(142deg 76% 19%)) !important;
     box-shadow: var(--cc5-shadow-sm);
     color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
@@ -17729,7 +17740,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     border: 1px solid hsl(142deg 55% 80%);
 }
 .cc5-player .cc5-dp-option[data-selected="correct"] .cc5-dp-result-icon::after {
-    content: '✓';
+    content: '\2713';
     color: hsl(142deg 65% 42%);
     font-weight: 700;
 }
@@ -17751,7 +17762,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     border: 1px solid hsl(0deg 65% 85%);
 }
 .cc5-player .cc5-dp-option[data-selected="incorrect"] .cc5-dp-result-icon::after {
-    content: '✗';
+    content: '\2717';
     color: hsl(0deg 65% 50%);
     font-weight: 700;
 }

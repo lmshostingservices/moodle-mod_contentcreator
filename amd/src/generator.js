@@ -1502,7 +1502,23 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                                      card.what_good_looks_like || card.positiveExamples ||
                                      card.standardItems || null;
                 }
-                if (card.goodItems) card.goodItems = _toStrArray(card.goodItems);
+                // v13.95.8: goodItems now carry a benefit line, the mirror of the
+                // consequence on badItems, so that both Card 6 columns read as a short
+                // label plus one explanatory line. _toStrArray would flatten them back
+                // to bare labels, so this uses its own pair mapper. An item with no
+                // benefit still renders as a single line, which is what saved modules
+                // from earlier builds contain.
+                const _toGoodPairArray = function (arr) {
+                    if (!Array.isArray(arr)) return [];
+                    return arr.map(function (item) {
+                        if (typeof item === 'string') { return { text: item.trim(), benefit: '' }; }
+                        return {
+                            text: (item.text || item.behaviour || item.criterion || item.item || '').trim(),
+                            benefit: (item.benefit || item.why || item.outcome || item.result || '').trim()
+                        };
+                    }).filter(function (p) { return p.text; });
+                };
+                if (card.goodItems) card.goodItems = _toGoodPairArray(card.goodItems);
                 // badItems aliases
                 if (!card.badItems) {
                     // v13.75 VENDOR-SCHEMA: errorItems is what the API now emits for the

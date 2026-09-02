@@ -1022,9 +1022,18 @@ define([], function () {
                 html += '<ul class="cc5-dos-list">';
                 goodItems.forEach(function (item) {
                     var text = typeof item === 'string' ? item : (item.text || item.behaviour || item.criterion || '');
+                    // v13.95.8: the benefit line is the mirror of the consequence on the
+                    // "What to Avoid" side, so both columns read as a short label plus one
+                    // explanatory line. Modules saved before this carry no benefit and
+                    // render as a single line exactly as they did.
+                    var benefit = (typeof item === 'string') ? '' : (item.benefit || '');
                     html += '<li class="cc5-do-item">';
                     html += '<span class="cc5-list-icon">' + getIcon('check') + '</span>';
-                    html += '<span>' + escapeHtml(fixGrammar(text)) + '</span>';
+                    html += '<span>' + escapeHtml(fixGrammar(text));
+                    if (benefit) {
+                        html += '<span class="cc5-do-benefit">' + escapeHtml(fixGrammar(benefit)) + '</span>';
+                    }
+                    html += '</span>';
                     html += '</li>';
                 });
                 html += '</ul></div>';

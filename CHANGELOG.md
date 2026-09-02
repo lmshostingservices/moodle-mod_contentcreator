@@ -1,5 +1,105 @@
 # Changelog
 
+## 13.95.8 - 2026-09-02
+
+### Changed - content prompts rewritten so cards carry a moment, not just a word count
+
+The prompts specified shapes and word counts but never a standard, so the model wrote to the
+count: correct, on-length and forgettable. Three changes across all four card-based routes.
+
+Scenario cards (hook-scenario, applied-scenario) now require EXACTLY 2 sentences, 42-58 words
+- the first sets the scene, the second says what is happening or what it costs you. Previously
+these arrived as one long run-on sentence, which is what the old "37-52 words" invited.
+
+The mistakes card's `consequence` now requires 2 sentences, 34-46 words. Sentence one is the
+operational impact; sentence two has to land it on a real person, with a route-appropriate
+worked example in each prompt - "the apprentice on the other end of the load is the one who
+wears it" (VET), "the customer who waited three days for that callback is the one who tells
+forty people about it" (Workplace), "the team member who stopped raising problems six months
+ago did not go quiet by accident" (PD).
+
+A shared MAKE IT LAND block now sits in all four card-based system prompts and all four repair
+prompts: every card must contain at least one sentence a person could picture, and concrete
+beats abstract - "the handover sheet nobody signed" over "documentation gaps". It also forbids
+the failure mode this invites: no manufactured drama, no exaggerated risk, no fear used to
+make a point.
+
+Topics-and-Text is deliberately excluded. That route is third person and explicitly forbids
+named characters and stories, so the rule would contradict its own contract.
+
+### Fixed - the quiz gave the answer away by shape
+
+The decision-point prompt capped each wrong answer at 8-12 words and left the correct answer
+with no cap at all (or a wider one on two routes). Every generated quiz therefore had one long,
+specific, self-justifying option and three short stubs, and a learner could pick the answer
+without reading the question.
+
+All four options are now 10-16 words on every route, with an explicit ANSWER-LENGTH PARITY
+rule stating the failure mode, the mechanism, and that any justification belongs in the
+feedback rather than the option text. Applied to VET, Workplace, PD and Topics-and-Text, to
+all four repair prompts, and to the story-QA rewrite pass - the most likely place for the
+correct answer to re-grow.
+
+### Fixed - the two Card 6 columns had different shapes
+
+"What to Avoid" items carried a label plus a consequence; "What Good Looks Like" carried only
+a label, so the left column read as run-on sentences beside a tidy heading-plus-explanation
+list on the right. This was a data-shape difference, not styling: `badItems` are
+`{text, consequence}` and `goodItems` were bare strings.
+
+`goodItems` now carry `{text, benefit}` - a short verb-first label plus one line on what it
+changes for a real person in that role. Plumbed end to end: prompt, normaliser
+(`_toGoodPairArray`), renderer (`.cc5-do-benefit`, sharing the existing consequence rule),
+narration, text export, print HTML and SCORM export. Both editor collectors carry the benefit
+across by index rather than collapsing the item to a string, the same guard v13.90.1 added for
+`badItems`.
+
+Modules generated before this change carry bare strings and render exactly as they did.
+
+### Fixed - repair passes silently undid the new contract
+
+Four of the five changes above were applied to the generation prompts only. The repair path
+fires on any structural failure and restates a stripped-down card spec, which still described
+the pre-change shape - and in one case actively contradicted it. The University repair prompt
+was worse: every one of its floors was roughly half the generation range, so a University
+section that tripped validation came back at about 55% of spec length, in one pass, invisibly.
+
+All four repair prompts now carry the generation ranges verbatim, the MAKE IT LAND rule, and
+an explicit instruction that a repaired field must never come back shorter than its range.
+
+### Fixed - tick and cross characters rendered as mojibake
+
+Reported from a live site: `âœ"` appearing beside quiz options. Three stylesheets carried
+literal UTF-8 characters inside `content:` declarations - the tick U+2713, the cross U+2717,
+the bullet, the arrow and the minus sign. A stylesheet with no `@charset` served under a
+Latin-1 charset header decodes those bytes as cp1252, which is exactly the glyph sequence
+reported.
+
+All fifteen replaced with CSS hex escapes (`\2713`), which no charset header can misread. An
+HTTP `Content-Type` charset overrides `@charset`, so the escapes are the more robust fix.
+Worth confirming the real header on the served stylesheet - this plugin bypasses `styles.php`
+and serves its CSS as static files, so a server-level `AddDefaultCharset` is the likely cause.
+
+### Fixed - the focus-modal OK button was the wrong green
+
+v13.95 darkened this button down the teal ramp (hue 168) to clear AA on its white label. It
+cleared AA, but it sat beside green cards (hue 142) as a separate, muddier colour. The fill is
+now the cards' own hue at a darker step: white on it is 5.11:1 resting and 7.08:1 on hover.
+`--cc5-teal-darker` and `--cc5-teal-darkest` had no other consumer and are removed.
+
+### Fixed - the Card Title box was blank on every unified card
+
+Unified cards have no per-card title: only `competency-summary`'s prompt asks for one, and the
+renderers print `section.title`, which nothing else assigns. The box was correct and simply
+gave the author no way to know that. It now carries a placeholder saying the heading is fixed
+for the card type.
+
+It deliberately does NOT fall back to `card.heading`. On concept-explainer that field is the
+legislation or policy name, and on decision-point it is the question itself - which already has
+its own control in the same modal - so binding the title box to it would let a field labelled
+"Card Title" silently overwrite the question and surface it a second time as an `<h3>`.
+
+
 ## 13.95.7 - 2026-09-01
 
 ### Fixed - rate-limited actions crashed on any site with developer debugging enabled

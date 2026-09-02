@@ -917,9 +917,14 @@ define([], function () {
                                         // criterion; reading text alone narrated an empty
                                         // string for every promoted legacy item that used
                                         // one of the other two names.
-                                        _7parts.push(_fg(typeof gi === 'string'
-                                            ? gi
-                                            : (gi.text || gi.behaviour || gi.criterion || '')));
+                                        if (typeof gi === 'string') { _7parts.push(_fg(gi)); return; }
+                                        // v13.95.8: goodItems now carry a benefit, the
+                                        // mirror of the consequence on badItems below.
+                                        // Narrating text alone would have made narration
+                                        // LESS symmetric than the page, not more.
+                                        var _giLine = _fg(gi.text || gi.behaviour || gi.criterion || '');
+                                        if (gi.benefit) { _giLine += '. ' + _fg(gi.benefit); }
+                                        _7parts.push(_giLine);
                                     });
                                 }
                                 if (card.badItems && card.badItems.length) {

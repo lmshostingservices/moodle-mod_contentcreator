@@ -659,6 +659,7 @@ define([], function () {
             insightSentencesLabel: 'Insight Sentences <small style="font-weight:400;opacity:0.7;"> -  each sentence shown as a numbered blue chip on screen</small>',
             detailCardsLabel: 'Detail Cards <small style="font-weight:400;opacity:0.7;"> -  optional icon-title-description cards shown in a grid below the insights</small>',
             cardTitleLabel: 'Card Title',
+            cardTitleOptionalPlaceholder: 'Optional - most cards use their fixed heading',
             voiceoverScriptLabel: 'Voiceover Script <small>(read aloud for this card)</small>',
             keyTermsFlipLabel: 'Key Terms <small>(become the Flip &amp; Learn cards)</small>',
             conceptInsightsLabel: 'Concept Insights <small> -  icon / title / text panels shown in a grid</small>',

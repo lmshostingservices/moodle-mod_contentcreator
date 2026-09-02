@@ -5975,13 +5975,21 @@ define([
                         if (card.goodItems && card.goodItems.length) {
                             lines.push('  What Good Looks Like:');
                             card.goodItems.forEach(function (gi) {
-                                lines.push('    OK ' + fixGrammar(typeof gi === 'string' ? gi : (gi.text || gi)));
+                                // v13.95.8: include the benefit, and never fall back to the
+                                // object itself - fixGrammar(obj) printed "[object Object]".
+                                if (typeof gi === 'string') { lines.push('    OK ' + fixGrammar(gi)); return; }
+                                var _gl = '    OK ' + fixGrammar(gi.text || '');
+                                if (gi.benefit) { _gl += ' - ' + fixGrammar(gi.benefit); }
+                                lines.push(_gl);
                             });
                         }
                         if (card.badItems && card.badItems.length) {
                             lines.push('  Common Mistakes:');
                             card.badItems.forEach(function (bi) {
-                                lines.push('    x ' + fixGrammar(typeof bi === 'string' ? bi : (bi.text || bi)));
+                                if (typeof bi === 'string') { lines.push('    x ' + fixGrammar(bi)); return; }
+                                var _bl = '    x ' + fixGrammar(bi.text || '');
+                                if (bi.consequence) { _bl += ' - ' + fixGrammar(bi.consequence); }
+                                lines.push(_bl);
                             });
                         }
                         if (card.question) {
@@ -6604,14 +6612,24 @@ define([
                         if (card.goodItems && card.goodItems.length) {
                             printHtml += '<div class="dos"><h4>' + getLabel('whatGoodLooksLike') + '</h4><ul>';
                             card.goodItems.forEach(function (gi) {
-                                printHtml += '<li>' + escapeHtml(fixGrammar(typeof gi === 'string' ? gi : (gi.text || gi))) + '</li>';
+                                if (typeof gi === 'string') { printHtml += '<li>' + escapeHtml(fixGrammar(gi)) + '</li>'; return; }
+                                printHtml += '<li>' + escapeHtml(fixGrammar(gi.text || ''));
+                                if (gi.benefit) {
+                                    printHtml += '<p style="margin:2px 0 0 0; font-size:10pt; color:#166534;">' + escapeHtml(fixGrammar(gi.benefit)) + '</p>';
+                                }
+                                printHtml += '</li>';
                             });
                             printHtml += '</ul></div>';
                         }
                         if (card.badItems && card.badItems.length) {
                             printHtml += '<div class="donts"><h4>' + getLabel('commonMistakes') + '</h4><ul>';
                             card.badItems.forEach(function (bi) {
-                                printHtml += '<li>' + escapeHtml(fixGrammar(typeof bi === 'string' ? bi : (bi.text || bi))) + '</li>';
+                                if (typeof bi === 'string') { printHtml += '<li>' + escapeHtml(fixGrammar(bi)) + '</li>'; return; }
+                                printHtml += '<li>' + escapeHtml(fixGrammar(bi.text || ''));
+                                if (bi.consequence) {
+                                    printHtml += '<p style="margin:2px 0 0 0; font-size:10pt; color:#991b1b;">' + escapeHtml(fixGrammar(bi.consequence)) + '</p>';
+                                }
+                                printHtml += '</li>';
                             });
                             printHtml += '</ul></div>';
                         }
@@ -7724,7 +7742,12 @@ define([
                 if (card.goodItems && card.goodItems.length) {
                     parts.push('What good looks like');
                     card.goodItems.forEach(function (gi) {
-                        parts.push(fixGrammar(typeof gi === 'string' ? gi : (gi.text || '')));
+                        if (typeof gi === 'string') { parts.push(fixGrammar(gi)); return; }
+                        // v13.95.8: narrate the benefit too, matching the badItems
+                        // branch below - it is the half that says why it matters.
+                        var gline = fixGrammar(gi.text || '');
+                        if (gi.benefit) { gline += '. ' + fixGrammar(gi.benefit); }
+                        parts.push(gline);
                     });
                 }
                 if (card.badItems && card.badItems.length) {
@@ -13513,7 +13536,21 @@ define([
                         // Card title
                         html += '<div class="cc5-edit-field">';
                         html += '<label>' + getLabel('cardTitleLabel') + '</label>';
-                        html += '<input type="text" class="cc5-edit-card-title" value="' + escapeHtml(card.title || '') + '">';
+                        // v13.95.8 FIX-CC-CARDTITLE-BLANK: this box was blank on every
+                        // unified card, and the honest reason is that unified cards have no
+                        // title - only competency-summary's prompt asks for one, and the
+                        // unified renderers print section.title, which nothing else assigns.
+                        //
+                        // It must NOT fall back to card.heading. On concept-explainer heading
+                        // is the legislation or policy name, and on decision-point it is the
+                        // question itself, which already has its own control further down this
+                        // modal. Writing either into title makes cc-card-slots print it as an
+                        // <h3> card title, duplicating the question on screen.
+                        //
+                        // So the field stays bound to card.title, and the placeholder tells the
+                        // author what an empty box means rather than leaving them guessing.
+                        html += '<input type="text" class="cc5-edit-card-title" value="' + escapeHtml(card.title || '') + '"'
+                            + ' placeholder="' + escapeHtml(getLabel('cardTitleOptionalPlaceholder')) + '">';
                         html += '</div>';
 
                         // Card voiceover
@@ -14253,10 +14290,17 @@ define([
                 }
                 if (section.cardType === 'competency-summary') {
                     // v10.39: goodItems/badItems dual-column schema
+                    // v13.95.8: goodItems carry {text, benefit}; carry the benefit across by
+                    // index rather than collapsing to a bare string and destroying it.
+                    var _priorGood = Array.isArray(cardData.goodItems) ? cardData.goodItems : [];
                     var goodItems = [];
                     modal.find('.cc5-edit-good-item').each(function () {
                         var s = $(this).find('.cc5-edit-good-item-text').val().trim();
-                        if (s) goodItems.push(s);
+                        if (!s) { return; }
+                        var _gidx = parseInt($(this).data('idx'), 10);
+                        var _gp = (!isNaN(_gidx) && _priorGood[_gidx]
+                            && typeof _priorGood[_gidx] === 'object') ? _priorGood[_gidx] : null;
+                        goodItems.push({ text: s, benefit: (_gp && _gp.benefit) || '' });
                     });
                     // v13.85: badItems entries carry {text, consequence}. The editor only
                     // exposes the text, so carry the existing consequence across by index
@@ -14294,9 +14338,14 @@ define([
                     // Deep-clone original card to preserve non-editable fields
                     var _origCard = (_origCards[_ci] && typeof _origCards[_ci] === 'object')
                         ? JSON.parse(JSON.stringify(_origCards[_ci])) : {};
+                    // v13.95.8 FIX-CC-CARDTITLE-BLANK: card.heading is deliberately NOT
+                    // written here. On concept-explainer it holds the legislation name and on
+                    // decision-point the question itself, so writing the title box into it
+                    // would let a box labelled "Card Title" silently overwrite the question.
+                    var _cardTitleVal = _blk.find('.cc5-edit-card-title').val().trim();
                     var _cu = Object.assign(_origCard, {
                         cardType:     _ct,
-                        title:        _blk.find('.cc5-edit-card-title').val().trim(),
+                        title:        _cardTitleVal,
                         voiceoverText:_blk.find('.cc5-edit-card-voiceover').val().trim()
                     });
                     // v13.92: Topics-and-Text prose cards.
@@ -14401,10 +14450,21 @@ define([
                         _cu.items = _mits;
                     }
                     if (_ct === 'competency-summary') {
+                        // v13.95.8: goodItems now carry {text, benefit}, the mirror of
+                        // {text, consequence} on badItems. Collapsing them back to bare
+                        // strings here would destroy the benefit on every save - the exact
+                        // defect v13.90.1 fixed for badItems immediately below. The editor
+                        // exposes only the item text, so the benefit is carried across by
+                        // index from the original card data, the same way.
+                        var _priorGoodCard = Array.isArray(_cu.goodItems) ? _cu.goodItems : [];
                         var _gi = [];
                         _blk.find('.cc5-edit-good-item').each(function () {
                             var s = $(this).find('.cc5-edit-good-item-text').val().trim();
-                            if (s) _gi.push(s);
+                            if (!s) { return; }
+                            var _gidx = parseInt($(this).data('idx'), 10);
+                            var _gprior = (!isNaN(_gidx) && _priorGoodCard[_gidx]
+                                && typeof _priorGoodCard[_gidx] === 'object') ? _priorGoodCard[_gidx] : null;
+                            _gi.push({ text: s, benefit: (_gprior && _gprior.benefit) || '' });
                         });
                         // v13.90.1 FIX-BADITEMS-CONSEQUENCE-LOSS: this collapsed every
                         // badItem back to a bare string, permanently destroying its

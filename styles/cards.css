@@ -477,7 +477,7 @@ body.dark .cc-player-container,
 }
 
 .cc-topic-card.completed::before {
-    content: '✓';
+    content: '\2713';
     position: absolute;
     top: 6px;
     right: 8px;
@@ -681,7 +681,7 @@ body.dark .cc-player-container,
 }
 
 .cc-quick-nav-pill.completed::after {
-    content: ' ✓';
+    content: ' \2713';
 }
 
 /* Section Cards */

@@ -348,6 +348,8 @@ the named tool, form, system or timeframe. Never pad with adjectives, restatemen
 
 VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
 
+MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time: "the handover sheet nobody signed" over "documentation gaps"; "the apprentice who copies what you do" over "workforce culture". Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
+
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
 map-pin  ->  location, site, workplace | users  ->  team, people, staff, group | user-check  ->  supervisor, approval, responsibility | handshake  ->  agreement, coordination, working together
 message-circle  ->  communication, discussion, conversation, email | megaphone  ->  reporting, notifying, announcing | phone  ->  phone call, contact
@@ -363,13 +365,14 @@ ICON CONSISTENCY RULES:
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(34-46 words, 2nd person, specific: name the place, the time of day, the equipment, what the learner can see or hear)}, highlightText(optional, max 20 words), voiceoverText
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific: name the place, the time of day, the equipment, what the learner can see or hear. The first sentence sets the scene, the second says what is happening or what it means for you  -  never one long run-on sentence)}, highlightText(optional, max 20 words), voiceoverText
 2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(35-50 words)}, heading(the legislation or policy name), keyInfo(25-35 words  -  the obligation in plain English, no section numbers), summaryLine(15-20 words linking to Card 1), voiceoverText
 3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(35-45 words with concrete nouns: what you do, what you are looking for, what tells you it is done)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(34-46 words)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), consequence(25-32 words: the specific impact, who it lands on, and how it shows up)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 12-16 words)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 18-28 words, 2nd person), standardItems[1]{text(the ONE correct answer), consequence(28-38 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 8-12 words), consequence(25-35 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  DIFFERENT setting and time from Card 1, highlightText(optional), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific operational impact. Sentence two makes it land on a real person in this job: name who is standing there when it goes wrong and what it costs them, in plain words a worker would use  -  "The apprentice on the other end of the load is the one who wears it.")}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  say what it changes for a real person in this role, the way a colleague would put it. "As the nurse on an emergency ward, asking for feedback early is how a small mistake stays small." Where it fits naturally, make it the moment the learner recognises, not a principle they already agree with)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 18-28 words, 2nd person), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(28-38 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(25-35 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+   ANSWER-LENGTH PARITY (all routes): the correct answer and all three wrong answers MUST be the same length and the same level of detail  -  every option 10-16 words, each naming a specific action. A learner must not be able to pick the answer by spotting the longest or most detailed option. Wrong answers are complete, plausible strategies that a reasonable person might choose, never two-word stubs ("Offer training") and never absurd ("Do everything at once"). Do not append a justification, benefit or outcome clause to the correct answer that the wrong answers do not also have  -  that reasoning belongs in consequence, not in text.
 `;
 
     // ===========================================================================
@@ -404,6 +407,8 @@ institution, the actual finding, the exact boundary condition. Never pad with ad
 restatement or filler.
 
 VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 60 words.
+
+MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time: "the handover sheet nobody signed" over "documentation gaps"; "the apprentice who copies what you do" over "workforce culture". Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
 
 CARDS (generate in this order):
 1. concept-anchor  -  conceptDefinition(48-64 words), significance(46-62 words: who this matters to, what changes when it is applied), keyTerms[3]{term(1-4 words), definition(22-30 words)}, voiceoverText
@@ -448,6 +453,8 @@ named system, policy, form or timeframe. Never pad with adjectives, restatement 
 
 VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
 
+MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time: "the handover sheet nobody signed" over "documentation gaps"; "the apprentice who copies what you do" over "workforce culture". Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
+
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
 map-pin  ->  location, site, workplace | users  ->  team, people, staff, group | user-check  ->  supervisor, approval, responsibility | handshake  ->  agreement, coordination, working together
 message-circle  ->  communication, discussion, conversation, email | megaphone  ->  reporting, notifying, announcing | phone  ->  phone call, contact
@@ -463,13 +470,14 @@ ICON CONSISTENCY RULES:
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(37-52 words, 2nd person, specific: name the place, the time of day, the system or equipment, what the learner can see or hear)}, highlightText(optional, max 20 words), voiceoverText
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific: name the place, the time of day, the system or equipment, what the learner can see or hear. The first sentence sets the scene, the second says what is happening or what it costs you  -  never one long run-on sentence)}, highlightText(optional, max 20 words), voiceoverText
 2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(36-52 words)}, heading(the legislation or policy name), keyInfo(28-40 words  -  the obligation in plain English, no section numbers), summaryLine(16-24 words linking to Card 1), voiceoverText
 3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(37-42 words with specific tools/systems/forms: what you do, what you are looking for, what tells you it is done)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(37-52 words)}  -  DIFFERENT setting and time from Card 1, highlightText(optional, max 20 words), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), consequence(26-38 words: the specific business/safety/regulatory impact, who it lands on, and how it shows up)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 12-16 words)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, compliance stakes), standardItems[1]{text(the ONE correct answer, 8-14 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 8-12 words), consequence(26-36 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  DIFFERENT setting and time from Card 1, highlightText(optional, max 20 words), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific business, safety or regulatory impact. Sentence two makes it land on a real person: name the customer, colleague or team member standing in it and what it costs them, in plain words  -  "The customer who waited three days for that callback is the one who tells forty people about it.")}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  say what it changes for a real person in this role, the way a colleague would put it. "As the nurse on an emergency ward, asking for feedback early is how a small mistake stays small." Where it fits naturally, make it the moment the learner recognises, not a principle they already agree with)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, compliance stakes), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(26-36 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+   ANSWER-LENGTH PARITY (all routes): the correct answer and all three wrong answers MUST be the same length and the same level of detail  -  every option 10-16 words, each naming a specific action. A learner must not be able to pick the answer by spotting the longest or most detailed option. Wrong answers are complete, plausible strategies that a reasonable person might choose, never two-word stubs ("Offer training") and never absurd ("Do everything at once"). Do not append a justification, benefit or outcome clause to the correct answer that the wrong answers do not also have  -  that reasoning belongs in consequence, not in text.
 `;
 
     // ===========================================================================
@@ -504,6 +512,8 @@ adjectives, restatement or filler.
 
 VOICEOVER: Every voiceoverText must not be empty and must reflect the visible content. Starts with substantive content  -  NOT the card name or "In this card...". Min 70 words.
 
+MAKE IT LAND: a learner remembers a moment, not a principle. Every card must contain at least one sentence a person could picture: a named role doing a named thing at a named time, or the human cost of getting it wrong stated plainly. Write the second sentence of a consequence or a benefit as the thing a colleague would actually say, not the thing a policy would say. Concrete beats abstract every time: "the handover sheet nobody signed" over "documentation gaps"; "the apprentice who copies what you do" over "workforce culture". Never manufacture drama, exaggerate risk, or use fear to make a point  -  the pull comes from the detail being true and recognisable, not from the stakes being raised.
+
 ICONS  -  choose based on the MEANING of the sentence (what it is DOING), not the title word. Valid values only:
 map-pin  ->  location, site, workplace | users  ->  team, people, staff, group | user-check  ->  supervisor, approval, responsibility | handshake  ->  agreement, coordination, working together
 message-circle  ->  communication, discussion, conversation, email | megaphone  ->  reporting, notifying, announcing | phone  ->  phone call, contact
@@ -519,13 +529,14 @@ ICON CONSISTENCY RULES:
 - Every icon within a single card MUST be different from all others in that same card.
 
 CARDS (generate in this order):
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(37-52 words, 2nd person, specific professional detail: who is in the room, the deadline, what was said, what is at stake)}, highlightText(optional, max 20 words), voiceoverText
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total, 2nd person, specific professional detail: who is in the room, the deadline, what was said, what is at stake. The first sentence sets the scene, the second says what is happening or what it costs you  -  never one long run-on sentence)}, highlightText(optional, max 20 words), voiceoverText
 2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(36-52 words)}, heading(the name of the principle, model or professional standard this rests on  -  NOT a law, act or regulation), keyInfo(28-40 words  -  what that principle actually requires of the practitioner, in plain English), summaryLine(16-24 words linking to Card 1), voiceoverText
 3. mental-model  -  steps[4-5]{step(verb-led, 3-6 words), icon, detail(37-42 words of practitioner-level guidance: what you do, what you are looking for, what tells you it is done)}, voiceoverText
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(37-52 words)}  -  DIFFERENT professional setting from Card 1, highlightText(optional, max 20 words), voiceoverText
-5. mistakes  -  errorItems[5]{error(verb or "Assuming...", 6-10 words), consequence(26-38 words: the specific professional/relational/organisational impact, who it lands on, and how it shows up)}, voiceoverText
-6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 12-16 words)}, errorItems[5]{error(verb or "Assuming...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
-7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, professional judgment), standardItems[1]{text(the ONE correct answer, 8-14 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 8-12 words), consequence(26-36 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), text(EXACTLY 2 sentences, 42-58 words in total. The first sentence sets the situation, the second says what you do about it or what it costs you  -  never one long run-on sentence)}  -  DIFFERENT professional setting and time from Card 1, highlightText(optional, max 20 words), voiceoverText
+5. mistakes  -  errorItems[5]{error(verb or "Assuming...", 6-10 words), consequence(EXACTLY 2 sentences, 34-46 words in total. Sentence one states the specific professional or relational impact. Sentence two makes it land on a real person: name the colleague, report or client who carries it and what it costs them, in plain words  -  "The team member who stopped raising problems six months ago did not go quiet by accident.")}, voiceoverText
+6. competency-summary  -  title(topic-specific  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  say what it changes for a real person in this role, the way a colleague would put it. "As the nurse on an emergency ward, asking for feedback early is how a small mistake stays small." Where it fits naturally, make it the moment the learner recognises, not a principle they already agree with)}, errorItems[5]{error(verb or "Assuming...", 10-12 words), consequence(14-18 words)}, voiceoverText(MUST end: "Now, complete the activity below.")
+7. decision-point  -  heading(the question itself, 20-30 words, 2nd person, professional judgment), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-42 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(26-36 words explaining why it is wrong)}, voiceoverText(70+ words setting up the decision without revealing the answer)
+   ANSWER-LENGTH PARITY (all routes): the correct answer and all three wrong answers MUST be the same length and the same level of detail  -  every option 10-16 words, each naming a specific action. A learner must not be able to pick the answer by spotting the longest or most detailed option. Wrong answers are complete, plausible strategies that a reasonable person might choose, never two-word stubs ("Offer training") and never absurd ("Do everything at once"). Do not append a justification, benefit or outcome clause to the correct answer that the wrong answers do not also have  -  that reasoning belongs in consequence, not in text.
 `;
 
     // ===========================================================================
@@ -631,7 +642,8 @@ CARDS (generate in this order):
    These six become a drag-to-sort activity, so each must be judgeable on its own, and a
    badItem must be plainly wrong rather than merely less good.
 
-5. decision-point  -  title, question, options[4]{text, correct, feedback}
+5. decision-point  -  title, question, options[4]{text(10-16 words), correct, feedback}
+   ANSWER-LENGTH PARITY: all four options MUST be the same length and the same level of detail (10-16 words each, each naming a specific action). The correct one must not be the longest, the most detailed, or the only one carrying a justification clause. Wrong options are complete, plausible choices, not two-word stubs and not absurd.
    One multiple-choice question testing understanding of cards 1-4, not recall of a phrase.
    title: 3-7 words naming what is being checked. No topic name repeated verbatim.
    question: 15-30 words, answerable only by someone who understood the article.
@@ -1249,7 +1261,11 @@ Generate the full 6-card sequence.${langSuffix}`;
                 { val: getPartsText(cards?.[1], 'conceptInsights'), min: 40, label: 'concept-explainer insights' },
                 { val: stepsDetailText, min: 50, label: 'mental-model steps detail' },
                 { val: mistakesConsequenceText, min: 50, label: 'mistakes consequences' },
-                { val: (cards?.[5]?.goodItems || []).join(' '), min: 30, label: 'competency-summary goodItems' },
+                { val: (cards?.[5]?.goodItems || []).map(function (g) {
+                    // v13.95.8: goodItems are {text, benefit} objects; joining them raw
+                    // yields "[object Object]" and fails this floor on every generation.
+                    return typeof g === 'string' ? g : ((g && g.text) || '') + ' ' + ((g && g.benefit) || '');
+                }).join(' '), min: 30, label: 'competency-summary goodItems' },
                 { val: cards?.[6]?.question, min: 15, label: 'decision-point question' }
             ];
             for (const check of floorChecks) {
@@ -1363,16 +1379,22 @@ Generate the full 6-card sequence.${langSuffix}`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, text, and details exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)), voiceoverText (70+ words)
 - concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
 - mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
-- mistakes: errorItems[] (5 objects: error/consequence 15+ words)
-- competency-summary: standardItems[] (5 objects: text, verb-first), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
-- decision-point: heading (the question, 15+ words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers)
+- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)), voiceoverText (70+ words)
+- mistakes: errorItems[] (5 objects: error (6-10 words) / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
+- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- decision-point: heading (the question, 18-30 words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers). All four option texts must be 10-16 words and equally detailed  -  the correct answer must not stand out by length
+
+MAKE IT LAND: any field you rewrite must keep at least one sentence a person could picture  -  a named role
+doing a named thing, or the human cost of getting it wrong stated plainly. Concrete beats abstract. Never
+manufacture drama or raise the stakes to make a point.
 
 UNCHANGED CARDS MUST BE RETURNED EXACTLY AS PROVIDED  -  do not modify formatting, wording, or structure.
 If a card has one issue, fix ONLY that field. Do NOT regenerate the entire card.
+A repaired field must never come back shorter than the range above. If a field is already in range, return it byte-for-byte unchanged.
+
 You MUST return all 7 cards. Do not remove or omit any existing fields.
 
 Return ONLY a valid JSON object with "cards" array of exactly 7 cards.${langBlock}`;
@@ -1408,15 +1430,21 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing theory names, case study details, and text exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- concept-anchor: conceptDefinition (30+ words), significance (30+ words), keyTerms[] (3 objects: term/definition)
-- theoretical-framework: frameworks[] (2-3 objects: name/originator/principle 20+w/limitation 15+w)
-- analytical-lens: cognitiveConsiderations[] (5+ strings, 15+ words each)
-- ethics-considerations: considerations[] (5+ objects: dimension/description 20+ words)
-- case-study-1: context (70+ words), keyInsight, analysisPrompts[] (3 strings, 20+ words each)
-- case-study-2: context (70+ words), criticalReflection (30+ words), analysisPrompts[] (3 strings, 20+ words each)
+- concept-anchor: conceptDefinition (48-64 words), significance (46-62 words), keyTerms[3] (term 1-4 words / definition 22-30 words)
+- theoretical-framework: frameworks[2-3] (name/originator/principle/limitation). With 2 frameworks: principle 50-62 words, limitation 34-44. With 3: principle 34-42, limitation 22-28
+- analytical-lens: heading (5-9 words), cognitiveConsiderations[5+] (31-46 words each, each carrying a concrete example)
+- ethics-considerations: heading (5-9 words), considerations[5+] (dimension 1-3 words / description 30-43 words)
+- case-study-1: title (4-8 words), context (80-104 words), analysisPrompts[3] (22-30 words each), keyInsight (24-34 words)
+- case-study-2: title (4-8 words), context (80-104 words, a different setting from case-study-1), analysisPrompts[3] (22-30 words each), criticalReflection (30-38 words)
+
+MAKE IT LAND: any field you rewrite must keep at least one sentence a person could picture  -  a named role
+doing a named thing, or the human cost of getting it wrong stated plainly. Concrete beats abstract. Never
+manufacture drama or raise the stakes to make a point.
 
 UNCHANGED CARDS MUST BE RETURNED EXACTLY AS PROVIDED  -  do not modify formatting, wording, or structure.
 If a card has one issue, fix ONLY that field. Do NOT regenerate the entire card.
+A repaired field must never come back shorter than the range above. If a field is already in range, return it byte-for-byte unchanged.
+
 You MUST return all 6 cards. Do not remove or omit any existing fields.
 
 Return ONLY a valid JSON object with "cards" array of exactly 6 cards.${langBlock}`;
@@ -1448,16 +1476,22 @@ Return ONLY a valid JSON object with "cards" array of exactly 6 cards.`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, text, and details exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)), voiceoverText (70+ words)
 - concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
 - mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
-- mistakes: errorItems[] (5 objects: error/consequence 15+ words)
-- competency-summary: standardItems[] (5 objects: text, verb-first), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
-- decision-point: heading (the question, 15+ words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers)
+- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)), voiceoverText (70+ words)
+- mistakes: errorItems[] (5 objects: error (6-10 words) / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
+- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- decision-point: heading (the question, 18-30 words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers). All four option texts must be 10-16 words and equally detailed  -  the correct answer must not stand out by length
+
+MAKE IT LAND: any field you rewrite must keep at least one sentence a person could picture  -  a named role
+doing a named thing, or the human cost of getting it wrong stated plainly. Concrete beats abstract. Never
+manufacture drama or raise the stakes to make a point.
 
 UNCHANGED CARDS MUST BE RETURNED EXACTLY AS PROVIDED  -  do not modify formatting, wording, or structure.
 If a card has one issue, fix ONLY that field. Do NOT regenerate the entire card.
+A repaired field must never come back shorter than the range above. If a field is already in range, return it byte-for-byte unchanged.
+
 You MUST return all 7 cards. Do not remove or omit any existing fields.
 
 Return ONLY a valid JSON object with "cards" array of exactly 7 cards.${langBlock}`;
@@ -1491,16 +1525,22 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
 CRITICAL RULE: Fix ONLY the structural issues listed. Do NOT rewrite, rephrase, or change any content that is not broken. Keep all existing scenarios, frameworks, and text exactly as they are.
 
 REQUIRED CARD STRUCTURE (for reference when fixing broken cards only):
-- hook-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
+- hook-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the scene, the second says what is happening or what it costs you  -  never one run-on sentence)), voiceoverText (70+ words)
 - concept-explainer: keyPoints[] (3 objects: title/text), heading, keyInfo, summaryLine, voiceoverText (70+ words)
 - mental-model: steps[] (4-5 objects: step/icon/detail), voiceoverText (70+ words)
-- applied-scenario: keyPoints[] (4 objects: title/text), voiceoverText (70+ words)
-- mistakes: errorItems[] (5 objects: error/consequence 15+ words)
-- competency-summary: standardItems[] (5 objects: text, verb-first), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
-- decision-point: heading (the question, 15+ words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers)
+- applied-scenario: keyPoints[] (4 objects: title (3-5 words) / text (EXACTLY 2 sentences, 42-58 words: the first sets the situation, the second says what you do about it or what it costs you)), voiceoverText (70+ words)
+- mistakes: errorItems[] (5 objects: error (6-10 words) / consequence (EXACTLY 2 sentences, 34-46 words: sentence one is the specific impact, sentence two makes it land on a real person  -  name who carries it and what it costs them))
+- competency-summary: standardItems[] (5 objects: text (verb-first label, 6-10 words) + benefit (14-22 words: what it changes for a real person in this role, the way a colleague would say it)), errorItems[] (5 objects: error/consequence), voiceoverText (70+ words, ends "Now, complete the activity below.")
+- decision-point: heading (the question, 18-30 words), standardItems[] (1 object: text/consequence  -  the correct answer), errorItems[] (3 objects: error/consequence  -  the wrong answers). All four option texts must be 10-16 words and equally detailed  -  the correct answer must not stand out by length
+
+MAKE IT LAND: any field you rewrite must keep at least one sentence a person could picture  -  a named role
+doing a named thing, or the human cost of getting it wrong stated plainly. Concrete beats abstract. Never
+manufacture drama or raise the stakes to make a point.
 
 UNCHANGED CARDS MUST BE RETURNED EXACTLY AS PROVIDED  -  do not modify formatting, wording, or structure.
 If a card has one issue, fix ONLY that field. Do NOT regenerate the entire card.
+A repaired field must never come back shorter than the range above. If a field is already in range, return it byte-for-byte unchanged.
+
 You MUST return all 7 cards. Do not remove or omit any existing fields.
 
 Return ONLY a valid JSON object with "cards" array of exactly 7 cards.${langBlock}`;
@@ -1818,9 +1858,9 @@ UNIFIED 7-CARD AUDIT RULES:
 - concept-explainer (card 2): conceptInsights array of 3 objects (title/icon/text), each insight concrete and jargon-free. voiceoverText 70+ words.
 - mental-model (card 3): steps array of 4-5 objects (step/icon/detail), each step verb-led and consequence-linked. voiceoverText 70+ words.
 - applied-scenario (card 4): sceneParts array of 4 objects (title/icon/text), each text exactly 2 sentences, different setting and time from hook-scenario. voiceoverText 70+ words.
-- mistakes (card 5): items array of 5 objects (mistake + icon + consequence 15+ words each). voiceoverText 70+ words.
-- competency-summary (card 6): goodItems array of 5 verb-first strings, badItems array of 5 strings. voiceoverText ends with "Now, complete the activity below."
-- decision-point (card 7): question (15+ words), options array of exactly 4 (text/feedback/correct), exactly one correct:true.
+- mistakes (card 5): items array of 5 objects (mistake + icon + consequence 25-38 words each). voiceoverText 70+ words.
+- competency-summary (card 6): goodItems array of 5 objects {text: verb-first label 6-10 words, benefit: 14-18 words}, badItems array of 5 objects {text, consequence}. voiceoverText ends with "Now, complete the activity below."
+- decision-point (card 7): question (18-30 words), options array of exactly 4 (text/feedback/correct), exactly one correct:true. Every option text is 10-16 words and equally detailed - the correct answer must not be identifiable by being the longest, the most specific, or the only one carrying a justification clause.
 - Every card must have voiceoverText of at least 70 words.
 - Scenario text must include legal/operational consequence terms where appropriate.
 
@@ -1934,7 +1974,7 @@ STORY FLOW
 - The applied-scenario card must feel like a direct continuation of the hook-scenario card
 - Each card should transition naturally into the next  -  no abrupt topic jumps
 - The mistakes/Watch Out For card should tie back to a specific moment in the scenario
-- The competency-summary card uses two arrays: "goodItems" (what elite practice looks like  -  4 - 6 concrete, scenario-grounded phrases) and "badItems" (what to avoid  -  4 - 6 specific, realistic failure patterns); keep both arrays; do NOT merge them into "items"
+- The competency-summary card uses two arrays of OBJECTS: "goodItems" (4 - 6 items of {text: a concrete verb-first label 6-10 words, benefit: 14-18 words on what it gets you}) and "badItems" (4 - 6 items of {text: a specific realistic failure 10-12 words, consequence: 14-18 words on what it costs}); both columns carry the same two-part shape; keep both arrays; do NOT merge them into "items" and never return either as bare strings
 - Every goodItems entry should describe observable, scenario-specific excellence  -  not generic principles
 - Every badItems entry should name a realistic mistake a real worker in the scenario could plausibly make
 
@@ -1943,7 +1983,8 @@ DECISION QUALITY (decision-point card)
 - Wrong answers must reflect believable mistakes  -  the kind where you can see why someone would make them
 - Avoid obviously absurd distractors ("just ignore it", "break the rules")
 - The correct answer should require genuine thinking, not be instantly obvious
-- Each wrong answer needs specific, realistic feedback explaining the real consequence
+- ANSWER-LENGTH PARITY: all four option texts must be 10-16 words and the same level of detail. If the correct answer is longer, more specific, or the only one that explains itself, rewrite it to match the others  -  a learner must not be able to pick it by shape alone. Any justification belongs in the feedback, never in the option text.
+- Each wrong answer needs specific, realistic feedback explaining the real consequence, and all four feedback texts are the same length (28-36 words)
 
 CONCEPT CLARITY (concept-explainer card)
 - Explain the concept once, clearly  -  don't restate the same idea in different words
