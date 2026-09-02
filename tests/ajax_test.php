@@ -173,7 +173,7 @@ class ajax_test extends advanced_testcase {
      * A prohibit on mod/contentcreator:manage must actually deny.
      *
      * v13.86 removed the moodle/course:manageactivities fallback from
-     * contentcreator_require_manage(), save_manifest, save_manifest_chunk and
+     * mod_contentcreator_require_manage(), save_manifest, save_manifest_chunk and
      * save_slide_edit. The fallback made the plugin's own capability advisory: an
      * administrator could prohibit :manage and the endpoints would still admit the
      * user through the course capability, which Moodle security review treats as a

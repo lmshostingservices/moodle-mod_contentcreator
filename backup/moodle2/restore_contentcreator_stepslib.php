@@ -190,7 +190,7 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
             return;
         }
 
-        // v13.85 FIX BUG-RESTORE-COMPRESSED: Manifests at or above
+        // V13.85 FIX BUG-RESTORE-COMPRESSED: Manifests at or above
         // manifest_storage::COMPRESS_THRESHOLD are held as gzip+base64 behind a 'gz:'
         // prefix, and real packs reach 6-10 MB. The URL rewrite below was applied
         // directly to that blob, matched nothing, and wrote it back unchanged - so the

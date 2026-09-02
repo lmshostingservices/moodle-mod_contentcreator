@@ -1,3 +1,18 @@
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
  * Content Creator v9.16 - AI Content Generator with Route-Aware Card Model
  * 
@@ -956,7 +971,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     ];
 
     // v13.92: the v13.91 slots. Retained for rendering and normalising saved modules.
-    const TOPICSTEXT_LEGACY_CARD_ORDER = [
+    // Unused (v13.95.5): superseded ordering, underscored to satisfy no-unused-vars.
+    const _TOPICSTEXT_LEGACY_CARD_ORDER = [
         'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'
     ];
 

@@ -132,7 +132,7 @@ class backup_restore_test extends advanced_testcase {
         $stored = \mod_contentcreator\manifest_storage::compress($manifest);
         if ($large) {
             $this->assertSame('gz:', substr($stored, 0, 3), 'Test fixture must be stored compressed.');
-            // compress() reports the saving through debugging(). That is intended plugin
+            // The compress() call reports its saving through debugging(). That is intended
             // behaviour, so acknowledge it here - otherwise it surfaces at teardown as an
             // unexpected debugging call and fails a test that is actually passing.
             $this->assertDebuggingCalled();

@@ -66,7 +66,7 @@ $functions = [
         'description' => 'Generate text-to-speech voiceover',
         'type' => 'write',
         // Type is 'write' because this stores an audio file and spends vendor credits.
-        // v13.85: the declared capability matches the runtime check, which is now
+        // V13.85: the declared capability matches the runtime check, which is now
         // ':generateondemand' - granted to student by default so non-editing roles can
         // still play audio, but prohibitable per role, course or cohort because the call
         // spends from the site's paid balance.

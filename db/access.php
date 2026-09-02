@@ -58,7 +58,7 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
-    // v13.85: On-demand generation performed by a LEARNER inside the player -
+    // V13.85: On-demand generation performed by a LEARNER inside the player -
     // voiceover playback and document examples. Both spend site credits, and both
     // were previously gated on :view alone, which meant every enrolled student in
     // every course could spend from the same paid balance with no way for an

@@ -319,7 +319,7 @@ if ($hassiteconfig && isset($settings)) {
         )
     );
 
-    // v13.85: Aggregate ceilings. The per-user limits above are per user, so they
+    // V13.85: Aggregate ceilings. The per-user limits above are per user, so they
     // cannot bound total spend on endpoints a learner may call.
     $settings->add(
         new admin_setting_heading(
@@ -349,7 +349,7 @@ if ($hassiteconfig && isset($settings)) {
         )
     );
 
-    // v13.86: Nothing ever removed cached voiceover audio before this release.
+    // V13.86: Nothing ever removed cached voiceover audio before this release.
     $settings->add(
         new admin_setting_configtext(
             'mod_contentcreator/voicecacheretention',

@@ -49,7 +49,7 @@ class save_manifest extends external_api {
             [
                 'cmid' => new external_value(PARAM_INT, 'Course module ID'),
                 'manifest' => new external_value(
-                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    PARAM_RAW, // Pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                     'JSON manifest data',
                 ),
                 'version' => new external_value(PARAM_TEXT, 'Manifest version', VALUE_DEFAULT, ''),
@@ -75,7 +75,7 @@ class save_manifest extends external_api {
         // Release session lock before long-running DB operation to prevent blocking other requests.
         \core\session\manager::write_close();
 
-        // v13.94.3: Parameter validation, context validation and the capability check used to
+        // V13.94.3: Parameter validation, context validation and the capability check used to
         // sit INSIDE the try below, so a rejected parameter, a bad context or a genuine
         // permission failure all came back as HTTP 200 with the same "could not be saved"
         // string. That hides an access-control failure from the caller, from the browser
@@ -102,7 +102,7 @@ class save_manifest extends external_api {
         // Accept 'moodle/course:manageactivities' as a fallback — every genuine
         // editing teacher has this regardless of whether their role explicitly lists
         // mod/contentcreator capabilities.
-        // v13.86: the moodle/course:manageactivities fallback was removed. It made
+        // V13.86: the moodle/course:manageactivities fallback was removed. It made
         // mod/contentcreator:manage advisory - a CAP_PROHIBIT on it denied nothing.
         // Roles that already hold manageactivities are granted :manage by the
         // upgrade step in db/upgrade.php, so no legitimate editing teacher loses
@@ -175,7 +175,7 @@ class save_manifest extends external_api {
                 ];
             }
         } catch (\Throwable $e) {
-            // v13.94.3: This was logged at DEBUG_DEVELOPER only, which no production site
+            // V13.94.3: This was logged at DEBUG_DEVELOPER only, which no production site
             // runs, so the one thing that could explain a save failure was thrown away on
             // exactly the sites where it matters. Report it at DEBUG_NORMAL and hand the
             // caller a stable errorcode, so a support request can be traced without asking
@@ -199,7 +199,7 @@ class save_manifest extends external_api {
             [
                 'success' => new external_value(PARAM_BOOL, 'Success status'),
                 'message' => new external_value(PARAM_TEXT, 'Response message'),
-                // v13.94.3: Stable machine-readable cause, present only on the unexpected-failure
+                // V13.94.3: Stable machine-readable cause, present only on the unexpected-failure
                 // path. Optional so the success and validation replies are unchanged.
                 'errorcode' => new external_value(
                     PARAM_ALPHANUMEXT,

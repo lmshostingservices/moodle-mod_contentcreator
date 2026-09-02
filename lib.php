@@ -119,7 +119,7 @@ function contentcreator_delete_instance($id) {
         // Remove the module's stored files: the pre-generated voiceovers, which are the only
         // audio this activity actually owns.
         //
-        // v13.94.3: the comment here used to claim this also removed "any cached TTS audio",
+        // V13.94.3: the comment here used to claim this also removed "any cached TTS audio",
         // which has not been true since v13.86. Both writers - ajax.php and
         // external\generate_voiceover - now put voice_cache files in the SYSTEM context under
         // itemid 0, keyed by md5(text|voice|language), because identical narration must be

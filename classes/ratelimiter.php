@@ -40,7 +40,7 @@ class ratelimiter {
      * Enforce both the site-wide and the per-user allowance for a bucket.
      *
      * v13.94.3: the admin settings ratelimitgenerate / ratelimitvoice / ratelimitvendor and
-     * the site ceilings were read only by contentcreator_check_ratelimit() in ajax.php. The
+     * the site ceilings were read only by mod_contentcreator_check_ratelimit() in ajax.php. The
      * two web-service entry points, external\generate_voiceover and
      * external\generate_document_example, passed hardcoded 100 and 60 straight to check()
      * instead, so an administrator who raised or lowered a limit changed only one of the two

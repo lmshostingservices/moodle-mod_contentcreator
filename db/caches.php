@@ -35,7 +35,7 @@ $definitions = [
         'ttl' => 3600,
     ],
 
-    // v13.94.3: Ownership record for an asynchronous generation job. action=poll_job
+    // V13.94.3: Ownership record for an asynchronous generation job. action=poll_job
     // used to accept any job id from any caller who held :manage on any Content Creator
     // activity, and returned the vendor's raw job payload for it - so one author could
     // read another author's generated content simply by guessing or replaying a job id.

@@ -75,7 +75,7 @@ function xmldb_contentcreator_upgrade($oldversion) {
         $table = new xmldb_table('contentcreator_attempts');
 
         // Step 1: remove duplicate rows, keeping the one with the highest id per pair.
-        // v13.90.1: get_records_sql() keys the returned array by the FIRST column, and
+        // V13.90.1: get_records_sql() keys the returned array by the FIRST column, and
         // contentcreatorid is not unique across a grouped result. One activity with
         // duplicate attempts for two different users produced two rows with the same key
         // and the second silently overwrote the first, so only one user's duplicates were
@@ -170,7 +170,7 @@ function xmldb_contentcreator_upgrade($oldversion) {
     // left alone.
     if ($oldversion < 2026082402) {
         $syscontext = context_system::instance();
-        // v13.90 SECURITY FIX: This query used to have no contextid filter, so a role
+        // V13.90 SECURITY FIX: This query used to have no contextid filter, so a role
         // granted moodle/course:manageactivities as a COURSE-LEVEL OVERRIDE in a single
         // course was picked up here and then granted mod/contentcreator:manage at SYSTEM
         // context - site-wide authoring rights from a one-course override. Only roles
@@ -190,7 +190,7 @@ function xmldb_contentcreator_upgrade($oldversion) {
         );
 
         foreach ($manageroles as $roleid) {
-            // v13.90.1: This lookup must be context-scoped too. Without the contextid
+            // V13.90.1: This lookup must be context-scoped too. Without the contextid
             // condition, a single course-level override of :manage anywhere on the site
             // counted as "already decided" and suppressed the SYSTEM-level grant - so a
             // trainer role that was set to Prevent in one course lost authoring rights in

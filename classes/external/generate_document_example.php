@@ -182,7 +182,7 @@ class generate_document_example extends external_api {
         // Billed path begins here. Everything past this point spends site credits, which is
         // why the capability gate and the rate limiter sit below the cache lookup above.
 
-        // v13.85: This call SPENDS SITE CREDITS. Gating it on :view alone meant every
+        // V13.85: This call SPENDS SITE CREDITS. Gating it on :view alone meant every
         // enrolled learner in every course could draw on the same paid balance, with no
         // administrative control beyond disabling the feature site-wide. The new
         // capability is granted to student by default, so behaviour is unchanged until a
@@ -192,7 +192,7 @@ class generate_document_example extends external_api {
         // This endpoint spends site credits and is available to any user who can view the
         // activity, so abuse control is enforced by a per-user sliding-window rate limit
         // rather than by the capability gate. Do not remove it without a replacement.
-        // v13.94.3: the per-user ceiling was hardcoded at 60 here, so the ratelimitgenerate
+        // V13.94.3: the per-user ceiling was hardcoded at 60 here, so the ratelimitgenerate
         // admin setting applied only to the AJAX path - an administrator who lowered it, or
         // set it to 0 to disable the bucket, changed nothing for this web service. enforce()
         // reads the setting and applies the site ceiling in one place, shared with ajax.php.
@@ -350,7 +350,7 @@ class generate_document_example extends external_api {
 
         return [
             'success' => true,
-            // v13.86: This HTML is injected straight into the player's DOM (player5.js
+            // V13.86: This HTML is injected straight into the player's DOM (player5.js
             // renders it with innerHTML, deliberately, because it is a rendered
             // workplace document). Everything else in that file is escaped, which makes
             // this the exception rather than a design decision. clean_text() strips
@@ -375,7 +375,7 @@ class generate_document_example extends external_api {
             [
                 'success' => new external_value(PARAM_BOOL, 'Success status'),
                 'content' => new external_value(
-                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    PARAM_RAW, // Pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                     'Generated document HTML content',
                 ),
                 'docId' => new external_value(PARAM_TEXT, 'Document type ID'),

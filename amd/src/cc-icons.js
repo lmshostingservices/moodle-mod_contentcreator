@@ -1,3 +1,18 @@
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
  * Content Creator  -  Shared icon data and icon-lookup helpers.
  *
@@ -277,7 +292,8 @@ define([], function () {
         }
     };
 
-    var GENERIC_AI_ICONS = {
+    // Unused (v13.95.5): kept for reference, underscored to satisfy no-unused-vars.
+    var _GENERIC_AI_ICONS = {
         'sparkles': 1, 'star': 1, 'check-circle': 1
     };
 
@@ -295,7 +311,8 @@ define([], function () {
         'decision-point':     ['help-circle', 'brain']
     };
 
-    var SCENE_PART_TITLE_ICONS = [
+    // Unused (v13.95.5): kept for reference, underscored to satisfy no-unused-vars.
+    var _SCENE_PART_TITLE_ICONS = [
         { patterns: ['setting', 'location', 'scene', 'workplace', 'site', 'environment', 'context', 'where'], icon: 'map-pin' },
         { patterns: ['who', 'people', 'team', 'involved', 'here', 'crew', 'staff', 'role', 'player'], icon: 'users' },
         { patterns: ['happened', 'went wrong', 'event', 'incident', 'problem', 'issue', 'tension', 'challenge', 'trigger', 'action', 'moment'], icon: 'zap' },

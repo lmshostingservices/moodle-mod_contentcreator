@@ -1,3 +1,18 @@
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
  * Content Creator v7.9.74 - Smart Learning Content Wizard
  * [SPEC] 3-step wizard: Mode  ->  Context  ->  Topics  ->  Generate
@@ -949,7 +964,12 @@ define([
     // Shared helpers that are defined inside bindCountryStateHandlers() but called
     // from the wizard steps. These were three separate globals before v13.66.
     const ccBuilder = {};
-    let updateCategoriesForUnit = null;
+    // FIX-CC-ESLINT-UNUSED (v13.95.5): renamed with a leading underscore so the lint rule
+    // accepts it. It is assigned a function below but NEVER CALLED, and the comment further
+    // down still reads "so updateCategoriesForUnit() can reach it" - which suggests a call
+    // site was lost rather than the function being deliberately dead. Kept, not deleted, so
+    // that finding is not silently erased. Worth investigating on its own merits.
+    let _updateCategoriesForUnit = null;
     let autoSuggestFromContent = null;
 
     let storedContext = null; // Context captured from Step 2 for display in Step 3
@@ -1610,7 +1630,7 @@ define([
         
         // v6.8.2: Helper function to update task/equipment categories based on Unit of Competency.
         // v13.66: Published on the module-scoped binding so fetchTGAUnit and handlePdfUpload can call it.
-        updateCategoriesForUnit = function () {
+        _updateCategoriesForUnit = function () {
             const taskCardsContainer = document.getElementById('cc-task-category-cards');
             const equipmentCardsContainer = document.getElementById('cc-equipment-category-cards');
             const industry = document.getElementById('cc-industry')?.value || '';

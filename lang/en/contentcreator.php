@@ -194,8 +194,8 @@ $string['privacy:metadata:files'] = 'Content Creator stores two kinds of audio f
 $string['cachedef_ratelimit'] = 'Rate limit counters for AI generation requests';
 $string['cachedef_jobowner'] = 'Ownership records binding an asynchronous generation job to the user and activity it was issued to';
 
-// =============================================================================
-// v13.86: PLAYER UI LABELS
+/* ========================================================================= */
+// V13.86: PLAYER UI LABELS
 //
 // The player's ~347 interface labels lived only inside amd/src/translations.js, a
 // private 53-language table with its own getLabel() lookup. Nothing in the plugin
@@ -207,7 +207,7 @@ $string['cachedef_jobowner'] = 'Ownership records binding an asynchronous genera
 // string and falls back to the private table, which stays in place as the offline
 // source for the other 52 languages until those are migrated too. Adding a key here
 // is therefore all it takes to bring a label under Moodle's control.
-// =============================================================================
+/* ========================================================================= */
 
 $string['cclabel_editSlide'] = 'Edit Slide';
 $string['cclabel_title'] = 'Title';
@@ -557,7 +557,7 @@ $string['cclabel_howToCommunicateVo'] = 'How to communicate:';
 $string['cclabel_commonMistakeVo'] = 'Common mistake';
 $string['cclabel_riskVo'] = 'Risk:';
 
-// v13.90.1 / v13.94.3: Labels that were read by getLabel() but had no admin-overridable
+// V13.90.1 / v13.94.3: Labels that were read by getLabel() but had no admin-overridable
 // string. Without these a site cannot reword the card headings, the activity
 // suite, or the error dialogs a teacher sees when a save fails.
 $string['cclabel_somethingWentWrong'] = 'Something went wrong. Please try again.';
@@ -586,7 +586,7 @@ $string['cclabel_proseHowItWorks'] = 'How It Works';
 $string['cclabel_proseExamplesApplication'] = 'Examples & Application';
 $string['cclabel_proseKeyTakeaways'] = 'Key Takeaways';
 
-// v13.94.3: Flow headings and TTS sentences (cc-card-slots.js / cc-state.js).
+// V13.94.3: Flow headings and TTS sentences (cc-card-slots.js / cc-state.js).
 $string['cclabel_sceneSetting'] = 'Scene Setting';
 $string['cclabel_whatThisMeans'] = 'What This Means';
 $string['cclabel_howToHandleIt'] = 'How to Handle It';
@@ -601,7 +601,7 @@ $string['cclabel_nowCompleteActivityConfirm'] = 'Now complete the activity below
 $string['cclabel_termMeansDefinition'] = '{term} means {definition}';
 $string['cclabel_youAreRole'] = 'You are {role}';
 
-// v13.94.3: Prose card headings and callouts.
+// V13.94.3: Prose card headings and callouts.
 $string['cclabel_definition'] = 'Definition';
 $string['cclabel_keyInsight'] = 'Key Insight';
 $string['cclabel_criticalReflection'] = 'Critical Reflection';
@@ -613,7 +613,7 @@ $string['cclabel_whatThePrincipleRequires'] = 'What the principle requires';
 $string['cclabel_selectContentLanguage'] = 'Select content language';
 $string['cclabel_listenToUnlock'] = 'listen to unlock';
 
-// v13.94.3: The 3-activity Decision Challenge suite.
+// V13.94.3: The 3-activity Decision Challenge suite.
 $string['cclabel_challengeMode'] = 'Challenge Mode';
 $string['cclabel_completeNActivities'] = 'Complete {count} activities to prove your mastery';
 $string['cclabel_activityNumber'] = 'Activity {number}';
@@ -636,11 +636,11 @@ $string['cclabel_nActivitiesComplete'] = '{current} / {total} Activities Complet
 $string['cclabel_reviewAnswers'] = 'Review Answers';
 $string['cclabel_continueLabel'] = 'Continue';
 
-// =============================================================================
-// v13.86: BUILDER MESSAGES
+/* ========================================================================= */
+// V13.86: BUILDER MESSAGES
 // The authoring wizard's user-facing errors were literals in builder.js, so no
 // site could translate or reword them. They are resolved through core/str now.
-// =============================================================================
+/* ========================================================================= */
 
 $string['errsuggesttopics'] = 'Could not suggest topics. Please paste your own topics instead.';
 $string['errexcelvetonly'] = 'Excel export is only available for VET mode.';

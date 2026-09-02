@@ -48,7 +48,7 @@ class generate_voiceover extends external_api {
     /**
      * Maximum number of characters accepted for a single voiceover request.
      *
-     * Must match CONTENTCREATOR_VOICE_MAXCHARS in ajax.php. This bounds one
+     * Must match MOD_CONTENTCREATOR_VOICE_MAXCHARS in ajax.php. This bounds one
      * request; abuse is prevented by the manage capability and the rate
      * limiter. Lowering it truncates audio mid-sentence.
      */
@@ -67,7 +67,7 @@ class generate_voiceover extends external_api {
             [
                 'cmid'      => new external_value(PARAM_INT, 'Course module ID'),
                 'text'      => new external_value(
-                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    PARAM_RAW, // Pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                     'Text to convert to speech',
                 ),
                 'sectionId' => new external_value(PARAM_ALPHANUMEXT, 'Section identifier', VALUE_DEFAULT, ''),
@@ -136,12 +136,12 @@ class generate_voiceover extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
-        // v13.85: This call SPENDS SITE CREDITS. Gating it on :view alone meant every
+        // V13.85: This call SPENDS SITE CREDITS. Gating it on :view alone meant every
         // enrolled learner in every course could draw on the same paid balance, with no
         // administrative control beyond disabling the feature site-wide. The new
         // capability is granted to student by default, so behaviour is unchanged until a
         // site chooses to prohibit it for a role, course or cohort.
-        // v13.90.1 FIX-CACHE-ORDER: the :generateondemand capability check and BOTH rate
+        // V13.90.1 FIX-CACHE-ORDER: the :generateondemand capability check and BOTH rate
         // limiters used to run here, ahead of the cache lookup further down. ajax.php has
         // always had this the right way round (cache first, gates only on a miss), and
         // this endpoint - the mobile app and web-service path - had it inverted.
@@ -226,7 +226,7 @@ class generate_voiceover extends external_api {
         $voicename  = (in_array($voiceparam, $validvoices)) ? $voiceparam : $sitedefaultvoice;
 
         // Build the voice ID: {language}-Chirp3-HD-{VoiceName}.
-        // v13.94.3: this used to call a private copy of the mapping that omitted the
+        // V13.94.3: this used to call a private copy of the mapping that omitted the
         // fallbacks for the eight locales Chirp 3 HD has no voice for, so this path asked
         // for ids such as 'ms-MY-Chirp3-HD-Zephyr'. The service rejects them and the
         // learner gets silence, while the identical request through ajax.php worked. Both
@@ -252,7 +252,7 @@ class generate_voiceover extends external_api {
         // every call hit the TTS API and charged credits even for identical text+language.
         // Cache key: MD5(text | voiceid | language) - same scheme as ajax.php.
         //
-        // v13.86: this used to cache into the MODULE context under itemid = cm->id while
+        // V13.86: this used to cache into the MODULE context under itemid = cm->id while
         // ajax.php cached identical audio into the SYSTEM context under itemid 0. The
         // same text was therefore billed twice, once per path, and neither path could see
         // the other's copy. Both now share the one site-wide cache, which is the correct
@@ -283,14 +283,13 @@ class generate_voiceover extends external_api {
         // the capability gate and the rate limiters live here rather than at the
         // top of the function - a cache hit above must cost nothing and must not
         // be blocked. Mirrors ajax.php's ordering. See FIX-CACHE-ORDER above.
-        // ---------------------------------------------------------------------
         require_capability('mod/contentcreator:generateondemand', $context);
 
         // This endpoint spends site credits (5 per call) and is available to any user who
         // can view the activity, so abuse control is enforced here rather than by the
         // capability gate: a per-user sliding-window limit plus the MAX_TEXT_LENGTH cap
         // applied to the text above. Do not remove either without replacing them.
-        // v13.94.3: the per-user ceiling was hardcoded at 100 here, so the ratelimitvoice
+        // V13.94.3: the per-user ceiling was hardcoded at 100 here, so the ratelimitvoice
         // admin setting applied only to the AJAX path - an administrator who lowered it, or
         // set it to 0 to disable the bucket, changed nothing for this web service. enforce()
         // reads the setting and applies the site ceiling in one place, shared with ajax.php.
@@ -361,7 +360,7 @@ class generate_voiceover extends external_api {
         $audioraw = base64_decode($data['audioContent'] ?? '');
         if ($audioraw && strlen($audioraw) <= self::MAX_CACHE_BYTES) {
             try {
-                // v13.86: Writes to the shared site-wide cache, matching the read above.
+                // V13.86: Writes to the shared site-wide cache, matching the read above.
                 $oldcachefile = $fs->get_file(
                     $cachectx->id,
                     'mod_contentcreator',
@@ -398,7 +397,7 @@ class generate_voiceover extends external_api {
         ];
     }
 
-    // v13.94.3: The get_chirp_voice_id() helper was removed. It was a second, incomplete copy of the
+    // V13.94.3: The get_chirp_voice_id() helper was removed. It was a second, incomplete copy of the
     // language-to-voice mapping and was the reason this path and ajax.php disagreed. The
     // one implementation now lives in \mod_contentcreator\voice::resolve().
 
@@ -412,7 +411,7 @@ class generate_voiceover extends external_api {
             [
                 'success'      => new external_value(PARAM_BOOL, 'Success status'),
                 'audioContent' => new external_value(
-                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    PARAM_RAW, // Pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                     'Base64 encoded audio',
                 ),
                 'audioType'    => new external_value(PARAM_TEXT, 'Audio MIME type'),

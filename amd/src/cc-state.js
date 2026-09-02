@@ -1,3 +1,18 @@
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
  * Content Creator  -  Shared version constant, logger factory, and voiceover utilities.
  *
@@ -362,9 +377,13 @@ define([], function () {
                 // out loud. Treat a value identical to the key as a miss.
                 if (v && typeof v === 'string' && v !== key) { return v; }
             } catch (e) {
-                if (typeof console !== 'undefined' && console.warn) {
-                    console.warn('[CC] label resolver failed for ' + key + ': ' + (e && e.message ? e.message : e));
-                }
+                // FIX-CC-ESLINT-NO-CONSOLE (v13.95.4): this called console.warn directly, which
+                // is a no-console error under the plugin's ESLint config and would fail
+                // moodle-plugin-ci. createLogger() above is documented as the plugin's single
+                // sanctioned console boundary - "disabled here and nowhere else" - so this is
+                // routed through it rather than earning a second exemption.
+                createLogger(false).warn('label resolver failed for ' + key + ': ' +
+                    (e && e.message ? e.message : e));
             }
         }
         return fallback;

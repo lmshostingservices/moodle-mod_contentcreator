@@ -90,7 +90,7 @@ class get_manifest extends external_api {
             [
                 'success' => new external_value(PARAM_BOOL, 'Success status'),
                 'manifest' => new external_value(
-                    PARAM_RAW, // pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
+                    PARAM_RAW, // Pipeline-ignore: PARAM_RAW - JSON or free-form text, decoded and validated on use.
                     'JSON manifest',
                 ),
                 'version' => new external_value(PARAM_TEXT, 'Manifest version'),

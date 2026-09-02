@@ -36,7 +36,7 @@ $context = context_module::instance($cm->id);
 require_capability('mod/contentcreator:view', $context);
 
 $PAGE->set_url('/mod/contentcreator/view.php', ['id' => $id]);
-// v13.94.3: The raw name was passed straight to set_title(). Activity names are plain text
+// V13.94.3: The raw name was passed straight to set_title(). Activity names are plain text
 // but may legitimately contain characters such as & or <, which then reached the page title
 // unescaped. format_string() also applies the site's multilang filters, so a name using the
 // {mlang} syntax now renders in the user's language instead of showing the markup.
@@ -96,7 +96,7 @@ $canreview = has_capability('mod/contentcreator:review', $context);
 $isstaff   = $canmanage || $canreview;
 
 // Check whether the manifest exists and is locked (content has been generated).
-// v7.1.3: Added backward compatibility for older manifests without a locked flag.
+// V7.1.3: Added backward compatibility for older manifests without a locked flag.
 $islocked = false;
 if (!empty($contentcreator->manifestjson)) {
     // FIX BUG-CC-DBWRITE (v11.48): decompress before json_decode (may be gz: compressed).
@@ -150,7 +150,7 @@ if ($canmanage && (!$islocked || $editmode)) {
     $requirefocus = get_config('mod_contentcreator', 'requirefocus') ?: 0;
 
     // Only show the Edit button when Moodle's edit mode is on, the top right toggle (v6.5.3).
-    // v11.12 FIX: $PAGE->user_is_editing() returns false on mod/xxx/view.php pages because
+    // V11.12 FIX: $PAGE->user_is_editing() returns false on mod/xxx/view.php pages because
     // the activity page never calls $PAGE->set_editing(). The Moodle editing toggle sets
     // $USER->editing globally, so check that instead.
     $caneditslides = $canmanage && !empty($USER->editing);
