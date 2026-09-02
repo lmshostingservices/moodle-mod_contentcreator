@@ -19,7 +19,7 @@
  * [SPEC] VET: TGA data  ->  Topics/Subtopics with PC/KE/PE/FS mappings (competency-based)
  * [SPEC] Workplace: Document-based  ->  Topics/Subtopics with policy/procedure focus (business impact)
  * [SPEC] University: Outcomes  ->  Topics/Subtopics with Bloom's alignment (academic rigor)
- * [SPEC] Credits: 100 credits per subtopic
+ * [SPEC] Credits: the per-subtopic price is CC_CREDITS_PER_SUBTOPIC in builder.js
  * 
  * v6.6.65: PC REWRITING FOR INSTRUCTIONAL CLARITY
  * [SPEC] Official TGA PCs are COVERED but rewritten for learner engagement

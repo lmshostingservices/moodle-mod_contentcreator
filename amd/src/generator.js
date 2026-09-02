@@ -3415,8 +3415,46 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // latency improves this can be raised again.
         const CONCURRENCY_LIMIT = 2;
 
+        /**
+         * v13.97: report a single stage of one section so the builder can render a row
+         * per subtopic rather than one bar for the whole run.
+         *
+         * The existing progressCallback fires once per section, AFTER everything for that
+         * section is done, which is enough for a percentage and nothing else. These events
+         * carry the section identity and which stage just finished, so the progress table
+         * can tick Content, Image and Voiceover independently and show what is in flight.
+         *
+         * Emitted alongside the original event, never instead of it - the percentage
+         * behaviour is unchanged for any caller that ignores `stage`.
+         *
+         * @param {Object} section The section being generated.
+         * @param {Number} jobIdx Its index in the flattened job list.
+         * @param {String} stage 'start' | 'content' | 'image' | 'section'.
+         * @param {String} state 'running' | 'ok' | 'skipped' | 'failed'.
+         */
+        const reportStage = (section, jobIdx, stage, state) => {
+            if (!progressCallback) { return; }
+            try {
+                progressCallback({
+                    current: currentPC,
+                    total: sectionCount,
+                    phase: 'Generating',
+                    itemType: 'stage',
+                    itemTitle: section?.title || '',
+                    sectionId: section?.id || ('section_' + jobIdx),
+                    sectionIndex: jobIdx,
+                    stage: stage,
+                    state: state
+                });
+            } catch (e) {
+                // A progress listener must never be able to stop generation.
+                ccWarn('[PROGRESS] stage listener threw: ' + e.message);
+            }
+        };
+
         const generateOneSection = async (section, topic, jobIdx) => {
             const existingSection = regenerateFailedOnly ? findExistingSection(section.id, topic.id) : null;
+            reportStage(section, jobIdx, 'start', 'running');
 
             const expectedCardCount = getExpectedCardOrder(plannedManifest.context?.mode || 'vet', activitiesEnabled).length;
             // v13.90.1: needsReview counts alongside failed, so a section whose content was
@@ -3495,15 +3533,19 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 }
                 if (fastParsed) {
                     learningCards = fastParsed;
+                    reportStage(section, jobIdx, 'content', 'ok');
                 } else {
                     ccDiag('generate() Launching card generation for section "' + (section?.title || 'UNTITLED') + '"');
                     try {
                         const cards = await generateFiveCardSequence(section, plannedManifest.context, cmid);
                         ccDiag('generate() Cards COMPLETED for "' + (section?.title || '') + '" | cards=' + (cards?.length || 0) + ' | failed=' + (cards?.some(c => c.failed) || false));
                         learningCards = cards;
+                        reportStage(section, jobIdx, 'content',
+                            (cards && cards.some(function (c) { return c.failed; })) ? 'failed' : 'ok');
                     } catch (err) {
                         ccError('generate() Cards FAILED for "' + (section?.title || '') + '": ' + err.message);
                         learningCards = getFailedCardSequence(section, plannedManifest.context?.mode || 'vet', err.message, activitiesEnabled);
+                        reportStage(section, jobIdx, 'content', 'failed');
                     }
                 }
             } else {
@@ -3511,6 +3553,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
             }
 
             if (needsImage) {
+                reportStage(section, jobIdx, 'image', 'running');
                 // Build a richer image context from the actual generated (or existing) card content.
                 // v10.27: Use hook-scenario card (card[0]) content as scenarioContext so the image
                 // depicts the actual job story, not just a generic description.
@@ -3586,14 +3629,18 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                     const img = await generateTopicImage(enrichedSection, plannedManifest.context, cmid);
                     ccDiag('generate() Image COMPLETED for "' + (section?.title || '') + '" | hasImage=' + !!img);
                     topicImage = img;
+                    reportStage(section, jobIdx, 'image', img ? 'ok' : 'failed');
                 } catch (err) {
                     ccError('generate() Image FAILED for "' + (section?.title || '') + '": ' + err.message);
                     topicImage = null;
+                    reportStage(section, jobIdx, 'image', 'failed');
                 }
             } else if (imageGenEnabled) {
                 ccDiag('generate() SKIPPING image for "' + (section?.title || '') + '" (already exists)');
+                reportStage(section, jobIdx, 'image', 'ok');
             } else {
                 ccDiag('generate() Images DISABLED for this generation');
+                reportStage(section, jobIdx, 'image', 'skipped');
             }
 
             const firstCard = learningCards?.[0] || {};

@@ -34,8 +34,12 @@ define([
     'mod_contentcreator/planner',
     'mod_contentcreator/cc-state',
     'mod_contentcreator/generator',
-    'mod_contentcreator/translations'
-], function (Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator, Translations) {
+    'mod_contentcreator/translations',
+    // v13.96: the downloadable ChatGPT prompt is composed from the real system prompt
+    // rather than a hand-maintained copy. prompts.js depends only on legislation and
+    // cc-state, so this adds no cycle.
+    'mod_contentcreator/prompts'
+], function (Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator, Translations, Prompts) {
     'use strict';
 
     // =======================================================================
@@ -113,7 +117,7 @@ define([
         // title/aria-label text migrated out of this file so sites can translate it.
         'msgselectsector', 'msgselectjobtitle', 'msgselectjobtitlefirst', 'msgfetchtaskcats',
         'msgfetchequipmentcats', 'msgnocategories', 'msgnoelementsfound', 'msgnoelementsinunit',
-        'msgvalidatingstructure', 'msgqadesclive', 'msgqaresultstitle', 'msgqadesc',
+        'msgptsubtopic', 'msgptcontent', 'msgptimage', 'msgptvoiceover', 'msgptstatus', 'msgptcomplete', 'msgptgenerating', 'msgptqueued', 'msgptfailed', 'msgptoverall', 'msgqaresultstitle', 'msgqadesc',
         'msgpluginupdates', 'msgsmartsuggestions', 'msgsuggestnote', 'msguploaddocsuggest',
         'msgnoaisuggestions', 'msgregenfailedtitle', 'msgcreatelearningcontent',
         'msgwizardsubtitle', 'msgchoosemode', 'msgchoosemodesubtitle', 'msgstepchoosemode',
@@ -174,21 +178,16 @@ define([
         'msgttinduction', 'msgttpolicy', 'msgttsafety', 'msgttcompliance', 'msgttskills',
         'msgttleadership', 'msgttcustomer', 'msgtttechnical', 'msgttcustom', 'msgtanewstarters',
         'msgtaallstaff', 'msgtasupervisors', 'msgtamanagers', 'msgtacontractors',
-        'msgtaspecificdept', 'msggenerates7cardspersection', 'msgcardvethookscenario',
-        'msgcardvetconceptexplainer', 'msgcardvetmentalmodel', 'msgcardvetappliedscenario',
-        'msgcardvetmistakes', 'msgcardvetcompetencysummary', 'msgcardvetdecisionpoint',
-        'msgcardworkplacehookscenario', 'msgcardworkplaceconceptexplainer',
-        'msgcardworkplacementalmodel', 'msgcardworkplaceappliedscenario',
-        'msgcardworkplacemistakes', 'msgcardworkplacecompetencysummary',
-        'msgcardworkplacedecisionpoint', 'msggenerates6cardspersection',
-        'msgcarduniversityconceptanchor', 'msgcarduniversitytheoreticalframework',
-        'msgcarduniversityanalyticallens', 'msgcarduniversityethicsconsiderations',
-        'msgcarduniversitycasestudy1', 'msgcarduniversitycasestudy2', 'msgcardpdhookscenario',
-        'msgcardpdconceptexplainer', 'msgcardpdmentalmodel', 'msgcardpdappliedscenario',
-        'msgcardpdmistakes', 'msgcardpddecisionpoint',
-        'msggenerates4cardspersectionplus3activities', 'msgcardtopicstextoverview',
-        'msgcardtopicstextkeyconcepts', 'msgcardtopicstextexamplesapplication',
-        'msgcardtopicstextkeytakeaways', 'msgsuggestedbasedon', 'msganalyzingdoc',
+        'msgtaspecificdept', 'msggenerates7cardspersection',
+        'msgcardnamehookscenario', 'msgcardnameconceptexplainer', 'msgcardnamementalmodel',
+        'msgcardnameappliedscenario', 'msgcardnamemistakes', 'msgcardnamecompetencysummary',
+        'msgcardnamedecisionpoint', 'msgcardnameconceptanchor', 'msgcardnametheoreticalframework',
+        'msgcardnameanalyticallens', 'msgcardnameethics', 'msgcardnamecasestudy1',
+        'msgcardnamecasestudy2', 'msgcardnameoverview', 'msgcardnamekeyconcepts',
+        'msgcardnameexamplesapplication', 'msgcardnamekeytakeaways', 'msghowitdiffers',
+        'msgdiffervet', 'msgdifferworkplace', 'msgdifferuniversity', 'msgdifferpd',
+        'msgdiffertopicstext', 'msggenerates6cardspersection',
+        'msggenerates4cardspersectionplus3activities', 'msgsuggestedbasedon', 'msganalyzingdoc',
         'msgaiextractedcontext', 'msgjobtitles', 'msgjobtitleshint', 'msgprocedurestasks',
         'msgtaskshint', 'msgtoolsequipment', 'msgequipmenthint', 'msgstep1label',
         'msgstep2label', 'msgstep3label', 'msgtryagain', 'msghowitworks', 'msghowstep1',
@@ -217,7 +216,7 @@ define([
         'msgvoiceenergeticyouthful', 'msgvoiceupbeatclear', 'msgvoiceinformativecalm',
         'msgvoiceexcitablebold', 'msgvoicefirmdirect', 'msgvoiceoverlanguage', 'msgcreditnote',
         'msgimagecredits', 'msgchallengehint', 'msgfreenavigation', 'msgtimedreading',
-        'msgmustlisten', 'msgyourbalance', 'msggeneratingcontent', 'msgestimatedcost',
+        'msgmustlisten', 'msgbalprevious', 'msgbalthisrun', 'msgbalafter', 'msggeneratingcontent', 'msgestimatedcost',
         'msgstructurevalidated', 'msgoverlaproles', 'errgennotstarted', 'errgentoolong',
         'errgentimeoutload', 'errgentimeout', 'errgenfailedretry',
         'msgcontexttopicstitle', 'msgcontextpdtitle',
@@ -304,8 +303,16 @@ define([
         msgnocategories: 'No categories available',
         msgnoelementsfound: 'No elements found.',
         msgnoelementsinunit: 'No elements found in this unit.',
-        msgvalidatingstructure: 'Validating content structure...',
-        msgqadesclive: 'Each topic is checked for correct card count, required fields, and voiceover length. Structurally broken content triggers one targeted repair pass.',
+        msgptsubtopic: 'Subtopic',
+        msgptcontent: 'Content',
+        msgptimage: 'Image',
+        msgptvoiceover: 'Voiceover',
+        msgptstatus: 'Status',
+        msgptcomplete: 'Complete',
+        msgptgenerating: 'Generating…',
+        msgptqueued: 'Queued',
+        msgptfailed: 'Retry',
+        msgptoverall: 'Subtopic {$a->done} of {$a->total}',
         msgqaresultstitle: 'Structure Validation Results',
         msgqadesc: 'Each topic is checked for correct card count, required fields, and voiceover length. Broken structure triggers one targeted repair pass.',
         msgpluginupdates: 'Plugin updates available for this module',
@@ -551,39 +558,32 @@ define([
         msgtamanagers: 'Managers',
         msgtacontractors: 'Contractors / Visitors',
         msgtaspecificdept: 'Specific Department',
-        msggenerates7cardspersection: 'Generates 7 cards per section',
-        msgcardvethookscenario: '<strong>Hook Scenario</strong> &ndash; a real moment on the job that puts the learner in the situation',
-        msgcardvetconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the rule or obligation behind it, in plain English',
-        msgcardvetmentalmodel: '<strong>Mental Model</strong> &ndash; the four or five steps, in order, with the reasoning',
-        msgcardvetappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same job, later the same day, when it gets harder',
-        msgcardvetmistakes: '<strong>Mistakes</strong> &ndash; five things that go wrong, each with its consequence',
-        msgcardvetcompetencysummary: '<strong>Competency Summary</strong> &ndash; what they can now do, and what failing looks like',
-        msgcardvetdecisionpoint: '<strong>Decision Point</strong> &ndash; one question, four answers, feedback on each',
-        msgcardworkplacehookscenario: '<strong>Hook Scenario</strong> &ndash; a moment at work where this matters',
-        msgcardworkplaceconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the policy or obligation, in plain English',
-        msgcardworkplacementalmodel: '<strong>Mental Model</strong> &ndash; the steps, naming your actual tools, systems and forms',
-        msgcardworkplaceappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same people and the same task, on a harder day',
-        msgcardworkplacemistakes: '<strong>Mistakes</strong> &ndash; five errors, each with its business or compliance cost',
-        msgcardworkplacecompetencysummary: '<strong>Competency Summary</strong> &ndash; the standard, and what falling short looks like',
-        msgcardworkplacedecisionpoint: '<strong>Decision Point</strong> &ndash; one question with compliance stakes, four answers',
-        msggenerates6cardspersection: 'Generates 6 cards per section',
-        msgcarduniversityconceptanchor: '<strong>Concept Anchor</strong> &ndash; the concept defined, why it matters, three key terms',
-        msgcarduniversitytheoreticalframework: '<strong>Theoretical Framework</strong> &ndash; two or three frameworks, each with its originator and its limits',
-        msgcarduniversityanalyticallens: '<strong>Analytical Lens</strong> &ndash; five or more considerations, each with a concrete example',
-        msgcarduniversityethicsconsiderations: '<strong>Ethics Considerations</strong> &ndash; five or more dimensions, each explained',
-        msgcarduniversitycasestudy1: '<strong>Case Study 1</strong> &ndash; a detailed case, three analysis questions, the key insight',
-        msgcarduniversitycasestudy2: '<strong>Case Study 2</strong> &ndash; a different context, different questions, a critical reflection',
-        msgcardpdhookscenario: '<strong>Hook Scenario</strong> &ndash; a professional moment where the skill is tested',
-        msgcardpdconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the principle underneath, in plain English',
-        msgcardpdmentalmodel: '<strong>Mental Model</strong> &ndash; the steps, as practitioner-level guidance',
-        msgcardpdappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same people, next time it comes up',
-        msgcardpdmistakes: '<strong>Mistakes</strong> &ndash; five errors and their professional or relational cost',
-        msgcardpddecisionpoint: '<strong>Decision Point</strong> &ndash; one judgement call, four answers, feedback on each',
-        msggenerates4cardspersectionplus3activities: 'Generates 4 cards per section, plus 3 activities',
-        msgcardtopicstextoverview: '<strong>Overview</strong> &ndash; what the subject is and why it matters',
-        msgcardtopicstextkeyconcepts: '<strong>Key Concepts</strong> &ndash; the two or three ideas the rest depends on',
-        msgcardtopicstextexamplesapplication: '<strong>Examples &amp; Application</strong> &ndash; the same ideas in real situations',
-        msgcardtopicstextkeytakeaways: '<strong>Key Takeaways</strong> &ndash; what to carry away, and the misunderstanding to avoid',
+        msggenerates7cardspersection: '7 cards per section',
+        msgcardnamehookscenario: 'Hook Scenario',
+        msgcardnameconceptexplainer: 'Concept Explainer',
+        msgcardnamementalmodel: 'Mental Model',
+        msgcardnameappliedscenario: 'Applied Scenario',
+        msgcardnamemistakes: 'Mistakes',
+        msgcardnamecompetencysummary: 'Competency Summary',
+        msgcardnamedecisionpoint: 'Decision Point',
+        msgcardnameconceptanchor: 'Concept Anchor',
+        msgcardnametheoreticalframework: 'Theoretical Framework',
+        msgcardnameanalyticallens: 'Analytical Lens',
+        msgcardnameethics: 'Ethics Considerations',
+        msgcardnamecasestudy1: 'Case Study 1',
+        msgcardnamecasestudy2: 'Case Study 2',
+        msgcardnameoverview: 'Overview',
+        msgcardnamekeyconcepts: 'Key Concepts',
+        msgcardnameexamplesapplication: 'Examples & Application',
+        msgcardnamekeytakeaways: 'Key Takeaways',
+        msghowitdiffers: 'How it differs',
+        msgdiffervet: 'Written to be assessable. Names the tool, the form, the reading and the sign-off, and cites the Act or code of practice behind it. The only route that imports a unit of competency and maps performance criteria.',
+        msgdifferworkplace: 'Built around what the business measures &ndash; the customer, the cost, the turnaround. Points at your own policies, SOPs and systems by name, with no RTO or assessment language anywhere.',
+        msgdifferuniversity: 'Six academic cards, not seven vocational ones. Frameworks with their originators and limits, ethics dimensions, and two full case studies. Bloom\'s level drives the verbs. No workplace scenarios.',
+        msgdifferpd: 'About judgement, not procedure. Lives in conversations and decisions &ndash; what you notice, what you say next, how you repair it. Cites a principle or professional standard rather than a law.',
+        msgdiffertopicstext: 'Plain explanatory prose on any subject, written in the third person. No workplace framing, no compliance, no scenarios or characters &ndash; just the subject, explained well.',
+        msggenerates6cardspersection: '6 cards per section',
+        msggenerates4cardspersectionplus3activities: '4 cards + 3 activities per section',
         msgsuggestedbasedon: 'Suggested based on:',
         msganalyzingdoc: 'AI is analyzing the document to suggest relevant roles, tasks, and equipment...',
         msgaiextractedcontext: 'AI has analysed your document and extracted relevant context. Select the job titles, tasks, and equipment that apply.',
@@ -692,7 +692,9 @@ define([
         msgfreenavigation: 'Free Navigation',
         msgtimedreading: 'Timed Reading',
         msgmustlisten: 'Must Listen',
-        msgyourbalance: 'Your balance:',
+        msgbalprevious: 'Previous balance',
+        msgbalthisrun: 'This generation',
+        msgbalafter: 'Balance after',
         msggeneratingcontent: 'Generating Content',
         msgestimatedcost: 'Estimated Credit Cost:',
         msgstructurevalidated: 'Structure validated  -  card count, fields, and voiceover length checked.',
@@ -4296,6 +4298,8 @@ define([
     
     // Update the credits display in the UI
     const updateCreditsDisplay = () => {
+        // v13.97: a freshly fetched balance changes "balance after" too.
+        try { updateCreditEstimation(); } catch (e) { /* estimate not on screen yet */ }
         const creditsEl = document.getElementById('cc-current-credits');
         if (creditsEl && currentCredits !== null) {
             creditsEl.textContent = currentCredits.toLocaleString();
@@ -4316,16 +4320,36 @@ define([
         return document.querySelectorAll('#cc-additional-langs input[type="checkbox"]:checked').length;
     };
 
+    /**
+     * v13.97: the price, in ONE place.
+     *
+     * It was hardcoded in getCreditEstimationHtml(), again in updateCreditEstimation(),
+     * and again in two language strings - so a price change meant four edits and any
+     * missed copy quoted the author a number the server would not charge.
+     *
+     * This is the price the plugin QUOTES. The amount actually debited is the LMS Labs
+     * tariff, which is server side. The two must move together: quoting 50 while the
+     * server still charges 100 shows the author a number and takes another.
+     */
+    // NOT YET 50. The owner has approved 50, but the debit happens in the LMS Labs
+    // tariff and that has not changed yet - quoting 50 while the server charges 100
+    // shows the author one number and takes another, which is the failure this comment
+    // exists to prevent. Flip this to 50 in the same release that the server tariff
+    // changes, and not before. See claude/lms-labs-credit-tariff-spec.md.
+    const CC_CREDITS_PER_SUBTOPIC = 100;
+    const CC_CREDITS_PER_EXTRA_LANG = 50; // translation pass, unchanged
+    const CC_CREDITS_PER_USD = 10;        // $10 USD = 100 credits
+
     const getCreditEstimationHtml = () => {
         const subtopicCount = countTotalSubtopics();
-        const creditsPerSubtopic = 100;
-        const creditsPerExtraLang = 50; // FIX-CC-ML-TRANSLATE-CREDITS (v13.17): translations cost 50/subtopic
+        const creditsPerSubtopic = CC_CREDITS_PER_SUBTOPIC;
+        const creditsPerExtraLang = CC_CREDITS_PER_EXTRA_LANG;
         const extraLangs = countCheckedAdditionalLangs();
         const baseCredits = subtopicCount * creditsPerSubtopic;
         const extraCredits = subtopicCount * creditsPerExtraLang * extraLangs;
         const totalCredits = baseCredits + extraCredits;
         // v13.94.7: pricing is quoted in USD, not AUD.
-        const usdAmount = (totalCredits / 10).toFixed(0); // $10 USD = 100 credits
+        const usdAmount = (totalCredits / CC_CREDITS_PER_USD).toFixed(0); // $10 USD = 100 credits
 
         if (subtopicCount === 0) {
             return '<span class="cc-credit-amount" id="cc-credit-estimation">' + s('msgcreditspersubtopic') + '</span>';
@@ -4338,13 +4362,36 @@ define([
     };
     
     // v6.9.22: Update credit estimation display dynamically
-    // v13.17: Extra languages cost 50 credits/subtopic (translation), primary costs 100/subtopic
+    // Extra languages cost CC_CREDITS_PER_EXTRA_LANG per subtopic (translation pass);
+    // the primary generation costs CC_CREDITS_PER_SUBTOPIC. Both are declared once above.
+    /**
+     * v13.97: keep the "balance after" figures in step with the estimate.
+     *
+     * @param {Number} totalCredits The cost of the run as currently configured.
+     */
+    const updateBalanceAfter = (totalCredits) => {
+        const costEl  = document.getElementById('cc-bal-cost');
+        const afterEl = document.getElementById('cc-bal-after');
+        if (!costEl || !afterEl) { return; }
+        if (!totalCredits || currentCredits === null) {
+            costEl.textContent = '\u2014';
+            afterEl.textContent = '\u2014';
+            afterEl.classList.remove('cc-bal-value-short');
+            return;
+        }
+        const after = currentCredits - totalCredits;
+        costEl.textContent = totalCredits.toLocaleString();
+        afterEl.textContent = after.toLocaleString();
+        // A negative balance after is the one thing here the author must not miss.
+        afterEl.classList.toggle('cc-bal-value-short', after < 0);
+    };
+
     const updateCreditEstimation = () => {
         const estimationEl = document.getElementById('cc-credit-estimation');
         if (estimationEl) {
             const subtopicCount = countTotalSubtopics();
-            const creditsPerSubtopic = 100;
-            const creditsPerExtraLang = 50;
+            const creditsPerSubtopic = CC_CREDITS_PER_SUBTOPIC;
+            const creditsPerExtraLang = CC_CREDITS_PER_EXTRA_LANG;
             const extraLangs = countCheckedAdditionalLangs();
             const baseCredits = subtopicCount * creditsPerSubtopic;
             const extraCredits = subtopicCount * creditsPerExtraLang * extraLangs;
@@ -4353,8 +4400,9 @@ define([
             // `usdAmount` - a const scoped to the OTHER function. Under strict mode this
             // threw a ReferenceError on every additional-language checkbox change, so the
             // credit estimate silently froze at its initial value.
-            const usdAmount = (totalCredits / 10).toFixed(0);
+            const usdAmount = (totalCredits / CC_CREDITS_PER_USD).toFixed(0);
 
+            updateBalanceAfter(totalCredits);
             if (subtopicCount > 0) {
                 if (extraLangs > 0) {
                     estimationEl.innerHTML = `${subtopicCount} subtopics x ${creditsPerSubtopic} credits + ${extraLangs} extra language${extraLangs > 1 ? 's' : ''} x ${creditsPerExtraLang} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${usdAmount} USD)`;
@@ -4362,7 +4410,7 @@ define([
                     estimationEl.innerHTML = `${subtopicCount} subtopics  x  ${creditsPerSubtopic} credits = <strong>${totalCredits.toLocaleString()} credits</strong> ($${usdAmount} USD)`;
                 }
             } else {
-                estimationEl.textContent = '100 credits per subtopic';
+                estimationEl.textContent = s('msgcreditspersubtopic');
             }
         }
     };
@@ -4870,6 +4918,10 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodevettitle')}</h3>
                         <p class="cc-mode-description">${s('msgmodevetdesc')}</p>
+                        <div class="cc-mode-differs">
+                            <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
+                            <p>${s('msgdiffervet')}</p>
+                        </div>
                         <ul class="cc-mode-features">
                             <li>${s('msgautoimports')}</li>
                             <li>${s('msgcompetencyfocus')}</li>
@@ -4879,13 +4931,13 @@ define([
                         <div class="cc-mode-cardlist">
                             <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li>${s('msgcardvethookscenario')}</li>
-                                <li>${s('msgcardvetconceptexplainer')}</li>
-                                <li>${s('msgcardvetmentalmodel')}</li>
-                                <li>${s('msgcardvetappliedscenario')}</li>
-                                <li>${s('msgcardvetmistakes')}</li>
-                                <li>${s('msgcardvetcompetencysummary')}</li>
-                                <li>${s('msgcardvetdecisionpoint')}</li>
+                                <li>${s('msgcardnamehookscenario')}</li>
+                                <li>${s('msgcardnameconceptexplainer')}</li>
+                                <li>${s('msgcardnamementalmodel')}</li>
+                                <li>${s('msgcardnameappliedscenario')}</li>
+                                <li>${s('msgcardnamemistakes')}</li>
+                                <li>${s('msgcardnamecompetencysummary')}</li>
+                                <li>${s('msgcardnamedecisionpoint')}</li>
                             </ol>
                         </div>
                     </div>
@@ -4901,6 +4953,10 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodewptitle')}</h3>
                         <p class="cc-mode-description">${s('msgmodewpdesc')}</p>
+                        <div class="cc-mode-differs">
+                            <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
+                            <p>${s('msgdifferworkplace')}</p>
+                        </div>
                         <ul class="cc-mode-features">
                             <li>${s('msguploadcompanydocs')}</li>
                             <li>${s('msgaiextractstopics')}</li>
@@ -4910,13 +4966,13 @@ define([
                         <div class="cc-mode-cardlist">
                             <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li>${s('msgcardworkplacehookscenario')}</li>
-                                <li>${s('msgcardworkplaceconceptexplainer')}</li>
-                                <li>${s('msgcardworkplacementalmodel')}</li>
-                                <li>${s('msgcardworkplaceappliedscenario')}</li>
-                                <li>${s('msgcardworkplacemistakes')}</li>
-                                <li>${s('msgcardworkplacecompetencysummary')}</li>
-                                <li>${s('msgcardworkplacedecisionpoint')}</li>
+                                <li>${s('msgcardnamehookscenario')}</li>
+                                <li>${s('msgcardnameconceptexplainer')}</li>
+                                <li>${s('msgcardnamementalmodel')}</li>
+                                <li>${s('msgcardnameappliedscenario')}</li>
+                                <li>${s('msgcardnamemistakes')}</li>
+                                <li>${s('msgcardnamecompetencysummary')}</li>
+                                <li>${s('msgcardnamedecisionpoint')}</li>
                             </ol>
                         </div>
                     </div>
@@ -4931,6 +4987,10 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodeunititle')}</h3>
                         <p class="cc-mode-description">${s('msgmodeunidesc')}</p>
+                        <div class="cc-mode-differs">
+                            <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
+                            <p>${s('msgdifferuniversity')}</p>
+                        </div>
                         <ul class="cc-mode-features">
                             <li>${s('msgoutcomedriven')}</li>
                             <li>${s('msgcarflow')}</li>
@@ -4940,12 +5000,12 @@ define([
                         <div class="cc-mode-cardlist">
                             <span class="cc-mode-cardlist-label">${s('msggenerates6cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li>${s('msgcarduniversityconceptanchor')}</li>
-                                <li>${s('msgcarduniversitytheoreticalframework')}</li>
-                                <li>${s('msgcarduniversityanalyticallens')}</li>
-                                <li>${s('msgcarduniversityethicsconsiderations')}</li>
-                                <li>${s('msgcarduniversitycasestudy1')}</li>
-                                <li>${s('msgcarduniversitycasestudy2')}</li>
+                                <li>${s('msgcardnameconceptanchor')}</li>
+                                <li>${s('msgcardnametheoreticalframework')}</li>
+                                <li>${s('msgcardnameanalyticallens')}</li>
+                                <li>${s('msgcardnameethics')}</li>
+                                <li>${s('msgcardnamecasestudy1')}</li>
+                                <li>${s('msgcardnamecasestudy2')}</li>
                             </ol>
                             <span class="cc-mode-cardlist-note">${s('msgnoquizcard')}</span>
                         </div>
@@ -4963,6 +5023,10 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodepdtitle')}</h3>
                         <p class="cc-mode-description">${s('msgmodepddesc')}</p>
+                        <div class="cc-mode-differs">
+                            <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
+                            <p>${s('msgdifferpd')}</p>
+                        </div>
                         <ul class="cc-mode-features">
                             <li>${s('msgentercoursetitleai')}</li>
                             <li>${s('msgorpasteowntopics')}</li>
@@ -4972,13 +5036,13 @@ define([
                         <div class="cc-mode-cardlist">
                             <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li>${s('msgcardpdhookscenario')}</li>
-                                <li>${s('msgcardpdconceptexplainer')}</li>
-                                <li>${s('msgcardpdmentalmodel')}</li>
-                                <li>${s('msgcardpdappliedscenario')}</li>
-                                <li>${s('msgcardpdmistakes')}</li>
-                                <li>${s('msgcardworkplacecompetencysummary')}</li>
-                                <li>${s('msgcardpddecisionpoint')}</li>
+                                <li>${s('msgcardnamehookscenario')}</li>
+                                <li>${s('msgcardnameconceptexplainer')}</li>
+                                <li>${s('msgcardnamementalmodel')}</li>
+                                <li>${s('msgcardnameappliedscenario')}</li>
+                                <li>${s('msgcardnamemistakes')}</li>
+                                <li>${s('msgcardnamecompetencysummary')}</li>
+                                <li>${s('msgcardnamedecisionpoint')}</li>
                             </ol>
                         </div>
                     </div>
@@ -4995,6 +5059,10 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodetopicstitle')}</h3>
                         <p class="cc-mode-description">${s('msgmodetopicsdesc')}</p>
+                        <div class="cc-mode-differs">
+                            <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
+                            <p>${s('msgdiffertopicstext')}</p>
+                        </div>
                         <ul class="cc-mode-features">
                             <li>${s('msgworksanysubject')}</li>
                             <li>${s('msguniversalheadings')}</li>
@@ -5004,10 +5072,10 @@ define([
                         <div class="cc-mode-cardlist">
                             <span class="cc-mode-cardlist-label">${s('msggenerates4cardspersectionplus3activities')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li>${s('msgcardtopicstextoverview')}</li>
-                                <li>${s('msgcardtopicstextkeyconcepts')}</li>
-                                <li>${s('msgcardtopicstextexamplesapplication')}</li>
-                                <li>${s('msgcardtopicstextkeytakeaways')}</li>
+                                <li>${s('msgcardnameoverview')}</li>
+                                <li>${s('msgcardnamekeyconcepts')}</li>
+                                <li>${s('msgcardnameexamplesapplication')}</li>
+                                <li>${s('msgcardnamekeytakeaways')}</li>
                             </ol>
                             <span class="cc-mode-cardlist-note">${s('msgtopicscardnote')}</span>
                         </div>
@@ -7234,9 +7302,26 @@ define([
                                 <span class="cc-credit-label">${s('msgtogeneratecontent')}</span>
                             </div>
                             <div class="cc-credit-balance">
-                                <span class="cc-balance-label">${s('msgyourbalance')}</span>
-                                <span class="cc-balance-amount" id="cc-current-credits">${currentCredits !== null ? currentCredits.toLocaleString() : '...'}</span>
-                                <span class="cc-balance-unit">${s('msgcredits')}</span>
+                                <!-- v13.97 FIX-CC-BALANCE-AFTER: the card showed only the
+                                     current balance, so the author had to do the subtraction
+                                     themselves to know whether they could afford the run.
+                                     Now: previous, this generation, balance after. -->
+                                <div class="cc-bal-grid" id="cc-bal-grid">
+                                    <div class="cc-bal-item">
+                                        <span class="cc-bal-label">${s('msgbalprevious')}</span>
+                                        <span class="cc-bal-value" id="cc-current-credits">${currentCredits !== null ? currentCredits.toLocaleString() : '...'}</span>
+                                    </div>
+                                    <span class="cc-bal-op">&minus;</span>
+                                    <div class="cc-bal-item">
+                                        <span class="cc-bal-label">${s('msgbalthisrun')}</span>
+                                        <span class="cc-bal-value cc-bal-value-cost" id="cc-bal-cost">&mdash;</span>
+                                    </div>
+                                    <span class="cc-bal-op">=</span>
+                                    <div class="cc-bal-item">
+                                        <span class="cc-bal-label">${s('msgbalafter')}</span>
+                                        <span class="cc-bal-value cc-bal-value-after" id="cc-bal-after">&mdash;</span>
+                                    </div>
+                                </div>
                                 <a href="https://lms-labs.com/pricing" target="_blank" class="cc-buy-credits-link" data-testid="link-buy-credits">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                                         <circle cx="12" cy="12" r="10"/>
@@ -7268,7 +7353,21 @@ define([
                             ${s('msgvoiceoverslater')}
                         </p>
                     </div>
-                    <div id="cc-live-qa" class="cc-qa-results" style="display:none;margin-top:16px;"></div>
+                    <!-- v13.97 FIX-CC-PROGRESS-TABLE: a row per subtopic, replacing the live
+                         "Validating content structure" panel that used to sit here. That panel
+                         narrated an internal step the author could not act on; this shows what
+                         is actually happening to their content. Rows are created on the first
+                         stage event for a section and updated in place. -->
+                    <div id="cc-progress-table" class="cc-ptable" style="display:none;">
+                        <div class="cc-ptable-row cc-ptable-head">
+                            <span>${s('msgptsubtopic')}</span>
+                            <span>${s('msgptcontent')}</span>
+                            <span>${s('msgptimage')}</span>
+                            <span>${s('msgptvoiceover')}</span>
+                            <span>${s('msgptstatus')}</span>
+                        </div>
+                        <div id="cc-progress-table-body"></div>
+                    </div>
                 </div>
 
                 <!-- v7.5.xx: Credit Cost Estimation Panel -->
@@ -8882,825 +8981,23 @@ define([
             topicsHeader += '====================================================================\n\n';
         }
 
-        // Prompt templates embedded directly  -  avoids Moodle blocking .txt file fetches from plugin dirs
-        const PROMPT_TEMPLATES = {
-            vet: `ROLE
-
-You are a VET (Vocational Education and Training) content designer creating slide card content for the AI Content Creator  -  an interactive Moodle learning activity used by frontline workers and apprentices in Australian industry.
-
-You write as a practical workplace colleague who has worked on job sites, trained new workers, and assessed competency in real workplaces. Not a corporate trainer. Not a compliance officer. Not an academic.
-
-Your tone is calm, direct, steady, and grounded in real work. You write in natural, connected paragraphs. Full, complete sentences. Ideas unfold clearly and gradually. No punchy fragments. No slogans. No dramatic rhetorical contrasts.
-
-
---------------------------------------------------------------------
-
-WHAT IS THE AI CONTENT CREATOR?
-
-The AI Content Creator displays your output as 7 interactive learning cards inside Moodle  -  one set of 7 cards per Performance Criterion. Each card has a specific visual layout and purpose, and together they tell one continuous story.
-
-You MUST write your output using the EXACT labeled sections shown below. Do not invent your own labels or section names.
-
---------------------------------------------------------------------
-
-STORY CONTINUITY  -  ESSENTIAL
-
-All 7 cards must feel like one connected learning journey, not 7 separate topics.
-
-The GOLDEN RULE: Cards 1 and 4 happen in the SAME job situation  -  same worker, same site, same day.
-- Card 1 (Hook Scenario): The opening scene. Worker faces a situation.
-- Card 4 (Applied Scenario): "Later that morning..."  -  same job, new development or higher stakes.
-- Card 2 must open with "What you just saw..." or "In that situation..."  -  direct reference to Card 1.
-- Card 3 gives the mental model for handling exactly what happened in Card 1.
-- Card 7 places the learner inside the Card 1/4 story as a decision moment.
-- Cards 5 and 6 are grounded in that same job context.
-
-Never write 7 disconnected cards about a general topic. Write 7 cards about ONE specific job situation.
-
---------------------------------------------------------------------
-
-THE 7 SLIDE CARDS  -  EXACT OUTPUT FORMAT
-
-Repeat this full 7-card block for EACH Performance Criterion listed in the task.
-
-====================================================================
-VOICEOVER NARRATION SYSTEM  -  READ THIS BEFORE WRITING ANY VOICEOVER
-====================================================================
-
-The Moodle player has a built-in text-to-speech narration engine. Before playing each card's VOICEOVER, it automatically reads aloud  -  in this exact order:
-
-  STEP 1 (automatic): The full Performance Criterion text from the ===PC [N.X]: ...=== header line.
-           What the learner hears: "1.1: Apply standard precautions when handling chemical substances."
-
-  STEP 2 (automatic): The card type label combined with the TITLE you wrote.
-           What the learner hears: "Scene Setting: A busy Tuesday afternoon at the Prestons depot."
-           Or: "How to Handle It: Three checks before accepting any delivery."
-           Or: "Your Decision: You are the driver  -  what do you do?"
-
-  STEP 3 (your VOICEOVER field): Your narration plays immediately after Steps 1 and 2.
-
-Because the player reads the PC text and the card label+title automatically, your VOICEOVER field:
-   ->  Must begin DIRECTLY with the substantive narration  -  never with the PC text, card label, or TITLE
-   ->  Must contain EXACTLY the text specified in each card's VOICEOVER instruction  -  no additions, no paraphrasing, no summarising
-   ->  Must read like a voice actor's script  -  natural, connected narration that flows from where Step 2 left off
-
-====================================================================
-
-===================================================PC [N.X]: [Copy the full Performance Criterion text here]===================================================
-
-[CARD 1  -  HOOK SCENARIO]
-Displays: An opening scene. A realistic job situation where this topic is immediately relevant. Narrative paragraphs. No bullet points.
-
-TITLE: [Short scene-setting title  -  8 words max. e.g. "A busy Tuesday afternoon at the Prestons depot"]
-CONTENT: [3 - 4 paragraphs, minimum 150 words. Who, where, what time, what are they doing. Introduce a real tension or challenge related to this topic. End with a moment where the right knowledge matters. Connected prose. No headings. No bullets.]
-VOICEOVER: [Copy CONTENT word for word  -  verbatim, no rewriting, no summarising. This IS the complete narration script for this card. The player has already announced the PC/sub-topic heading (Step 1) and "Scene Setting: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with the first sentence of CONTENT, no preamble.]
-
-[CARD 2  -  CONCEPT EXPLAINER]
-Displays: The concept explained directly  -  what the situation in Card 1 is really about.
-
-TITLE: [Short heading that references Card 1's situation  -  8 words max. e.g. "What the worker should have known"]
-CONTENT: [3 paragraphs, minimum 120 words. Para 1 MUST start with "What you just saw..." or "In that situation..."  -  explain the concept directly. Para 2: what this means in practice  -  the rule, the standard, the expectation. Para 3: why it matters in this specific workplace context.]
-VOICEOVER: [Copy CONTENT word for word  -  verbatim, no rewriting. The player has already announced the PC/sub-topic heading (Step 1) and "What This Means: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "What you just saw..." or "In that situation..." exactly as written in CONTENT. No preamble, no card label.]
-
-[CARD 3  -  MENTAL MODEL]
-Displays: A numbered step-by-step flow  -  how to handle exactly this type of situation.
-
-TITLE: [Short heading: the mental model or decision process  -  8 words max. e.g. "How to check it properly every time"]
-STEP 1 TITLE: [Short step label  -  4 words max]
-STEP 1 DETAIL: [2 - 3 sentences, 35 - 45 words. What this step involves, what you are looking for, and what tells you it is done.]
-STEP 2 TITLE: [Short step label]
-STEP 2 DETAIL: [2 - 3 sentences, 35 - 45 words.]
-STEP 3 TITLE: [Short step label]
-STEP 3 DETAIL: [2 - 3 sentences, 35 - 45 words.]
-STEP 4 TITLE: [Short step label  -  optional 4th step if genuinely needed]
-STEP 4 DETAIL: [2 - 3 sentences, 35 - 45 words  -  only if genuinely needed]
-VOICEOVER: [Copy all step content word for word in this exact format: "[STEP 1 TITLE]: [STEP 1 DETAIL] [STEP 2 TITLE]: [STEP 2 DETAIL] [STEP 3 TITLE]: [STEP 3 DETAIL]"  -  and so on for every step you wrote. Do NOT include TITLE  -  the player has already announced "How to Handle It: [your TITLE]" (Step 2). Start your VOICEOVER directly with Step 1 Title. Minimum 60 words covering all steps.]
-
-[CARD 4  -  APPLIED SCENARIO]
-Displays: "Later that day..."  -  a continuation of Card 1, same job, new development.
-
-TITLE: [Short title that signals continuation  -  8 words max. e.g. "Later that morning  -  a second delivery arrives"]
-CONTENT: [3 - 4 paragraphs, minimum 150 words. Continue the SAME job situation from Card 1. Use "Later that day...", "On the same shift...", or "The same worker now..."  -  new complication or higher stakes. End with a moment of correct action or decision.]
-HIGHLIGHT: [1 - 2 sentences, 18 - 28 words. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
-VOICEOVER: [Copy CONTENT word for word then HIGHLIGHT word for word  -  verbatim, in that order. The player has already announced the PC/sub-topic heading (Step 1) and "On the Job: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "Later that day..." or "On the same shift..." as written in CONTENT. No preamble, no card label.]
-
-[CARD 5  -  COMMON MISTAKES]
-Displays: Warning cards  -  specific mistakes grounded in the Card 1/4 scenario context.
-
-TITLE: [Short heading  -  8 words max. e.g. "What goes wrong in situations like this"]
-MISTAKE 1: [Specific mistake  -  named, sounds reasonable but creates a problem. Grounded in the scenario.]
-CONSEQUENCE 1: [Minimum 50 words. Specific chain of events  -  what actually happens. Not vague.]
-MISTAKE 2: [Specific mistake  -  different from Mistake 1.]
-CONSEQUENCE 2: [Minimum 50 words. Specific chain of events.]
-MISTAKE 3: [Specific mistake.]
-CONSEQUENCE 3: [Minimum 50 words. End with a PRACTICAL HABIT  -  a specific check, phrase, or routine that prevents this.]
-VOICEOVER: [Copy all MISTAKE and CONSEQUENCE text word for word in this order: "[MISTAKE 1]. [CONSEQUENCE 1] [MISTAKE 2]. [CONSEQUENCE 2] [MISTAKE 3]. [CONSEQUENCE 3]". The player has already announced the PC/sub-topic heading (Step 1) and "Watch Out For: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with Mistake 1. No preamble, no card label.]
-
-[CARD 6  -  COMPETENCY SUMMARY]
-Displays: Two columns  -  left column "What Good Looks Like" (green) + right column "What to Avoid" (red).
-
-TITLE: [Short heading  -  8 words max. e.g. "You are ready when you can"]
-GOOD 1: [Observable marker of competence  -  full sentence, action verb first, grounded in the Card 1/4 scenario. e.g. "Checks the temperature log before signing any refrigerated delivery docket"]
-GOOD 2: [Observable marker of competence.]
-GOOD 3: [Observable marker of competence.]
-GOOD 4: [Observable marker of competence.]
-GOOD 5: [Observable marker of competence.]
-BAD 1: [Specific failure pattern  -  full sentence describing what the incompetent worker does or skips, grounded in the scenario. e.g. "Signs the delivery paperwork without checking whether the temperature stayed within range"]
-BAD 2: [Failure pattern.]
-BAD 3: [Failure pattern.]
-BAD 4: [Failure pattern.]
-BAD 5: [Failure pattern.]
-VOICEOVER: [Copy all GOOD items then all BAD items word for word in this exact format: "[GOOD 1]. [GOOD 2]. [GOOD 3]. [GOOD 4]. [GOOD 5]. Watch out for: [BAD 1]. [BAD 2]. [BAD 3]. [BAD 4]. [BAD 5]." The player has already announced the PC/sub-topic heading (Step 1) and "You Are Ready When You Can: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with GOOD 1. No preamble, no card label.]
-
-[CARD 7  -  DECISION POINT]
-Displays: An interactive question placing the learner inside the Card 1/4 story.
-
-TITLE: [Short title that places the learner in the story  -  10 words max. e.g. "You are the driver  -  what do you do?"]
-QUESTION: [1 - 2 sentences, 25 - 35 words. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
-OPTION A: [Specific action. Sounds reasonable  -  not obviously wrong.]
-FEEDBACK A: [2 - 3 sentences, 28 - 38 words. What happens if they choose this. Specific, realistic consequence.]
-OPTION B: [Specific action  -  the correct or best action.]
-FEEDBACK B: [2 - 3 sentences, 28 - 38 words. Why this is right and what it achieves.]
-OPTION C: [Specific action  -  a common shortcut or wrong assumption.]
-FEEDBACK C: [2 - 3 sentences, 28 - 38 words. The consequence of this choice.]
-OPTION D: [Specific action  -  another option that seems reasonable but misses something important.]
-FEEDBACK D: [2 - 3 sentences, 28 - 38 words. What is missed and why it matters.]
-CORRECT: [Letter of the correct option  -  A, B, C or D]
-VOICEOVER: [Write in this exact format  -  copy each field verbatim: "[QUESTION text] Option A: [OPTION A text]. Option B: [OPTION B text]. Option C: [OPTION C text]. Option D: [OPTION D text]." Do NOT include any FEEDBACK text here  -  feedback only plays after the learner clicks an option, not in the voiceover. The player has already announced the PC/sub-topic heading (Step 1) and "Your Decision: [your TITLE]" (Step 2)  -  start directly with the QUESTION sentence, no preamble.]
-
---------------------------------------------------------------------
-
-WRITING STANDARDS
-
-LANGUAGE:
-- Australian English spelling (organisation, recognise, behaviour, practise, licence)
-- Full, complete sentences throughout
-- Medium-length sentences, easy to follow
-- Plain, precise vocabulary
-- Concrete details: specific tools, equipment, locations, times, conversations
-
-BANNED WORDS  -  do not use any of these:
-crucial, delve, dive, unpack, holistic, robust, synergy, paradigm, multifaceted, nuanced, pivotal, empower, leverage, realm, journey, landscape, endeavour, pertaining, henceforth, whereby, thereof, therein, notwithstanding, explore, navigate, utilise, utilize, foster, streamline, effectively, efficiently, best practice, ensuring, critical, paramount, comprehensive, subsequently, furthermore, facilitate, it is important to, in order to ensure, for safety purposes, various, range of, significantly, overall, appropriate
-
-STORY COHERENCE  -  every 7-card block must have:
-1. One continuous job situation threading through Cards 1, 4, and 7
-2. Card 2 opening with a direct reference to Card 1 ("What you just saw...")
-3. Card 3 giving practical tools for the exact situation in Cards 1/4
-4. A realistic, specific decision in Card 7  -  not generic
-5. Specific, realistic consequences in Card 5  -  not vague outcomes
-6. Observable, assessable behaviours in Card 6
-
---------------------------------------------------------------------
-
-TASK INSTRUCTIONS
-
-Use the Performance Criteria listed in the section below.
-Generate a complete 7-card block for EACH Performance Criterion.
-Do NOT combine multiple PCs into one block.
-Do NOT add commentary or summaries between cards.
-Stop after all PCs are complete.
-
---------------------------------------------------------------------
-
-The context and task details follow below.
-
---------------------------------------------------------------------`,
-            topicstext: `ROLE
-
-You are writing short-course explanatory content for the AI Content Creator  -  an interactive Moodle learning activity. This is the "Topics and Text" route. It is used for any subject at all: history, science, policy, craft, health, finance, whatever the course is about. There is no workplace framing, no compliance angle and no scenario.
-
-You write clear, compact explanatory prose for an intelligent adult who does not know the subject yet. Third person. Plain, confident, specific. Define a term the first time you use it. No hedging, no moralising, no "in this module you will learn", no calls to action.
-
---------------------------------------------------------------------
-
-WHAT THIS ROUTE PRODUCES
-
-Four short colour-coded cards per sub topic, then a question that drives three activities. The four headings are FIXED and supplied by the platform  -  Overview, Key Concepts, Examples & Application, Key Takeaways. Do NOT write your own headings and do NOT repeat the topic name in one.
-
-The cards are revealed one at a time as the voiceover reads them, so length discipline matters more here than on any other route.
-
---------------------------------------------------------------------
-
-HARD LIMITS  -  READ TWICE
-
-- Cards 1-4 carry EXACTLY TWO paragraphs each.
-- Each paragraph is 55-70 words. Not 40. Not 90.
-- A whole card is therefore 110-140 words. Never exceed 150 on a card.
-- Sentences under 22 words.
-- Plain text only. Never write the characters backslash-n, and no <br>, no markdown, no bullet characters, no asterisks, no numbered lists.
-- Do NOT write a voiceoverText field. The narration on this route is the paragraphs themselves, read verbatim, so a separate script would desynchronise the audio from the on-screen reveal.
-
---------------------------------------------------------------------
-
-OUTPUT FORMAT
-
-Return ONE JSON object per sub topic and nothing else  -  no commentary, no markdown code fences, no headings between blocks. Separate consecutive sub topics with a line containing only:
-
-=== NEXT ===
-
-Each object must be exactly this shape, with exactly these five cards in this order:
-
-{"cards":[
-{"cardType":"overview","paragraphs":["<55-70 words>","<55-70 words>"]},
-{"cardType":"key-concepts","paragraphs":["<55-70 words>","<55-70 words>"],"keyTerms":[{"term":"<1-4 words>","definition":"<one sentence, 12-25 words, standing on its own without the term in front of it>"},{"term":"","definition":""},{"term":"","definition":""}]},
-{"cardType":"examples-application","paragraphs":["<55-70 words>","<55-70 words>"]},
-{"cardType":"key-takeaways","paragraphs":["<55-70 words>","<55-70 words>"],"goodItems":[{"text":"<8-16 words, sound practice or correct understanding>"},{"text":""},{"text":""}],"badItems":[{"text":"<8-16 words, the matching error or misconception>"},{"text":""},{"text":""}]},
-{"cardType":"decision-point","title":"<3-7 words naming what is being checked, not the topic name>","question":"<15-30 words, answerable only by someone who understood the cards>","options":[{"text":"","correct":true,"feedback":"<12-25 words saying why it is right>"},{"text":"","correct":false,"feedback":"<12-25 words naming the exact misunderstanding>"},{"text":"","correct":false,"feedback":""},{"text":"","correct":false,"feedback":""}]}
-]}
-
-Exactly four options. Exactly ONE with correct set to true. The three wrong answers must each be plausible to someone who half understood.
-
---------------------------------------------------------------------
-
-WHAT EACH CARD MUST DO
-
-CARD 1  -  overview
-Paragraph 1: say what the subject IS. Open with a plain definitional sentence that names the subject and places it in its broadest true category. No metaphor, no question, no anecdote, no statistic. Test: sentence one must survive being read on its own as a true definition.
-Paragraph 2: why it matters and what changes for someone who understands it  -  concrete stakes, consequence or usefulness.
-
-CARD 2  -  key-concepts
-The two or three load-bearing ideas the rest depends on. Name each idea, define it in one sentence, then say what work it does in the subject. Prefer ideas that are DISTINCTIONS (X as against Y) over ideas that are only labels. Give the simplest COMPLETE version of an idea, never a simplification you would have to retract later.
-keyTerms: 3-4 terms drawn from these paragraphs. These become flip cards, so each definition must be learnable on its own.
-
-CARD 3  -  examples-application
-The same ideas in real situations. Give two concrete examples, cases, settings or contexts and show what the ideas from Card 2 look like in each. Name real particulars  -  a place, a role, a situation, a decision. Where two approaches differ, say what each buys and at what cost. Everything must trace back to Card 2; introduce no new concept. Do NOT ask the reader questions and do NOT write a story with named characters. Test: at least one sentence must take the form "X rather than Y, because...".
-
-CARD 4  -  key-takeaways
-Paragraph 1: the points that must survive if the learner forgets everything else, written as prose, not a list. Say why each matters, not just that it does.
-Paragraph 2: the most common mistaken belief about this subject. Name it, say plainly that it is mistaken, say why it is plausible, then give the correct account. This paragraph MUST contain an explicit negation  -  "is not", "does not", or "contrary to".
-goodItems and badItems become a drag-to-sort activity, so each must be judgeable on its own and a badItem must be plainly wrong rather than merely less good.
-
-CARD 5  -  decision-point
-One multiple-choice question testing understanding of Cards 1-4, not recall of a phrase.
-
---------------------------------------------------------------------
-
-REFERENCE MATERIAL
-
-When reference material is supplied below, use it as the PRIMARY source. Keep named systems, people, works, places, dates and terms  -  never replace a specific with a generic.
-
---------------------------------------------------------------------
-
-Use the sub topics listed in the section below. Produce one JSON object for EACH sub topic, separated by === NEXT ===. Do not combine sub topics. Do not add commentary between blocks. Stop when all sub topics are done.
-
---------------------------------------------------------------------
-
-The context and task details follow below.
-
---------------------------------------------------------------------`,
-            workplace: `ROLE
-
-You are a workplace learning designer creating slide card content for the AI Content Creator  -  an interactive Moodle learning activity used by workplace professionals and team members.
-
-You write as a practical, experienced colleague who understands real workplace challenges, organisational dynamics, and what makes professionals better at their jobs. Not a consultant. Not a motivational speaker.
-
-Your tone is clear, direct, and practical. You write in natural, connected paragraphs. Full, complete sentences. Ideas unfold clearly. No corporate jargon. No punchy fragments. No slogans.
-
-
---------------------------------------------------------------------
-
-WHAT IS THE AI CONTENT CREATOR?
-
-The AI Content Creator displays your output as 7 interactive learning cards inside Moodle  -  one set of 7 cards per sub topic. Each card has a specific visual layout and purpose, and together they tell one continuous story.
-
-You MUST write your output using the EXACT labeled sections shown below. Do not invent your own labels or section names.
-
---------------------------------------------------------------------
-
-STORY CONTINUITY  -  ESSENTIAL
-
-All 7 cards must feel like one connected learning journey, not 7 separate topics.
-
-The GOLDEN RULE: Cards 1 and 4 happen in the SAME job situation  -  same worker, same site, same day.
-- Card 1 (Hook Scenario): The opening scene. Worker faces a situation.
-- Card 4 (Applied Scenario): "Later that morning..."  -  same job, new development or higher stakes.
-- Card 2 must open with "What you just saw..." or "In that situation..."  -  direct reference to Card 1.
-- Card 3 gives the mental model for handling exactly what happened in Card 1.
-- Card 7 places the learner inside the Card 1/4 story as a decision moment.
-- Cards 5 and 6 are grounded in that same job context.
-
-Never write 7 disconnected cards about a general topic. Write 7 cards about ONE specific job situation.
-
---------------------------------------------------------------------
-
-THE 7 SLIDE CARDS  -  EXACT OUTPUT FORMAT
-
-Repeat this full 7-card block for EACH sub topic listed in the task.
-
-====================================================================
-VOICEOVER NARRATION SYSTEM  -  READ THIS BEFORE WRITING ANY VOICEOVER
-====================================================================
-
-The Moodle player has a built-in text-to-speech narration engine. Before playing each card's VOICEOVER, it automatically reads aloud  -  in this exact order:
-
-  STEP 1 (automatic): The sub topic title from the ===A  -  [title]=== header line.
-           What the learner hears: "Managing a difficult conversation with a distressed client."
-
-  STEP 2 (automatic): The card type label combined with the TITLE you wrote.
-           What the learner hears: "Scene Setting: A Friday afternoon in the project office."
-           Or: "How to Handle It: Three checks before accepting any delivery."
-           Or: "Your Decision: You are the driver  -  what do you do?"
-
-  STEP 3 (your VOICEOVER field): Your narration plays immediately after Steps 1 and 2.
-
-Because the player reads the sub topic title and the card label+title automatically, your VOICEOVER field:
-   ->  Must begin DIRECTLY with the substantive narration  -  never with the sub topic title, card label, or TITLE
-   ->  Must contain EXACTLY the text specified in each card's VOICEOVER instruction  -  no additions, no paraphrasing, no summarising
-   ->  Must read like a voice actor's script  -  natural, connected narration that flows from where Step 2 left off
-
-====================================================================
-
-===================================================A  -  [Sub topic title here]===================================================
-
-[CARD 1  -  HOOK SCENARIO]
-Displays: An opening scene. A realistic job situation where this topic is immediately relevant. Narrative paragraphs. No bullet points.
-
-TITLE: [Short scene-setting title  -  8 words max. e.g. "A busy Tuesday afternoon at the Prestons depot"]
-CONTENT: [3 - 4 paragraphs, minimum 150 words. Who, where, what time, what are they doing. Introduce a real tension or challenge related to this topic. End with a moment where the right knowledge matters. Connected prose. No headings. No bullets.]
-VOICEOVER: [Copy CONTENT word for word  -  verbatim, no rewriting, no summarising. This IS the complete narration script for this card. The player has already announced the PC/sub-topic heading (Step 1) and "Scene Setting: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with the first sentence of CONTENT, no preamble.]
-
-[CARD 2  -  CONCEPT EXPLAINER]
-Displays: The concept explained directly  -  what the situation in Card 1 is really about.
-
-TITLE: [Short heading that references Card 1's situation  -  8 words max. e.g. "What the worker should have known"]
-CONTENT: [3 paragraphs, minimum 120 words. Para 1 MUST start with "What you just saw..." or "In that situation..."  -  explain the concept directly. Para 2: what this means in practice  -  the rule, the standard, the expectation. Para 3: why it matters in this specific workplace context.]
-VOICEOVER: [Copy CONTENT word for word  -  verbatim, no rewriting. The player has already announced the PC/sub-topic heading (Step 1) and "What This Means: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "What you just saw..." or "In that situation..." exactly as written in CONTENT. No preamble, no card label.]
-
-[CARD 3  -  MENTAL MODEL]
-Displays: A numbered step-by-step flow  -  how to handle exactly this type of situation.
-
-TITLE: [Short heading: the mental model or decision process  -  8 words max. e.g. "How to check it properly every time"]
-STEP 1 TITLE: [Short step label  -  4 words max]
-STEP 1 DETAIL: [2 - 3 sentences, 35 - 45 words. What this step involves, what you are looking for, and what tells you it is done.]
-STEP 2 TITLE: [Short step label]
-STEP 2 DETAIL: [2 - 3 sentences, 35 - 45 words.]
-STEP 3 TITLE: [Short step label]
-STEP 3 DETAIL: [2 - 3 sentences, 35 - 45 words.]
-STEP 4 TITLE: [Short step label  -  optional 4th step if genuinely needed]
-STEP 4 DETAIL: [2 - 3 sentences, 35 - 45 words  -  only if genuinely needed]
-VOICEOVER: [Copy all step content word for word in this exact format: "[STEP 1 TITLE]: [STEP 1 DETAIL] [STEP 2 TITLE]: [STEP 2 DETAIL] [STEP 3 TITLE]: [STEP 3 DETAIL]"  -  and so on for every step you wrote. Do NOT include TITLE  -  the player has already announced "How to Handle It: [your TITLE]" (Step 2). Start your VOICEOVER directly with Step 1 Title. Minimum 60 words covering all steps.]
-
-[CARD 4  -  APPLIED SCENARIO]
-Displays: "Later that day..."  -  a continuation of Card 1, same job, new development.
-
-TITLE: [Short title that signals continuation  -  8 words max. e.g. "Later that morning  -  a second delivery arrives"]
-CONTENT: [3 - 4 paragraphs, minimum 150 words. Continue the SAME job situation from Card 1. Use "Later that day...", "On the same shift...", or "The same worker now..."  -  new complication or higher stakes. End with a moment of correct action or decision.]
-HIGHLIGHT: [1 - 2 sentences, 18 - 28 words. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
-VOICEOVER: [Copy CONTENT word for word then HIGHLIGHT word for word  -  verbatim, in that order. The player has already announced the PC/sub-topic heading (Step 1) and "On the Job: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "Later that day..." or "On the same shift..." as written in CONTENT. No preamble, no card label.]
-
-[CARD 5  -  COMMON MISTAKES]
-Displays: Warning cards  -  specific mistakes grounded in the Card 1/4 scenario context.
-
-TITLE: [Short heading  -  8 words max. e.g. "What goes wrong in situations like this"]
-MISTAKE 1: [Specific mistake  -  named, sounds reasonable but creates a problem. Grounded in the scenario.]
-CONSEQUENCE 1: [Minimum 50 words. Specific chain of events  -  what actually happens. Not vague.]
-MISTAKE 2: [Specific mistake  -  different from Mistake 1.]
-CONSEQUENCE 2: [Minimum 50 words. Specific chain of events.]
-MISTAKE 3: [Specific mistake.]
-CONSEQUENCE 3: [Minimum 50 words. End with a PRACTICAL HABIT  -  a specific check, phrase, or routine that prevents this.]
-VOICEOVER: [Copy all MISTAKE and CONSEQUENCE text word for word in this order: "[MISTAKE 1]. [CONSEQUENCE 1] [MISTAKE 2]. [CONSEQUENCE 2] [MISTAKE 3]. [CONSEQUENCE 3]". The player has already announced the PC/sub-topic heading (Step 1) and "Watch Out For: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with Mistake 1. No preamble, no card label.]
-
-[CARD 6  -  COMPETENCY SUMMARY]
-Displays: Two columns  -  left column "What Good Looks Like" (green) + right column "What to Avoid" (red).
-
-TITLE: [Short heading  -  8 words max. e.g. "You are ready when you can"]
-GOOD 1: [Observable marker of competence  -  full sentence, action verb first, grounded in the Card 1/4 scenario. e.g. "Checks the temperature log before signing any refrigerated delivery docket"]
-GOOD 2: [Observable marker of competence.]
-GOOD 3: [Observable marker of competence.]
-GOOD 4: [Observable marker of competence.]
-GOOD 5: [Observable marker of competence.]
-BAD 1: [Specific failure pattern  -  full sentence describing what the incompetent worker does or skips, grounded in the scenario. e.g. "Signs the delivery paperwork without checking whether the temperature stayed within range"]
-BAD 2: [Failure pattern.]
-BAD 3: [Failure pattern.]
-BAD 4: [Failure pattern.]
-BAD 5: [Failure pattern.]
-VOICEOVER: [Copy all GOOD items then all BAD items word for word in this exact format: "[GOOD 1]. [GOOD 2]. [GOOD 3]. [GOOD 4]. [GOOD 5]. Watch out for: [BAD 1]. [BAD 2]. [BAD 3]. [BAD 4]. [BAD 5]." The player has already announced the PC/sub-topic heading (Step 1) and "You Are Ready When You Can: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with GOOD 1. No preamble, no card label.]
-
-[CARD 7  -  DECISION POINT]
-Displays: An interactive question placing the learner inside the Card 1/4 story.
-
-TITLE: [Short title that places the learner in the story  -  10 words max. e.g. "You are the driver  -  what do you do?"]
-QUESTION: [1 - 2 sentences, 25 - 35 words. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
-OPTION A: [Specific action. Sounds reasonable  -  not obviously wrong.]
-FEEDBACK A: [2 - 3 sentences, 28 - 38 words. What happens if they choose this. Specific, realistic consequence.]
-OPTION B: [Specific action  -  the correct or best action.]
-FEEDBACK B: [2 - 3 sentences, 28 - 38 words. Why this is right and what it achieves.]
-OPTION C: [Specific action  -  a common shortcut or wrong assumption.]
-FEEDBACK C: [2 - 3 sentences, 28 - 38 words. The consequence of this choice.]
-OPTION D: [Specific action  -  another option that seems reasonable but misses something important.]
-FEEDBACK D: [2 - 3 sentences, 28 - 38 words. What is missed and why it matters.]
-CORRECT: [Letter of the correct option  -  A, B, C or D]
-VOICEOVER: [Write in this exact format  -  copy each field verbatim: "[QUESTION text] Option A: [OPTION A text]. Option B: [OPTION B text]. Option C: [OPTION C text]. Option D: [OPTION D text]." Do NOT include any FEEDBACK text here  -  feedback only plays after the learner clicks an option, not in the voiceover. The player has already announced the PC/sub-topic heading (Step 1) and "Your Decision: [your TITLE]" (Step 2)  -  start directly with the QUESTION sentence, no preamble.]
-
---------------------------------------------------------------------
-
-WRITING STANDARDS
-
-LANGUAGE:
-- Australian English spelling (organisation, recognise, behaviour, practise, licence)
-- Full, complete sentences throughout
-- Medium-length sentences, easy to follow
-- Plain, precise vocabulary
-- Concrete details: specific tools, equipment, locations, times, conversations
-
-BANNED WORDS  -  do not use any of these:
-crucial, delve, dive, unpack, holistic, robust, synergy, paradigm, multifaceted, nuanced, pivotal, empower, leverage, realm, journey, landscape, endeavour, pertaining, henceforth, whereby, thereof, therein, notwithstanding, explore, navigate, utilise, utilize, foster, streamline, effectively, efficiently, best practice, ensuring, critical, paramount, comprehensive, subsequently, furthermore, facilitate, it is important to, in order to ensure, for safety purposes, various, range of, significantly, overall, appropriate
-
-STORY COHERENCE  -  every 7-card block must have:
-1. One continuous job situation threading through Cards 1, 4, and 7
-2. Card 2 opening with a direct reference to Card 1 ("What you just saw...")
-3. Card 3 giving practical tools for the exact situation in Cards 1/4
-4. A realistic, specific decision in Card 7  -  not generic
-5. Specific, realistic consequences in Card 5  -  not vague outcomes
-6. Observable, assessable behaviours in Card 6
-
---------------------------------------------------------------------
-
-TASK INSTRUCTIONS
-
-Use the sub topics listed in the section below.
-Generate a complete 7-card block for EACH sub topic.
-Do NOT combine multiple sub topics into one block.
-Do NOT add commentary or summaries between cards.
-Label each sub topic block using the letter system: A, B, C, D, etc.
-Stop after all sub topics are complete.
-
---------------------------------------------------------------------
-
-The context and task details follow below.
-
---------------------------------------------------------------------`,
-            university: `ROLE
-
-You are a university learning designer creating slide card content for the AI Content Creator  -  an interactive Moodle learning activity used by undergraduate and postgraduate students.
-
-You write as a knowledgeable academic colleague who bridges theory and practice  -  someone who understands both the intellectual rigour of the discipline and what students actually need to apply ideas. Not a lecturer reading from notes. Not a textbook.
-
-Your tone is clear, intellectually honest, and direct. You write in natural, connected paragraphs. Full, complete sentences. Ideas unfold with precision. No academic jargon without explanation. No slogans.
-
-
---------------------------------------------------------------------
-
-WHAT IS THE AI CONTENT CREATOR?
-
-The AI Content Creator displays your output as 7 interactive learning cards inside Moodle  -  one set of 7 cards per sub topic. Each card has a specific visual layout and purpose, and together they tell one continuous story.
-
-You MUST write your output using the EXACT labeled sections shown below. Do not invent your own labels or section names.
-
---------------------------------------------------------------------
-
-STORY CONTINUITY  -  ESSENTIAL
-
-All 7 cards must feel like one connected learning journey, not 7 separate topics.
-
-The GOLDEN RULE: Cards 1 and 4 happen in the SAME job situation  -  same worker, same site, same day.
-- Card 1 (Hook Scenario): The opening scene. Worker faces a situation.
-- Card 4 (Applied Scenario): "Later that morning..."  -  same job, new development or higher stakes.
-- Card 2 must open with "What you just saw..." or "In that situation..."  -  direct reference to Card 1.
-- Card 3 gives the mental model for handling exactly what happened in Card 1.
-- Card 7 places the learner inside the Card 1/4 story as a decision moment.
-- Cards 5 and 6 are grounded in that same job context.
-
-Never write 7 disconnected cards about a general topic. Write 7 cards about ONE specific job situation.
-
---------------------------------------------------------------------
-
-THE 7 SLIDE CARDS  -  EXACT OUTPUT FORMAT
-
-Repeat this full 7-card block for EACH sub topic listed in the task.
-
-====================================================================
-VOICEOVER NARRATION SYSTEM  -  READ THIS BEFORE WRITING ANY VOICEOVER
-====================================================================
-
-The Moodle player has a built-in text-to-speech narration engine. Before playing each card's VOICEOVER, it automatically reads aloud  -  in this exact order:
-
-  STEP 1 (automatic): The sub topic title from the ===A  -  [title]=== header line.
-           What the learner hears: "Managing a difficult conversation with a distressed client."
-
-  STEP 2 (automatic): The card type label combined with the TITLE you wrote.
-           What the learner hears: "Scene Setting: A Friday afternoon in the project office."
-           Or: "How to Handle It: Three checks before accepting any delivery."
-           Or: "Your Decision: You are the driver  -  what do you do?"
-
-  STEP 3 (your VOICEOVER field): Your narration plays immediately after Steps 1 and 2.
-
-Because the player reads the sub topic title and the card label+title automatically, your VOICEOVER field:
-   ->  Must begin DIRECTLY with the substantive narration  -  never with the sub topic title, card label, or TITLE
-   ->  Must contain EXACTLY the text specified in each card's VOICEOVER instruction  -  no additions, no paraphrasing, no summarising
-   ->  Must read like a voice actor's script  -  natural, connected narration that flows from where Step 2 left off
-
-====================================================================
-
-===================================================A  -  [Sub topic title here]===================================================
-
-[CARD 1  -  HOOK SCENARIO]
-Displays: An opening scene. A realistic job situation where this topic is immediately relevant. Narrative paragraphs. No bullet points.
-
-TITLE: [Short scene-setting title  -  8 words max. e.g. "A busy Tuesday afternoon at the Prestons depot"]
-CONTENT: [3 - 4 paragraphs, minimum 150 words. Who, where, what time, what are they doing. Introduce a real tension or challenge related to this topic. End with a moment where the right knowledge matters. Connected prose. No headings. No bullets.]
-VOICEOVER: [Copy CONTENT word for word  -  verbatim, no rewriting, no summarising. This IS the complete narration script for this card. The player has already announced the PC/sub-topic heading (Step 1) and "Scene Setting: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with the first sentence of CONTENT, no preamble.]
-
-[CARD 2  -  CONCEPT EXPLAINER]
-Displays: The concept explained directly  -  what the situation in Card 1 is really about.
-
-TITLE: [Short heading that references Card 1's situation  -  8 words max. e.g. "What the worker should have known"]
-CONTENT: [3 paragraphs, minimum 120 words. Para 1 MUST start with "What you just saw..." or "In that situation..."  -  explain the concept directly. Para 2: what this means in practice  -  the rule, the standard, the expectation. Para 3: why it matters in this specific workplace context.]
-VOICEOVER: [Copy CONTENT word for word  -  verbatim, no rewriting. The player has already announced the PC/sub-topic heading (Step 1) and "What This Means: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "What you just saw..." or "In that situation..." exactly as written in CONTENT. No preamble, no card label.]
-
-[CARD 3  -  MENTAL MODEL]
-Displays: A numbered step-by-step flow  -  how to handle exactly this type of situation.
-
-TITLE: [Short heading: the mental model or decision process  -  8 words max. e.g. "How to check it properly every time"]
-STEP 1 TITLE: [Short step label  -  4 words max]
-STEP 1 DETAIL: [2 - 3 sentences, 35 - 45 words. What this step involves, what you are looking for, and what tells you it is done.]
-STEP 2 TITLE: [Short step label]
-STEP 2 DETAIL: [2 - 3 sentences, 35 - 45 words.]
-STEP 3 TITLE: [Short step label]
-STEP 3 DETAIL: [2 - 3 sentences, 35 - 45 words.]
-STEP 4 TITLE: [Short step label  -  optional 4th step if genuinely needed]
-STEP 4 DETAIL: [2 - 3 sentences, 35 - 45 words  -  only if genuinely needed]
-VOICEOVER: [Copy all step content word for word in this exact format: "[STEP 1 TITLE]: [STEP 1 DETAIL] [STEP 2 TITLE]: [STEP 2 DETAIL] [STEP 3 TITLE]: [STEP 3 DETAIL]"  -  and so on for every step you wrote. Do NOT include TITLE  -  the player has already announced "How to Handle It: [your TITLE]" (Step 2). Start your VOICEOVER directly with Step 1 Title. Minimum 60 words covering all steps.]
-
-[CARD 4  -  APPLIED SCENARIO]
-Displays: "Later that day..."  -  a continuation of Card 1, same job, new development.
-
-TITLE: [Short title that signals continuation  -  8 words max. e.g. "Later that morning  -  a second delivery arrives"]
-CONTENT: [3 - 4 paragraphs, minimum 150 words. Continue the SAME job situation from Card 1. Use "Later that day...", "On the same shift...", or "The same worker now..."  -  new complication or higher stakes. End with a moment of correct action or decision.]
-HIGHLIGHT: [1 - 2 sentences, 18 - 28 words. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
-VOICEOVER: [Copy CONTENT word for word then HIGHLIGHT word for word  -  verbatim, in that order. The player has already announced the PC/sub-topic heading (Step 1) and "On the Job: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "Later that day..." or "On the same shift..." as written in CONTENT. No preamble, no card label.]
-
-[CARD 5  -  COMMON MISTAKES]
-Displays: Warning cards  -  specific mistakes grounded in the Card 1/4 scenario context.
-
-TITLE: [Short heading  -  8 words max. e.g. "What goes wrong in situations like this"]
-MISTAKE 1: [Specific mistake  -  named, sounds reasonable but creates a problem. Grounded in the scenario.]
-CONSEQUENCE 1: [Minimum 50 words. Specific chain of events  -  what actually happens. Not vague.]
-MISTAKE 2: [Specific mistake  -  different from Mistake 1.]
-CONSEQUENCE 2: [Minimum 50 words. Specific chain of events.]
-MISTAKE 3: [Specific mistake.]
-CONSEQUENCE 3: [Minimum 50 words. End with a PRACTICAL HABIT  -  a specific check, phrase, or routine that prevents this.]
-VOICEOVER: [Copy all MISTAKE and CONSEQUENCE text word for word in this order: "[MISTAKE 1]. [CONSEQUENCE 1] [MISTAKE 2]. [CONSEQUENCE 2] [MISTAKE 3]. [CONSEQUENCE 3]". The player has already announced the PC/sub-topic heading (Step 1) and "Watch Out For: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with Mistake 1. No preamble, no card label.]
-
-[CARD 6  -  COMPETENCY SUMMARY]
-Displays: Two columns  -  left column "What Good Looks Like" (green) + right column "What to Avoid" (red).
-
-TITLE: [Short heading  -  8 words max. e.g. "You are ready when you can"]
-GOOD 1: [Observable marker of competence  -  full sentence, action verb first, grounded in the Card 1/4 scenario. e.g. "Checks the temperature log before signing any refrigerated delivery docket"]
-GOOD 2: [Observable marker of competence.]
-GOOD 3: [Observable marker of competence.]
-GOOD 4: [Observable marker of competence.]
-GOOD 5: [Observable marker of competence.]
-BAD 1: [Specific failure pattern  -  full sentence describing what the incompetent worker does or skips, grounded in the scenario. e.g. "Signs the delivery paperwork without checking whether the temperature stayed within range"]
-BAD 2: [Failure pattern.]
-BAD 3: [Failure pattern.]
-BAD 4: [Failure pattern.]
-BAD 5: [Failure pattern.]
-VOICEOVER: [Copy all GOOD items then all BAD items word for word in this exact format: "[GOOD 1]. [GOOD 2]. [GOOD 3]. [GOOD 4]. [GOOD 5]. Watch out for: [BAD 1]. [BAD 2]. [BAD 3]. [BAD 4]. [BAD 5]." The player has already announced the PC/sub-topic heading (Step 1) and "You Are Ready When You Can: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with GOOD 1. No preamble, no card label.]
-
-[CARD 7  -  DECISION POINT]
-Displays: An interactive question placing the learner inside the Card 1/4 story.
-
-TITLE: [Short title that places the learner in the story  -  10 words max. e.g. "You are the driver  -  what do you do?"]
-QUESTION: [1 - 2 sentences, 25 - 35 words. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
-OPTION A: [Specific action. Sounds reasonable  -  not obviously wrong.]
-FEEDBACK A: [2 - 3 sentences, 28 - 38 words. What happens if they choose this. Specific, realistic consequence.]
-OPTION B: [Specific action  -  the correct or best action.]
-FEEDBACK B: [2 - 3 sentences, 28 - 38 words. Why this is right and what it achieves.]
-OPTION C: [Specific action  -  a common shortcut or wrong assumption.]
-FEEDBACK C: [2 - 3 sentences, 28 - 38 words. The consequence of this choice.]
-OPTION D: [Specific action  -  another option that seems reasonable but misses something important.]
-FEEDBACK D: [2 - 3 sentences, 28 - 38 words. What is missed and why it matters.]
-CORRECT: [Letter of the correct option  -  A, B, C or D]
-VOICEOVER: [Write in this exact format  -  copy each field verbatim: "[QUESTION text] Option A: [OPTION A text]. Option B: [OPTION B text]. Option C: [OPTION C text]. Option D: [OPTION D text]." Do NOT include any FEEDBACK text here  -  feedback only plays after the learner clicks an option, not in the voiceover. The player has already announced the PC/sub-topic heading (Step 1) and "Your Decision: [your TITLE]" (Step 2)  -  start directly with the QUESTION sentence, no preamble.]
-
---------------------------------------------------------------------
-
-WRITING STANDARDS
-
-LANGUAGE:
-- Australian English spelling (organisation, recognise, behaviour, practise, licence)
-- Full, complete sentences throughout
-- Medium-length sentences, easy to follow
-- Plain, precise vocabulary
-- Concrete details: specific tools, equipment, locations, times, conversations
-
-BANNED WORDS  -  do not use any of these:
-crucial, delve, dive, unpack, holistic, robust, synergy, paradigm, multifaceted, nuanced, pivotal, empower, leverage, realm, journey, landscape, endeavour, pertaining, henceforth, whereby, thereof, therein, notwithstanding, explore, navigate, utilise, utilize, foster, streamline, effectively, efficiently, best practice, ensuring, critical, paramount, comprehensive, subsequently, furthermore, facilitate, it is important to, in order to ensure, for safety purposes, various, range of, significantly, overall, appropriate
-
-STORY COHERENCE  -  every 7-card block must have:
-1. One continuous job situation threading through Cards 1, 4, and 7
-2. Card 2 opening with a direct reference to Card 1 ("What you just saw...")
-3. Card 3 giving practical tools for the exact situation in Cards 1/4
-4. A realistic, specific decision in Card 7  -  not generic
-5. Specific, realistic consequences in Card 5  -  not vague outcomes
-6. Observable, assessable behaviours in Card 6
-
---------------------------------------------------------------------
-
-TASK INSTRUCTIONS
-
-Use the sub topics listed in the section below.
-Generate a complete 7-card block for EACH sub topic.
-Do NOT combine multiple sub topics into one block.
-Do NOT add commentary or summaries between cards.
-Label each sub topic block using the letter system: A, B, C, D, etc.
-Stop after all sub topics are complete.
-
---------------------------------------------------------------------
-
-The context and task details follow below.
-
---------------------------------------------------------------------`,
-            pd: `ROLE
-
-You are a professional development learning designer creating slide card content for the AI Content Creator  -  an interactive Moodle learning activity used by working professionals continuing their development.
-
-You write as a senior, experienced practitioner  -  someone who has lived the challenges professionals face and knows what genuinely improves practice. Not a consultant. Not a motivational coach.
-
-Your tone is warm, direct, and evidence-informed. You write in natural, connected paragraphs. Full, complete sentences. No corporate speak. No motivational platitudes. No punchy fragments.
-
-
---------------------------------------------------------------------
-
-WHAT IS THE AI CONTENT CREATOR?
-
-The AI Content Creator displays your output as 7 interactive learning cards inside Moodle  -  one set of 7 cards per sub topic. Each card has a specific visual layout and purpose, and together they tell one continuous story.
-
-You MUST write your output using the EXACT labeled sections shown below. Do not invent your own labels or section names.
-
---------------------------------------------------------------------
-
-STORY CONTINUITY  -  ESSENTIAL
-
-All 7 cards must feel like one connected learning journey, not 7 separate topics.
-
-The GOLDEN RULE: Cards 1 and 4 happen in the SAME job situation  -  same worker, same site, same day.
-- Card 1 (Hook Scenario): The opening scene. Worker faces a situation.
-- Card 4 (Applied Scenario): "Later that morning..."  -  same job, new development or higher stakes.
-- Card 2 must open with "What you just saw..." or "In that situation..."  -  direct reference to Card 1.
-- Card 3 gives the mental model for handling exactly what happened in Card 1.
-- Card 7 places the learner inside the Card 1/4 story as a decision moment.
-- Cards 5 and 6 are grounded in that same job context.
-
-Never write 7 disconnected cards about a general topic. Write 7 cards about ONE specific job situation.
-
---------------------------------------------------------------------
-
-THE 7 SLIDE CARDS  -  EXACT OUTPUT FORMAT
-
-Repeat this full 7-card block for EACH sub topic listed in the task.
-
-====================================================================
-VOICEOVER NARRATION SYSTEM  -  READ THIS BEFORE WRITING ANY VOICEOVER
-====================================================================
-
-The Moodle player has a built-in text-to-speech narration engine. Before playing each card's VOICEOVER, it automatically reads aloud  -  in this exact order:
-
-  STEP 1 (automatic): The sub topic title from the ===A  -  [title]=== header line.
-           What the learner hears: "Managing a difficult conversation with a distressed client."
-
-  STEP 2 (automatic): The card type label combined with the TITLE you wrote.
-           What the learner hears: "Scene Setting: A Friday afternoon in the project office."
-           Or: "How to Handle It: Three checks before accepting any delivery."
-           Or: "Your Decision: You are the driver  -  what do you do?"
-
-  STEP 3 (your VOICEOVER field): Your narration plays immediately after Steps 1 and 2.
-
-Because the player reads the sub topic title and the card label+title automatically, your VOICEOVER field:
-   ->  Must begin DIRECTLY with the substantive narration  -  never with the sub topic title, card label, or TITLE
-   ->  Must contain EXACTLY the text specified in each card's VOICEOVER instruction  -  no additions, no paraphrasing, no summarising
-   ->  Must read like a voice actor's script  -  natural, connected narration that flows from where Step 2 left off
-
-====================================================================
-
-===================================================A  -  [Sub topic title here]===================================================
-
-[CARD 1  -  HOOK SCENARIO]
-Displays: An opening scene. A realistic job situation where this topic is immediately relevant. Narrative paragraphs. No bullet points.
-
-TITLE: [Short scene-setting title  -  8 words max. e.g. "A busy Tuesday afternoon at the Prestons depot"]
-CONTENT: [3 - 4 paragraphs, minimum 150 words. Who, where, what time, what are they doing. Introduce a real tension or challenge related to this topic. End with a moment where the right knowledge matters. Connected prose. No headings. No bullets.]
-VOICEOVER: [Copy CONTENT word for word  -  verbatim, no rewriting, no summarising. This IS the complete narration script for this card. The player has already announced the PC/sub-topic heading (Step 1) and "Scene Setting: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with the first sentence of CONTENT, no preamble.]
-
-[CARD 2  -  CONCEPT EXPLAINER]
-Displays: The concept explained directly  -  what the situation in Card 1 is really about.
-
-TITLE: [Short heading that references Card 1's situation  -  8 words max. e.g. "What the worker should have known"]
-CONTENT: [3 paragraphs, minimum 120 words. Para 1 MUST start with "What you just saw..." or "In that situation..."  -  explain the concept directly. Para 2: what this means in practice  -  the rule, the standard, the expectation. Para 3: why it matters in this specific workplace context.]
-VOICEOVER: [Copy CONTENT word for word  -  verbatim, no rewriting. The player has already announced the PC/sub-topic heading (Step 1) and "What This Means: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "What you just saw..." or "In that situation..." exactly as written in CONTENT. No preamble, no card label.]
-
-[CARD 3  -  MENTAL MODEL]
-Displays: A numbered step-by-step flow  -  how to handle exactly this type of situation.
-
-TITLE: [Short heading: the mental model or decision process  -  8 words max. e.g. "How to check it properly every time"]
-STEP 1 TITLE: [Short step label  -  4 words max]
-STEP 1 DETAIL: [2 - 3 sentences, 35 - 45 words. What this step involves, what you are looking for, and what tells you it is done.]
-STEP 2 TITLE: [Short step label]
-STEP 2 DETAIL: [2 - 3 sentences, 35 - 45 words.]
-STEP 3 TITLE: [Short step label]
-STEP 3 DETAIL: [2 - 3 sentences, 35 - 45 words.]
-STEP 4 TITLE: [Short step label  -  optional 4th step if genuinely needed]
-STEP 4 DETAIL: [2 - 3 sentences, 35 - 45 words  -  only if genuinely needed]
-VOICEOVER: [Copy all step content word for word in this exact format: "[STEP 1 TITLE]: [STEP 1 DETAIL] [STEP 2 TITLE]: [STEP 2 DETAIL] [STEP 3 TITLE]: [STEP 3 DETAIL]"  -  and so on for every step you wrote. Do NOT include TITLE  -  the player has already announced "How to Handle It: [your TITLE]" (Step 2). Start your VOICEOVER directly with Step 1 Title. Minimum 60 words covering all steps.]
-
-[CARD 4  -  APPLIED SCENARIO]
-Displays: "Later that day..."  -  a continuation of Card 1, same job, new development.
-
-TITLE: [Short title that signals continuation  -  8 words max. e.g. "Later that morning  -  a second delivery arrives"]
-CONTENT: [3 - 4 paragraphs, minimum 150 words. Continue the SAME job situation from Card 1. Use "Later that day...", "On the same shift...", or "The same worker now..."  -  new complication or higher stakes. End with a moment of correct action or decision.]
-HIGHLIGHT: [1 - 2 sentences, 18 - 28 words. The key moment or correct action  -  what made the difference. Written as a pull-quote.]
-VOICEOVER: [Copy CONTENT word for word then HIGHLIGHT word for word  -  verbatim, in that order. The player has already announced the PC/sub-topic heading (Step 1) and "On the Job: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with "Later that day..." or "On the same shift..." as written in CONTENT. No preamble, no card label.]
-
-[CARD 5  -  COMMON MISTAKES]
-Displays: Warning cards  -  specific mistakes grounded in the Card 1/4 scenario context.
-
-TITLE: [Short heading  -  8 words max. e.g. "What goes wrong in situations like this"]
-MISTAKE 1: [Specific mistake  -  named, sounds reasonable but creates a problem. Grounded in the scenario.]
-CONSEQUENCE 1: [Minimum 50 words. Specific chain of events  -  what actually happens. Not vague.]
-MISTAKE 2: [Specific mistake  -  different from Mistake 1.]
-CONSEQUENCE 2: [Minimum 50 words. Specific chain of events.]
-MISTAKE 3: [Specific mistake.]
-CONSEQUENCE 3: [Minimum 50 words. End with a PRACTICAL HABIT  -  a specific check, phrase, or routine that prevents this.]
-VOICEOVER: [Copy all MISTAKE and CONSEQUENCE text word for word in this order: "[MISTAKE 1]. [CONSEQUENCE 1] [MISTAKE 2]. [CONSEQUENCE 2] [MISTAKE 3]. [CONSEQUENCE 3]". The player has already announced the PC/sub-topic heading (Step 1) and "Watch Out For: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with Mistake 1. No preamble, no card label.]
-
-[CARD 6  -  COMPETENCY SUMMARY]
-Displays: Two columns  -  left column "What Good Looks Like" (green) + right column "What to Avoid" (red).
-
-TITLE: [Short heading  -  8 words max. e.g. "You are ready when you can"]
-GOOD 1: [Observable marker of competence  -  full sentence, action verb first, grounded in the Card 1/4 scenario. e.g. "Checks the temperature log before signing any refrigerated delivery docket"]
-GOOD 2: [Observable marker of competence.]
-GOOD 3: [Observable marker of competence.]
-GOOD 4: [Observable marker of competence.]
-GOOD 5: [Observable marker of competence.]
-BAD 1: [Specific failure pattern  -  full sentence describing what the incompetent worker does or skips, grounded in the scenario. e.g. "Signs the delivery paperwork without checking whether the temperature stayed within range"]
-BAD 2: [Failure pattern.]
-BAD 3: [Failure pattern.]
-BAD 4: [Failure pattern.]
-BAD 5: [Failure pattern.]
-VOICEOVER: [Copy all GOOD items then all BAD items word for word in this exact format: "[GOOD 1]. [GOOD 2]. [GOOD 3]. [GOOD 4]. [GOOD 5]. Watch out for: [BAD 1]. [BAD 2]. [BAD 3]. [BAD 4]. [BAD 5]." The player has already announced the PC/sub-topic heading (Step 1) and "You Are Ready When You Can: [your TITLE]" (Step 2)  -  start your VOICEOVER directly with GOOD 1. No preamble, no card label.]
-
-[CARD 7  -  DECISION POINT]
-Displays: An interactive question placing the learner inside the Card 1/4 story.
-
-TITLE: [Short title that places the learner in the story  -  10 words max. e.g. "You are the driver  -  what do you do?"]
-QUESTION: [1 - 2 sentences, 25 - 35 words. The exact moment of decision. Place learner in the Card 1/4 story. Specific details  -  job, location, pressure, stakes.]
-OPTION A: [Specific action. Sounds reasonable  -  not obviously wrong.]
-FEEDBACK A: [2 - 3 sentences, 28 - 38 words. What happens if they choose this. Specific, realistic consequence.]
-OPTION B: [Specific action  -  the correct or best action.]
-FEEDBACK B: [2 - 3 sentences, 28 - 38 words. Why this is right and what it achieves.]
-OPTION C: [Specific action  -  a common shortcut or wrong assumption.]
-FEEDBACK C: [2 - 3 sentences, 28 - 38 words. The consequence of this choice.]
-OPTION D: [Specific action  -  another option that seems reasonable but misses something important.]
-FEEDBACK D: [2 - 3 sentences, 28 - 38 words. What is missed and why it matters.]
-CORRECT: [Letter of the correct option  -  A, B, C or D]
-VOICEOVER: [Write in this exact format  -  copy each field verbatim: "[QUESTION text] Option A: [OPTION A text]. Option B: [OPTION B text]. Option C: [OPTION C text]. Option D: [OPTION D text]." Do NOT include any FEEDBACK text here  -  feedback only plays after the learner clicks an option, not in the voiceover. The player has already announced the PC/sub-topic heading (Step 1) and "Your Decision: [your TITLE]" (Step 2)  -  start directly with the QUESTION sentence, no preamble.]
-
---------------------------------------------------------------------
-
-WRITING STANDARDS
-
-LANGUAGE:
-- Australian English spelling (organisation, recognise, behaviour, practise, licence)
-- Full, complete sentences throughout
-- Medium-length sentences, easy to follow
-- Plain, precise vocabulary
-- Concrete details: specific tools, equipment, locations, times, conversations
-
-BANNED WORDS  -  do not use any of these:
-crucial, delve, dive, unpack, holistic, robust, synergy, paradigm, multifaceted, nuanced, pivotal, empower, leverage, realm, journey, landscape, endeavour, pertaining, henceforth, whereby, thereof, therein, notwithstanding, explore, navigate, utilise, utilize, foster, streamline, effectively, efficiently, best practice, ensuring, critical, paramount, comprehensive, subsequently, furthermore, facilitate, it is important to, in order to ensure, for safety purposes, various, range of, significantly, overall, appropriate
-
-STORY COHERENCE  -  every 7-card block must have:
-1. One continuous job situation threading through Cards 1, 4, and 7
-2. Card 2 opening with a direct reference to Card 1 ("What you just saw...")
-3. Card 3 giving practical tools for the exact situation in Cards 1/4
-4. A realistic, specific decision in Card 7  -  not generic
-5. Specific, realistic consequences in Card 5  -  not vague outcomes
-6. Observable, assessable behaviours in Card 6
-
---------------------------------------------------------------------
-
-TASK INSTRUCTIONS
-
-Use the sub topics listed in the section below.
-Generate a complete 7-card block for EACH sub topic.
-Do NOT combine multiple sub topics into one block.
-Do NOT add commentary or summaries between cards.
-Label each sub topic block using the letter system: A, B, C, D, etc.
-Stop after all sub topics are complete.
-
---------------------------------------------------------------------
-
-The context and task details follow below.
-
---------------------------------------------------------------------`
-        };
 
         // Build the full prompt from template + context block + topics header
-        const promptText = PROMPT_TEMPLATES[mode] || PROMPT_TEMPLATES.vet;
-        const fullPrompt = promptText +
-            (contextBlock ? '\n\n' + contextBlock : '') +
-            (topicsHeader ? '\n' + topicsHeader : '');
+        // v13.96 FIX-CC-PROMPTFILE-DRIFT: the file is now composed from the SAME system
+        // prompt the plugin sends itself, rather than from a hand-maintained copy. See
+        // buildChatGptPromptFile() in prompts.js for why. gatherContext() gives the real
+        // context so language, spelling and legislation match what Generate would use.
+        // gatherContext() reads the whole wizard form; a half-filled form must not stop a
+        // teacher downloading the prompt, so fall back to the bare mode.
+        let promptContext;
+        try {
+            promptContext = gatherContext() || {};
+        } catch (ctxErr) {
+            ccWarn('[PROMPT-FILE] gatherContext() failed, using minimal context: ' + ctxErr.message);
+            promptContext = {};
+        }
+        promptContext.mode = mode;
+        const fullPrompt = Prompts.buildChatGptPromptFile(mode, promptContext, contextBlock, topicsHeader);
 
         // Trigger browser download of the prompt as a .txt file
         const blob = new Blob([fullPrompt], { type: 'text/plain' });
@@ -10455,6 +9752,199 @@ The context and task details follow below.
         return '';
     };
 
+    // =======================================================================
+    // v13.97 FIX-CC-PROGRESS-TABLE: per-subtopic generation progress.
+    //
+    // The build used to show one bar and a line of text, so an author watching a
+    // twelve-subtopic run had no idea which subtopic was being written, whether its
+    // image had come back, or which one had failed. generator.js now emits a stage
+    // event per section (see reportStage there) and this renders a row for each.
+    //
+    // State lives in a Map keyed by section id, so events arriving out of order -
+    // which they do, generation runs two sections concurrently - land on the right
+    // row. Rows are appended in first-seen order, which matches generation order.
+    // =======================================================================
+    const CC_PT = {
+        rows: new Map(),
+        order: [],
+        total: 0,
+        voiceoverEnabled: false,
+        painted: []
+    };
+
+    const ccPtIcon = (state) => {
+        if (state === 'ok') {
+            return '<span class="cc-pt-tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                + 'stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>';
+        }
+        if (state === 'running') {
+            return '<span class="cc-pt-spin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                + 'stroke-width="2.5" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></span>';
+        }
+        if (state === 'failed') {
+            return '<span class="cc-pt-fail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                + 'stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>';
+        }
+        if (state === 'skipped') { return '<span class="cc-pt-skip">&mdash;</span>'; }
+        return '<span class="cc-pt-dot"></span>';
+    };
+
+    const ccPtStatusPill = (row) => {
+        const done = ['content', 'image', 'voiceover'].every((k) => row[k] === 'ok' || row[k] === 'skipped');
+        const failed = ['content', 'image', 'voiceover'].some((k) => row[k] === 'failed');
+        if (failed) {
+            return '<span class="cc-pt-pill cc-pt-pill-failed">' + s('msgptfailed') + '</span>';
+        }
+        if (done) {
+            return '<span class="cc-pt-pill">' + ccPtIcon('ok') + s('msgptcomplete') + '</span>';
+        }
+        // v13.97: "Queued" means nothing has started. A row that has finished its
+        // content and image but is waiting on voiceover is still in progress - the first
+        // cut read "Queued" there, which told the author a subtopic they had watched
+        // being written had not been started.
+        const started = row.content !== 'pending' || row.image !== 'pending' || row.voiceover !== 'pending';
+        if (row.active || started) {
+            return '<span class="cc-pt-pill cc-pt-pill-working">' + s('msgptgenerating') + '</span>';
+        }
+        return '<span class="cc-pt-pill cc-pt-pill-queued">' + s('msgptqueued') + '</span>';
+    };
+
+    const ccPtRenderRow = (id) => {
+        const row = CC_PT.rows.get(id);
+        if (!row) { return ''; }
+        const cls = 'cc-ptable-row'
+            + (row.active ? ' cc-ptable-row-active' : '')
+            + (row.content === 'pending' && !row.active ? ' cc-ptable-row-queued' : '');
+        return '<div class="' + cls + '" data-pt-id="' + escapeHtml(id) + '">'
+            + '<div class="cc-pt-topic"><span class="cc-pt-num">' + row.index + '</span>'
+            + '<span class="cc-pt-name">' + escapeHtml(row.title || '') + '</span></div>'
+            + '<div class="cc-pt-cell">' + ccPtIcon(row.content) + '</div>'
+            + '<div class="cc-pt-cell">' + ccPtIcon(row.image) + '</div>'
+            + '<div class="cc-pt-cell">' + ccPtIcon(row.voiceover) + '</div>'
+            + '<div class="cc-pt-cell">' + ccPtStatusPill(row) + '</div>'
+            + '</div>';
+    };
+
+    const ccPtPaint = () => {
+        const body = document.getElementById('cc-progress-table-body');
+        const wrap = document.getElementById('cc-progress-table');
+        if (!body || !wrap) { return; }
+        wrap.style.display = CC_PT.order.length ? '' : 'none';
+        // v13.97: replace only the rows whose markup actually changed. Rebuilding the
+        // whole tbody destroyed and recreated every <svg>, which restarts the CSS spin
+        // animation from zero - so with two sections running concurrently and an event
+        // every few seconds, both spinners visibly jumped back to the start together.
+        if (body.childElementCount !== CC_PT.order.length) {
+            body.innerHTML = CC_PT.order.map(ccPtRenderRow).join('');
+            CC_PT.painted = CC_PT.order.map(ccPtRenderRow);
+            return;
+        }
+        CC_PT.painted = CC_PT.painted || [];
+        CC_PT.order.forEach(function (id, i) {
+            const html = ccPtRenderRow(id);
+            if (CC_PT.painted[i] === html) { return; }
+            CC_PT.painted[i] = html;
+            const el = body.children[i];
+            if (el) { el.outerHTML = html; }
+        });
+    };
+
+    /**
+     * v13.97: seed one row per planned subtopic so the whole run is visible up front.
+     *
+     * @param {Array} topics The planned topics, each with sections/subtopics.
+     * @param {Boolean} voiceoverEnabled Whether voiceovers will be generated at all.
+     * @param {Boolean} imagesEnabled Whether images will be generated at all.
+     */
+    const ccPtInit = (topics, voiceoverEnabled, imagesEnabled) => {
+        CC_PT.rows = new Map();
+        CC_PT.order = [];
+        CC_PT.painted = [];
+        CC_PT.voiceoverEnabled = !!voiceoverEnabled;
+        let n = 0;
+        (topics || []).forEach((t) => {
+            const sections = t.sections || t.subtopics || [];
+            sections.forEach((sec) => {
+                const id = sec.id || ('section_' + n);
+                n += 1;
+                CC_PT.rows.set(id, {
+                    index: n,
+                    title: sec.title || sec.name || '',
+                    content: 'pending',
+                    image: imagesEnabled ? 'pending' : 'skipped',
+                    voiceover: voiceoverEnabled ? 'pending' : 'skipped',
+                    active: false
+                });
+                CC_PT.order.push(id);
+            });
+        });
+        CC_PT.total = n;
+        ccPtPaint();
+    };
+
+    /**
+     * v13.97: apply one stage event from generator.js.
+     *
+     * @param {Object} p The progress event.
+     */
+    const ccPtStage = (p) => {
+        if (!p || p.itemType !== 'stage') { return; }
+        let id = p.sectionId;
+        // A section the planner did not name still gets a row rather than being lost.
+        if (!CC_PT.rows.has(id)) {
+            id = CC_PT.order[p.sectionIndex] || id;
+            if (!CC_PT.rows.has(id)) {
+                CC_PT.rows.set(id, {
+                    index: CC_PT.order.length + 1,
+                    title: p.itemTitle || '',
+                    content: 'pending', image: 'pending',
+                    voiceover: CC_PT.voiceoverEnabled ? 'pending' : 'skipped',
+                    active: false
+                });
+                CC_PT.order.push(id);
+            }
+        }
+        const row = CC_PT.rows.get(id);
+        if (p.itemTitle && !row.title) { row.title = p.itemTitle; }
+        if (p.stage === 'start') {
+            row.active = true;
+            if (row.content === 'pending') { row.content = 'running'; }
+        } else if (p.stage === 'content' || p.stage === 'image') {
+            row[p.stage] = p.state;
+            if (p.stage === 'image' && p.state !== 'running') { row.active = false; }
+        }
+        ccPtPaint();
+    };
+
+    /**
+     * v13.97: mark one section's voiceover, called from the builder's own pre-gen loop
+     * because voiceovers are synthesised after generate() returns, not inside it.
+     *
+     * @param {String} sectionId The section id.
+     * @param {String} state 'running' | 'ok' | 'failed' | 'skipped'.
+     */
+    const ccPtVoiceover = (sectionId, state) => {
+        const row = CC_PT.rows.get(sectionId);
+        // v13.97: silently doing nothing when an id does not match would hide a real
+        // mismatch behind a permanent spinner, so say so in the console.
+        if (!row) {
+            ccWarn('[PROGRESS] no row for section "' + sectionId + '" - voiceover state ' + state + ' dropped');
+            return;
+        }
+        row.voiceover = state;
+        if (state !== 'running') { row.active = false; }
+        ccPtPaint();
+    };
+
+    /** v13.97: every remaining voiceover is not being generated. */
+    const ccPtVoiceoverSkipAll = () => {
+        CC_PT.rows.forEach((row) => {
+            if (row.voiceover === 'pending' || row.voiceover === 'running') { row.voiceover = 'skipped'; }
+            row.active = false;
+        });
+        ccPtPaint();
+    };
+
     const gatherContext = () => {
         if (selectedMode === 'vet') {
             const countryCode = document.getElementById('cc-country')?.value || 'AU';
@@ -10975,6 +10465,11 @@ The context and task details follow below.
                     headerColor: headerColor
                 }
             };
+
+            // v13.97: seed the progress table from the plan, so the author sees every
+            // subtopic queued before the first one starts rather than rows appearing
+            // one at a time out of an empty box.
+            ccPtInit(topicPlan?.topics || [], voiceoverEnabled, imagesEnabled);
             
 
             // v9.74: Slow-generation warning  -  fires after 75s in 'generating' status.
@@ -11007,19 +10502,28 @@ The context and task details follow below.
                 onProgress: (progress) => {
                     _clearSlowGenTimer();
                     const percent = Math.round((progress.current / progress.total) * 100);
-                    document.getElementById('cc-gen-progress').style.width = percent + '%';
+                    if (progress.itemType !== 'stage') {
+                        document.getElementById('cc-gen-progress').style.width = percent + '%';
+                    }
                     const topicNum = Math.floor(progress.current / Math.max(1, Math.ceil(progress.total / (topicPlan?.topics?.length || 1)))) + 1;
                     const topicTotal = topicPlan?.topics?.length || 1;
                     const statusEl = document.getElementById('cc-gen-status');
-                    if (statusEl) {
-                        statusEl.textContent = 'Topic ' + Math.min(topicNum, topicTotal) + ' of ' + topicTotal + ': ' + (progress.itemTitle || 'Generating content') + ' (' + percent + '%)';
+                    // v13.97: the table below now names the subtopic, so this line carries
+                    // only the overall count. Stage events must not move the percentage -
+                    // several fire per section and would make the bar jump backwards.
+                    if (statusEl && progress.itemType !== 'stage') {
+                        // v13.97: progress.current/total are SECTION counts, which is what
+                        // this line now names. topicNum/topicTotal are TOPIC counts and read
+                        // "Subtopic 3 of 3" through a twelve-subtopic build.
+                        statusEl.textContent = s('msgptoverall')
+                            .replace('{$a->done}', progress.current || 0)
+                            .replace('{$a->total}', progress.total || 0);
                     }
-                    // v11.30: Show live QA indicator
-                    const liveQa = document.getElementById('cc-live-qa');
-                    if (liveQa && percent > 0) {
-                        liveQa.style.display = '';
-                        liveQa.innerHTML = '<div class="cc-qa-results-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;vertical-align:middle;margin-right:6px;"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>' + s('msgvalidatingstructure') + '</div><p class="cc-qa-results-desc" style="margin-bottom:0;">' + s('msgqadesclive') + '</p>';
-                    }
+                    // v13.97 FIX-CC-PROGRESS-TABLE: the "Validating content structure" panel
+                    // that used to live here narrated an internal step the author could not
+                    // act on. Replaced by a row per subtopic showing what is actually being
+                    // built. (The Structure Validation Results on the FINAL screen stays.)
+                    ccPtStage(progress);
                 },
                 onComplete: async (generatedManifest) => {
                     if (generatedManifest && generatedManifest.topics) {
@@ -11050,6 +10554,9 @@ The context and task details follow below.
                                 _voSkipBtn.disabled = true;
                                 _voSkipBtn.textContent = s('msgskipping');
                                 document.getElementById('cc-gen-status').textContent = s('msgvoiceskipped');
+                                // v13.97: every remaining Voiceover cell becomes a dash rather
+                                // than sitting on a spinner that will never resolve.
+                                ccPtVoiceoverSkipAll();
                                 ccLog('[VOICEOVER BUILDER v12.57] PRE-GEN SKIPPED by user');
                             };
                         }
@@ -11146,7 +10653,12 @@ The context and task details follow below.
                         const pregenOne = async (section, attempt) => {
                             attempt = attempt || 1;
                             // v12.57: Exit immediately if user clicked "Skip voiceover generation".
-                            if (_voSkipRequested) return;
+                            if (_voSkipRequested) { return; }
+                            // v13.97: the spinner goes on AFTER the skip guard. Marking it
+                            // before meant every section still queued when the teacher hit
+                            // Skip was flipped back to a spinner by its own no-op call and
+                            // sat there for the rest of the build.
+                            if (attempt === 1) { ccPtVoiceover(section.id, 'running'); }
                             try {
                                 // v11.02: Use the shared buildVoiceoverText from cc-state.js.
                                 // This produces byte-identical text to the player's buildFullVoiceoverText,
@@ -11157,7 +10669,9 @@ The context and task details follow below.
                                 useNarrationLanguage(voiceLanguage);
                                 var voText = CcState.buildVoiceoverText(section, generatedManifest);
 
-                                if (!voText.trim()) return;
+                                // v13.97: nothing to narrate - mark it, do not leave the
+                                // cell on a spinner that will never resolve.
+                                if (!voText.trim()) { ccPtVoiceover(section.id, 'skipped'); return; }
                                 
                                 const formData = new FormData();
                                 formData.append('sesskey', M.cfg.sesskey);
@@ -11198,6 +10712,8 @@ The context and task details follow below.
                                 var _sectionDur = ((Date.now() - _sectionStart) / 1000).toFixed(1);
                                 
                                 if (data.success && data.audioContent) {
+                                    // v13.97: tick this section's Voiceover column.
+                                    ccPtVoiceover(section.id, 'ok');
                                     var _voWordCount = voText.split(/\s+/).length;
                                     ccLog('%c[VOICEOVER BUILDER v9.75] PRE-GEN OK section ' + section.id + ' | attempt: ' + attempt + ' | ' + _sectionDur + 's | ' + (data.audioContent.length / 1024).toFixed(0) + 'KB | words: ' + _voWordCount, 'color: #10b981');
                                     // FIX-CC-BUILDER-PRIMARY-PERSIST (v13.14): Previously stored a data: URL
@@ -11256,8 +10772,10 @@ The context and task details follow below.
                                     await new Promise(r => setTimeout(r, retryDelay));
                                     return pregenOne(section, attempt + 1);
                                 }
+                                // v13.97: retries exhausted - mark the cell, do not leave it spinning.
+                                ccPtVoiceover(section.id, 'failed');
                             }
-                            
+
                             completed++;
                             const percent = Math.round((completed / allSections.length) * 100);
                             document.getElementById('cc-gen-progress').style.width = percent + '%';
@@ -11265,9 +10783,21 @@ The context and task details follow below.
                                 `Pre-generating voiceovers (${completed}/${allSections.length})`;
                         };
                         
+                        // v13.97: allSections is filtered - a section with no cards never gets
+                        // a voiceover event, so its row would sit on "Generating" forever.
+                        try {
+                            var _voIds = {};
+                            allSections.forEach(function (sec) { _voIds[sec.id] = true; });
+                            CC_PT.order.forEach(function (rowId) {
+                                if (!_voIds[rowId]) { ccPtVoiceover(rowId, 'skipped'); }
+                            });
+                        } catch (_ptErr) {
+                            ccWarn('[PROGRESS] could not reconcile voiceover rows: ' + _ptErr.message);
+                        }
+
                         const promises = [];
                         while (index < allSections.length) {
-                            while (promises.length < CONCURRENT && index < allSections.length) {
+                            while (promises.length < CONCURRENT && index < allSections.length && !_voSkipRequested) {
                                 const section = allSections[index++];
                                 const p = pregenOne(section, 1).then(() => {
                                     promises.splice(promises.indexOf(p), 1);

@@ -207,6 +207,20 @@
        at only 2.30:1, so a solid control with a white label needs a darker step. These
        two stay on the card green's own hue (142) rather than the teal ramp (168), which
        read as a different, muddier colour beside the green cards. */
+    /* v13.97 FIX-CC-CTA-CONTRAST: brand orange carries WHITE at only 2.90:1, which is why
+       v13.95 darkened every orange CTA until it stopped looking like the brand. Saturated
+       orange sits at a luminance that is wrong for white and fine for near-black, which is
+       why Bootstrap 5, Material 3 and Tailwind all put a DARK label on amber and orange
+       buttons rather than darkening the fill. Same here: the brand orange comes back and
+       the label flips. The label is 5.68:1 on the light end of the gradient and 4.70:1 on the
+       dark end - both clear AA - and the button reads as a confident action rather than a
+       warning. --cc5-orange-cta-text is the matching foreground for orange-on-white
+       secondary buttons (6.46:1). */
+    --cc5-orange-cta: hsl(22deg 90% 55%);
+    --cc5-orange-cta-dark: hsl(22deg 88% 48%);
+    --cc5-orange-cta-label: hsl(22deg 95% 11%);   /* 5.68:1 on the light stop, 4.70:1 on the dark */
+    --cc5-orange-cta-text: hsl(22deg 92% 33%);    /* on white: 6.46:1 */
+    --cc5-orange-cta-wash: hsl(22deg 92% 96%);    /* secondary hover fill */
     --cc5-green-solid: hsl(142deg 71% 29%);       /* white on this: 5.11:1 */
     --cc5-green-solid-dark: hsl(142deg 74% 23%);  /* white on this: 7.08:1 */
     --cc5-amber: hsl(38deg 92% 50%);
@@ -308,6 +322,14 @@
 .theme-dark .cc5-player,
 body.dark .cc5-player,
 [data-theme="dark"] .cc5-player {
+    /* v13.97: the orange CTA tokens need dark-theme values. --cc5-orange-cta-text is
+       6.46:1 on white but 2.90:1 on the dark ground below, so the bordered secondary
+       would have had an unreadable label in dark mode; the light orange here is 7.31:1
+       on hsl(0 0% 7%). The wash likewise flashes near-white on a dark page. The solid
+       button's fill and near-black label are the same in both themes - that pair works
+       on any ground, which is the point of flipping the label rather than the fill. */
+    --cc5-orange-cta-text: hsl(22deg 90% 72%);
+    --cc5-orange-cta-wash: hsl(22deg 45% 16%);
     --cc5-bg: hsl(0deg 0% 7%);
     --cc5-bg-subtle: hsl(0deg 0% 9%);
     --cc5-bg-muted: hsl(0deg 0% 11%);
@@ -17947,8 +17969,10 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     letter-spacing: 0.01em;
 }
 .cc5-challenge-step.cc5-active {
+    /* v13.97: was #fff on hsl(22 90% 55%) = 2.91:1, on the same screen as the CTA
+       buttons this release fixed. Same flip: keep the brand orange, darken the label. */
     background: linear-gradient(135deg, hsl(22deg 90% 55%) 0%, hsl(22deg 85% 50%) 100%);
-    color: #fff;
+    color: var(--cc5-orange-cta-label);
     box-shadow: 0 2px 8px hsl(22deg 90% 55% / 0.3);
 }
 .cc5-challenge-step.cc5-done {
@@ -18076,14 +18100,15 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
    Hue and weight are unchanged, so the button still reads as the same brand orange. */
 .cc5-challenge-next-btn.cc5-enabled,
 .cc5-challenge-finish-btn.cc5-enabled {
-    background: linear-gradient(135deg, hsl(22deg 90% 41%) 0%, hsl(22deg 85% 37%) 100%);
-    color: #fff;
-    border-color: hsl(22deg 90% 37%);
-    box-shadow: 0 3px 12px hsl(22deg 90% 41% / 0.3);
+    background: linear-gradient(135deg, var(--cc5-orange-cta) 0%, var(--cc5-orange-cta-dark) 100%);
+    color: var(--cc5-orange-cta-label);
+    border-color: var(--cc5-orange-cta-dark);
+    box-shadow: 0 3px 12px hsl(22deg 90% 45% / 0.3);
 }
 .cc5-challenge-next-btn.cc5-enabled:hover,
 .cc5-challenge-finish-btn.cc5-enabled:hover {
-    background: linear-gradient(135deg, hsl(22deg 90% 50%) 0%, hsl(22deg 85% 45%) 100%);
+    background: linear-gradient(135deg, hsl(22deg 92% 60%) 0%, hsl(22deg 88% 53%) 100%);
+    color: var(--cc5-orange-cta-label);
     box-shadow: 0 4px 16px hsl(22deg 90% 55% / 0.4);
     transform: translateY(-1px);
 }
@@ -18652,24 +18677,30 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     transform: translateY(0);
     color: hsl(22 80% 32%);
 }
+/* v13.97 FIX-CC-CTA-HIERARCHY: Review Answers was the same heavy orange as Continue and
+   Next Activity, so three solid buttons competed on one screen. One primary action per
+   screen: the forward action stays solid, this becomes a bordered secondary in the same
+   hue. Orange text on white is 6.46:1; the border is 3.61:1, clearing the 3:1 floor. */
 .cc5-challenge-review-btn {
-    /* v13.95 FIX-CC-CHALLENGE-CONTRAST: white on hsl(22 90% 55%) is 2.90:1. Same
-       correction as the Next Activity button: drop to the lightest orange in this hue
-       that clears 4.5:1 under white 0.9rem text. */
-    background: linear-gradient(135deg, hsl(22 90% 41%) 0%, hsl(22 85% 36%) 100%);
-    border: 2px solid hsl(22 90% 37%);
-    color: #fff;
-    box-shadow: 0 2px 8px hsl(22 90% 41% / 0.25);
+    background: var(--cc5-bg);
+    /* The border is the only thing making a background-less button look like a button,
+       so it takes the darker orange: 3.61:1 on white, clearing the 3:1 floor that
+       WCAG 1.4.11 sets for a UI component boundary. The lighter brand orange is 2.91:1
+       and would have failed it. */
+    border: 2px solid var(--cc5-orange-cta-dark);
+    color: var(--cc5-orange-cta-text);
+    box-shadow: none;
 }
 .cc5-challenge-review-btn:hover {
-    background: linear-gradient(135deg, hsl(22 90% 35%) 0%, hsl(22 85% 30%) 100%);
-    color: #fff;
-    box-shadow: 0 3px 12px hsl(22 90% 41% / 0.3);
+    background: var(--cc5-orange-cta-wash);
+    border-color: var(--cc5-orange-cta-dark);
+    color: var(--cc5-orange-cta-text);
+    box-shadow: 0 2px 8px hsl(22 90% 45% / 0.18);
     transform: translateY(-1px);
 }
 .cc5-challenge-review-btn:active {
     transform: translateY(0);
-    color: #fff;
+    color: var(--cc5-orange-cta-text);
 }
 /* v12.57 FIX-CC-CHALLENGE-NEXT: "Continue" button — primary green, signals forward progression */
 .cc5-challenge-continue-btn {
@@ -19324,7 +19355,10 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     margin-top: 0;
 }
 .cc5-player .cc5-scene-parts-hook .cc5-scene-part-icon {
-    background: hsl(28deg 90% 50%);
+    /* v13.97: white on hsl(28 90% 50%) is 2.81:1, under the 3:1 floor WCAG 1.4.11 sets
+       for a graphic that carries meaning. Darkened to 4.58:1; the hue is unchanged so it
+       still reads as the same accent beside the teal applied-scenario icon (4.10:1). */
+    background: hsl(28deg 92% 38%);
     color: #fff;
 }
 .cc5-player .cc5-scene-parts-applied .cc5-scene-part-icon {
@@ -21215,9 +21249,10 @@ body.dark .cc5-lang-pill {
    layers cannot disagree if the !important block is ever unwound. */
 .cc5-challenge-next-btn.cc5-enabled:hover,
 .cc5-challenge-finish-btn.cc5-enabled:hover {
-    color: #fff;
-    background: linear-gradient(135deg, hsl(22deg 90% 35%) 0%, hsl(22deg 85% 31%) 100%);
-    border-color: hsl(22deg 90% 31%);
+    /* v13.97: dark label on brand orange - see the token block at the top of this file. */
+    color: var(--cc5-orange-cta-label);
+    background: linear-gradient(135deg, hsl(22deg 92% 60%) 0%, hsl(22deg 88% 53%) 100%);
+    border-color: var(--cc5-orange-cta-dark);
 }
 
 /* Focus and active share the theme's selector list, so a button that is
@@ -21544,9 +21579,12 @@ body.dark .cc5-lang-pill {
 .cc5-challenge-finish-btn.cc5-enabled:hover,
 .cc5-challenge-finish-btn.cc5-enabled:focus,
 .cc5-challenge-finish-btn.cc5-enabled:active {
-    color: #fff !important;
-    background: linear-gradient(135deg, hsl(22deg 90% 35%) 0%, hsl(22deg 85% 31%) 100%) !important;
-    border-color: hsl(22deg 90% 31%) !important;
+    /* v13.97: was white on dark orange, which is the pair v13.97 replaced in the base
+       state. Left unchanged it made the button flip appearance on hover, focus AND
+       click - a mouse click left it in the old style until focus moved away. */
+    color: var(--cc5-orange-cta-label) !important;
+    background: linear-gradient(135deg, hsl(22deg 92% 60%) 0%, hsl(22deg 88% 53%) 100%) !important;
+    border-color: var(--cc5-orange-cta-dark) !important;
 }
 
 /* v13.95 FIX-CC-NEXTACTIVITY-DISABLED: :disabled elements still match :hover in CSS, so
@@ -21583,17 +21621,20 @@ body.dark .cc5-lang-pill {
 }
 
 .cc5-challenge-review-btn {
-    background: linear-gradient(135deg, hsl(22 90% 41%) 0%, hsl(22 85% 36%) 100%) !important;
-    border-color: hsl(22 90% 37%) !important;
-    color: #fff !important;
+    /* v13.97 FIX-CC-CTA-HIERARCHY: this !important block made the demotion 3000 lines
+       up a complete no-op. Review Answers is a SECONDARY action - bordered, not solid,
+       so it stops competing with Continue for the same screen. */
+    background: var(--cc5-bg) !important;
+    border-color: var(--cc5-orange-cta-dark) !important;
+    color: var(--cc5-orange-cta-text) !important;
 }
 
 .cc5-challenge-review-btn:hover,
 .cc5-challenge-review-btn:focus,
 .cc5-challenge-review-btn:active {
-    background: linear-gradient(135deg, hsl(22 90% 35%) 0%, hsl(22 85% 30%) 100%) !important;
-    border-color: hsl(22 90% 37%) !important;
-    color: #fff !important;
+    background: var(--cc5-orange-cta-wash) !important;
+    border-color: var(--cc5-orange-cta-dark) !important;
+    color: var(--cc5-orange-cta-text) !important;
 }
 
 .cc5-challenge-continue-btn {

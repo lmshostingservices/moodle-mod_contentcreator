@@ -711,6 +711,86 @@ in step with the audio. A separate narration script would desynchronise them.`;
 
     const getFiveCardSystemPromptForMode = getSystemPromptForMode;
 
+
+    /**
+     * v13.96 FIX-CC-PROMPTFILE-DRIFT: build the downloadable ChatGPT prompt from the
+     * SAME system prompt the plugin sends itself.
+     *
+     * Until now the five downloadable prompt files were hand-maintained copies of the
+     * card contract living in builder.js, and they had drifted badly: none of the
+     * v13.96 quality rules were in them, the University file was a clone of the VET
+     * vocational prompt, and four of the five still asked for the pre-v10.43 labelled
+     * output format even though generator.js has preferred JSON since v10.52 and its
+     * own comment says "current prompt-file format outputs JSON". A teacher using the
+     * ChatGPT path therefore got structurally different, thinner cards than a teacher
+     * who clicked Generate - blob text instead of the four-panel scene the renderer is
+     * built for, no per-item icons, three mistakes instead of five.
+     *
+     * Composing the file from getSystemPromptForMode() means there is exactly one card
+     * contract in the codebase. Pasted JSON is picked up by parseChatGPTJSONBlocks()
+     * and run through the same normalizeCardSchema() the API path uses, so the two
+     * paths now produce identical cards by construction rather than by maintenance.
+     *
+     * @param {string} mode Route id.
+     * @param {Object} context The generation context (country, industry, language...).
+     * @param {string} contextBlock Route-specific context already formatted by the caller.
+     * @param {string} topicsBlock The teacher's sub-topic list, already formatted.
+     * @return {string} The complete .txt file body.
+     */
+    const buildChatGptPromptFile = (mode, context, contextBlock, topicsBlock) => {
+        const systemPrompt = getSystemPromptForMode(mode, context);
+        const cardCount = getCardCountForMode(mode);
+        const sep = '====================================================================';
+
+        const howTo = [
+            sep,
+            'HOW TO USE THIS FILE',
+            sep,
+            '',
+            '1. Open ChatGPT (GPT-4 or later).',
+            '2. Upload any documents you want used as source material - a training manual,',
+            '   a policy, a unit PDF, course readings. Do this BEFORE sending the prompt.',
+            '3. Paste this entire file as your message and send it.',
+            '4. Read what comes back and ask for changes until you are happy with it.',
+            '5. Copy the whole reply and paste it into the box in Content Creator, then',
+            '   continue. Your slides are built from it directly - no second AI call.',
+            '',
+            'Keep the JSON exactly as ChatGPT returns it, including the === NEXT === lines.',
+            'If you edit the text by hand, do not remove or rename any field.',
+            ''
+        ].join('\n');
+
+        const multi = [
+            sep,
+            'OUTPUT FORMAT FOR THIS FILE',
+            sep,
+            '',
+            'The rules below describe ONE sub topic. This file asks for several.',
+            '',
+            'Produce one complete JSON object for EACH sub topic listed at the end, in the',
+            'order they are listed. Separate consecutive sub topics with a line containing',
+            'only:',
+            '',
+            '=== NEXT ===',
+            '',
+            'Each object must be { "cards": [ ... ] } with exactly ' + cardCount + ' cards.',
+            'Do not combine sub topics. Do not skip any. Do not write commentary between',
+            'them. Do not wrap the JSON in markdown code fences.',
+            ''
+        ].join('\n');
+
+        return [
+            howTo,
+            (contextBlock || '').trim(),
+            '',
+            systemPrompt.trim(),
+            '',
+            multi,
+            (topicsBlock || '').trim(),
+            ''
+        ].filter(function (part, i) { return i === 0 || part !== ''; }).join('\n\n');
+    };
+
     // ===========================================================================
     // USER PROMPT BUILDERS
     // ===========================================================================
@@ -1566,6 +1646,7 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         TOPICSTEXT_SYSTEM_PROMPT: TOPICSTEXT_SYSTEM_PROMPT,
         buildTopicsTextUserPrompt: buildTopicsTextUserPrompt,
         getFiveCardSystemPromptForMode: getFiveCardSystemPromptForMode,
+        buildChatGptPromptFile: buildChatGptPromptFile,
         buildFiveCardUserPrompt: buildFiveCardUserPrompt,
         normalizeCards: normalizeCards,
         validateBannedWords: validateBannedWords,

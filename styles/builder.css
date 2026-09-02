@@ -688,6 +688,44 @@ body.dark .cc-mode-features li,
     color: hsl(217 8% 65%);
 }
 
+/* v13.96: dark-mode for the new chips and the "how it differs" panel. Same five
+   selector families the block above uses, so all four theme conventions are covered. */
+.dark .cc-mode-differs,
+.theme-dark .cc-mode-differs,
+body.dark .cc-mode-differs,
+[data-theme="dark"] .cc-mode-differs,
+[data-bs-theme="dark"] .cc-mode-differs,
+.dark .cc-mode-cardlist-items li,
+.theme-dark .cc-mode-cardlist-items li,
+body.dark .cc-mode-cardlist-items li,
+[data-theme="dark"] .cc-mode-cardlist-items li,
+[data-bs-theme="dark"] .cc-mode-cardlist-items li {
+    background: hsl(217 30% 16%);
+    border-color: hsl(217 20% 28%);
+    color: hsl(217 8% 72%);
+}
+
+.dark .cc-mode-differs p,
+.theme-dark .cc-mode-differs p,
+body.dark .cc-mode-differs p,
+[data-theme="dark"] .cc-mode-differs p,
+[data-bs-theme="dark"] .cc-mode-differs p {
+    color: hsl(217 8% 72%);
+}
+
+.dark .cc-mode-differs-label,
+.theme-dark .cc-mode-differs-label,
+body.dark .cc-mode-differs-label,
+[data-theme="dark"] .cc-mode-differs-label,
+[data-bs-theme="dark"] .cc-mode-differs-label,
+.dark .cc-mode-cardlist-items li::before,
+.theme-dark .cc-mode-cardlist-items li::before,
+body.dark .cc-mode-cardlist-items li::before,
+[data-theme="dark"] .cc-mode-cardlist-items li::before,
+[data-bs-theme="dark"] .cc-mode-cardlist-items li::before {
+    color: hsl(217 8% 58%);
+}
+
 .dark .cc-mode-icon,
 .theme-dark .cc-mode-icon,
 body.dark .cc-mode-icon,
@@ -2063,21 +2101,8 @@ body.dark .cc-instruction-card-text strong,
     border: 1px solid var(--cc-border);
 }
 
-.cc-balance-label {
-    font-size: var(--cc-text-sm);
-    color: var(--cc-text-muted);
-}
 
-.cc-balance-amount {
-    font-size: var(--cc-text-lg);
-    font-weight: var(--cc-font-bold);
-    color: var(--cc-success);
-}
 
-.cc-balance-unit {
-    font-size: var(--cc-text-sm);
-    color: var(--cc-text-muted);
-}
 
 .cc-buy-credits-link {
     display: inline-flex;
@@ -5970,21 +5995,71 @@ body.dark .cc-input-method-btn:hover:not(.active),
     margin-bottom: var(--cc-space-3);
 }
 
+/* v13.96: the card list used to be a numbered list of 6-7 long descriptions. Because
+   VET, Workplace and PD share the same seven card types, that was the same paragraph
+   printed three times side by side, and it buried the real differences between the
+   routes. It is now the card NAMES as compact chips - the sequence at a glance - and
+   the space it freed carries .cc-mode-differs above. */
 .cc-mode-cardlist-items {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
     margin: 0;
-    padding-left: 1.25rem;
-    font-size: 0.8125rem;
-    line-height: 1.55;
-    color: var(--cc-text-secondary);
+    padding: 0;
+    counter-reset: ccmodecard;
 }
 
 .cc-mode-cardlist-items li {
-    margin-bottom: var(--cc-space-2);
-    padding-left: 0.125rem;
+    counter-increment: ccmodecard;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    margin: 0;
+    padding: 3px 9px;
+    border: 1px solid var(--cc-border);
+    border-radius: 999px;
+    background: var(--cc-bg-subtle, #f8fafc);
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--cc-text-secondary);
+    white-space: nowrap;
 }
 
-.cc-mode-cardlist-items li:last-child {
-    margin-bottom: 0;
+.cc-mode-cardlist-items li::before {
+    content: counter(ccmodecard);
+    font-size: 0.625rem;
+    font-weight: 700;
+    color: var(--cc-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* v13.96: what actually separates this route from the other four. */
+.cc-mode-differs {
+    width: 100%;
+    margin-top: var(--cc-space-3);
+    padding: var(--cc-space-3);
+    border-radius: 8px;
+    background: var(--cc-bg-subtle, #f8fafc);
+    border: 1px solid var(--cc-border);
+    text-align: left;
+}
+
+.cc-mode-differs-label {
+    display: block;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cc-text-muted);
+    margin-bottom: 4px;
+}
+
+.cc-mode-differs p {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--cc-text-secondary);
 }
 
 .cc-mode-cardlist-items strong {
@@ -6327,4 +6402,291 @@ body.dark button.cc-btn-icon-only:active,
     color: hsl(0 85% 84%) !important;
     background: hsl(0 45% 20%) !important;
     background-color: hsl(0 45% 20%) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.97 FIX-CC-PROGRESS-TABLE
+   A row per subtopic during generation, replacing the single bar plus the
+   "Validating content structure" panel. Values, spacing and the tick/spinner
+   marks come from the mockup the owner approved on 2 Sep.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.cc-ptable {
+    margin-top: var(--cc-space-4);
+    border: 1px solid var(--cc-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--cc-bg, #fff);
+    text-align: left;
+}
+
+.cc-ptable-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 104px 104px 104px 132px;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--cc-border-muted, #f1f5f9);
+}
+
+.cc-ptable-row:last-child { border-bottom: 0; }
+
+.cc-ptable-head {
+    background: var(--cc-bg-subtle, #f8fafc);
+    border-bottom: 1px solid var(--cc-border);
+}
+
+.cc-ptable-head span {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--cc-text-muted, #64748b);
+}
+
+.cc-ptable-head span:not(:first-child) { text-align: center; }
+
+.cc-ptable-row-active { background: hsl(217 91% 97%); }
+
+.cc-pt-topic {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cc-pt-num {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--cc-bg-subtle, #f8fafc);
+    border: 1px solid var(--cc-border);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--cc-text-muted, #64748b);
+    font-variant-numeric: tabular-nums;
+}
+
+.cc-ptable-row-active .cc-pt-num {
+    background: #fff;
+    border-color: hsl(217 91% 60%);
+    color: hsl(217 91% 40%);
+}
+
+.cc-pt-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.cc-ptable-row-queued .cc-pt-name {
+    color: var(--cc-text-muted, #64748b);
+    font-weight: 400;
+}
+
+.cc-pt-cell { display: grid; place-items: center; }
+
+.cc-pt-tick,
+.cc-pt-fail {
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+}
+
+.cc-pt-tick { background: hsl(142 60% 95%); color: hsl(142 71% 29%); }
+.cc-pt-fail { background: hsl(0 84% 96%); color: hsl(0 74% 42%); }
+.cc-pt-tick svg,
+.cc-pt-fail svg { width: 13px; height: 13px; }
+
+.cc-pt-spin { width: 22px; height: 22px; display: grid; place-items: center; color: hsl(217 91% 45%); }
+.cc-pt-spin svg { width: 16px; height: 16px; animation: cc-pt-spin 0.9s linear infinite; }
+
+@keyframes cc-pt-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .cc-pt-spin svg { animation-duration: 3s; }
+}
+
+.cc-pt-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--cc-border-strong, #cbd5e1); }
+.cc-pt-skip { font-size: 0.8125rem; color: var(--cc-text-muted, #64748b); }
+
+.cc-pt-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px 3px 6px;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: hsl(142 60% 95%);
+    color: hsl(142 71% 29%);
+}
+
+.cc-pt-pill svg { width: 13px; height: 13px; }
+.cc-pt-pill .cc-pt-tick { background: none; width: auto; height: auto; }
+
+.cc-pt-pill-working { background: hsl(217 91% 95%); color: hsl(217 91% 40%); padding-left: 10px; }
+.cc-pt-pill-failed  { background: hsl(0 84% 96%);  color: hsl(0 74% 42%);  padding-left: 10px; }
+
+.cc-pt-pill-queued {
+    background: var(--cc-bg-subtle, #f8fafc);
+    color: var(--cc-text-muted, #64748b);
+    border: 1px solid var(--cc-border-muted, #f1f5f9);
+    font-weight: 500;
+    padding-left: 10px;
+}
+
+@media (max-width: 720px) {
+    .cc-ptable-row {
+        grid-template-columns: minmax(0, 1fr) 44px 44px 44px 40px;
+        gap: 8px;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+    .cc-pt-pill { padding: 4px 6px; font-size: 0; gap: 0; }
+    .cc-pt-pill svg { width: 14px; height: 14px; }
+    .cc-pt-pill-working,
+    .cc-pt-pill-queued,
+    .cc-pt-pill-failed { font-size: 0.625rem; padding: 4px 7px; }
+}
+
+/* Dark mode - same four theme conventions the rest of this file uses. */
+.dark .cc-ptable,
+.theme-dark .cc-ptable,
+body.dark .cc-ptable,
+[data-theme="dark"] .cc-ptable,
+[data-bs-theme="dark"] .cc-ptable {
+    background: hsl(217 30% 13%);
+    border-color: hsl(217 20% 26%);
+}
+
+.dark .cc-ptable-head,
+.theme-dark .cc-ptable-head,
+body.dark .cc-ptable-head,
+[data-theme="dark"] .cc-ptable-head,
+[data-bs-theme="dark"] .cc-ptable-head,
+.dark .cc-pt-num,
+.theme-dark .cc-pt-num,
+body.dark .cc-pt-num,
+[data-theme="dark"] .cc-pt-num,
+[data-bs-theme="dark"] .cc-pt-num {
+    background: hsl(217 30% 17%);
+    border-color: hsl(217 20% 26%);
+    color: hsl(217 8% 68%);
+}
+
+.dark .cc-ptable-row,
+.theme-dark .cc-ptable-row,
+body.dark .cc-ptable-row,
+[data-theme="dark"] .cc-ptable-row,
+[data-bs-theme="dark"] .cc-ptable-row {
+    border-bottom-color: hsl(217 20% 20%);
+    color: hsl(217 8% 86%);
+}
+
+.dark .cc-ptable-row-active,
+.theme-dark .cc-ptable-row-active,
+body.dark .cc-ptable-row-active,
+[data-theme="dark"] .cc-ptable-row-active,
+[data-bs-theme="dark"] .cc-ptable-row-active {
+    background: hsl(217 45% 18%);
+}
+
+/* v13.97 FIX-CC-BALANCE-AFTER: previous / this generation / balance after. */
+.cc-bal-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: var(--cc-bg-subtle, #f8fafc);
+    border: 1px solid var(--cc-border-muted, #f1f5f9);
+}
+
+.cc-bal-item { text-align: center; min-width: 0; }
+
+.cc-bal-label {
+    display: block;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    color: var(--cc-text-muted, #64748b);
+    margin-bottom: 2px;
+}
+
+.cc-bal-value {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--cc-text, #0f172a);
+}
+
+.cc-bal-value-cost  { color: hsl(0 74% 42%); }
+.cc-bal-value-after { color: hsl(142 71% 29%); }
+
+/* The one thing on this card the author must not miss. */
+.cc-bal-value-short { color: hsl(0 74% 42%); }
+
+.cc-bal-op {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--cc-border-strong, #cbd5e1);
+}
+
+@media (max-width: 560px) {
+    .cc-bal-grid { grid-template-columns: 1fr; gap: 8px; }
+    .cc-bal-op { display: none; }
+}
+
+.dark .cc-bal-grid,
+.theme-dark .cc-bal-grid,
+body.dark .cc-bal-grid,
+[data-theme="dark"] .cc-bal-grid,
+[data-bs-theme="dark"] .cc-bal-grid {
+    background: hsl(217 30% 16%);
+    border-color: hsl(217 20% 26%);
+}
+
+/* v13.97: :not() keeps this off the two modifier classes. Without it a (0,2,0) dark rule
+   outranked .cc-bal-value-short at (0,1,0) and a NEGATIVE balance after rendered in the
+   same neutral as every other number - the one figure on this card that must stand out
+   was the one that disappeared in dark mode. */
+.dark .cc-bal-value:not(.cc-bal-value-short):not(.cc-bal-value-cost):not(.cc-bal-value-after),
+.theme-dark .cc-bal-value:not(.cc-bal-value-short):not(.cc-bal-value-cost):not(.cc-bal-value-after),
+body.dark .cc-bal-value:not(.cc-bal-value-short):not(.cc-bal-value-cost):not(.cc-bal-value-after),
+[data-theme="dark"] .cc-bal-value:not(.cc-bal-value-short):not(.cc-bal-value-cost):not(.cc-bal-value-after),
+[data-bs-theme="dark"] .cc-bal-value:not(.cc-bal-value-short):not(.cc-bal-value-cost):not(.cc-bal-value-after) {
+    color: hsl(217 8% 92%);
+}
+
+/* Lighter variants so the semantic colours stay legible on a dark ground. */
+.dark .cc-bal-value-cost,
+.theme-dark .cc-bal-value-cost,
+body.dark .cc-bal-value-cost,
+[data-theme="dark"] .cc-bal-value-cost,
+[data-bs-theme="dark"] .cc-bal-value-cost,
+.dark .cc-bal-value-short,
+.theme-dark .cc-bal-value-short,
+body.dark .cc-bal-value-short,
+[data-theme="dark"] .cc-bal-value-short,
+[data-bs-theme="dark"] .cc-bal-value-short {
+    color: hsl(0 80% 70%);
+}
+
+.dark .cc-bal-value-after,
+.theme-dark .cc-bal-value-after,
+body.dark .cc-bal-value-after,
+[data-theme="dark"] .cc-bal-value-after,
+[data-bs-theme="dark"] .cc-bal-value-after {
+    color: hsl(142 60% 62%);
 }

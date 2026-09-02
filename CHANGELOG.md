@@ -1,5 +1,69 @@
 # Changelog
 
+## 13.97.0 - 2026-09-02
+
+### Added - a row per subtopic while the course is being built
+
+Generation showed one bar and a line of text, so an author watching a twelve-subtopic run
+could not tell which subtopic was being written, whether its image had come back, or which one
+had failed. There is now a row per subtopic with Content, Image, Voiceover and Status, matching
+the mockup approved on 2 September.
+
+`generator.js` emits a stage event per section (`reportStage`) alongside the existing
+per-section event, so the percentage behaviour is unchanged for anything that ignores it. The
+rows are keyed by section id and seeded from the plan, so the whole run is visible as Queued
+before the first subtopic starts, and events arriving out of order - generation runs two
+sections concurrently - land on the right row.
+
+A note on scope: images were ALREADY generated during the build, one per subtopic, inside
+`generateOneSection`. Earlier notes in this project said otherwise; that was wrong. The
+`generateSlideImage` call in `player5.js` is the regenerate path, not the build path. No image
+work moved; the Image column reports what was already happening.
+
+The credit card now shows previous balance, this generation and balance after, rather than only
+the current balance, so the author no longer has to do the subtraction to know whether they can
+afford the run. A negative balance after is flagged in red - in both themes.
+
+### Removed - the "Validating content structure" panel
+
+It narrated an internal step to someone who could not act on it, and it occupied the space the
+progress table needed. The Structure Validation Results on the FINAL screen is untouched.
+
+### Fixed - the orange buttons were darkened until they stopped looking like the brand
+
+v13.95 darkened every orange CTA to clear AA on a white label. That cleared AA and lost the
+brand colour. Saturated orange sits at a luminance that is wrong for white and fine for
+near-black, which is why Bootstrap 5, Material 3 and Tailwind all put a DARK label on amber and
+orange buttons rather than darkening the fill. Same fix here: the brand orange comes back and
+the label flips. 5.68:1 on the light end of the gradient, 4.70:1 on the dark, 6.39:1 on hover.
+
+Three later `!important` blocks in the same stylesheet still carried the old white-on-dark pair
+and would have made half of this a no-op - the button would have flipped appearance on hover,
+focus AND click, leaving a mouse-clicked button in the old style until focus moved away. All
+three updated.
+
+Review Answers is demoted from a third solid orange button to a bordered secondary, so one
+primary action leads each screen instead of three competing. Its border uses the darker orange
+at 3.61:1, clearing the 3:1 floor WCAG 1.4.11 sets for a UI component boundary; the lighter
+brand orange would have failed it at 2.91:1. The label gets a dark-theme value, because
+6.46:1 on white is 2.90:1 on the player's dark ground.
+
+Two more white-on-orange failures on the same screen: the active step pill (2.91:1) takes the
+same label flip, and the hook-scenario part icon (2.81:1, under the 3:1 floor for a graphic
+that carries meaning) is darkened to 4.58:1 with its hue unchanged.
+
+### Changed - the per-subtopic price now lives in one place
+
+It was hardcoded in two functions and two language strings, so a price change meant four edits
+and any missed copy quoted a number the server would not charge. It is now
+`CC_CREDITS_PER_SUBTOPIC`, declared once.
+
+**The price itself is unchanged at 100.** The owner has approved 50, but the amount actually
+debited is the LMS Labs tariff and that has not changed yet - quoting 50 while the server
+charges 100 shows the author one number and takes another. Flipping the constant is a one-line
+change to make in the same release that the server tariff moves, and not before.
+
+
 ## 13.96.0 - 2026-09-02
 
 The content-quality release. Every change here exists to make generated cards land with a
@@ -126,6 +190,59 @@ theory" into "important theory" on the one route whose premise is an unconstrain
 University was already exempt; Topics-and-Text now is too, and nine further rules covering
 ordinary English words (journey, landscape, foster, robust, navigate, realm, tapestry, pivotal,
 empower) are marked safe on both.
+
+### Changed - the downloadable ChatGPT prompts are now generated from the real prompt
+
+The five ChatGPT prompt files a teacher downloads, pastes into ChatGPT and pastes the output back
+from were hand-maintained copies of the card contract living in `builder.js`. They had drifted
+badly, and the drift was not cosmetic:
+
+- None of the quality rules above were in them, so a teacher using the ChatGPT path - the path
+  people choose when they care most about the result - got the old contract.
+- `ChatGPT-Prompt-University.txt` was a clone of the VET vocational prompt. A lecturer
+  downloading their route's prompt received seven workplace scenario cards with
+  refrigerated-delivery examples, when the plugin's own University route generates six academic
+  cards with no scenario at all.
+- Four of the five still asked for the pre-v10.43 labelled output format, even though the
+  generator has preferred JSON since v10.52 and its own comment says the current prompt-file
+  format outputs JSON. Because the parser prefers `PART N` labels and falls back to a `CONTENT:`
+  blob, those four produced cards **structurally different from the API path** - one text blob
+  instead of the four-panel scene the renderer is built for, no per-item icons, three mistakes
+  where the API asks for five, and a generic card 2 that could not drive the legal/policy/
+  principle banner. Topics-and-Text had been converted and was the only route behaving.
+
+The file is now composed by `buildChatGptPromptFile()` in `prompts.js` from
+`getSystemPromptForMode()` - the same system prompt the plugin sends itself - wrapped with the
+teacher-facing instructions, the route's context block, the sub-topic list and the multi-section
+`=== NEXT ===` rule. Pasted JSON is picked up by `parseChatGPTJSONBlocks()` and run through the
+same `normalizeCardSchema()` the API path uses.
+
+The two paths now produce identical cards **by construction rather than by maintenance**. Every
+future prompt change lands on both automatically, and this class of drift cannot recur. The 833
+lines of hand-maintained templates are deleted.
+
+Verified end to end: a prompt file was generated for each of the five routes and a synthetic
+ChatGPT reply written to the VET file was run through the real `parseChatGPTJSONBlocks` - two
+sections split correctly on `=== NEXT ===`, seven cards each with the right cardTypes, the
+four-part scene with its per-item icons preserved, five mistake items, and the new Card 6 benefit
+carried through.
+
+### Changed - the route picker said too much and explained too little
+
+Choosing a route showed a numbered list of six or seven long card descriptions per route. VET,
+Workplace and PD share the same seven card types, so that was substantially the same paragraph
+printed three times side by side - which is precisely why the real differences between the routes
+were invisible to the person choosing.
+
+The card list is now the card names as compact numbered chips: the sequence at a glance. The
+space that frees carries a "How it differs" panel on each route saying what actually separates it
+- that VET is written to be assessable and is the only route that imports a unit of competency,
+that Workplace names your own policies and systems and uses no assessment language, that
+University replaces scenarios with frameworks and case studies, that PD is about judgement rather
+than procedure, and that Topics and Text is plain third-person prose on any subject.
+
+Thirty long per-route strings are removed and replaced with seventeen short card names shared
+across the routes that share the cards.
 
 ### Removed - about 2,600 lines of specification that contradicted the live prompts
 
