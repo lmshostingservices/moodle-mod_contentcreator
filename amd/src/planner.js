@@ -16,7 +16,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function () {
+define(['mod_contentcreator/cc-state'], function (CcState) {
     'use strict';
 
     // World-Class Topic-End Activities (v6.4.4)
@@ -247,6 +247,7 @@ define([], function () {
                     
                     subtopics.push({
                         id: aiSubtopic?.id || `subtopic_${mtIdx}_${s}`,
+                        billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                         // v10.53: Use actualElNum so Element 2  ->  2.1, 2.2 (not 1.1, 1.2)
                         number: `${actualElNum}.${s + 1}`,
                         pcNumber: aiSubtopic.pcNumber || pcCode || `${actualElNum}.${s + 1}`,
@@ -365,6 +366,7 @@ define([], function () {
 
                         subtopics.push({
                             id: `subtopic_${t}_${s}`,
+                            billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                             number: `${t + 1}.${s + 1}`,
                             title: subtopicTitle,
                             mappings: mappings.slice(0, 4),
@@ -400,6 +402,7 @@ define([], function () {
                         // v6.7.24: Use FULL PC text for subtopic title - no truncation
                         subtopics.push({
                             id: `subtopic_${t}_${s}`,
+                            billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                             number: `${t + 1}.${s + 1}`,
                             title: pcItem.text || `Section ${s + 1}`,
                             mappings: [pcItem.code || `PC${t + 1}.${s + 1}`],
@@ -524,6 +527,7 @@ define([], function () {
                     usedActivityTypes.push(activityType);
                     subtopics.push({
                         id: `subtopic_${t}_${s}`,
+                        billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                         number: `${t + 1}.${s + 1}`,
                         title: subs[s],
                         mappings: [`LO${t + 1}`],
@@ -537,6 +541,7 @@ define([], function () {
                     usedActivityTypes.push(activityType);
                     subtopics.push({
                         id: `subtopic_${t}_0`,
+                        billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                         number: `${t + 1}.1`,
                         title: module.title,
                         mappings: [`LO${t + 1}`],
@@ -560,6 +565,7 @@ define([], function () {
                 usedActivityTypes.push(activityType);
                 subtopics.push({
                     id: `subtopic_0_${s}`,
+                    billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                     number: `1.${s + 1}`,
                     title: outcomes[s].replace(/\.\s*$/, '').trim(),
                     mappings: [`LO${s + 1}`],
@@ -636,6 +642,7 @@ define([], function () {
                 
                 subtopics.push({
                     id: `subtopic_${t}_${s}`,
+                    billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                     number: `${t + 1}.${s + 1}`,
                     title: subtopicTitle,
                     keyPoints: dynamicWorkplaceKeyPoints,
@@ -765,6 +772,7 @@ define([], function () {
                 const keyContext = criterionWords.slice(1).join(' ') || 'workplace requirements';
                 sections.push({
                     id: `section_${sectionIndex++}`,
+                    billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                     title: sectionTitle,
                     criterionCode: criterion.code || '',
                     criterionText: criterion.text || '',

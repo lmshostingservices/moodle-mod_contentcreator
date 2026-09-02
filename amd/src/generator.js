@@ -1682,10 +1682,18 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     // use this field to inject the mandatory language guard — extraction from prompt
     // text was fragile and silently failed for German and other non-English languages,
     // causing secondary passes to rewrite content in English.
-    const callAI = async (prompt, cmid, contentType, retryCount = 0, route = 'vet', language = 'en-AU') => {
+    const callAI = async (prompt, cmid, contentType, retryCount = 0, route = 'vet', language = 'en-AU', billingKey = '') => {
         const MAX_RETRIES = 5;
         const BASE_DELAY_MS = 1000;
         const MAX_DELAY_MS = 32000;
+
+        // FIX-CC-RETRY-RESUBMITS-BILLED-JOB (v13.95.1): the server charges at SUBMIT, not at
+        // completion - ajax.php sends creditsToUse to /prompt/start. So once we hold a jobId the
+        // credits are already spent, and re-entering callAI() (which POSTs generate_slide_async
+        // again) buys the same content a second time. That is how one flaky section could bill
+        // 6 times; on an ml_translate_* pass, priced at 50 credits a submit, that is 300 credits
+        // for a section quoted at 50. Retrying is only ever safe BEFORE a job exists.
+        let billedJobId = null;
         
         ccDiag('callAI() START | type=' + contentType + ' | cmid=' + cmid + ' | retry=' + retryCount + '/' + MAX_RETRIES);
         ccDiag('callAI() systemPrompt length=' + (prompt.system?.length || 0) + ' | userPrompt length=' + (prompt.user?.length || 0));
@@ -1703,6 +1711,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         formData.append('language', language); // FIX-CC-LANG-EXPLICIT (v12.99): explicit language for server secondary passes
         formData.append('systemprompt', prompt.system);
         formData.append('userprompt', prompt.user);
+        // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): identifies the subtopic this call belongs to,
+        // so the vendor charges the subtopic once and treats the structural repair pass - and
+        // every voiceover and image for the same subtopic - as already paid for.
+        formData.append('subtopickey', billingKey || '');
 
         const ajaxUrl = M.cfg.wwwroot + '/mod/contentcreator/ajax.php';
         ccDiag('callAI() POST  ->  ' + ajaxUrl);
@@ -1757,6 +1769,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
             // rest of callAI continues unchanged.
             if (data.async && data.jobId) {
                 ccDiag('callAI() ASYNC JOB queued | jobId=' + data.jobId + ' | polling every 3s (max ~6 min)');
+                // From here the credits are spent. See FIX-CC-RETRY-RESUBMITS-BILLED-JOB above.
+                billedJobId = data.jobId;
                 data = await pollJob(ajaxUrl, data.jobId, M.cfg.sesskey, cmid);
                 ccDiag('callAI() ASYNC JOB done | content items=' + (Array.isArray(data?.content) ? data.content.length : 'n/a'));
             }
@@ -1780,6 +1794,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 // v10.23: curl/OpenAI timeouts are ~180s waits. After that we need a meaningful
                 // pause (20s base, doubling) before hammering the server again  -  not 3s.
                 const isTimeoutError = /curl 28|OPENAI_TIMEOUT|timed out after \d/i.test(errorStr);
+                if (billedJobId) {
+                    ccError('callAI() job ' + billedJobId + ' was already submitted and charged - refusing to re-submit (FIX-CC-RETRY-RESUBMITS-BILLED-JOB). Failing this section instead of paying twice.');
+                    throw new Error(errorStr);
+                }
                 if ((is429 || isTransient) && retryCount < MAX_RETRIES) {
                     const delay = is429
                         ? Math.min(BASE_DELAY_MS * Math.pow(2, retryCount), MAX_DELAY_MS)
@@ -1790,7 +1808,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                     const totalDelay = delay + jitter;
                     ccDiag('callAI() ' + (is429 ? '429 rate limit' : isTimeoutError ? 'timeout error' : 'transient error') + ' - waiting ' + Math.round(totalDelay) + 'ms before retry ' + (retryCount + 1) + '/' + MAX_RETRIES);
                     await new Promise(resolve => setTimeout(resolve, totalDelay));
-                    return callAI(prompt, cmid, contentType, retryCount + 1, route, language);
+                    return callAI(prompt, cmid, contentType, retryCount + 1, route, language, billingKey);
                 }
                 throw new Error(errorStr);
             }
@@ -1816,6 +1834,13 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
             // without holding the user hostage indefinitely.
             const abortMaxRetries = 3;
             const effectiveMaxRetries = isAbort ? abortMaxRetries : MAX_RETRIES;
+            if (billedJobId) {
+                // Covers the OPENAI_TIMEOUT / poll-exhaustion throws out of pollJob(), which are
+                // by definition post-submit: the job is running and paid for. Re-submitting here
+                // was the single largest credit-burn path in the client.
+                ccError('callAI() job ' + billedJobId + ' was already submitted and charged - refusing to re-submit (FIX-CC-RETRY-RESUBMITS-BILLED-JOB). Failing this section instead of paying twice.');
+                throw error;
+            }
             if ((is429 || isTransient) && retryCount < effectiveMaxRetries) {
                 const delay = is429
                     ? Math.min(BASE_DELAY_MS * Math.pow(2, retryCount), MAX_DELAY_MS)
@@ -1826,7 +1851,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 const totalDelay = delay + jitter;
                 ccDiag('callAI() ' + (is429 ? '429 rate limit' : isTimeoutError ? 'timeout error' : 'transient error') + ' (catch) - waiting ' + Math.round(totalDelay) + 'ms before retry ' + (retryCount + 1) + '/' + effectiveMaxRetries);
                 await new Promise(resolve => setTimeout(resolve, totalDelay));
-                return callAI(prompt, cmid, contentType, retryCount + 1, route, language);
+                return callAI(prompt, cmid, contentType, retryCount + 1, route, language, billingKey);
             }
             ccError('callAI() FATAL - no more retries (' + retryCount + '/' + effectiveMaxRetries + '), throwing error: ' + error.message);
             pushDebugLogEntry({
@@ -2621,7 +2646,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 
                 ccLog('%c[API] Calling AI...', 'color: #10b981; font-weight: bold;');
                 const startTime = Date.now();
-                const rawResponse = await callAI(prompt, cmid, contentType, 0, context?.mode || 'vet', context?.language || 'en-AU'); // v11.42: pass route | v12.99 FIX-CC-LANG-EXPLICIT: pass language
+                const rawResponse = await callAI(prompt, cmid, contentType, 0, context?.mode || 'vet', context?.language || 'en-AU', topic?.billingKey || ''); // v11.42: pass route | v12.99 FIX-CC-LANG-EXPLICIT: pass language
                 const elapsed = Date.now() - startTime;
                 ccLog('%c[API] Response received in ' + elapsed + 'ms', 'color: #10b981;');
                 ccLog('%c[API] Raw response length:', 'color: #10b981;', rawResponse?.length || 0, 'chars');
@@ -3707,7 +3732,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                     'ml_translate_' + String(section.id || 'sec'),
                     0,
                     routeMode || 'vet',
-                    targetLang
+                    targetLang,
+                    // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): a translation pass is priced per
+                    // subtopic per language, so it carries the subtopic's key and the vendor
+                    // scopes the grant by language. Without it a retried translation would be
+                    // charged again at the full per-subtopic rate.
+                    section?.billingKey || ''
                 );
 
                 const cleaned = (rawResponse || '').replace(/```json/gi, '').replace(/```/g, '').trim();

@@ -110,7 +110,9 @@ class privacy_provider_test extends provider_testcase {
         $contextlist = provider::get_contexts_for_userid((int)$this->usera->id);
         $contextids = $contextlist->get_contextids();
 
-        $this->assertContains($this->context->id, $contextids);
+        // get_contextids() returns strings from the database; assertContains is strict, so
+        // compare like with like rather than int against string.
+        $this->assertContains((int)$this->context->id, array_map('intval', $contextids));
     }
 
     /**

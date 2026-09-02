@@ -480,8 +480,26 @@ function contentcreator_check_ratelimit($bucket, $max, $window) {
     try {
         \mod_contentcreator\ratelimiter::enforce($USER->id, $bucket, $max, $window);
     } catch (\moodle_exception $e) {
-        debugging('mod_contentcreator rate limit hit: ' . $e->getMessage(), DEBUG_DEVELOPER);
-        contentcreator_fail($e->errorcode === 'errorsiteratelimited' ? 'errorsiteratelimited' : 'errorratelimited');
+        debugging('mod_contentcreator rate limit hit on bucket ' . $bucket . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
+        if ($e->errorcode === 'errorsiteratelimited') {
+            contentcreator_fail('errorsiteratelimited');
+        }
+        // FIX-CC-RATELIMIT-MESSAGE-MISLEADING (v13.95.1): every per-user breach was reported as
+        // 'errorratelimited' - "You have made too many AI requests in a short time. Please wait
+        // a few minutes and try again." Three things were wrong with that. The window is an
+        // HOUR, not "a few minutes", so the advice sent authors back to retry into a wall. The
+        // detailed message ratelimiter::enforce() had already built, naming the actual ceiling
+        // and window, was thrown and then discarded here. And the read-only bucket spends no
+        // credits at all, so telling someone who read their credit balance that they made too
+        // many "AI requests" pointed them at entirely the wrong problem. The detail message is
+        // now passed through, and reads get wording that matches what they actually did.
+        if ($bucket === 'vendorread') {
+            contentcreator_fail('errorreadratelimited');
+        }
+        // The exception's own message is used verbatim rather than rebuilt here: enforce()
+        // resolves the admin-configured ceiling, which may differ from the $max default this
+        // function was called with, and only it knows which value was actually applied.
+        contentcreator_response(['success' => false, 'error' => $e->getMessage()]);
     }
 }
 
@@ -521,6 +539,29 @@ function contentcreator_job_is_owned($jobid, $cmid) {
     global $USER;
 
     $owner = \cache::make('mod_contentcreator', 'jobowner')->get(md5($jobid));
+
+    // FIX-CC-JOBOWNER-FAILS-CLOSED-ON-CACHE-LOSS (v13.95.1): this used to collapse "absent"
+    // and "belongs to someone else" into one false. The binding lives in a MODE_APPLICATION
+    // cache, which on a common APCu/node-local mapping is not shared between web nodes, and
+    // which any 'Purge all caches' empties. A generation job runs for up to six minutes, so a
+    // purge or a poll landing on a second node made EVERY poll for a live job refuse. The
+    // client then gave up and started a fresh job - billing a second time, at 50 credits a
+    // submit on a translation pass, for work already paid for.
+    //
+    // Absence is now allowed through: the poll is already behind require_login() and
+    // contentcreator_require_manage() on the nominated activity, so the residual exposure is
+    // an author who has somehow learned another author's opaque vendor job id AND whose
+    // binding has expired or been purged - a job that is stale within minutes. A replayed id
+    // whose binding is still present MISMATCHES and is still refused, which is the case
+    // v13.94.3 was actually written to stop.
+    if ($owner === false || $owner === null || $owner === '') {
+        debugging(
+            'mod_contentcreator poll_job: no owner binding found for this job id (cache miss ' .
+                'or purge); allowing the poll rather than abandoning a job the site has paid for.',
+            DEBUG_DEVELOPER
+        );
+        return true;
+    }
 
     return is_string($owner) && $owner === $USER->id . ':' . (int)$cmid;
 }
@@ -864,6 +905,12 @@ try {
         $route = optional_param('route', 'vet', PARAM_ALPHANUMEXT);
         // Forward the language so secondary passes use it directly.
         $genlanguagesync = optional_param('language', 'en-AU', PARAM_TEXT);
+        // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): identifies the subtopic this call belongs to.
+        // The vendor prices a subtopic once - covering its content, the structural repair pass,
+        // and the first voiceover and image for each of its sections - so it needs to recognise
+        // calls that belong to something already paid for. Optional and empty-safe: an older
+        // client that does not send it is priced exactly as before.
+        $subtopickey = optional_param('subtopickey', '', PARAM_ALPHANUMEXT);
 
         $cm = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
@@ -893,6 +940,7 @@ try {
                 'route' => $route,
                 'language' => $genlanguagesync,
                 'creditsToUse' => $creditsforaction,
+                'subtopicKey' => $subtopickey,
             ]
         );
 
@@ -928,6 +976,12 @@ try {
         // Explicit language forwarded to the server so secondary passes, such as expansion
         // and banned word rewrites, use it directly instead of parsing the prompt text.
         $genlanguage = optional_param('language', 'en-AU', PARAM_TEXT);
+        // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): identifies the subtopic this call belongs to.
+        // The vendor prices a subtopic once - covering its content, the structural repair pass,
+        // and the first voiceover and image for each of its sections - so it needs to recognise
+        // calls that belong to something already paid for. Optional and empty-safe: an older
+        // client that does not send it is priced exactly as before.
+        $subtopickey = optional_param('subtopickey', '', PARAM_ALPHANUMEXT);
 
         $cm = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
@@ -955,6 +1009,7 @@ try {
                 'route' => $route,
                 'language' => $genlanguage,
                 'creditsToUse' => $creditsforasync,
+                'subtopicKey' => $subtopickey,
             ]
         );
 
@@ -1030,6 +1085,10 @@ try {
         // Text to speech input sent to the speech API only, never stored or echoed.
         $text = required_param('text', PARAM_RAW); // pipeline-ignore: PARAM_RAW - TTS input text, forwarded to the speech API only.
         $sectionid = optional_param('sectionid', '', PARAM_ALPHANUMEXT);
+        // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): the subtopic this narration belongs to. The
+        // vendor covers the first voiceover for each section inside the subtopic's price and
+        // charges regeneration separately, which it cannot tell apart without this.
+        $subtopickey = optional_param('subtopickey', '', PARAM_ALPHANUMEXT);
         $voicegender = optional_param('gender', 'female', PARAM_ALPHA);
         // The language is set per activity by the wizard; fall back to the plugin setting.
         $requestlanguage = optional_param('language', '', PARAM_TEXT);
@@ -1155,7 +1214,20 @@ try {
                 // Send the actual voice name rather than the legacy gender.
                 'voiceGender' => $voicename,
                 'creditsToUse' => 5,
-            ]
+                'subtopicKey' => $subtopickey,
+                'sectionId' => $sectionid,
+            ],
+            'POST',
+            // FIX-CC-TTS-TIMEOUT-BILLS-WITHOUT-DELIVERY (v13.95.1): this call used to fall
+            // through to contentcreator_api_call()'s 180s default. Measured synthesis for a
+            // 4 chunk en-AU-Chirp3-HD-Aoede voiceover is 143-153s (see CHANGELOG v13.92), and
+            // CONTENTCREATOR_VOICE_MAXCHARS allows 5 chunks, which lands at or past 180s. When
+            // curl gave up the vendor had already synthesised and charged 5 credits, this
+            // branch returned success=false, and the cache write below was skipped - so the
+            // client retried and paid again, up to 4 times, on every page load, forever.
+            // 280s sits inside the 300s of PHP time prepare_long_request() already grants and
+            // matches the web service twin in classes/external/generate_voiceover.php.
+            ['timeout' => 280]
         );
 
         if (!isset($result['success']) || !$result['success']) {
@@ -1564,6 +1636,13 @@ try {
             contentcreator_fail('errorinvalidrequestdata');
         }
 
+        // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): the subtopic and section this image belongs
+        // to. The vendor covers the first image for each section inside the subtopic's price
+        // and charges regeneration separately. Sanitised to the same character set the URL
+        // parameter path uses, because these arrive inside a JSON blob rather than as params.
+        $imgsubtopickey = preg_replace('/[^a-zA-Z0-9_]/', '', (string)($data['subtopicKey'] ?? ''));
+        $imgsectionid = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)($data['sectionId'] ?? ''));
+
         $slidetitle = $data['slideTitle'] ?? '';
         $slidedescription = $data['slideDescription'] ?? '';
         $topictitle = $data['topicTitle'] ?? '';
@@ -1607,6 +1686,8 @@ try {
                 'requirements' => $requirements,
                 'route' => $route,
                 'scenarioContext' => $scenariocontext,
+                'subtopicKey' => $imgsubtopickey,
+                'sectionId' => $imgsectionid,
             ]
         );
 

@@ -89,7 +89,156 @@ define([
         'errfiletoolarge', 'errfiletype', 'errnotopicplan', 'errnotopicssuggested',
         'errneedcoursetitle', 'errneedtrainingtopic', 'errneedunitcodefirst',
         'errneedunitcode', 'errneedunittext', 'errselectpdf', 'errselectmode',
-        'erruploadpdf', 'errtgaunavailable', 'errunitevidencemissing'
+        'erruploadpdf', 'errtgaunavailable', 'errunitevidencemissing',
+        // FIX-CC-AMD-HARDCODED-STRINGS (v13.95.3): progress and status text that was
+        // written as literals in this file, so no site could translate or reword it.
+        'msgnoelements', 'msgrefreshing', 'msgextractingtext', 'msgextractingpdf', 'msgexporting',
+        'msgstillgenerating', 'msgpregenvoice', 'msgskipping', 'msgvoiceskipped', 'msgapplyingupdates',
+        // FIX-CC-AMD-HARDCODED-STRINGS (v13.95.3): wizard UI prose, placeholders and
+        // title/aria-label text migrated out of this file so sites can translate it.
+        'msgselectsector', 'msgselectjobtitle', 'msgselectjobtitlefirst', 'msgfetchtaskcats',
+        'msgfetchequipmentcats', 'msgnocategories', 'msgnoelementsfound', 'msgnoelementsinunit',
+        'msgvalidatingstructure', 'msgqadesclive', 'msgqaresultstitle', 'msgqadesc',
+        'msgpluginupdates', 'msgsmartsuggestions', 'msgsuggestnote', 'msguploaddocsuggest',
+        'msgnoaisuggestions', 'msgregenfailedtitle', 'msgcreatelearningcontent',
+        'msgwizardsubtitle', 'msgchoosemode', 'msgchoosemodesubtitle', 'msgstepchoosemode',
+        'msgstepaddcontext', 'msgstepgenerate', 'msgmodevetdesc', 'msguploadrefdocs',
+        'msguploadcompanydocs', 'msgrealworkplacescenarios', 'msgmodeunidesc',
+        'msgoutcomedriven', 'msgcriticalthinking', 'msgacademictone', 'msgnoquizcard',
+        'msgentercoursetitleai', 'msgorpasteowntopics', 'msgmodetopicstitle',
+        'msgmodetopicsdesc', 'msgworksanysubject', 'msgcardsreveal', 'msgtopicscardnote',
+        'msgcontextvettitle', 'msgcontextvetsubtitle', 'msgunitofcompetency', 'msgfetchingtga',
+        'msgtgafetchfailed', 'msgfillfieldsfirst', 'msgselectindustryfirst',
+        'msgsectorhint', 'msgjobrolehint', 'msgchatgptprompt', 'msgchatgptreview',
+        'msgchatgptpastecontinue', 'msgcontextwptitle', 'msgcontextwpsubtitle',
+        'msguploadpolicyhint', 'msgdraganddrop', 'msgextractingdoc', 'msgtrainingcontexthint',
+        'msgmajortopicwphint', 'msgselecttrainingtype', 'msgcontextunititle',
+        'msgcontextunisubtitle', 'msgmajortopichint', 'msghowtopaste', 'msgdownloadpromptfile',
+        'msgchatgptpastegenerate', 'msgpdsubtitle', 'msgaddsubtopics', 'msgpastesubtopicslabel',
+        'msgfetchedfromtga', 'msgunitcoverhint', 'msggeneratingtopicstructure',
+        'msgproposedstructure', 'msgcustomizelook', 'msgslideheadercolor',
+        'msgprimarycolorhint', 'msgnovoiceoverhint', 'msgadditionallanguages',
+        'msgadditionallangshint', 'msgaddimageshint', 'msgapplyimagesall',
+        'msgdecisionchallenge', 'msgincludedecision', 'msgnochallengehint',
+        'msgprogressionmode', 'msgprogressionhint', 'msgprogressfree', 'msgprogressmintime',
+        'msgprogressvoice', 'msgreadingtime', 'msgtopicnavmode', 'msgtopicnavhint',
+        'msgtopicnavfree', 'msgtopicnavsequential', 'msgcontentgenerated', 'msginstructionvet',
+        'msginstructionwp', 'msginstructionuni', 'msginstructionpd', 'msgphunitcode',
+        'msgphunittext', 'msgphelements', 'msgphvetjobtitle', 'msgphvettasks',
+        'msgphvetequipment', 'msgphchatgptoutput', 'msgphtrainingtopic', 'msgphcompanyname',
+        'msgphdepartment', 'msgphinstructions', 'msgphwpjobtitle', 'msgphwptasks',
+        'msgphwpequipment', 'msgphcoursename', 'msgphsubjectarea', 'msgphbulkpaste',
+        'msgphpdcoursetitle', 'msgphpdindustry', 'msgphpdpaste', 'msgphlearningoutcome',
+        'msgremove', 'msgtitlerefreshelements', 'msgtitleauditlayer', 'msgtitlegenerate',
+        // FIX-CC-AMD-HARDCODED-STRINGS pass 2 (v13.95.3): wizard body copy, mode cards,
+        // form labels, and the country / language / audience pickers.
+        'msglangenau', 'msglangengb', 'msglangenus', 'msglangenin', 'msglangarxa',
+        'msglangbnin', 'msglangbgbg', 'msglangcaes', 'msglangyuehk', 'msglangcscz',
+        'msglangdadk', 'msglangnlbe', 'msglangnlnl', 'msglangfilph', 'msglangfifi',
+        'msglangfrca', 'msglangfrfr', 'msglangdede', 'msglangelgr', 'msglangguin',
+        'msglangheil', 'msglanghiin', 'msglanghuhu', 'msglangisis', 'msglangidid',
+        'msglangitit', 'msglangjajp', 'msglangknin', 'msglangkokr', 'msglanglvlv',
+        'msglangltlt', 'msglangmsmy', 'msglangmlin', 'msgvoicelangcmncn', 'msgvoicelangcmntw',
+        'msglangmrin', 'msglangnbno', 'msglangplpl', 'msglangptbr', 'msglangptpt',
+        'msglangpain', 'msglangroro', 'msglangruru', 'msglangsrrs', 'msglangsksk',
+        'msglangeses', 'msglangesus', 'msglangsvse', 'msglangtain', 'msglangtein',
+        'msglangthth', 'msglangtrtr', 'msglangukua', 'msglangvivn', 'msgaddlangcmncn',
+        'msgaddlangcmntw', 'msgcountryau', 'msgcountrynz', 'msgcountrygb', 'msgcountryus',
+        'msgcountryca', 'msgcountrysg', 'msgcountryae', 'msgcountryin', 'msgcountryph',
+        'msgcountryza', 'msgpdaudnewstarters', 'msgpdaudteamleaders',
+        'msgpdaudseniorleaders', 'msgpdaudfrontlineworkers',
+        'msgpdaudspecialists', 'msgpdaudcontractors', 'msgcountryes', 'msgcountrymx',
+        'msgcountryfr', 'msgcountryde', 'msgcountrybr', 'msgcountrybe', 'msgcountrynl',
+        'msgcountrydk', 'msgcountryfi', 'msgcountryno', 'msgcountryse', 'msgcountrybg',
+        'msgcountrycz', 'msgcountryhr', 'msgcountryhu', 'msgcountrypl', 'msgcountryro',
+        'msgcountryru', 'msgcountrysk', 'msgcountrysi', 'msgcountryrs', 'msgcountryua',
+        'msgcountryee', 'msgcountrylt', 'msgcountrylv', 'msgcountrygr', 'msgcountryit',
+        'msgcountrycn', 'msgcountryjp', 'msgcountrykr', 'msgcountryid', 'msgcountryth',
+        'msgcountryvn', 'msgcountrybd', 'msgcountrypk', 'msgcountryil', 'msgcountrytr',
+        'msgcountrysa', 'msgcountryeg', 'msgcountryke', 'msgcountryie', 'msgcountrymy',
+        'msgttinduction', 'msgttpolicy', 'msgttsafety', 'msgttcompliance', 'msgttskills',
+        'msgttleadership', 'msgttcustomer', 'msgtttechnical', 'msgttcustom', 'msgtanewstarters',
+        'msgtaallstaff', 'msgtasupervisors', 'msgtamanagers', 'msgtacontractors',
+        'msgtaspecificdept', 'msggenerates7cardspersection', 'msgcardvethookscenario',
+        'msgcardvetconceptexplainer', 'msgcardvetmentalmodel', 'msgcardvetappliedscenario',
+        'msgcardvetmistakes', 'msgcardvetcompetencysummary', 'msgcardvetdecisionpoint',
+        'msgcardworkplacehookscenario', 'msgcardworkplaceconceptexplainer',
+        'msgcardworkplacementalmodel', 'msgcardworkplaceappliedscenario',
+        'msgcardworkplacemistakes', 'msgcardworkplacecompetencysummary',
+        'msgcardworkplacedecisionpoint', 'msggenerates6cardspersection',
+        'msgcarduniversityconceptanchor', 'msgcarduniversitytheoreticalframework',
+        'msgcarduniversityanalyticallens', 'msgcarduniversityethicsconsiderations',
+        'msgcarduniversitycasestudy1', 'msgcarduniversitycasestudy2', 'msgcardpdhookscenario',
+        'msgcardpdconceptexplainer', 'msgcardpdmentalmodel', 'msgcardpdappliedscenario',
+        'msgcardpdmistakes', 'msgcardpddecisionpoint',
+        'msggenerates4cardspersectionplus3activities', 'msgcardtopicstextoverview',
+        'msgcardtopicstextkeyconcepts', 'msgcardtopicstextexamplesapplication',
+        'msgcardtopicstextkeytakeaways', 'msgsuggestedbasedon', 'msganalyzingdoc',
+        'msgaiextractedcontext', 'msgjobtitles', 'msgjobtitleshint', 'msgprocedurestasks',
+        'msgtaskshint', 'msgtoolsequipment', 'msgequipmenthint', 'msgstep1label',
+        'msgstep2label', 'msgstep3label', 'msgtryagain', 'msghowitworks', 'msghowstep1',
+        'msghowstep2', 'msghowstep3', 'msgimportantonetopic', 'msgtipnochatgpt',
+        'msgautoimports', 'msgcompetencyfocus', 'msgpccoverage', 'msgmodewptitle',
+        'msgmodewpdesc', 'msgaiextractstopics', 'msginductionsafety', 'msgmodeunititle',
+        'msgcarflow', 'msgmodepdtitle', 'msgmodepddesc', 'msgpracticalskills',
+        'msgcpdmicrocreds', 'msguniversalheadings', 'msgshortbydesign', 'msgunitcodelabel',
+        'msgtgaapiunavailable', 'msgdownloadunitpdf', 'msgopenuniton', 'msgchooseoneelement',
+        'msgpasteelementshint', 'msgworkplacecontext', 'msgselectindustry', 'msgindustrysector',
+        'msgjoblevelrequired', 'msgscenariosalllevels', 'msgjobtitleoptional',
+        'msgtypicaljobtasks', 'msgequipmenttools', 'msgrealisticscenarios',
+        'msgsuggestingsubtopics', 'msgreferencecontent', 'msgreadytogenerate',
+        'msgbuilddirectvet', 'msgwhentousevet', 'msgdownloadpromptcontext', 'msgopenchatgptvet',
+        'msgsupportedformats', 'msgtrainingdetails', 'msgtrainingtopiclabel',
+        'msgtrainingtypelabel', 'msgtargetaudiencerequired', 'msgcompanyname', 'msgjoblevel',
+        'msgscenariosforlevel', 'msgadditionalinstructions', 'msgdoccontexttargeted',
+        'msgbuilddirectwp', 'msgwhentousewp', 'msgopenchatgptwp', 'msgcourseinformation',
+        'msgcoursetitlerequired', 'msgcourselevelrequired', 'msgsubjectarearequired',
+        'msgbloomsfocus', 'msgconfirmsubtopics', 'msgeditsubtopics', 'msgbuilddirectuni',
+        'msgwhentouseuni', 'msgopenchatgptuni', 'msggeneratetopics', 'msgcoursetitle',
+        'msgtargetaudience', 'msgbuilddirectpd', 'msgwhentousepd', 'msgopenchatgptpd',
+        'msgaboutthissection', 'msganalyzinginputs', 'msgappearancesettings',
+        'msgvoiceoversettings', 'msgvoiceoverhint', 'msgenablevoiceover',
+        'msgvoicewarmfriendly', 'msgvoiceclearprofessional', 'msgvoicesoftnurturing',
+        'msgvoiceenergeticyouthful', 'msgvoiceupbeatclear', 'msgvoiceinformativecalm',
+        'msgvoiceexcitablebold', 'msgvoicefirmdirect', 'msgvoiceoverlanguage', 'msgcreditnote',
+        'msgimagecredits', 'msgchallengehint', 'msgfreenavigation', 'msgtimedreading',
+        'msgmustlisten', 'msgyourbalance', 'msggeneratingcontent', 'msgestimatedcost',
+        'msgstructurevalidated', 'msgoverlaproles', 'errgennotstarted', 'errgentoolong',
+        'errgentimeoutload', 'errgentimeout', 'errgenfailedretry',
+        'msgcontexttopicstitle', 'msgcontextpdtitle',
+        'msgupdatedesc', 'msgapplyupdatesbtn', 'msgreasonnostamp', 'msgreasonolderbuild', 'msgreasonstalesection', 'msgreasonstalesections',
+        // FIX-CC-AMD-HARDCODED-STRINGS pass 3 (v13.95.3): button labels, short form
+        // labels, the reading-time list, and sentences carrying a {$a} value.
+        'msgselectoptional', 'msgothercustom', 'msgcreditspersubtopic', 'msginitializing',
+        'msgmodevettitle', 'msgcountryrequired', 'msgstateregion', 'msgindustryrequired',
+        'msgclear', 'msgdepartment', 'msgsubtopics', 'msgindustryoptional', 'msgcountry',
+        'msgcancel', 'msgwords', 'msgsections', 'msgtopics', 'msgelements', 'msgpc', 'msgke',
+        'msgpe', 'msgfs', 'msgenabled', 'msgvoice', 'msgfemale', 'msgmale', 'msgimages',
+        'msgtime5seconds', 'msgtime10seconds', 'msgtime15seconds', 'msgtime20seconds',
+        'msgtime30seconds', 'msgtime45seconds', 'msgtime1minute', 'msgtime90seconds',
+        'msgtime2minutes', 'msgtime3minutes', 'msgtime4minutes', 'msgtime5minutes',
+        'msgtime7minutes', 'msgtime10minutes', 'msgsequentiallockstep', 'msgtogeneratecontent',
+        'msgcredits', 'msgpreparing', 'msgzerocredits', 'msgcontinue', 'msguploadpdf',
+        'msgpastetext', 'msgprocesstext', 'msgselectelement', 'msgrefreshfromtga',
+        'msgmergeaddmissing', 'msgsuggestsubtopics', 'msgdownloadchatgptcontext', 'msgback',
+        'msgtrainingdocument', 'msgdownloadchatgpt', 'msgsuggestsubtopicsai',
+        'msgcompliancemap', 'msgplanninglayer', 'msgselectall', 'msgdeselectall',
+        'msgskipvoiceover', 'msgvoiceoverslater', 'msgexportexcel', 'msgresetstartover',
+        'msgpastesubtopicsintro', 'msgsubtopicex1', 'msgsubtopicex2', 'msgsubtopicex3',
+        'msgsubtopicex4', 'msgsubtopicex5', 'msgsubtopicex6', 'msgtipsubtopics', 'msgtipimages',
+        'msgriskprofile', 'msgcommonplant', 'msgreferencedin', 'msgfoundin', 'msgthroughoutdoc',
+        'msgonlyregenerating', 'msgsplitpart', 'msgcovers', 'msgtaskslabel',
+        'msgequipmentlabel', 'msgor', 'msgbrowsefiles',
+        // FIX-CC-AMD-HARDCODED-STRINGS pass 3b (v13.95.3): remaining picker tables,
+        // counters, subtitles and defaults.
+        'msgjlentry', 'msgjlworker', 'msgjlsupervisor', 'msgjlmanager', 'msgjlexecutive',
+        'msgblremember', 'msgblunderstand', 'msgblapply', 'msgblanalyze', 'msgblevaluate',
+        'msgblcreate', 'msgclcertificate', 'msgclundergraduate', 'msgclpostgraduate',
+        'msgclprofessional', 'msglevelworker', 'msglevelsupervisor', 'msglevelmanager',
+        'msgwordsuffix', 'msgzerowords', 'msgitemssuffix', 'msgzeroitems', 'msgoneitem',
+        'msgnselected', 'msgnofmselected', 'msguploadeddocument', 'msgtrainingtopicdefault',
+        'msguntitledtopic', 'msgvalid', 'msgunitdefault', 'msgbasedondefault', 'msgbasedon',
+        'msgbasedonworkplacedoc', 'msgnsubtopic', 'msgnsubtopics'
     ];
 
     /**
@@ -120,7 +269,554 @@ define([
         erruploadpdf: 'Please upload a PDF file.',
         errtgaunavailable: 'TGA API unavailable. Please upload the unit PDF instead.',
         errunitevidencemissing: 'Unit found but Performance/Knowledge Evidence missing. ' +
-            'Upload the complete unit PDF to extract this data.'
+            'Upload the complete unit PDF to extract this data.',
+        msgnoelements: 'No elements found  -  check the format.',
+        msgrefreshing: 'Refreshing...',
+        msgextractingtext: 'Extracting competency data from pasted text...',
+        msgextractingpdf: 'Extracting competency data from PDF...',
+        msgexporting: 'Exporting...',
+        msgstillgenerating: 'Still generating  -  the AI is working on your content. This can take 1–2 minutes for larger courses. Please do not close this page.',
+        msgpregenvoice: 'Pre-generating voiceovers...',
+        msgskipping: 'Skipping…',
+        msgvoiceskipped: 'Voiceover skipped  -  saving module…',
+        msgapplyingupdates: 'Applying updates...',
+        // FIX-CC-AMD-HARDCODED-STRINGS (v13.95.3)
+        msgselectsector: 'Select sector (optional)...',
+        msgselectjobtitle: 'Select job title...',
+        msgselectjobtitlefirst: 'Select job title first...',
+        msgfetchtaskcats: 'Fetch unit or upload documents to see suggested task categories...',
+        msgfetchequipmentcats: 'Fetch unit or upload documents to see suggested equipment categories...',
+        msgnocategories: 'No categories available',
+        msgnoelementsfound: 'No elements found.',
+        msgnoelementsinunit: 'No elements found in this unit.',
+        msgvalidatingstructure: 'Validating content structure...',
+        msgqadesclive: 'Each topic is checked for correct card count, required fields, and voiceover length. Structurally broken content triggers one targeted repair pass.',
+        msgqaresultstitle: 'Structure Validation Results',
+        msgqadesc: 'Each topic is checked for correct card count, required fields, and voiceover length. Broken structure triggers one targeted repair pass.',
+        msgpluginupdates: 'Plugin updates available for this module',
+        msgsmartsuggestions: 'Smart Suggestions Applied',
+        msgsuggestnote: 'You can add or remove selections as needed.',
+        msguploaddocsuggest: 'Upload a document to generate AI-powered suggestions for job titles, tasks, and equipment.',
+        msgnoaisuggestions: 'Could not generate AI suggestions from document. You can still proceed with manual context selection below.',
+        msgregenfailedtitle: 'Regenerating Failed Content',
+        msgcreatelearningcontent: 'Create Learning Content',
+        msgwizardsubtitle: 'Build engaging, compliant learning experiences with AI assistance',
+        msgchoosemode: 'Choose Your Learning Mode',
+        msgchoosemodesubtitle: 'Select the mode that matches your educational context. This determines how content is structured and mapped.',
+        msgstepchoosemode: 'Choose your mode and enter your topics',
+        msgstepaddcontext: 'Add context and generate your slides',
+        msgstepgenerate: 'Generate your slides',
+        msgmodevetdesc: 'Unit of competency with RTO compliance',
+        msguploadrefdocs: 'Upload reference documents',
+        msguploadcompanydocs: 'Upload company documents (PDF, Word)',
+        msgrealworkplacescenarios: 'Real workplace decision scenarios',
+        msgmodeunidesc: 'Academic courses with Bloom\'s Taxonomy alignment',
+        msgoutcomedriven: 'Learning outcome-driven structure',
+        msgcriticalthinking: 'Critical thinking emphasis',
+        msgacademictone: 'Academic tone and terminology',
+        msgnoquizcard: 'No quiz card and no jurisdiction legislation on this route.',
+        msgentercoursetitleai: 'Enter course title, AI suggests topics',
+        msgorpasteowntopics: 'Or paste your own topics',
+        msgmodetopicstitle: 'Topics and Text',
+        msgmodetopicsdesc: 'Four short, colour-coded cards of plain explanatory writing, then the activities.',
+        msgworksanysubject: 'Works for any subject at all',
+        msgcardsreveal: 'Cards reveal one at a time as the voiceover reads them',
+        msgtopicscardnote: 'Headings are fixed and never carry the topic name. Each card is two short paragraphs. Ends with the same quiz, flip cards and category sort as the other routes. Voiceover, images and full card editing all work as normal.',
+        msgcontextvettitle: 'Learning Context - Vocational (RTO)',
+        msgcontextvetsubtitle: 'Enter the unit code to auto-fetch competency data, then provide workplace context for relevant examples.',
+        msgunitofcompetency: 'Unit of Competency',
+        msgfetchingtga: 'Fetching unit data from training.gov.au...',
+        msgtgafetchfailed: 'Unable to fetch unit data automatically. Upload the unit PDF or paste the unit text from training.gov.au instead.',
+        msgfillfieldsfirst: 'Fill in these fields first. AI will use this context to suggest relevant job titles, tasks, and equipment.',
+        msgselectindustryfirst: 'Select industry first...',
+        msgsectorhint: 'More specific sector for realistic scenarios',
+        msgjobrolehint: 'Naming the role makes every scenario speak to that learner. Leave blank to let the AI choose.',
+        msgchatgptprompt: 'Or use the ChatGPT prompt for more control (optional)',
+        msgchatgptreview: 'Review and refine the ChatGPT output until you are happy with it',
+        msgchatgptpastecontinue: 'Paste the output below, then click Continue to generate your slides',
+        msgcontextwptitle: 'Learning Context - Workplace Training',
+        msgcontextwpsubtitle: 'Upload your company documents and provide context. AI will extract topics and build interactive training content.',
+        msguploadpolicyhint: 'Upload the policy, procedure, manual, or training material you want to convert into interactive learning content.',
+        msgdraganddrop: 'Drag and drop your document here',
+        msgextractingdoc: 'Extracting content from document...',
+        msgtrainingcontexthint: 'Provide context about the training to help AI create relevant, realistic scenarios.',
+        msgmajortopicwphint: 'This is your major topic. AI will suggest sub topics (A, B, C) under it - from your uploaded document if you provided one, otherwise from the topic and context you entered here.',
+        msgselecttrainingtype: 'Select training type...',
+        msgcontextunititle: 'Learning Context - University',
+        msgcontextunisubtitle: 'Follow the steps below to build your course content. Each section unlocks as you complete the previous one.',
+        msgmajortopichint: 'This is your major topic. AI will suggest sub topics (A, B, C) under it.',
+        msghowtopaste: 'How to paste your subtopics',
+        msgdownloadpromptfile: 'Download the prompt file below (includes your topics)',
+        msgchatgptpastegenerate: 'Paste the output below, then click Generate Topics to generate your slides',
+        msgpdsubtitle: 'Enter your course details, then add topics by letting AI suggest them or paste your own.',
+        msgaddsubtopics: 'Add the subtopics for your major topic. You can let AI suggest them or paste your own.',
+        msgpastesubtopicslabel: 'Paste your subtopics (one per line)',
+        msgfetchedfromtga: 'Fetched from TGA',
+        msgunitcoverhint: 'What this unit must cover (expanded later with role-specific content)',
+        msggeneratingtopicstructure: 'Generating Topic Structure...',
+        msgproposedstructure: 'Proposed Learning Structure',
+        msgcustomizelook: 'Customize the look and feel of your learning content',
+        msgslideheadercolor: 'Slide Header Color',
+        msgprimarycolorhint: 'Uses your site\'s primary color by default',
+        msgnovoiceoverhint: 'When disabled, slides will not have AI voiceovers',
+        msgadditionallanguages: 'Additional Student Languages',
+        msgadditionallangshint: 'Students can switch between the primary language above and any language selected here. Full content and voiceover will be generated in each selected language.',
+        msgaddimageshint: 'Add professional AI-generated images to learning slides',
+        msgapplyimagesall: 'Apply AI Images to All Slides',
+        msgdecisionchallenge: 'Decision Challenge Activities',
+        msgincludedecision: 'Include Decision Challenge',
+        msgnochallengehint: 'When disabled, content will be delivered without interactive challenge activities',
+        msgprogressionmode: 'Slide Progression Mode',
+        msgprogressionhint: 'Choose how learners progress through the slides',
+        msgprogressfree: 'Learners can move freely between slides',
+        msgprogressmintime: 'Minimum time per slide before continuing',
+        msgprogressvoice: 'Learners must listen to voiceover before continuing',
+        msgreadingtime: 'Reading time per slide',
+        msgtopicnavmode: 'Topic Navigation Mode',
+        msgtopicnavhint: 'Control whether learners must complete topics in order',
+        msgtopicnavfree: 'Learners can access any topic in any order',
+        msgtopicnavsequential: 'Learners must complete each topic before accessing the next',
+        msgcontentgenerated: 'Content Generated Successfully',
+        msginstructionvet: '<strong>One element per content pack.</strong> Each Content Creator activity covers a single element at a time. Select the element you want to build content for, and each PC becomes a learning slide. To cover more elements, create additional Content Creator activities in your course. <strong>Best practice:</strong> Place an <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> activity between each element so students can consolidate their learning before moving on.',
+        msginstructionwp: '<strong>One topic per content pack.</strong> Each Content Creator activity covers a single training topic at a time (e.g. "Manual Handling" or "Fire Evacuation"). Each sub topic (A, B, C) becomes a learning slide. To cover more topics, create additional Content Creator activities in your course. <strong>Best practice:</strong> Place an <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> activity between each topic so students can consolidate their learning before moving on.',
+        msginstructionuni: '<strong>One topic per content pack.</strong> Each Content Creator activity covers a single topic at a time (e.g. "Motivation Theories" or "Group Dynamics"). Each sub topic (A, B, C) becomes a learning slide. To cover more topics, create additional Content Creator activities in your course. <strong>Best practice:</strong> Place an <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> activity between each topic so students can consolidate their learning before moving on.',
+        msginstructionpd: '<strong>One topic per content pack.</strong> Each Content Creator activity covers a single topic at a time (e.g. "Active Listening" or "Managing Conflict"). Each sub topic (A, B, C) becomes a learning slide. To cover more topics, create additional Content Creator activities in your course. <strong>Best practice:</strong> Place an <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> activity between each topic so students can consolidate their learning before moving on.',
+        msgphunitcode: 'e.g., RIIWHS204E',
+        msgphunittext: 'Paste the unit of competency text here. Include the Performance Evidence, Knowledge Evidence and Elements sections for best results.',
+        msgphelements: 'Paste the elements section here, e.g.:\n1. Plan and prepare for the detailed design of urban roads\n1.1 Interpret and analyse data and identify viable options\n1.2 Recommend the preferred option\n2. Undertake the detailed design of urban roads\n2.1 Select appropriate design parameters\n...',
+        msgphvetjobtitle: 'e.g. Scaffolder, Site Supervisor',
+        msgphvettasks: 'One per line, or separated by commas&#10;e.g. Erecting mobile scaffold&#10;Conducting pre-start checks',
+        msgphvetequipment: 'One per line, or separated by commas&#10;e.g. Full body harness&#10;Mobile scaffold tower',
+        msgphchatgptoutput: 'Optional: Paste ChatGPT output or any reference material here to guide the AI...',
+        msgphtrainingtopic: 'e.g., Manual Handling Procedures, Fire Evacuation, Chemical Storage',
+        msgphcompanyname: 'e.g., Acme Industries Pty Ltd',
+        msgphdepartment: 'e.g., Operations, HR, Safety',
+        msgphinstructions: 'e.g., Focus on forklift operations',
+        msgphwpjobtitle: 'e.g. Warehouse Operator, Duty Manager',
+        msgphwptasks: 'One per line, or separated by commas&#10;e.g. Receiving inbound stock&#10;Operating a pallet jack',
+        msgphwpequipment: 'One per line, or separated by commas&#10;e.g. Pallet jack&#10;RF scanner',
+        msgphcoursename: 'e.g., Motivation Theories, Group Dynamics, Organisational Behaviour',
+        msgphsubjectarea: 'e.g., Psychology, Business, Engineering',
+        msgphbulkpaste: 'Paste your subtopics here (one per line)...&#10;&#10;How visibility shifts meaning&#10;Public disagreement and response pressure&#10;Personal opinion vs institutional signal&#10;Platform-specific risks&#10;When personal becomes professional&#10;Managing digital footprint',
+        msgphpdcoursetitle: 'e.g. Active Listening, Managing Conflict, Mental Health First Aid',
+        msgphpdindustry: 'e.g. Healthcare, Construction, Finance',
+        msgphpdpaste: 'What makes a good leader&#10;Leadership vs management&#10;Active listening techniques&#10;Giving constructive feedback&#10;Setting clear expectations',
+        msgphlearningoutcome: 'Enter learning outcome...',
+        msgremove: 'Remove',
+        msgtitlerefreshelements: 'Re-fetch this unit from training.gov.au, bypassing the cache',
+        msgtitleauditlayer: 'This layer ensures audit coverage. Specific workplace examples appear in the Content Layers.',
+        msgtitlegenerate: 'Topics will be expanded using your selected job role, industry, and location.',
+        // FIX-CC-AMD-HARDCODED-STRINGS pass 2 (v13.95.3)
+        msglangenau: 'English (Australia)',
+        msglangengb: 'English (UK)',
+        msglangenus: 'English (US)',
+        msglangenin: 'English (India)',
+        msglangarxa: 'Arabic',
+        msglangbnin: 'Bengali (India)',
+        msglangbgbg: 'Bulgarian',
+        msglangcaes: 'Catalan',
+        msglangyuehk: 'Cantonese (Hong Kong)',
+        msglangcscz: 'Czech',
+        msglangdadk: 'Danish',
+        msglangnlbe: 'Dutch (Belgium)',
+        msglangnlnl: 'Dutch (Netherlands)',
+        msglangfilph: 'Filipino',
+        msglangfifi: 'Finnish',
+        msglangfrca: 'French (Canada)',
+        msglangfrfr: 'French (France)',
+        msglangdede: 'German',
+        msglangelgr: 'Greek',
+        msglangguin: 'Gujarati',
+        msglangheil: 'Hebrew',
+        msglanghiin: 'Hindi',
+        msglanghuhu: 'Hungarian',
+        msglangisis: 'Icelandic',
+        msglangidid: 'Indonesian',
+        msglangitit: 'Italian',
+        msglangjajp: 'Japanese',
+        msglangknin: 'Kannada',
+        msglangkokr: 'Korean',
+        msglanglvlv: 'Latvian',
+        msglangltlt: 'Lithuanian',
+        msglangmsmy: 'Malay',
+        msglangmlin: 'Malayalam',
+        msgvoicelangcmncn: 'Mandarin (China)',
+        msgvoicelangcmntw: 'Mandarin (Taiwan)',
+        msglangmrin: 'Marathi',
+        msglangnbno: 'Norwegian',
+        msglangplpl: 'Polish',
+        msglangptbr: 'Portuguese (Brazil)',
+        msglangptpt: 'Portuguese (Portugal)',
+        msglangpain: 'Punjabi',
+        msglangroro: 'Romanian',
+        msglangruru: 'Russian',
+        msglangsrrs: 'Serbian',
+        msglangsksk: 'Slovak',
+        msglangeses: 'Spanish (Spain)',
+        msglangesus: 'Spanish (US)',
+        msglangsvse: 'Swedish',
+        msglangtain: 'Tamil',
+        msglangtein: 'Telugu',
+        msglangthth: 'Thai',
+        msglangtrtr: 'Turkish',
+        msglangukua: 'Ukrainian',
+        msglangvivn: 'Vietnamese',
+        msgaddlangcmncn: 'Mandarin (Simplified)',
+        msgaddlangcmntw: 'Mandarin (Traditional)',
+        msgcountryau: 'Australia',
+        msgcountrynz: 'New Zealand',
+        msgcountrygb: 'United Kingdom',
+        msgcountryus: 'United States',
+        msgcountryca: 'Canada',
+        msgcountrysg: 'Singapore',
+        msgcountryae: 'United Arab Emirates',
+        msgcountryin: 'India',
+        msgcountryph: 'Philippines',
+        msgcountryza: 'South Africa',
+        msgpdaudnewstarters: 'New Starters',
+        msgpdaudteamleaders: 'Team Leaders',
+        msgpdaudseniorleaders: 'Senior Leaders',
+        msgpdaudfrontlineworkers: 'Frontline Workers',
+        msgpdaudspecialists: 'Specialists / Technical Staff',
+        msgpdaudcontractors: 'Contractors',
+        msgcountryes: 'Spain',
+        msgcountrymx: 'Mexico',
+        msgcountryfr: 'France',
+        msgcountryde: 'Germany',
+        msgcountrybr: 'Brazil',
+        msgcountrybe: 'Belgium',
+        msgcountrynl: 'Netherlands',
+        msgcountrydk: 'Denmark',
+        msgcountryfi: 'Finland',
+        msgcountryno: 'Norway',
+        msgcountryse: 'Sweden',
+        msgcountrybg: 'Bulgaria',
+        msgcountrycz: 'Czech Republic',
+        msgcountryhr: 'Croatia',
+        msgcountryhu: 'Hungary',
+        msgcountrypl: 'Poland',
+        msgcountryro: 'Romania',
+        msgcountryru: 'Russia',
+        msgcountrysk: 'Slovakia',
+        msgcountrysi: 'Slovenia',
+        msgcountryrs: 'Serbia',
+        msgcountryua: 'Ukraine',
+        msgcountryee: 'Estonia',
+        msgcountrylt: 'Lithuania',
+        msgcountrylv: 'Latvia',
+        msgcountrygr: 'Greece',
+        msgcountryit: 'Italy',
+        msgcountrycn: 'China',
+        msgcountryjp: 'Japan',
+        msgcountrykr: 'South Korea',
+        msgcountryid: 'Indonesia',
+        msgcountryth: 'Thailand',
+        msgcountryvn: 'Vietnam',
+        msgcountrybd: 'Bangladesh',
+        msgcountrypk: 'Pakistan',
+        msgcountryil: 'Israel',
+        msgcountrytr: 'Turkey',
+        msgcountrysa: 'Saudi Arabia',
+        msgcountryeg: 'Egypt',
+        msgcountryke: 'Kenya',
+        msgcountryie: 'Ireland',
+        msgcountrymy: 'Malaysia',
+        msgttinduction: 'Staff Induction / Onboarding',
+        msgttpolicy: 'Policy & Procedure Training',
+        msgttsafety: 'Workplace Health & Safety',
+        msgttcompliance: 'Compliance & Regulatory',
+        msgttskills: 'Skills Development',
+        msgttleadership: 'Leadership & Management',
+        msgttcustomer: 'Customer Service',
+        msgtttechnical: 'Technical / Systems Training',
+        msgttcustom: 'Custom Training Module',
+        msgtanewstarters: 'New Starters / Inductees',
+        msgtaallstaff: 'All Staff',
+        msgtasupervisors: 'Supervisors / Team Leaders',
+        msgtamanagers: 'Managers',
+        msgtacontractors: 'Contractors / Visitors',
+        msgtaspecificdept: 'Specific Department',
+        msggenerates7cardspersection: 'Generates 7 cards per section',
+        msgcardvethookscenario: '<strong>Hook Scenario</strong> &ndash; a real moment on the job that puts the learner in the situation',
+        msgcardvetconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the rule or obligation behind it, in plain English',
+        msgcardvetmentalmodel: '<strong>Mental Model</strong> &ndash; the four or five steps, in order, with the reasoning',
+        msgcardvetappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same skill in a different setting and time',
+        msgcardvetmistakes: '<strong>Mistakes</strong> &ndash; five things that go wrong, each with its consequence',
+        msgcardvetcompetencysummary: '<strong>Competency Summary</strong> &ndash; what they can now do, and what failing looks like',
+        msgcardvetdecisionpoint: '<strong>Decision Point</strong> &ndash; one question, four answers, feedback on each',
+        msgcardworkplacehookscenario: '<strong>Hook Scenario</strong> &ndash; a moment at work where this matters',
+        msgcardworkplaceconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the policy or obligation, in plain English',
+        msgcardworkplacementalmodel: '<strong>Mental Model</strong> &ndash; the steps, naming your actual tools, systems and forms',
+        msgcardworkplaceappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same situation somewhere else in the business',
+        msgcardworkplacemistakes: '<strong>Mistakes</strong> &ndash; five errors, each with its business or compliance cost',
+        msgcardworkplacecompetencysummary: '<strong>Competency Summary</strong> &ndash; the standard, and what falling short looks like',
+        msgcardworkplacedecisionpoint: '<strong>Decision Point</strong> &ndash; one question with compliance stakes, four answers',
+        msggenerates6cardspersection: 'Generates 6 cards per section',
+        msgcarduniversityconceptanchor: '<strong>Concept Anchor</strong> &ndash; the concept defined, why it matters, three key terms',
+        msgcarduniversitytheoreticalframework: '<strong>Theoretical Framework</strong> &ndash; two or three frameworks, each with its originator and its limits',
+        msgcarduniversityanalyticallens: '<strong>Analytical Lens</strong> &ndash; five or more considerations, each with a concrete example',
+        msgcarduniversityethicsconsiderations: '<strong>Ethics Considerations</strong> &ndash; five or more dimensions, each explained',
+        msgcarduniversitycasestudy1: '<strong>Case Study 1</strong> &ndash; a detailed case, three analysis questions, the key insight',
+        msgcarduniversitycasestudy2: '<strong>Case Study 2</strong> &ndash; a different context, different questions, a critical reflection',
+        msgcardpdhookscenario: '<strong>Hook Scenario</strong> &ndash; a professional moment where the skill is tested',
+        msgcardpdconceptexplainer: '<strong>Concept Explainer</strong> &ndash; the principle underneath, in plain English',
+        msgcardpdmentalmodel: '<strong>Mental Model</strong> &ndash; the steps, as practitioner-level guidance',
+        msgcardpdappliedscenario: '<strong>Applied Scenario</strong> &ndash; the same skill in a different professional setting',
+        msgcardpdmistakes: '<strong>Mistakes</strong> &ndash; five errors and their professional or relational cost',
+        msgcardpddecisionpoint: '<strong>Decision Point</strong> &ndash; one judgement call, four answers, feedback on each',
+        msggenerates4cardspersectionplus3activities: 'Generates 4 cards per section, plus 3 activities',
+        msgcardtopicstextoverview: '<strong>Overview</strong> &ndash; what the subject is and why it matters',
+        msgcardtopicstextkeyconcepts: '<strong>Key Concepts</strong> &ndash; the two or three ideas the rest depends on',
+        msgcardtopicstextexamplesapplication: '<strong>Examples &amp; Application</strong> &ndash; the same ideas in real situations',
+        msgcardtopicstextkeytakeaways: '<strong>Key Takeaways</strong> &ndash; what to carry away, and the misunderstanding to avoid',
+        msgsuggestedbasedon: 'Suggested based on:',
+        msganalyzingdoc: 'AI is analyzing the document to suggest relevant roles, tasks, and equipment...',
+        msgaiextractedcontext: 'AI has analysed your document and extracted relevant context. Select the job titles, tasks, and equipment that apply.',
+        msgjobtitles: 'Job Titles',
+        msgjobtitleshint: 'Who is this training for? Select 1-3 job titles.',
+        msgprocedurestasks: 'Procedures & Tasks',
+        msgtaskshint: 'What tasks are covered? Select 1-3 task categories.',
+        msgtoolsequipment: 'Tools & Equipment',
+        msgequipmenthint: 'What equipment is mentioned? Select 1-3 categories.',
+        msgstep1label: 'Select Mode',
+        msgstep2label: 'Learning Context',
+        msgstep3label: 'Topics & Generate',
+        msgtryagain: 'Try Again',
+        msghowitworks: 'How It Works  -  3 Simple Steps',
+        msghowstep1: 'Select VET, Workplace, University, or PD / Short Courses mode below. Then enter your major topic and sub topics.',
+        msghowstep2: 'Select your industry and topics, then click Generate — AI builds your slides automatically. Optionally, paste reference content or use the ChatGPT prompt when you need more control or want to upload documents as guides.',
+        msghowstep3: 'AI builds your slides with text, images, voiceover, and real-world scenarios  -  all from your refined content.',
+        msgimportantonetopic: '<strong>Important:</strong> Each Content Creator activity is designed for <strong>one major topic only</strong>. For effective learning, place revision activities between your topics  -  use <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> to reinforce understanding before students move to the next topic.',
+        msgtipnochatgpt: '<strong>Tip:</strong> You can generate slides directly — no ChatGPT needed. Use the optional ChatGPT prompt (shown later) when you want to upload documents as guides or review and refine content before generating.',
+        msgautoimports: 'Auto-imports from training.gov.au',
+        msgcompetencyfocus: 'Competency-based assessment focus',
+        msgpccoverage: 'Element &amp; PC coverage mapping',
+        msgmodewptitle: 'Workplace Training',
+        msgmodewpdesc: 'Company policies, procedures & onboarding',
+        msgaiextractstopics: 'AI extracts topics from your content',
+        msginductionsafety: 'Induction, safety &amp; policy training',
+        msgmodeunititle: 'University / Higher Ed',
+        msgcarflow: 'Concept-Application-Reflection flow',
+        msgmodepdtitle: 'PD / Short Courses',
+        msgmodepddesc: 'Professional development, upskilling & staff training courses',
+        msgpracticalskills: 'Practical, skills-focused content',
+        msgcpdmicrocreds: 'Perfect for CPD &amp; micro-credentials',
+        msguniversalheadings: 'Universal headings &ndash; no compliance or scenario framing',
+        msgshortbydesign: 'Short by design: two paragraphs a card, easy to digest',
+        msgunitcodelabel: 'Unit Code *',
+        msgtgaapiunavailable: 'TGA API unavailable',
+        msgdownloadunitpdf: 'Download the unit PDF from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> and upload it here.',
+        msgopenuniton: 'Open the unit on <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a>, select all text (Ctrl+A / Cmd+A) and paste here.',
+        msgchooseoneelement: 'Choose <strong>one element</strong> to generate learning content for. Generate each element separately so you can place <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> between them for revision and deeper learning.',
+        msgpasteelementshint: 'If auto-fetch missed an element, paste the <strong>Elements and Performance Criteria</strong> section from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> below.<br>Format: <code>1. Element name</code> on its own line, then <code>1.1 PC text</code> etc.',
+        msgworkplacecontext: 'Workplace Context',
+        msgselectindustry: 'Select industry...',
+        msgindustrysector: 'Industry Sector',
+        msgjoblevelrequired: 'Job Level * <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(select one or more)</small>',
+        msgscenariosalllevels: 'AI will create workplace scenarios for all selected levels',
+        msgjobtitleoptional: 'Job Title <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small>',
+        msgtypicaljobtasks: 'Typical Job Tasks <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small>',
+        msgequipmenttools: 'Equipment &amp; Tools <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small>',
+        msgrealisticscenarios: 'Industry + Sector + Job Level = Realistic Scenarios',
+        msgsuggestingsubtopics: 'AI is suggesting subtopics for your major topic...',
+        msgreferencecontent: 'Reference Content <span style="font-weight:400;font-size:12px;color:#6b7280;">(Optional)</span>',
+        msgreadytogenerate: 'Ready to generate — no reference content needed',
+        msgbuilddirectvet: 'AI will build your slides directly from your unit, topics, and context. Click <strong>Continue</strong> below to generate your slides now.',
+        msgwhentousevet: '<strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>upload documents as guides</strong> (e.g. a training manual, policy doc, or unit PDF), or when you want to <strong>review and edit content before slides are generated</strong> for full creative control.',
+        msgdownloadpromptcontext: 'Download the prompt file below (includes your topics + context)',
+        msgopenchatgptvet: 'Open ChatGPT, paste the prompt — then upload any documents you want to use as guides',
+        msgsupportedformats: 'Supported: PDF, DOCX, PPTX, TXT (max 10MB)',
+        msgtrainingdetails: 'Training Details',
+        msgtrainingtopiclabel: 'Training Topic *',
+        msgtrainingtypelabel: 'Training Type *',
+        msgtargetaudiencerequired: 'Target Audience *',
+        msgcompanyname: 'Company / Organisation Name',
+        msgjoblevel: 'Job Level',
+        msgscenariosforlevel: 'AI creates scenarios appropriate for this level',
+        msgadditionalinstructions: 'Additional Instructions',
+        msgdoccontexttargeted: 'Document + Context = Targeted Training',
+        msgbuilddirectwp: 'AI will build your slides directly from your uploaded document, topics, and context. Click <strong>Continue</strong> below to generate your slides now.',
+        msgwhentousewp: '<strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>review and edit the content before slides are generated</strong>, or when you want to provide <strong>additional documents as guides</strong> beyond your uploaded training document.',
+        msgopenchatgptwp: 'Open ChatGPT, paste the prompt — then upload any additional documents you want to use as guides',
+        msgcourseinformation: 'Course Information',
+        msgcoursetitlerequired: 'Course / Topic Title *',
+        msgcourselevelrequired: 'Course Level *',
+        msgsubjectarearequired: 'Subject Area *',
+        msgbloomsfocus: 'Bloom\'s Taxonomy Focus *',
+        msgconfirmsubtopics: 'Confirm Subtopics',
+        msgeditsubtopics: 'Edit Subtopics',
+        msgbuilddirectuni: 'AI will build your slides directly from your topics and course context. Click <strong>Generate Topics</strong> below to generate your slides now.',
+        msgwhentouseuni: '<strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>upload course readings or academic documents as guides</strong>, or when you want to <strong>review and edit content before slides are generated</strong> for full creative control.',
+        msgopenchatgptuni: 'Open ChatGPT, paste the prompt — then upload any course readings or documents you want to use as guides',
+        msggeneratetopics: 'Generate Topics',
+        msgcoursetitle: 'Course / Topic Title <span class="cc-required">*</span>',
+        msgtargetaudience: 'Target Audience',
+        msgbuilddirectpd: 'AI will build your slides directly from your course title and subtopics. Click <strong>Generate Topics</strong> below to generate your slides now.',
+        msgwhentousepd: '<strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>upload reference documents as guides</strong> (e.g. a course manual, company policy, or learning framework), or when you want to <strong>review and edit content before slides are generated</strong> for full creative control.',
+        msgopenchatgptpd: 'Open ChatGPT, paste the prompt — then upload any reference documents you want to use as guides',
+        msgaboutthissection: '<strong>About this section:</strong> These topics show what must be covered to meet unit requirements. They are planning markers, not learner-facing content. Each topic will be expanded in the next step into role-specific explanations, scenarios, and activities based on your selected context.',
+        msganalyzinginputs: 'AI is analyzing your inputs and creating an optimized learning sequence.',
+        msgappearancesettings: 'Appearance Settings',
+        msgvoiceoversettings: 'Voiceover Settings',
+        msgvoiceoverhint: 'Configure the AI-generated voiceover for each slide (Chirp 3 HD)',
+        msgenablevoiceover: 'Enable Voiceover',
+        msgvoicewarmfriendly: 'Warm &amp; Friendly',
+        msgvoiceclearprofessional: 'Clear &amp; Professional',
+        msgvoicesoftnurturing: 'Soft &amp; Nurturing',
+        msgvoiceenergeticyouthful: 'Energetic &amp; Youthful',
+        msgvoiceupbeatclear: 'Upbeat &amp; Clear',
+        msgvoiceinformativecalm: 'Informative &amp; Calm',
+        msgvoiceexcitablebold: 'Excitable &amp; Bold',
+        msgvoicefirmdirect: 'Firm &amp; Direct',
+        msgvoiceoverlanguage: 'Voiceover Language',
+        msgcreditnote: '<strong>Note:</strong> Primary language costs 100 credits per subtopic. Each additional language costs 50 credits per subtopic (translation pass). A full set of slides and voiceovers is created for each language selected. The credit estimate above updates automatically as you select languages.',
+        msgimagecredits: 'When enabled, AI will generate images for each learning slide (5 credits per image)',
+        msgchallengehint: 'Include the 3-activity challenge (quiz, flip cards, category sort) at the end of each topic',
+        msgfreenavigation: 'Free Navigation',
+        msgtimedreading: 'Timed Reading',
+        msgmustlisten: 'Must Listen',
+        msgyourbalance: 'Your balance:',
+        msggeneratingcontent: 'Generating Content',
+        msgestimatedcost: 'Estimated Credit Cost:',
+        msgstructurevalidated: 'Structure validated  -  card count, fields, and voiceover length checked.',
+        msgoverlaproles: 'Overlap across <strong>{$a}</strong> roles',
+        errgennotstarted: 'Generation did not start. This is usually a dropped connection. Click Try Again to retry.',
+        errgentoolong: 'Generation failed — the content may be too long. Try reducing your reference material, then click Try Again.',
+        errgentimeoutload: 'Generation timed out. The AI is under heavy load — click Try Again to retry.',
+        errgentimeout: 'Generation timed out. Click Try Again to retry.',
+        errgenfailedretry: 'Content generation failed. Click Try Again to retry.',
+        msgcontexttopicstitle: 'Learning Context - Topics and Text',
+        msgcontextpdtitle: 'Learning Context - Professional Development',
+        msgupdatedesc: 'Applying updates keeps every topic, card, image, activity and edit exactly as it is. Only the voiceover audio is cleared, so it is re-recorded with the current narration engine the next time the module is opened. Re-recording uses voiceover credits.',
+        msgapplyupdatesbtn: 'Apply v{$a} updates &amp; relaunch',
+        msgreasonnostamp: 'This module was built before the plugin recorded build versions.',
+        msgreasonolderbuild: 'Built with v{$a->built}; the plugin is now v{$a->current}.',
+        msgreasonstalesection: '{$a} section hold voiceover produced by an older narration engine.',
+        msgreasonstalesections: '{$a} sections hold voiceover produced by an older narration engine.',
+        // FIX-CC-AMD-HARDCODED-STRINGS pass 3 (v13.95.3)
+        msgselectoptional: 'Select (optional)...',
+        msgothercustom: 'Other (custom)...',
+        msgcreditspersubtopic: '100 credits per subtopic',
+        msginitializing: 'Initializing...',
+        msgmodevettitle: 'Vocational (RTO)',
+        msgcountryrequired: 'Country *',
+        msgstateregion: 'State/Region',
+        msgindustryrequired: 'Industry *',
+        msgclear: 'Clear',
+        msgdepartment: 'Department',
+        msgsubtopics: 'Subtopics',
+        msgindustryoptional: 'Industry (Optional)',
+        msgcountry: 'Country',
+        msgcancel: 'Cancel',
+        msgwords: 'Words',
+        msgsections: 'Sections',
+        msgtopics: 'Topics',
+        msgelements: 'Elements',
+        msgpc: 'PC',
+        msgke: 'KE',
+        msgpe: 'PE',
+        msgfs: 'FS',
+        msgenabled: 'Enabled',
+        msgvoice: 'Voice',
+        msgfemale: 'Female',
+        msgmale: 'Male',
+        msgimages: 'Images',
+        msgtime5seconds: '5 seconds',
+        msgtime10seconds: '10 seconds',
+        msgtime15seconds: '15 seconds',
+        msgtime20seconds: '20 seconds',
+        msgtime30seconds: '30 seconds',
+        msgtime45seconds: '45 seconds',
+        msgtime1minute: '1 minute',
+        msgtime90seconds: '1.5 minutes',
+        msgtime2minutes: '2 minutes',
+        msgtime3minutes: '3 minutes',
+        msgtime4minutes: '4 minutes',
+        msgtime5minutes: '5 minutes',
+        msgtime7minutes: '7 minutes',
+        msgtime10minutes: '10 minutes',
+        msgsequentiallockstep: 'Sequential (Lockstep)',
+        msgtogeneratecontent: 'to generate content',
+        msgcredits: 'credits',
+        msgpreparing: 'Preparing...',
+        msgzerocredits: '0 credits',
+        msgcontinue: 'Continue',
+        msguploadpdf: 'Upload PDF',
+        msgpastetext: 'Paste Text',
+        msgprocesstext: 'Process Text',
+        msgselectelement: 'Select Element to Generate',
+        msgrefreshfromtga: 'Refresh from TGA',
+        msgmergeaddmissing: 'Merge (add missing only)',
+        msgsuggestsubtopics: 'Suggest Subtopics',
+        msgdownloadchatgptcontext: 'Download ChatGPT Prompt File (includes your topics + context)',
+        msgback: 'Back',
+        msgtrainingdocument: 'Training Document',
+        msgdownloadchatgpt: 'Download ChatGPT Prompt File (includes your topics)',
+        msgsuggestsubtopicsai: 'Suggest Subtopics with AI',
+        msgcompliancemap: 'Compliance Coverage Map',
+        msgplanninglayer: 'Planning Layer',
+        msgselectall: 'Select All',
+        msgdeselectall: 'Deselect All',
+        msgskipvoiceover: 'Skip voiceover generation and continue',
+        msgvoiceoverslater: 'Voiceovers will be generated when the activity is first opened.',
+        msgexportexcel: 'Export Excel Mapping',
+        msgresetstartover: 'Reset & Start Over',
+        msgpastesubtopicsintro: 'Paste the subtopics for your major topic below (one per line). Each subtopic will become a separate learning slide:',
+        msgsubtopicex1: 'How visibility shifts meaning',
+        msgsubtopicex2: 'Public disagreement and response pressure',
+        msgsubtopicex3: 'Personal opinion vs institutional signal',
+        msgsubtopicex4: 'Platform-specific risks',
+        msgsubtopicex5: 'When personal becomes professional',
+        msgsubtopicex6: 'Managing digital footprint',
+        msgtipsubtopics: '<strong>Tip:</strong> List 4-8 sub topics. Each sub topic (A, B, C) becomes one learning slide in your content pack. You can also paste lists or bullet points.',
+        msgtipimages: '<strong>Tip:</strong> You can also manually add or upload images after slides are generated by clicking the purple Edit button on any slide.',
+        msgriskprofile: '<strong>{$a}</strong> risk profile',
+        msgcommonplant: 'Common plant used: {$a}',
+        msgreferencedin: 'Referenced in: {$a}',
+        msgfoundin: 'Found in: {$a}',
+        msgthroughoutdoc: 'Throughout document',
+        msgonlyregenerating: 'Only regenerating {$a} slides that failed previously. Your successful content is preserved.',
+        msgsplitpart: 'Part {$a->part} of {$a->total} — split ({$a->max}+ PCs)',
+        msgcovers: 'Covers: {$a}',
+        msgtaskslabel: 'Tasks:',
+        msgequipmentlabel: 'Equipment:',
+        msgor: 'or',
+        msgbrowsefiles: 'browse files',
+        msgjlentry: 'Entry Level / Trainee',
+        msgjlworker: 'Worker / Operator',
+        msgjlsupervisor: 'Supervisor / Team Leader',
+        msgjlmanager: 'Manager / Senior',
+        msgjlexecutive: 'Executive / Director',
+        msgblremember: 'Remember - Recall facts and concepts',
+        msgblunderstand: 'Understand - Explain ideas or concepts',
+        msgblapply: 'Apply - Use information in new situations',
+        msgblanalyze: 'Analyze - Draw connections among ideas',
+        msgblevaluate: 'Evaluate - Justify a decision or action',
+        msgblcreate: 'Create - Produce new or original work',
+        msgclcertificate: 'Certificate / Diploma',
+        msgclundergraduate: 'Undergraduate',
+        msgclpostgraduate: 'Postgraduate',
+        msgclprofessional: 'Professional Development',
+        msglevelworker: 'Worker',
+        msglevelsupervisor: 'Supervisor',
+        msglevelmanager: 'Manager',
+        msgwordsuffix: ' words',
+        msgzerowords: '0 words',
+        msgitemssuffix: ' items detected',
+        msgzeroitems: '0 items detected',
+        msgoneitem: '1 item detected',
+        msgnselected: '{$a} selected',
+        msgnofmselected: '{$a->selected}/{$a->total} selected',
+        msguploadeddocument: 'Uploaded Document',
+        msgtrainingtopicdefault: 'Training Topic',
+        msguntitledtopic: 'Untitled Topic',
+        msgvalid: 'Valid',
+        msgunitdefault: 'Unit',
+        msgbasedondefault: 'Based on your course context and learning outcomes',
+        msgbasedon: 'Based on {$a}',
+        msgbasedonworkplacedoc: 'Based on your workplace document',
+        msgnsubtopic: '{$a} subtopic',
+        msgnsubtopics: '{$a} subtopics'
     };
 
     /** Resolved strings, filled by preloadMessages(). */
@@ -469,57 +1165,57 @@ define([
     };
 
     const COUNTRIES = [
-        { code: 'AU', name: 'Australia', lang: 'en-AU' },
-        { code: 'GB', name: 'United Kingdom', lang: 'en-GB' },
-        { code: 'US', name: 'United States', lang: 'en-US' },
-        { code: 'IN', name: 'India', lang: 'en-IN' },
-        { code: 'ES', name: 'Spain', lang: 'es-ES' },
-        { code: 'MX', name: 'Mexico', lang: 'es-US' },
-        { code: 'FR', name: 'France', lang: 'fr-FR' },
-        { code: 'CA', name: 'Canada', lang: 'fr-CA' },
-        { code: 'DE', name: 'Germany', lang: 'de-DE' },
-        { code: 'BR', name: 'Brazil', lang: 'pt-BR' },
-        { code: 'BE', name: 'Belgium', lang: 'nl-BE' },
-        { code: 'NL', name: 'Netherlands', lang: 'nl-NL' },
-        { code: 'DK', name: 'Denmark', lang: 'da-DK' },
-        { code: 'FI', name: 'Finland', lang: 'fi-FI' },
-        { code: 'NO', name: 'Norway', lang: 'nb-NO' },
-        { code: 'SE', name: 'Sweden', lang: 'sv-SE' },
-        { code: 'BG', name: 'Bulgaria', lang: 'bg-BG' },
-        { code: 'CZ', name: 'Czech Republic', lang: 'cs-CZ' },
-        { code: 'HR', name: 'Croatia', lang: 'hr-HR' },
-        { code: 'HU', name: 'Hungary', lang: 'hu-HU' },
-        { code: 'PL', name: 'Poland', lang: 'pl-PL' },
-        { code: 'RO', name: 'Romania', lang: 'ro-RO' },
-        { code: 'RU', name: 'Russia', lang: 'ru-RU' },
-        { code: 'SK', name: 'Slovakia', lang: 'sk-SK' },
-        { code: 'SI', name: 'Slovenia', lang: 'sl-SI' },
-        { code: 'RS', name: 'Serbia', lang: 'sr-RS' },
-        { code: 'UA', name: 'Ukraine', lang: 'uk-UA' },
-        { code: 'EE', name: 'Estonia', lang: 'et-EE' },
-        { code: 'LT', name: 'Lithuania', lang: 'lt-LT' },
-        { code: 'LV', name: 'Latvia', lang: 'lv-LV' },
-        { code: 'GR', name: 'Greece', lang: 'el-GR' },
-        { code: 'IT', name: 'Italy', lang: 'it-IT' },
-        { code: 'CN', name: 'China', lang: 'cmn-CN' },
-        { code: 'JP', name: 'Japan', lang: 'ja-JP' },
-        { code: 'KR', name: 'South Korea', lang: 'ko-KR' },
-        { code: 'ID', name: 'Indonesia', lang: 'id-ID' },
-        { code: 'TH', name: 'Thailand', lang: 'th-TH' },
-        { code: 'VN', name: 'Vietnam', lang: 'vi-VN' },
-        { code: 'BD', name: 'Bangladesh', lang: 'bn-IN' },
-        { code: 'PK', name: 'Pakistan', lang: 'ur-IN' },
-        { code: 'IL', name: 'Israel', lang: 'he-IL' },
-        { code: 'TR', name: 'Turkey', lang: 'tr-TR' },
-        { code: 'SA', name: 'Saudi Arabia', lang: 'ar-XA' },
-        { code: 'AE', name: 'United Arab Emirates', lang: 'ar-XA' },
-        { code: 'EG', name: 'Egypt', lang: 'ar-XA' },
-        { code: 'KE', name: 'Kenya', lang: 'sw-KE' },
-        { code: 'NZ', name: 'New Zealand', lang: 'en-AU' },
-        { code: 'IE', name: 'Ireland', lang: 'en-GB' },
-        { code: 'SG', name: 'Singapore', lang: 'en-GB' },
-        { code: 'MY', name: 'Malaysia', lang: 'en-GB' },
-        { code: 'PH', name: 'Philippines', lang: 'en-US' }
+        { code: 'AU', key: 'msgcountryau', lang: 'en-AU' },
+        { code: 'GB', key: 'msgcountrygb', lang: 'en-GB' },
+        { code: 'US', key: 'msgcountryus', lang: 'en-US' },
+        { code: 'IN', key: 'msgcountryin', lang: 'en-IN' },
+        { code: 'ES', key: 'msgcountryes', lang: 'es-ES' },
+        { code: 'MX', key: 'msgcountrymx', lang: 'es-US' },
+        { code: 'FR', key: 'msgcountryfr', lang: 'fr-FR' },
+        { code: 'CA', key: 'msgcountryca', lang: 'fr-CA' },
+        { code: 'DE', key: 'msgcountryde', lang: 'de-DE' },
+        { code: 'BR', key: 'msgcountrybr', lang: 'pt-BR' },
+        { code: 'BE', key: 'msgcountrybe', lang: 'nl-BE' },
+        { code: 'NL', key: 'msgcountrynl', lang: 'nl-NL' },
+        { code: 'DK', key: 'msgcountrydk', lang: 'da-DK' },
+        { code: 'FI', key: 'msgcountryfi', lang: 'fi-FI' },
+        { code: 'NO', key: 'msgcountryno', lang: 'nb-NO' },
+        { code: 'SE', key: 'msgcountryse', lang: 'sv-SE' },
+        { code: 'BG', key: 'msgcountrybg', lang: 'bg-BG' },
+        { code: 'CZ', key: 'msgcountrycz', lang: 'cs-CZ' },
+        { code: 'HR', key: 'msgcountryhr', lang: 'hr-HR' },
+        { code: 'HU', key: 'msgcountryhu', lang: 'hu-HU' },
+        { code: 'PL', key: 'msgcountrypl', lang: 'pl-PL' },
+        { code: 'RO', key: 'msgcountryro', lang: 'ro-RO' },
+        { code: 'RU', key: 'msgcountryru', lang: 'ru-RU' },
+        { code: 'SK', key: 'msgcountrysk', lang: 'sk-SK' },
+        { code: 'SI', key: 'msgcountrysi', lang: 'sl-SI' },
+        { code: 'RS', key: 'msgcountryrs', lang: 'sr-RS' },
+        { code: 'UA', key: 'msgcountryua', lang: 'uk-UA' },
+        { code: 'EE', key: 'msgcountryee', lang: 'et-EE' },
+        { code: 'LT', key: 'msgcountrylt', lang: 'lt-LT' },
+        { code: 'LV', key: 'msgcountrylv', lang: 'lv-LV' },
+        { code: 'GR', key: 'msgcountrygr', lang: 'el-GR' },
+        { code: 'IT', key: 'msgcountryit', lang: 'it-IT' },
+        { code: 'CN', key: 'msgcountrycn', lang: 'cmn-CN' },
+        { code: 'JP', key: 'msgcountryjp', lang: 'ja-JP' },
+        { code: 'KR', key: 'msgcountrykr', lang: 'ko-KR' },
+        { code: 'ID', key: 'msgcountryid', lang: 'id-ID' },
+        { code: 'TH', key: 'msgcountryth', lang: 'th-TH' },
+        { code: 'VN', key: 'msgcountryvn', lang: 'vi-VN' },
+        { code: 'BD', key: 'msgcountrybd', lang: 'bn-IN' },
+        { code: 'PK', key: 'msgcountrypk', lang: 'ur-IN' },
+        { code: 'IL', key: 'msgcountryil', lang: 'he-IL' },
+        { code: 'TR', key: 'msgcountrytr', lang: 'tr-TR' },
+        { code: 'SA', key: 'msgcountrysa', lang: 'ar-XA' },
+        { code: 'AE', key: 'msgcountryae', lang: 'ar-XA' },
+        { code: 'EG', key: 'msgcountryeg', lang: 'ar-XA' },
+        { code: 'KE', key: 'msgcountryke', lang: 'sw-KE' },
+        { code: 'NZ', key: 'msgcountrynz', lang: 'en-AU' },
+        { code: 'IE', key: 'msgcountryie', lang: 'en-GB' },
+        { code: 'SG', key: 'msgcountrysg', lang: 'en-GB' },
+        { code: 'MY', key: 'msgcountrymy', lang: 'en-GB' },
+        { code: 'PH', key: 'msgcountryph', lang: 'en-US' }
     ];
 
     // States/Regions for all supported countries
@@ -596,7 +1292,7 @@ define([
                 const stateSelect = document.getElementById('cc-state');
                 if (stateSelect) {
                     const states = getStatesForCountry(e.target.value);
-                    stateSelect.innerHTML = '<option value="">Select (optional)...</option>' +
+                    stateSelect.innerHTML = '<option value="">' + s('msgselectoptional') + '</option>' +
                         states.map(s => `<option value="${s}">${s}</option>`).join('');
                 }
             };
@@ -611,7 +1307,7 @@ define([
                 const sectorSelect = document.getElementById('cc-industry-sector');
                 if (sectorSelect) {
                     const sectors = getSubcategoriesForIndustry(industry);
-                    sectorSelect.innerHTML = '<option value="">Select sector (optional)...</option>' +
+                    sectorSelect.innerHTML = '<option value="">' + s('msgselectsector') + '</option>' +
                         sectors.map(s => `<option value="${s}">${s}</option>`).join('');
                 }
                 // Populate Job Titles based on industry
@@ -626,9 +1322,9 @@ define([
                 const jobTitleCustom = document.getElementById('cc-job-title-custom');
                 if (jobTitleSelect) {
                     const jobTitles = getJobTitlesForIndustry(industry);
-                    jobTitleSelect.innerHTML = '<option value="">Select job title...</option>' +
+                    jobTitleSelect.innerHTML = '<option value="">' + s('msgselectjobtitle') + '</option>' +
                         jobTitles.map(j => `<option value="${j}">${j}</option>`).join('') +
-                        '<option value="_other">Other (custom)...</option>';
+                        '<option value="_other">' + s('msgothercustom') + '</option>';
                     jobTitleSelect.classList.remove('cc-hidden');
                     if (jobTitleCustom) jobTitleCustom.classList.add('cc-hidden');
                 }
@@ -637,7 +1333,7 @@ define([
                 const jobTasksSelected = document.getElementById('cc-job-tasks-selected');
                 const jobTasksCustomWrapper = document.getElementById('cc-job-tasks-custom-wrapper');
                 if (jobTasksList) {
-                    jobTasksList.innerHTML = '<div class="cc-job-tasks-placeholder">Select job title first...</div>';
+                    jobTasksList.innerHTML = '<div class="cc-job-tasks-placeholder">' + s('msgselectjobtitlefirst') + '</div>';
                 }
                 if (jobTasksSelected) jobTasksSelected.innerHTML = '';
                 if (jobTasksCustomWrapper) jobTasksCustomWrapper.classList.add('cc-hidden');
@@ -853,17 +1549,17 @@ define([
                     feedback.innerHTML = `
                         <div class="cc-suggest-header">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                            <strong>Smart Suggestions Applied</strong>
+                            <strong>${s('msgsmartsuggestions')}</strong>
                         </div>
                         <div class="cc-suggest-reason">
-                            <span>Suggested based on:</span>
+                            <span>${s('msgsuggestedbasedon')}</span>
                             <ul>
-                                <li><strong>${unitShort}</strong> risk profile</li>
-                                <li>Overlap across <strong>${roleList}</strong> roles</li>
-                                ${selectedEquipNames.length > 0 ? `<li>Common plant used: ${selectedEquipNames.slice(0, 3).join(', ')}</li>` : ''}
+                                <li>${s('msgriskprofile').split('{$a}').join(unitShort)}</li>
+                                <li>${s('msgoverlaproles').split('{$a}').join(roleList)}</li>
+                                ${selectedEquipNames.length > 0 ? `<li>${s('msgcommonplant').split('{$a}').join(selectedEquipNames.slice(0, 3).join(', '))}</li>` : ''}
                             </ul>
                         </div>
-                        <div class="cc-suggest-note">You can add or remove selections as needed.</div>
+                        <div class="cc-suggest-note">${s('msgsuggestnote')}</div>
                     `;
                     
                     const taskSection = document.getElementById('cc-task-category-cards')?.parentElement;
@@ -894,7 +1590,7 @@ define([
             chipsContainer.innerHTML = CC_SELECTED_JOB_ROLES.map((role, idx) => `
                 <div class="cc-role-chip" data-testid="chip-job-role-${idx}">
                     <span class="cc-role-chip-text">${role}</span>
-                    <button type="button" class="cc-role-chip-remove" data-role="${role}" data-testid="button-remove-role-${idx}" aria-label="Remove ${role}">
+                    <button type="button" class="cc-role-chip-remove" data-role="${role}" data-testid="button-remove-role-${idx}" aria-label="${s('msgremove')} ${role}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     </button>
                 </div>
@@ -928,10 +1624,10 @@ define([
             
             if (!unitTitle) {
                 if (taskCardsContainer) {
-                    taskCardsContainer.innerHTML = '<div class="cc-category-placeholder">Fetch unit or upload documents to see suggested task categories...</div>';
+                    taskCardsContainer.innerHTML = '<div class="cc-category-placeholder">' + s('msgfetchtaskcats') + '</div>';
                 }
                 if (equipmentCardsContainer) {
-                    equipmentCardsContainer.innerHTML = '<div class="cc-category-placeholder">Fetch unit or upload documents to see suggested equipment categories...</div>';
+                    equipmentCardsContainer.innerHTML = '<div class="cc-category-placeholder">' + s('msgfetchequipmentcats') + '</div>';
                 }
                 return;
             }
@@ -1071,14 +1767,14 @@ define([
                 feedback.innerHTML = `
                     <div class="cc-suggest-header">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                        <strong>Smart Suggestions Applied</strong>
+                        <strong>${s('msgsmartsuggestions')}</strong>
                     </div>
                     <div class="cc-suggest-reason">
                         Based on your unit and uploaded documents, we've suggested:<br>
-                        ${selectedTaskNames.length > 0 ? `<strong>Tasks:</strong> ${selectedTaskNames.join(', ')}<br>` : ''}
-                        ${selectedEquipNames.length > 0 ? `<strong>Equipment:</strong> ${selectedEquipNames.join(', ')}` : ''}
+                        ${selectedTaskNames.length > 0 ? `<strong>${s('msgtaskslabel')}</strong> ${selectedTaskNames.join(', ')}<br>` : ''}
+                        ${selectedEquipNames.length > 0 ? `<strong>${s('msgequipmentlabel')}</strong> ${selectedEquipNames.join(', ')}` : ''}
                     </div>
-                    <div class="cc-suggest-note">You can add or remove selections as needed.</div>
+                    <div class="cc-suggest-note">${s('msgsuggestnote')}</div>
                 `;
                 
                 const taskSection = document.getElementById('cc-task-category-cards')?.parentElement;
@@ -1221,7 +1917,7 @@ define([
         // ===========================================================================
         ccBuilder.renderCategoryCards = function (container, categories, type) {
             if (!container || !categories || categories.length === 0) {
-                container.innerHTML = '<div class="cc-category-placeholder">No categories available</div>';
+                container.innerHTML = '<div class="cc-category-placeholder">' + s('msgnocategories') + '</div>';
                 return;
             }
             
@@ -1483,10 +2179,10 @@ define([
             const equipmentCountEl = document.getElementById('cc-wp-equipment-count');
             
             if (taskCountEl) {
-                taskCountEl.textContent = `${taskCount} selected`;
+                taskCountEl.textContent = s('msgnselected').split('{$a}').join(taskCount);
             }
             if (equipmentCountEl) {
-                equipmentCountEl.textContent = `${equipmentCount} selected`;
+                equipmentCountEl.textContent = s('msgnselected').split('{$a}').join(equipmentCount);
             }
         };
         
@@ -1529,12 +2225,12 @@ define([
             container.innerHTML = `
                 <div class="cc-auto-loading">
                     <div class="cc-spinner"></div>
-                    <p>AI is analyzing the document to suggest relevant roles, tasks, and equipment...</p>
+                    <p>${s('msganalyzingdoc')}</p>
                 </div>
             `;
             
             // Gather document info
-            const docTitle = documentData?.filename || workplaceData?.filename || 'Uploaded Document';
+            const docTitle = documentData?.filename || workplaceData?.filename || s('msguploadeddocument');
             const docContent = documentData?.content || workplaceData?.content || '';
             const docSections = documentData?.sections || workplaceData?.suggestedTopics || [];
             
@@ -1546,7 +2242,7 @@ define([
             if (!docContent || docContent.length < 100) {
                 container.innerHTML = `
                     <div class="cc-auto-placeholder cc-auto-info">
-                        <p>Upload a document to generate AI-powered suggestions for job titles, tasks, and equipment.</p>
+                        <p>${s('msguploaddocsuggest')}</p>
                     </div>
                 `;
                 return;
@@ -1597,11 +2293,11 @@ define([
                         manager: 'cc-level-manager'
                     };
                     const labels = {
-                        worker: 'Worker',
-                        supervisor: 'Supervisor',
-                        manager: 'Manager'
+                        worker: 'msglevelworker',
+                        supervisor: 'msglevelsupervisor',
+                        manager: 'msglevelmanager'
                     };
-                    return `<span class="cc-level-badge ${colors[level] || colors.worker}">${labels[level] || 'Worker'}</span>`;
+                    return `<span class="cc-level-badge ${colors[level] || colors.worker}">${s(labels[level] || 'msglevelworker')}</span>`;
                 };
                 
                 // Build HTML with selectable AI-generated cards
@@ -1611,7 +2307,7 @@ define([
                         <div class="cc-ai-header-icon">${AUTO_ICONS['sparkles']}</div>
                         <div class="cc-ai-header-content">
                             <h4 class="cc-ai-header-title">${escapeHtml(aiData.detectedIndustry || 'Industry')} * ${escapeHtml(aiData.detectedSector || 'Sector')}</h4>
-                            <p class="cc-ai-header-subtitle">AI has analysed your document and extracted relevant context. Select the job titles, tasks, and equipment that apply.</p>
+                            <p class="cc-ai-header-subtitle">${s('msgaiextractedcontext')}</p>
                         </div>
                     </div>
                 `;
@@ -1623,8 +2319,8 @@ define([
                             <div class="cc-ai-section-header">
                                 <div class="cc-ai-section-icon">${AUTO_ICONS['users']}</div>
                                 <div class="cc-ai-section-text">
-                                    <h4 class="cc-ai-section-title">Job Titles</h4>
-                                    <p class="cc-ai-section-hint">Who is this training for? Select 1-3 job titles.</p>
+                                    <h4 class="cc-ai-section-title">${s('msgjobtitles')}</h4>
+                                    <p class="cc-ai-section-hint">${s('msgjobtitleshint')}</p>
                                 </div>
                                 <span class="cc-ai-section-count"><span id="cc-wp-job-count">1</span>/${aiData.jobTitles.length}</span>
                             </div>
@@ -1637,7 +2333,7 @@ define([
                                                 <span class="cc-ai-card-title">${escapeHtml(job.title)}</span>
                                                 ${getLevelBadge(job.level)}
                                             </div>
-                                            <p class="cc-ai-card-mapping">Referenced in: ${escapeHtml(job.sectionMapping || 'Throughout document')}</p>
+                                            <p class="cc-ai-card-mapping">${s('msgreferencedin').split('{$a}').join(escapeHtml(job.sectionMapping || s('msgthroughoutdoc')))}</p>
                                         </div>
                                     </label>
                                 `).join('')}
@@ -1653,8 +2349,8 @@ define([
                             <div class="cc-ai-section-header">
                                 <div class="cc-ai-section-icon">${AUTO_ICONS['clipboard-list']}</div>
                                 <div class="cc-ai-section-text">
-                                    <h4 class="cc-ai-section-title">Procedures & Tasks</h4>
-                                    <p class="cc-ai-section-hint">What tasks are covered? Select 1-3 task categories.</p>
+                                    <h4 class="cc-ai-section-title">${s('msgprocedurestasks')}</h4>
+                                    <p class="cc-ai-section-hint">${s('msgtaskshint')}</p>
                                 </div>
                                 <span class="cc-ai-section-count"><span id="cc-wp-task-count">1</span>/${aiData.taskCategories.length}</span>
                             </div>
@@ -1665,7 +2361,7 @@ define([
                                         <div class="cc-ai-card-body">
                                             <span class="cc-ai-card-title">${escapeHtml(task.title)}</span>
                                             <p class="cc-ai-card-examples">${escapeHtml((task.examples || []).slice(0, 2).join(', '))}</p>
-                                            <p class="cc-ai-card-mapping">Found in: ${escapeHtml(task.sectionMapping || 'Throughout document')}</p>
+                                            <p class="cc-ai-card-mapping">${s('msgfoundin').split('{$a}').join(escapeHtml(task.sectionMapping || s('msgthroughoutdoc')))}</p>
                                         </div>
                                     </label>
                                 `).join('')}
@@ -1681,8 +2377,8 @@ define([
                             <div class="cc-ai-section-header">
                                 <div class="cc-ai-section-icon">${AUTO_ICONS['wrench']}</div>
                                 <div class="cc-ai-section-text">
-                                    <h4 class="cc-ai-section-title">Tools & Equipment</h4>
-                                    <p class="cc-ai-section-hint">What equipment is mentioned? Select 1-3 categories.</p>
+                                    <h4 class="cc-ai-section-title">${s('msgtoolsequipment')}</h4>
+                                    <p class="cc-ai-section-hint">${s('msgequipmenthint')}</p>
                                 </div>
                                 <span class="cc-ai-section-count"><span id="cc-wp-equip-count">1</span>/${aiData.equipmentCategories.length}</span>
                             </div>
@@ -1693,7 +2389,7 @@ define([
                                         <div class="cc-ai-card-body">
                                             <span class="cc-ai-card-title">${escapeHtml(equip.title)}</span>
                                             <p class="cc-ai-card-examples">${escapeHtml((equip.examples || []).slice(0, 2).join(', '))}</p>
-                                            <p class="cc-ai-card-mapping">Found in: ${escapeHtml(equip.sectionMapping || 'Throughout document')}</p>
+                                            <p class="cc-ai-card-mapping">${s('msgfoundin').split('{$a}').join(escapeHtml(equip.sectionMapping || s('msgthroughoutdoc')))}</p>
                                         </div>
                                     </label>
                                 `).join('')}
@@ -1776,7 +2472,7 @@ define([
             } catch (err) {
                 container.innerHTML = `
                     <div class="cc-auto-placeholder cc-auto-error">
-                        <p>Could not generate AI suggestions from document. You can still proceed with manual context selection below.</p>
+                        <p>${s('msgnoaisuggestions')}</p>
                     </div>
                 `;
             }
@@ -1789,7 +2485,7 @@ define([
                 const stateSelect = document.getElementById('cc-wp-state');
                 if (stateSelect) {
                     const states = getStatesForCountry(e.target.value);
-                    stateSelect.innerHTML = '<option value="">Select (optional)...</option>' +
+                    stateSelect.innerHTML = '<option value="">' + s('msgselectoptional') + '</option>' +
                         states.map(s => `<option value="${s}">${s}</option>`).join('');
                 }
             };
@@ -1805,7 +2501,7 @@ define([
                 const sectorSelect = document.getElementById('cc-wp-industry-sector');
                 if (sectorSelect) {
                     const sectors = getSubcategoriesForIndustry(industry);
-                    sectorSelect.innerHTML = '<option value="">Select sector (optional)...</option>' +
+                    sectorSelect.innerHTML = '<option value="">' + s('msgselectsector') + '</option>' +
                         sectors.map(s => `<option value="${s}">${s}</option>`).join('');
                 }
                 // v6.6.40: Populate Job Titles based on industry
@@ -1813,16 +2509,16 @@ define([
                 const jobTitleCustomContainer = document.getElementById('cc-wp-custom-job-container');
                 if (jobTitleSelect) {
                     const jobTitles = getJobTitlesForIndustry(industry);
-                    jobTitleSelect.innerHTML = '<option value="">Select job title...</option>' +
+                    jobTitleSelect.innerHTML = '<option value="">' + s('msgselectjobtitle') + '</option>' +
                         jobTitles.map(j => `<option value="${j}">${j}</option>`).join('') +
-                        '<option value="_other">Other (custom)...</option>';
+                        '<option value="_other">' + s('msgothercustom') + '</option>';
                     if (jobTitleCustomContainer) jobTitleCustomContainer.classList.add('cc-hidden');
                 }
                 // Reset task/equipment categories
                 const taskGrid = document.getElementById('cc-wp-task-categories');
                 const equipmentGrid = document.getElementById('cc-wp-equipment-categories');
-                if (taskGrid) taskGrid.innerHTML = '<p class="cc-form-hint">Select job title first...</p>';
-                if (equipmentGrid) equipmentGrid.innerHTML = '<p class="cc-form-hint">Select job title first...</p>';
+                if (taskGrid) taskGrid.innerHTML = '<p class="cc-form-hint">' + s('msgselectjobtitlefirst') + '</p>';
+                if (equipmentGrid) equipmentGrid.innerHTML = '<p class="cc-form-hint">' + s('msgselectjobtitlefirst') + '</p>';
                 CC_WP_SELECTED_TASK_CATEGORIES = [];
                 CC_WP_SELECTED_EQUIPMENT_CATEGORIES = [];
             };
@@ -1918,7 +2614,7 @@ define([
                 const stateSelect = document.getElementById('cc-uni-state');
                 if (stateSelect) {
                     const states = getStatesForCountry(e.target.value);
-                    stateSelect.innerHTML = '<option value="">Select (optional)...</option>' +
+                    stateSelect.innerHTML = '<option value="">' + s('msgselectoptional') + '</option>' +
                         states.map(s => `<option value="${s}">${s}</option>`).join('');
                 }
             };
@@ -3487,27 +4183,27 @@ define([
 
 
     const JOB_LEVELS = [
-        { value: 'entry', label: 'Entry Level / Trainee' },
-        { value: 'worker', label: 'Worker / Operator' },
-        { value: 'supervisor', label: 'Supervisor / Team Leader' },
-        { value: 'manager', label: 'Manager / Senior' },
-        { value: 'executive', label: 'Executive / Director' }
+        { value: 'entry', key: 'msgjlentry' },
+        { value: 'worker', key: 'msgjlworker' },
+        { value: 'supervisor', key: 'msgjlsupervisor' },
+        { value: 'manager', key: 'msgjlmanager' },
+        { value: 'executive', key: 'msgjlexecutive' }
     ];
 
     const BLOOMS_LEVELS = [
-        { value: 'remember', label: 'Remember - Recall facts and concepts' },
-        { value: 'understand', label: 'Understand - Explain ideas or concepts' },
-        { value: 'apply', label: 'Apply - Use information in new situations' },
-        { value: 'analyze', label: 'Analyze - Draw connections among ideas' },
-        { value: 'evaluate', label: 'Evaluate - Justify a decision or action' },
-        { value: 'create', label: 'Create - Produce new or original work' }
+        { value: 'remember', key: 'msgblremember' },
+        { value: 'understand', key: 'msgblunderstand' },
+        { value: 'apply', key: 'msgblapply' },
+        { value: 'analyze', key: 'msgblanalyze' },
+        { value: 'evaluate', key: 'msgblevaluate' },
+        { value: 'create', key: 'msgblcreate' }
     ];
 
     const COURSE_LEVELS = [
-        { value: 'certificate', label: 'Certificate / Diploma' },
-        { value: 'undergraduate', label: 'Undergraduate' },
-        { value: 'postgraduate', label: 'Postgraduate' },
-        { value: 'professional', label: 'Professional Development' }
+        { value: 'certificate', key: 'msgclcertificate' },
+        { value: 'undergraduate', key: 'msgclundergraduate' },
+        { value: 'postgraduate', key: 'msgclpostgraduate' },
+        { value: 'professional', key: 'msgclprofessional' }
     ];
 
     /**
@@ -3610,7 +4306,7 @@ define([
         const usdAmount = (totalCredits / 10).toFixed(0); // $10 USD = 100 credits
 
         if (subtopicCount === 0) {
-            return '<span class="cc-credit-amount" id="cc-credit-estimation">100 credits per subtopic</span>';
+            return '<span class="cc-credit-amount" id="cc-credit-estimation">' + s('msgcreditspersubtopic') + '</span>';
         }
 
         if (extraLangs > 0) {
@@ -3859,6 +4555,18 @@ define([
         // v13.86: once the work is on the server the local draft is redundant, and
         // keeping it would let a stale copy resurrect after a completed build.
         if (manifestData && manifestData.locked) { clearDraft(); }
+
+        // v13.95 FIX-CC-STALE-BUILD: stamp the plugin version that produced this
+        // manifest. Nothing recorded it before, so once a module was built there was no
+        // way for the plugin to tell that the code which built it has since been fixed -
+        // a site upgraded from 13.91 to 13.94.8 kept serving audio synthesised by the
+        // old narration builder, and no amount of relaunching changed that. The stamp is
+        // what makes the "apply updates" path on the completion screen possible: compare
+        // it against CcState.CC_VERSION and you know whether the build predates a fix.
+        if (manifestData && typeof manifestData === 'object') {
+            manifestData.builtWithVersion = CcState.CC_VERSION;
+        }
+
         const cleanManifest = stripInlineAudio(manifestData);
         const serialized = ManifestBuilder.serialize(cleanManifest);
         const sizeKB = (serialized.length / 1024).toFixed(1);
@@ -3966,15 +4674,15 @@ define([
         container.innerHTML = `
             <div class="cc-wizard">
                 <div class="cc-wizard-header">
-                    <h1 class="cc-wizard-title">Regenerating Failed Content</h1>
-                    <p class="cc-wizard-subtitle">Only regenerating ${failedCount} slides that failed previously. Your successful content is preserved.</p>
+                    <h1 class="cc-wizard-title">${s('msgregenfailedtitle')}</h1>
+                    <p class="cc-wizard-subtitle">${s('msgonlyregenerating').split('{$a}').join(failedCount)}</p>
                 </div>
                 <div class="cc-generation-panel">
                     <div class="cc-gen-progress">
                         <div class="cc-gen-progress-bar" style="width: 0%"></div>
                     </div>
                     <div class="cc-gen-status">
-                        <span class="cc-gen-phase">Initializing...</span>
+                        <span class="cc-gen-phase">${s('msginitializing')}</span>
                         <span class="cc-gen-item"></span>
                     </div>
                 </div>
@@ -4036,24 +4744,24 @@ define([
         container.innerHTML = `
             <div class="cc-wizard">
                 <div class="cc-wizard-header">
-                    <h1 class="cc-wizard-title">Create Learning Content</h1>
-                    <p class="cc-wizard-subtitle">Build engaging, compliant learning experiences with AI assistance</p>
+                    <h1 class="cc-wizard-title">${s('msgcreatelearningcontent')}</h1>
+                    <p class="cc-wizard-subtitle">${s('msgwizardsubtitle')}</p>
                 </div>
 
                 <div class="cc-wizard-steps">
                     <div class="cc-step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'complete' : ''}" data-step="1">
                         <span class="cc-step-number">1</span>
-                        <span class="cc-step-label">Select Mode</span>
+                        <span class="cc-step-label">${s('msgstep1label')}</span>
                     </div>
                     <div class="cc-step-connector ${currentStep > 1 ? 'active' : ''}"></div>
                     <div class="cc-step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'complete' : ''}" data-step="2">
                         <span class="cc-step-number">2</span>
-                        <span class="cc-step-label">Learning Context</span>
+                        <span class="cc-step-label">${s('msgstep2label')}</span>
                     </div>
                     <div class="cc-step-connector ${currentStep > 2 ? 'active' : ''}"></div>
                     <div class="cc-step ${currentStep >= 3 ? 'active' : ''}" data-step="3">
                         <span class="cc-step-number">3</span>
-                        <span class="cc-step-label">Topics & Generate</span>
+                        <span class="cc-step-label">${s('msgstep3label')}</span>
                     </div>
                 </div>
 
@@ -4064,7 +4772,7 @@ define([
                 <div id="cc-error-section" class="cc-error-banner" style="display: none;">
                     <span id="cc-error-message"></span>
                     <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                        <button type="button" class="cc-btn cc-btn-sm cc-btn-primary" id="cc-error-retry-btn" style="display:none;">Try Again</button>
+                        <button type="button" class="cc-btn cc-btn-sm cc-btn-primary" id="cc-error-retry-btn" style="display:none;">${s('msgtryagain')}</button>
                         <button type="button" class="cc-error-close" data-action="close-error">&times;</button>
                     </div>
                 </div>
@@ -4086,8 +4794,8 @@ define([
     const renderStep1 = () => {
         return `
             <div class="cc-step-content" data-testid="step-1-mode">
-                <h2 class="cc-section-title">Choose Your Learning Mode</h2>
-                <p class="cc-section-subtitle">Select the mode that matches your educational context. This determines how content is structured and mapped.</p>
+                <h2 class="cc-section-title">${s('msgchoosemode')}</h2>
+                <p class="cc-section-subtitle">${s('msgchoosemodesubtitle')}</p>
 
                 <div style="background:linear-gradient(135deg,#eff6ff 0%,#f0f9ff 100%);border:1px solid #93c5fd;border-radius:10px;padding:18px 20px;margin-bottom:20px;" data-testid="info-how-it-works">
                     <div style="display:flex;align-items:flex-start;gap:12px;">
@@ -4095,35 +4803,35 @@ define([
                             <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="22" height="22"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         </div>
                         <div style="flex:1;min-width:0;">
-                            <div style="font-weight:700;font-size:14px;color:#1e3a5f;margin-bottom:6px;">How It Works  -  3 Simple Steps</div>
+                            <div style="font-weight:700;font-size:14px;color:#1e3a5f;margin-bottom:6px;">${s('msghowitworks')}</div>
                             <div style="display:flex;flex-direction:column;gap:10px;">
                                 <div style="display:flex;align-items:flex-start;gap:8px;">
                                     <div style="flex-shrink:0;width:22px;height:22px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#2563eb;margin-top:1px;">1</div>
                                     <div>
-                                        <div style="font-weight:600;font-size:13px;color:#1e40af;">Choose your mode and enter your topics</div>
-                                        <div style="font-size:12px;color:#3b82f6;line-height:1.5;">Select VET, Workplace, University, or PD / Short Courses mode below. Then enter your major topic and sub topics.</div>
+                                        <div style="font-weight:600;font-size:13px;color:#1e40af;">${s('msgstepchoosemode')}</div>
+                                        <div style="font-size:12px;color:#3b82f6;line-height:1.5;">${s('msghowstep1')}</div>
                                     </div>
                                 </div>
                                 <div style="display:flex;align-items:flex-start;gap:8px;">
                                     <div style="flex-shrink:0;width:22px;height:22px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#2563eb;margin-top:1px;">2</div>
                                     <div>
-                                        <div style="font-weight:600;font-size:13px;color:#1e40af;">Add context and generate your slides</div>
-                                        <div style="font-size:12px;color:#3b82f6;line-height:1.5;">Select your industry and topics, then click Generate — AI builds your slides automatically. Optionally, paste reference content or use the ChatGPT prompt when you need more control or want to upload documents as guides.</div>
+                                        <div style="font-weight:600;font-size:13px;color:#1e40af;">${s('msgstepaddcontext')}</div>
+                                        <div style="font-size:12px;color:#3b82f6;line-height:1.5;">${s('msghowstep2')}</div>
                                     </div>
                                 </div>
                                 <div style="display:flex;align-items:flex-start;gap:8px;">
                                     <div style="flex-shrink:0;width:22px;height:22px;background:#dbeafe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#2563eb;margin-top:1px;">3</div>
                                     <div>
-                                        <div style="font-weight:600;font-size:13px;color:#1e40af;">Generate your slides</div>
-                                        <div style="font-size:12px;color:#3b82f6;line-height:1.5;">AI builds your slides with text, images, voiceover, and real-world scenarios  -  all from your refined content.</div>
+                                        <div style="font-weight:600;font-size:13px;color:#1e40af;">${s('msgstepgenerate')}</div>
+                                        <div style="font-size:12px;color:#3b82f6;line-height:1.5;">${s('msghowstep3')}</div>
                                     </div>
                                 </div>
                             </div>
                             <div style="margin-top:10px;padding:8px 12px;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;font-size:11px;color:#92400e;line-height:1.5;">
-                                <strong>Important:</strong> Each Content Creator activity is designed for <strong>one major topic only</strong>. For effective learning, place revision activities between your topics  -  use <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> to reinforce understanding before students move to the next topic.
+                                ${s('msgimportantonetopic')}
                             </div>
                             <div style="margin-top:8px;padding:8px 12px;background:#dbeafe;border-radius:6px;font-size:11px;color:#1e40af;line-height:1.5;">
-                                <strong>Tip:</strong> You can generate slides directly — no ChatGPT needed. Use the optional ChatGPT prompt (shown later) when you want to upload documents as guides or review and refine content before generating.
+                                ${s('msgtipnochatgpt')}
                             </div>
                         </div>
                     </div>
@@ -4138,24 +4846,24 @@ define([
                                 <path d="M6 12v5c3 3 9 3 12 0v-5"/>
                             </svg>
                         </div>
-                        <h3 class="cc-mode-title">Vocational (RTO)</h3>
-                        <p class="cc-mode-description">Unit of competency with RTO compliance</p>
+                        <h3 class="cc-mode-title">${s('msgmodevettitle')}</h3>
+                        <p class="cc-mode-description">${s('msgmodevetdesc')}</p>
                         <ul class="cc-mode-features">
-                            <li>Auto-imports from training.gov.au</li>
-                            <li>Competency-based assessment focus</li>
-                            <li>Element &amp; PC coverage mapping</li>
-                            <li>Upload reference documents</li>
+                            <li>${s('msgautoimports')}</li>
+                            <li>${s('msgcompetencyfocus')}</li>
+                            <li>${s('msgpccoverage')}</li>
+                            <li>${s('msguploadrefdocs')}</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">Generates 7 cards per section</span>
+                            <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li><strong>Hook Scenario</strong> &ndash; a real moment on the job that puts the learner in the situation</li>
-                                <li><strong>Concept Explainer</strong> &ndash; the rule or obligation behind it, in plain English</li>
-                                <li><strong>Mental Model</strong> &ndash; the four or five steps, in order, with the reasoning</li>
-                                <li><strong>Applied Scenario</strong> &ndash; the same skill in a different setting and time</li>
-                                <li><strong>Mistakes</strong> &ndash; five things that go wrong, each with its consequence</li>
-                                <li><strong>Competency Summary</strong> &ndash; what they can now do, and what failing looks like</li>
-                                <li><strong>Decision Point</strong> &ndash; one question, four answers, feedback on each</li>
+                                <li>${s('msgcardvethookscenario')}</li>
+                                <li>${s('msgcardvetconceptexplainer')}</li>
+                                <li>${s('msgcardvetmentalmodel')}</li>
+                                <li>${s('msgcardvetappliedscenario')}</li>
+                                <li>${s('msgcardvetmistakes')}</li>
+                                <li>${s('msgcardvetcompetencysummary')}</li>
+                                <li>${s('msgcardvetdecisionpoint')}</li>
                             </ol>
                         </div>
                     </div>
@@ -4169,24 +4877,24 @@ define([
                                 <circle cx="7" cy="7" r="3"/>
                             </svg>
                         </div>
-                        <h3 class="cc-mode-title">Workplace Training</h3>
-                        <p class="cc-mode-description">Company policies, procedures & onboarding</p>
+                        <h3 class="cc-mode-title">${s('msgmodewptitle')}</h3>
+                        <p class="cc-mode-description">${s('msgmodewpdesc')}</p>
                         <ul class="cc-mode-features">
-                            <li>Upload company documents (PDF, Word)</li>
-                            <li>AI extracts topics from your content</li>
-                            <li>Induction, safety &amp; policy training</li>
-                            <li>Real workplace decision scenarios</li>
+                            <li>${s('msguploadcompanydocs')}</li>
+                            <li>${s('msgaiextractstopics')}</li>
+                            <li>${s('msginductionsafety')}</li>
+                            <li>${s('msgrealworkplacescenarios')}</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">Generates 7 cards per section</span>
+                            <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li><strong>Hook Scenario</strong> &ndash; a moment at work where this matters</li>
-                                <li><strong>Concept Explainer</strong> &ndash; the policy or obligation, in plain English</li>
-                                <li><strong>Mental Model</strong> &ndash; the steps, naming your actual tools, systems and forms</li>
-                                <li><strong>Applied Scenario</strong> &ndash; the same situation somewhere else in the business</li>
-                                <li><strong>Mistakes</strong> &ndash; five errors, each with its business or compliance cost</li>
-                                <li><strong>Competency Summary</strong> &ndash; the standard, and what falling short looks like</li>
-                                <li><strong>Decision Point</strong> &ndash; one question with compliance stakes, four answers</li>
+                                <li>${s('msgcardworkplacehookscenario')}</li>
+                                <li>${s('msgcardworkplaceconceptexplainer')}</li>
+                                <li>${s('msgcardworkplacementalmodel')}</li>
+                                <li>${s('msgcardworkplaceappliedscenario')}</li>
+                                <li>${s('msgcardworkplacemistakes')}</li>
+                                <li>${s('msgcardworkplacecompetencysummary')}</li>
+                                <li>${s('msgcardworkplacedecisionpoint')}</li>
                             </ol>
                         </div>
                     </div>
@@ -4199,25 +4907,25 @@ define([
                                 <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
                             </svg>
                         </div>
-                        <h3 class="cc-mode-title">University / Higher Ed</h3>
-                        <p class="cc-mode-description">Academic courses with Bloom's Taxonomy alignment</p>
+                        <h3 class="cc-mode-title">${s('msgmodeunititle')}</h3>
+                        <p class="cc-mode-description">${s('msgmodeunidesc')}</p>
                         <ul class="cc-mode-features">
-                            <li>Learning outcome-driven structure</li>
-                            <li>Concept-Application-Reflection flow</li>
-                            <li>Critical thinking emphasis</li>
-                            <li>Academic tone and terminology</li>
+                            <li>${s('msgoutcomedriven')}</li>
+                            <li>${s('msgcarflow')}</li>
+                            <li>${s('msgcriticalthinking')}</li>
+                            <li>${s('msgacademictone')}</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">Generates 6 cards per section</span>
+                            <span class="cc-mode-cardlist-label">${s('msggenerates6cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li><strong>Concept Anchor</strong> &ndash; the concept defined, why it matters, three key terms</li>
-                                <li><strong>Theoretical Framework</strong> &ndash; two or three frameworks, each with its originator and its limits</li>
-                                <li><strong>Analytical Lens</strong> &ndash; five or more considerations, each with a concrete example</li>
-                                <li><strong>Ethics Considerations</strong> &ndash; five or more dimensions, each explained</li>
-                                <li><strong>Case Study 1</strong> &ndash; a detailed case, three analysis questions, the key insight</li>
-                                <li><strong>Case Study 2</strong> &ndash; a different context, different questions, a critical reflection</li>
+                                <li>${s('msgcarduniversityconceptanchor')}</li>
+                                <li>${s('msgcarduniversitytheoreticalframework')}</li>
+                                <li>${s('msgcarduniversityanalyticallens')}</li>
+                                <li>${s('msgcarduniversityethicsconsiderations')}</li>
+                                <li>${s('msgcarduniversitycasestudy1')}</li>
+                                <li>${s('msgcarduniversitycasestudy2')}</li>
                             </ol>
-                            <span class="cc-mode-cardlist-note">No quiz card and no jurisdiction legislation on this route.</span>
+                            <span class="cc-mode-cardlist-note">${s('msgnoquizcard')}</span>
                         </div>
                     </div>
 
@@ -4231,24 +4939,24 @@ define([
                                 <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                             </svg>
                         </div>
-                        <h3 class="cc-mode-title">PD / Short Courses</h3>
-                        <p class="cc-mode-description">Professional development, upskilling & staff training courses</p>
+                        <h3 class="cc-mode-title">${s('msgmodepdtitle')}</h3>
+                        <p class="cc-mode-description">${s('msgmodepddesc')}</p>
                         <ul class="cc-mode-features">
-                            <li>Enter course title, AI suggests topics</li>
-                            <li>Or paste your own topics</li>
-                            <li>Practical, skills-focused content</li>
-                            <li>Perfect for CPD &amp; micro-credentials</li>
+                            <li>${s('msgentercoursetitleai')}</li>
+                            <li>${s('msgorpasteowntopics')}</li>
+                            <li>${s('msgpracticalskills')}</li>
+                            <li>${s('msgcpdmicrocreds')}</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">Generates 7 cards per section</span>
+                            <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li><strong>Hook Scenario</strong> &ndash; a professional moment where the skill is tested</li>
-                                <li><strong>Concept Explainer</strong> &ndash; the principle underneath, in plain English</li>
-                                <li><strong>Mental Model</strong> &ndash; the steps, as practitioner-level guidance</li>
-                                <li><strong>Applied Scenario</strong> &ndash; the same skill in a different professional setting</li>
-                                <li><strong>Mistakes</strong> &ndash; five errors and their professional or relational cost</li>
-                                <li><strong>Competency Summary</strong> &ndash; the standard, and what falling short looks like</li>
-                                <li><strong>Decision Point</strong> &ndash; one judgement call, four answers, feedback on each</li>
+                                <li>${s('msgcardpdhookscenario')}</li>
+                                <li>${s('msgcardpdconceptexplainer')}</li>
+                                <li>${s('msgcardpdmentalmodel')}</li>
+                                <li>${s('msgcardpdappliedscenario')}</li>
+                                <li>${s('msgcardpdmistakes')}</li>
+                                <li>${s('msgcardworkplacecompetencysummary')}</li>
+                                <li>${s('msgcardpddecisionpoint')}</li>
                             </ol>
                         </div>
                     </div>
@@ -4263,23 +4971,23 @@ define([
                                 <path d="M4 18h10"/>
                             </svg>
                         </div>
-                        <h3 class="cc-mode-title">Topics and Text</h3>
-                        <p class="cc-mode-description">Four short, colour-coded cards of plain explanatory writing, then the activities.</p>
+                        <h3 class="cc-mode-title">${s('msgmodetopicstitle')}</h3>
+                        <p class="cc-mode-description">${s('msgmodetopicsdesc')}</p>
                         <ul class="cc-mode-features">
-                            <li>Works for any subject at all</li>
-                            <li>Universal headings &ndash; no compliance or scenario framing</li>
-                            <li>Short by design: two paragraphs a card, easy to digest</li>
-                            <li>Cards reveal one at a time as the voiceover reads them</li>
+                            <li>${s('msgworksanysubject')}</li>
+                            <li>${s('msguniversalheadings')}</li>
+                            <li>${s('msgshortbydesign')}</li>
+                            <li>${s('msgcardsreveal')}</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">Generates 4 cards per section, plus 3 activities</span>
+                            <span class="cc-mode-cardlist-label">${s('msggenerates4cardspersectionplus3activities')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li><strong>Overview</strong> &ndash; what the subject is and why it matters</li>
-                                <li><strong>Key Concepts</strong> &ndash; the two or three ideas the rest depends on</li>
-                                <li><strong>Examples &amp; Application</strong> &ndash; the same ideas in real situations</li>
-                                <li><strong>Key Takeaways</strong> &ndash; what to carry away, and the misunderstanding to avoid</li>
+                                <li>${s('msgcardtopicstextoverview')}</li>
+                                <li>${s('msgcardtopicstextkeyconcepts')}</li>
+                                <li>${s('msgcardtopicstextexamplesapplication')}</li>
+                                <li>${s('msgcardtopicstextkeytakeaways')}</li>
                             </ol>
-                            <span class="cc-mode-cardlist-note">Headings are fixed and never carry the topic name. Each card is two short paragraphs. Ends with the same quiz, flip cards and category sort as the other routes. Voiceover, images and full card editing all work as normal.</span>
+                            <span class="cc-mode-cardlist-note">${s('msgtopicscardnote')}</span>
                         </div>
                     </div>
                 </div>
@@ -4288,7 +4996,7 @@ define([
                     <div></div>
                     <button type="button" class="cc-btn cc-btn-primary cc-btn-lg" id="cc-next-step" 
                             data-testid="button-next" ${!selectedMode ? 'disabled' : ''}>
-                        Continue
+                        ${s('msgcontinue')}
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon-right">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
                         </svg>
@@ -4315,26 +5023,26 @@ define([
     const renderStep2VET = () => {
         return `
             <div class="cc-step-content" data-testid="step-2-vet">
-                <h2 class="cc-section-title">Learning Context - Vocational (RTO)</h2>
-                <p class="cc-section-subtitle">Enter the unit code to auto-fetch competency data, then provide workplace context for relevant examples.</p>
+                <h2 class="cc-section-title">${s('msgcontextvettitle')}</h2>
+                <p class="cc-section-subtitle">${s('msgcontextvetsubtitle')}</p>
 
                 <div class="cc-instruction-card" data-testid="instruction-card-vet">
                     <div class="cc-instruction-card-icon">
                         <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                     </div>
                     <div class="cc-instruction-card-text">
-                        <strong>One element per content pack.</strong> Each Content Creator activity covers a single element at a time. Select the element you want to build content for, and each PC becomes a learning slide. To cover more elements, create additional Content Creator activities in your course. <strong>Best practice:</strong> Place an <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> activity between each element so students can consolidate their learning before moving on.
+                        ${s('msginstructionvet')}
                     </div>
                 </div>
 
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Unit of Competency</h3>
+                    <h3 class="cc-form-section-title">${s('msgunitofcompetency')}</h3>
                     <div class="cc-unit-fetch-row">
                         <div class="cc-form-group cc-form-group-lg">
-                            <label class="cc-form-label">Unit Code *</label>
+                            <label class="cc-form-label">${s('msgunitcodelabel')}</label>
                             <div class="cc-input-with-button">
                                 <input type="text" class="cc-input" id="cc-unit-code" 
-                                       placeholder="e.g., RIIWHS204E" data-testid="input-unit-code"
+                                       placeholder="${s('msgphunitcode')}" data-testid="input-unit-code"
                                        value="${escapeHtml(tgaData?.unitCode || '')}">
                                 <button type="button" class="cc-btn cc-btn-secondary" id="cc-fetch-unit" 
                                         data-testid="button-fetch-unit">
@@ -4353,7 +5061,7 @@ define([
 
                     <div id="cc-unit-loading" class="cc-loading-state cc-hidden">
                         <div class="cc-spinner"></div>
-                        <span>Fetching unit data from training.gov.au...</span>
+                        <span>${s('msgfetchingtga')}</span>
                     </div>
 
                     <!-- PDF Upload Fallback - shown when TGA API fails -->
@@ -4364,19 +5072,19 @@ define([
                                 <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                             </svg>
                             <div class="cc-alert-content">
-                                <strong>TGA API unavailable</strong>
-                                <p>Unable to fetch unit data automatically. Upload the unit PDF or paste the unit text from training.gov.au instead.</p>
+                                <strong>${s('msgtgaapiunavailable')}</strong>
+                                <p>${s('msgtgafetchfailed')}</p>
                             </div>
                         </div>
                         <!-- Tab switcher -->
                         <div class="cc-fallback-tabs" style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid var(--cc-border);">
                             <button type="button" id="cc-tab-pdf" class="cc-fallback-tab cc-fallback-tab-active" data-testid="button-tab-upload-pdf"
                                 style="padding:7px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid var(--cc-primary);margin-bottom:-2px;color:var(--cc-primary);">
-                                Upload PDF
+                                ${s('msguploadpdf')}
                             </button>
                             <button type="button" id="cc-tab-paste" class="cc-fallback-tab" data-testid="button-tab-paste-text"
                                 style="padding:7px 16px;font-size:13px;font-weight:600;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:var(--cc-text-secondary);">
-                                Paste Text
+                                ${s('msgpastetext')}
                             </button>
                         </div>
                         <!-- PDF upload panel (default) -->
@@ -4389,10 +5097,10 @@ define([
                                         <polyline points="17 8 12 3 7 8"/>
                                         <line x1="12" y1="3" x2="12" y2="15"/>
                                     </svg>
-                                    Upload PDF
+                                    ${s('msguploadpdf')}
                                 </button>
                             </div>
-                            <p class="cc-form-hint">Download the unit PDF from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> and upload it here.</p>
+                            <p class="cc-form-hint">${s('msgdownloadunitpdf')}</p>
                         </div>
                         <!-- Paste text panel (shown when PDF fails or user prefers copy-paste) -->
                         <div id="cc-fallback-paste-panel" style="display:none;">
@@ -4400,23 +5108,23 @@ define([
                                       data-testid="textarea-paste-unit-text"
                                       class="cc-paste-textarea"
                                       style="width:100%;box-sizing:border-box;font-size:13px;font-family:inherit;resize:vertical;"
-                                      placeholder="Paste the unit of competency text here. Include the Performance Evidence, Knowledge Evidence and Elements sections for best results."></textarea>
+                                      placeholder="${s('msgphunittext')}"></textarea>
                             <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
                                 <button type="button" class="cc-btn cc-btn-secondary" id="cc-process-paste-text" data-testid="button-process-paste-text">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                                         <polyline points="9 11 12 14 22 4"/>
                                         <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
                                     </svg>
-                                    Process Text
+                                    ${s('msgprocesstext')}
                                 </button>
-                                <span class="cc-form-hint" style="margin:0;">Open the unit on <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a>, select all text (Ctrl+A / Cmd+A) and paste here.</span>
+                                <span class="cc-form-hint" style="margin:0;">${s('msgopenuniton')}</span>
                             </div>
                         </div>
                     </div>
 
                     <div id="cc-pdf-loading" class="cc-loading-state cc-hidden">
                         <div class="cc-spinner"></div>
-                        <span>Extracting competency data from PDF...</span>
+                        <span>${s('msgextractingpdf')}</span>
                     </div>
                 </div>
 
@@ -4438,22 +5146,22 @@ define([
                             <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
                             <path d="m9 14 2 2 4-4"/>
                         </svg>
-                        Select Element to Generate
+                        ${s('msgselectelement')}
                     </h3>
-                    <p class="cc-form-hint">Choose <strong>one element</strong> to generate learning content for. Generate each element separately so you can place <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> between them for revision and deeper learning.</p>
+                    <p class="cc-form-hint">${s('msgchooseoneelement')}</p>
                     <div id="cc-element-list" data-testid="element-list">
-                        ${tgaData?.elements?.length > 0 ? renderElementList(tgaData) : '<p class="cc-form-hint">No elements found.</p>'}
+                        ${tgaData?.elements?.length > 0 ? renderElementList(tgaData) : '<p class="cc-form-hint">' + s('msgnoelementsfound') + '</p>'}
                     </div>
 
                     <!-- v10.25: Element correction tools - shown when unit is loaded -->
                     <div id="cc-element-correction-bar" class="${tgaData?.elements?.length > 0 ? '' : 'cc-hidden'}" style="margin-top:10px;">
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <button type="button" id="cc-refresh-elements" class="cc-btn cc-btn-ghost cc-btn-sm" data-testid="button-refresh-elements" title="Re-fetch this unit from training.gov.au, bypassing the cache">
+                            <button type="button" id="cc-refresh-elements" class="cc-btn cc-btn-ghost cc-btn-sm" data-testid="button-refresh-elements" title="${s('msgtitlerefreshelements')}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:14px;height:14px;">
                                     <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
                                     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                                 </svg>
-                                Refresh from TGA
+                                ${s('msgrefreshfromtga')}
                             </button>
                             <button type="button" id="cc-toggle-paste-elements" class="cc-btn cc-btn-ghost cc-btn-sm" data-testid="button-toggle-paste-elements">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:14px;height:14px;">
@@ -4465,17 +5173,11 @@ define([
                         </div>
                         <!-- Paste panel (collapsed by default) -->
                         <div id="cc-paste-elements-panel" class="cc-hidden" style="margin-top:10px;padding:12px;background:var(--cc-bg-subtle,var(--cc-bg));border:1px solid var(--cc-border);border-radius:6px;">
-                            <p class="cc-form-hint" style="margin-bottom:8px;">If auto-fetch missed an element, paste the <strong>Elements and Performance Criteria</strong> section from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> below.<br>Format: <code>1. Element name</code> on its own line, then <code>1.1 PC text</code> etc.</p>
+                            <p class="cc-form-hint" style="margin-bottom:8px;">${s('msgpasteelementshint')}</p>
                             <textarea id="cc-paste-elements-text" rows="10"
                                       data-testid="textarea-paste-elements"
                                       style="width:100%;box-sizing:border-box;font-size:12px;font-family:monospace;resize:vertical;background:var(--cc-input-bg,var(--cc-bg));color:var(--cc-text);border:1px solid var(--cc-border);border-radius:4px;padding:8px;"
-                                      placeholder="Paste the elements section here, e.g.:
-1. Plan and prepare for the detailed design of urban roads
-1.1 Interpret and analyse data and identify viable options
-1.2 Recommend the preferred option
-2. Undertake the detailed design of urban roads
-2.1 Select appropriate design parameters
-..."></textarea>
+                                      placeholder="${s('msgphelements')}"></textarea>
                             <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">
                                 <button type="button" id="cc-apply-paste-elements" class="cc-btn cc-btn-secondary cc-btn-sm" data-testid="button-apply-paste-elements">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:14px;height:14px;">
@@ -4488,7 +5190,7 @@ define([
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:14px;height:14px;">
                                         <circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/>
                                     </svg>
-                                    Merge (add missing only)
+                                    ${s('msgmergeaddmissing')}
                                 </button>
                                 <span id="cc-paste-elements-status" class="cc-form-hint" style="margin:0;"></span>
                             </div>
@@ -4501,20 +5203,20 @@ define([
 
                 <!-- v6.9.5: Workplace Context - User must fill this BEFORE AI suggestions -->
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Workplace Context</h3>
-                    <p class="cc-form-hint">Fill in these fields first. AI will use this context to suggest relevant job titles, tasks, and equipment.</p>
+                    <h3 class="cc-form-section-title">${s('msgworkplacecontext')}</h3>
+                    <p class="cc-form-hint">${s('msgfillfieldsfirst')}</p>
                     
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Country *</label>
+                            <label class="cc-form-label">${s('msgcountryrequired')}</label>
                             <select class="cc-select" id="cc-country" data-testid="select-country">
-                                ${COUNTRIES.map(c => `<option value="${c.code}" ${c.code === 'AU' ? 'selected' : ''}>${c.name}</option>`).join('')}
+                                ${COUNTRIES.map(c => `<option value="${c.code}" ${c.code === 'AU' ? 'selected' : ''}>${s(c.key)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">State/Region</label>
+                            <label class="cc-form-label">${s('msgstateregion')}</label>
                             <select class="cc-select" id="cc-state" data-testid="select-state">
-                                <option value="">Select (optional)...</option>
+                                <option value="">${s('msgselectoptional')}</option>
                                 ${getStatesForCountry('AU').map(s => `<option value="${s}">${s}</option>`).join('')}
                             </select>
                         </div>
@@ -4522,30 +5224,30 @@ define([
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Industry *</label>
+                            <label class="cc-form-label">${s('msgindustryrequired')}</label>
                             <select class="cc-select" id="cc-industry" data-testid="select-industry">
-                                <option value="">Select industry...</option>
+                                <option value="">${s('msgselectindustry')}</option>
                                 ${INDUSTRIES.map(i => `<option value="${i}">${i}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Industry Sector</label>
+                            <label class="cc-form-label">${s('msgindustrysector')}</label>
                             <select class="cc-select" id="cc-industry-sector" data-testid="select-industry-sector">
-                                <option value="">Select industry first...</option>
+                                <option value="">${s('msgselectindustryfirst')}</option>
                             </select>
-                            <small class="cc-form-hint">More specific sector for realistic scenarios</small>
+                            <small class="cc-form-hint">${s('msgsectorhint')}</small>
                         </div>
                     </div>
 
                     <div class="cc-form-group">
-                        <label class="cc-form-label">Job Level * <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(select one or more)</small></label>
+                        <label class="cc-form-label">${s('msgjoblevelrequired')}</label>
                         <div class="cc-job-level-pills" id="cc-job-level-pills" data-testid="group-job-levels">
                             ${JOB_LEVELS.map(j => `
                             <button type="button" class="cc-level-pill" data-value="${j.value}" data-testid="pill-job-level-${j.value}">
-                                ${j.label}
+                                ${s(j.key)}
                             </button>`).join('')}
                         </div>
-                        <small class="cc-form-hint">AI will create workplace scenarios for all selected levels</small>
+                        <small class="cc-form-hint">${s('msgscenariosalllevels')}</small>
                     </div>
                     
                     <!-- v13.84: restored. These three fields were dropped in v6.9.14 on the
@@ -4555,24 +5257,24 @@ define([
                          are optional - leave them blank and the old auto-generate behaviour
                          applies unchanged. -->
                     <div class="cc-form-group">
-                        <label class="cc-form-label">Job Title <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                        <label class="cc-form-label">${s('msgjobtitleoptional')}</label>
                         <input type="text" class="cc-input" id="cc-vet-job-title" list="cc-vet-job-title-options"
-                               data-testid="input-vet-job-title" placeholder="e.g. Scaffolder, Site Supervisor" style="width:100%;box-sizing:border-box;">
+                               data-testid="input-vet-job-title" placeholder="${s('msgphvetjobtitle')}" style="width:100%;box-sizing:border-box;">
                         <datalist id="cc-vet-job-title-options"></datalist>
-                        <small class="cc-form-hint">Naming the role makes every scenario speak to that learner. Leave blank to let the AI choose.</small>
+                        <small class="cc-form-hint">${s('msgjobrolehint')}</small>
                     </div>
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Typical Job Tasks <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                            <label class="cc-form-label">${s('msgtypicaljobtasks')}</label>
                             <textarea class="cc-input" id="cc-vet-job-tasks" rows="3" data-testid="textarea-vet-job-tasks"
-                                      placeholder="One per line, or separated by commas&#10;e.g. Erecting mobile scaffold&#10;Conducting pre-start checks"
+                                      placeholder="${s('msgphvettasks')}"
                                       style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Equipment &amp; Tools <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                            <label class="cc-form-label">${s('msgequipmenttools')}</label>
                             <textarea class="cc-input" id="cc-vet-equipment" rows="3" data-testid="textarea-vet-equipment"
-                                      placeholder="One per line, or separated by commas&#10;e.g. Full body harness&#10;Mobile scaffold tower"
+                                      placeholder="${s('msgphvetequipment')}"
                                       style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
                         </div>
                     </div>
@@ -4582,7 +5284,7 @@ define([
                             <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1-1.275 1.275L12 3Z"/>
                         </svg>
                         <div class="cc-ai-info-text">
-                            <strong>Industry + Sector + Job Level = Realistic Scenarios</strong><br>
+                            <strong>${s('msgrealisticscenarios')}</strong><br>
                             Anything you leave blank above, the AI generates from your industry, sector and job level.
                         </div>
                     </div>
@@ -4596,11 +5298,11 @@ define([
                             <circle cx="7.5" cy="14.5" r="1.5"/>
                             <circle cx="16.5" cy="14.5" r="1.5"/>
                         </svg>
-                        Suggest Subtopics
+                        ${s('msgsuggestsubtopics')}
                     </button>
                     <div id="cc-suggest-loading" class="cc-loading-state cc-hidden">
                         <div class="cc-spinner"></div>
-                        <span>AI is suggesting subtopics for your major topic...</span>
+                        <span>${s('msgsuggestingsubtopics')}</span>
                     </div>
                 </div>
                 
@@ -4613,53 +5315,53 @@ define([
                         <div style="flex-shrink:0;width:28px;height:28px;background:#10b981;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         </div>
-                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">Reference Content <span style="font-weight:400;font-size:12px;color:#6b7280;">(Optional)</span></h3>
+                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">${s('msgreferencecontent')}</h3>
                     </div>
 
                     <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px 16px;margin-bottom:14px;">
                         <div style="display:flex;align-items:flex-start;gap:10px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" width="20" height="20" style="flex-shrink:0;margin-top:1px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                             <div>
-                                <div style="font-weight:600;font-size:13px;color:#15803d;margin-bottom:4px;">Ready to generate — no reference content needed</div>
-                                <div style="font-size:12px;color:#166534;line-height:1.5;">AI will build your slides directly from your unit, topics, and context. Click <strong>Continue</strong> below to generate your slides now.</div>
+                                <div style="font-weight:600;font-size:13px;color:#15803d;margin-bottom:4px;">${s('msgreadytogenerate')}</div>
+                                <div style="font-size:12px;color:#166534;line-height:1.5;">${s('msgbuilddirectvet')}</div>
                             </div>
                         </div>
                     </div>
 
                     <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;background:#fafafa;">
-                        <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">Or use the ChatGPT prompt for more control (optional)</div>
+                        <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">${s('msgchatgptprompt')}</div>
                         <div style="font-size:12px;color:#6b7280;line-height:1.6;margin-bottom:12px;padding:8px 12px;background:#fef9c3;border:1px solid #fbbf24;border-radius:6px;">
-                            <strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>upload documents as guides</strong> (e.g. a training manual, policy doc, or unit PDF), or when you want to <strong>review and edit content before slides are generated</strong> for full creative control.
+                            ${s('msgwhentousevet')}
                         </div>
                         <div style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:12px;">
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bbf7d0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#065f46;">1</div>
-                                <span>Download the prompt file below (includes your topics + context)</span>
+                                <span>${s('msgdownloadpromptcontext')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bbf7d0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#065f46;">2</div>
-                                <span>Open ChatGPT, paste the prompt — then upload any documents you want to use as guides</span>
+                                <span>${s('msgopenchatgptvet')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bbf7d0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#065f46;">3</div>
-                                <span>Review and refine the ChatGPT output until you are happy with it</span>
+                                <span>${s('msgchatgptreview')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bbf7d0;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#065f46;">4</div>
-                                <span>Paste the output below, then click Continue to generate your slides</span>
+                                <span>${s('msgchatgptpastecontinue')}</span>
                             </div>
                         </div>
                         <button type="button" id="cc-download-vet-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-vet-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            Download ChatGPT Prompt File (includes your topics + context)
+                            ${s('msgdownloadchatgptcontext')}
                         </button>
                         <div class="cc-paste-text-panel" id="cc-vet-paste-panel">
                             <textarea class="cc-paste-textarea" id="cc-vet-paste-text" 
-                                      placeholder="Optional: Paste ChatGPT output or any reference material here to guide the AI..."
+                                      placeholder="${s('msgphchatgptoutput')}"
                                       data-testid="textarea-vet-paste" rows="6">${escapeHtml(vetPastedContent)}</textarea>
                             <div class="cc-paste-footer">
-                                <span class="cc-paste-word-count" id="cc-vet-paste-count">${vetPastedContent ? countWords(vetPastedContent) + ' words' : '0 words'}</span>
-                                ${vetPastedContent ? '<button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-vet-paste-clear" data-testid="button-vet-paste-clear">Clear</button>' : ''}
+                                <span class="cc-paste-word-count" id="cc-vet-paste-count">${vetPastedContent ? countWords(vetPastedContent) + s('msgwordsuffix') : s('msgzerowords')}</span>
+                                ${vetPastedContent ? '<button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-vet-paste-clear" data-testid="button-vet-paste-clear">' + s('msgclear') + '</button>' : ''}
                             </div>
                         </div>
                     </div>
@@ -4674,11 +5376,11 @@ define([
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                             <path d="M19 12H5M12 19l-7-7 7-7"/>
                         </svg>
-                        Back
+                        ${s('msgback')}
                     </button>
                     <!-- v6.9.27: Hidden by default - only shown after topics are suggested AND selected -->
                     <button type="button" class="cc-btn cc-btn-primary cc-btn-lg cc-hidden" id="cc-next-step" data-testid="button-next">
-                        Continue
+                        ${s('msgcontinue')}
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon-right">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
                         </svg>
@@ -4744,38 +5446,38 @@ define([
 
     // v8.4.24: Workplace Training mode - document-first, no TGA unit required
     const TRAINING_TYPES = [
-        { value: 'induction', label: 'Staff Induction / Onboarding' },
-        { value: 'policy', label: 'Policy & Procedure Training' },
-        { value: 'safety', label: 'Workplace Health & Safety' },
-        { value: 'compliance', label: 'Compliance & Regulatory' },
-        { value: 'skills', label: 'Skills Development' },
-        { value: 'leadership', label: 'Leadership & Management' },
-        { value: 'customer', label: 'Customer Service' },
-        { value: 'technical', label: 'Technical / Systems Training' },
-        { value: 'custom', label: 'Custom Training Module' }
+        { value: 'induction', key: 'msgttinduction' },
+        { value: 'policy', key: 'msgttpolicy' },
+        { value: 'safety', key: 'msgttsafety' },
+        { value: 'compliance', key: 'msgttcompliance' },
+        { value: 'skills', key: 'msgttskills' },
+        { value: 'leadership', key: 'msgttleadership' },
+        { value: 'customer', key: 'msgttcustomer' },
+        { value: 'technical', key: 'msgtttechnical' },
+        { value: 'custom', key: 'msgttcustom' }
     ];
     
     const TARGET_AUDIENCES = [
-        { value: 'new-starters', label: 'New Starters / Inductees' },
-        { value: 'all-staff', label: 'All Staff' },
-        { value: 'supervisors', label: 'Supervisors / Team Leaders' },
-        { value: 'managers', label: 'Managers' },
-        { value: 'contractors', label: 'Contractors / Visitors' },
-        { value: 'specific-dept', label: 'Specific Department' }
+        { value: 'new-starters', key: 'msgtanewstarters' },
+        { value: 'all-staff', key: 'msgtaallstaff' },
+        { value: 'supervisors', key: 'msgtasupervisors' },
+        { value: 'managers', key: 'msgtamanagers' },
+        { value: 'contractors', key: 'msgtacontractors' },
+        { value: 'specific-dept', key: 'msgtaspecificdept' }
     ];
 
     const renderStep2Workplace = () => {
         return `
             <div class="cc-step-content" data-testid="step-2-workplace">
-                <h2 class="cc-section-title">Learning Context - Workplace Training</h2>
-                <p class="cc-section-subtitle">Upload your company documents and provide context. AI will extract topics and build interactive training content.</p>
+                <h2 class="cc-section-title">${s('msgcontextwptitle')}</h2>
+                <p class="cc-section-subtitle">${s('msgcontextwpsubtitle')}</p>
 
                 <div class="cc-instruction-card" data-testid="instruction-card-workplace">
                     <div class="cc-instruction-card-icon">
                         <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                     </div>
                     <div class="cc-instruction-card-text">
-                        <strong>One topic per content pack.</strong> Each Content Creator activity covers a single training topic at a time (e.g. "Manual Handling" or "Fire Evacuation"). Each sub topic (A, B, C) becomes a learning slide. To cover more topics, create additional Content Creator activities in your course. <strong>Best practice:</strong> Place an <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> activity between each topic so students can consolidate their learning before moving on.
+                        ${s('msginstructionwp')}
                     </div>
                 </div>
 
@@ -4786,9 +5488,9 @@ define([
                             <polyline points="14 2 14 8 20 8"/>
                             <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
                         </svg>
-                        Training Document
+                        ${s('msgtrainingdocument')}
                     </h3>
-                    <p class="cc-form-hint">Upload the policy, procedure, manual, or training material you want to convert into interactive learning content.</p>
+                    <p class="cc-form-hint">${s('msguploadpolicyhint')}</p>
 
                     <div id="cc-drop-zone" class="cc-upload-dropzone ${workplaceData ? 'cc-hidden' : ''}" data-testid="dropzone-workplace">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-upload-icon">
@@ -4796,9 +5498,9 @@ define([
                             <polyline points="17 8 12 3 7 8"/>
                             <line x1="12" y1="3" x2="12" y2="15"/>
                         </svg>
-                        <p class="cc-upload-text">Drag and drop your document here</p>
-                        <p class="cc-upload-hint">or <button type="button" class="cc-link-button" id="cc-browse-file" data-testid="button-browse-file">browse files</button></p>
-                        <p class="cc-upload-formats">Supported: PDF, DOCX, PPTX, TXT (max 10MB)</p>
+                        <p class="cc-upload-text">${s('msgdraganddrop')}</p>
+                        <p class="cc-upload-hint">${s('msgor')} <button type="button" class="cc-link-button" id="cc-browse-file" data-testid="button-browse-file">${s('msgbrowsefiles')}</button></p>
+                        <p class="cc-upload-formats">${s('msgsupportedformats')}</p>
                         <input type="file" id="cc-workplace-file" accept=".pdf,.docx,.pptx,.txt" class="cc-hidden" data-testid="input-workplace-file">
                     </div>
 
@@ -4817,13 +5519,13 @@ define([
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                             </svg>
-                            Remove
+                            ${s('msgremove')}
                         </button>
                     </div>
 
                     <div id="cc-extract-loading" class="cc-loading-state cc-hidden">
                         <div class="cc-spinner"></div>
-                        <span>Extracting content from document...</span>
+                        <span>${s('msgextractingdoc')}</span>
                     </div>
                 </div>
 
@@ -4835,56 +5537,56 @@ define([
                 </div>
 
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Training Details</h3>
-                    <p class="cc-form-hint">Provide context about the training to help AI create relevant, realistic scenarios.</p>
+                    <h3 class="cc-form-section-title">${s('msgtrainingdetails')}</h3>
+                    <p class="cc-form-hint">${s('msgtrainingcontexthint')}</p>
 
                     <div class="cc-form-group">
-                        <label class="cc-form-label">Training Topic *</label>
+                        <label class="cc-form-label">${s('msgtrainingtopiclabel')}</label>
                         <input type="text" class="cc-input" id="cc-wp-training-topic" 
-                               placeholder="e.g., Manual Handling Procedures, Fire Evacuation, Chemical Storage" data-testid="input-wp-training-topic">
-                        <small class="cc-form-hint">This is your major topic. AI will suggest sub topics (A, B, C) under it - from your uploaded document if you provided one, otherwise from the topic and context you entered here.</small>
+                               placeholder="${s('msgphtrainingtopic')}" data-testid="input-wp-training-topic">
+                        <small class="cc-form-hint">${s('msgmajortopicwphint')}</small>
                     </div>
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Training Type *</label>
+                            <label class="cc-form-label">${s('msgtrainingtypelabel')}</label>
                             <select class="cc-select" id="cc-training-type" data-testid="select-training-type">
-                                <option value="">Select training type...</option>
-                                ${TRAINING_TYPES.map(t => `<option value="${t.value}">${t.label}</option>`).join('')}
+                                <option value="">${s('msgselecttrainingtype')}</option>
+                                ${TRAINING_TYPES.map(t => `<option value="${t.value}">${s(t.key)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Target Audience *</label>
+                            <label class="cc-form-label">${s('msgtargetaudiencerequired')}</label>
                             <select class="cc-select" id="cc-wp-audience" data-testid="select-audience">
-                                ${TARGET_AUDIENCES.map(a => `<option value="${a.value}">${a.label}</option>`).join('')}
+                                ${TARGET_AUDIENCES.map(a => `<option value="${a.value}">${s(a.key)}</option>`).join('')}
                             </select>
                         </div>
                     </div>
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Company / Organisation Name</label>
+                            <label class="cc-form-label">${s('msgcompanyname')}</label>
                             <input type="text" class="cc-input" id="cc-company-name" 
-                                   placeholder="e.g., Acme Industries Pty Ltd" data-testid="input-company-name">
+                                   placeholder="${s('msgphcompanyname')}" data-testid="input-company-name">
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Department</label>
+                            <label class="cc-form-label">${s('msgdepartment')}</label>
                             <input type="text" class="cc-input" id="cc-wp-department" 
-                                   placeholder="e.g., Operations, HR, Safety" data-testid="input-department">
+                                   placeholder="${s('msgphdepartment')}" data-testid="input-department">
                         </div>
                     </div>
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Country *</label>
+                            <label class="cc-form-label">${s('msgcountryrequired')}</label>
                             <select class="cc-select" id="cc-wp-country" data-testid="select-wp-country">
-                                ${COUNTRIES.map(c => `<option value="${c.code}" ${c.code === 'AU' ? 'selected' : ''}>${c.name}</option>`).join('')}
+                                ${COUNTRIES.map(c => `<option value="${c.code}" ${c.code === 'AU' ? 'selected' : ''}>${s(c.key)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">State/Region</label>
+                            <label class="cc-form-label">${s('msgstateregion')}</label>
                             <select class="cc-select" id="cc-wp-state" data-testid="select-wp-state">
-                                <option value="">Select (optional)...</option>
+                                <option value="">${s('msgselectoptional')}</option>
                                 ${getStatesForCountry('AU').map(s => `<option value="${s}">${s}</option>`).join('')}
                             </select>
                         </div>
@@ -4892,33 +5594,33 @@ define([
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Industry *</label>
+                            <label class="cc-form-label">${s('msgindustryrequired')}</label>
                             <select class="cc-select" id="cc-wp-industry" data-testid="select-wp-industry">
-                                <option value="">Select industry...</option>
+                                <option value="">${s('msgselectindustry')}</option>
                                 ${INDUSTRIES.map(i => `<option value="${i}">${i}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Industry Sector</label>
+                            <label class="cc-form-label">${s('msgindustrysector')}</label>
                             <select class="cc-select" id="cc-wp-industry-sector" data-testid="select-wp-industry-sector">
-                                <option value="">Select industry first...</option>
+                                <option value="">${s('msgselectindustryfirst')}</option>
                             </select>
-                            <small class="cc-form-hint">More specific sector for realistic scenarios</small>
+                            <small class="cc-form-hint">${s('msgsectorhint')}</small>
                         </div>
                     </div>
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Job Level</label>
+                            <label class="cc-form-label">${s('msgjoblevel')}</label>
                             <select class="cc-select" id="cc-wp-job-level" data-testid="select-wp-job-level">
-                                ${JOB_LEVELS.map(j => `<option value="${j.value}">${j.label}</option>`).join('')}
+                                ${JOB_LEVELS.map(j => `<option value="${j.value}">${s(j.key)}</option>`).join('')}
                             </select>
-                            <small class="cc-form-hint">AI creates scenarios appropriate for this level</small>
+                            <small class="cc-form-hint">${s('msgscenariosforlevel')}</small>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Additional Instructions</label>
+                            <label class="cc-form-label">${s('msgadditionalinstructions')}</label>
                             <input type="text" class="cc-input" id="cc-wp-instructions" 
-                                   placeholder="e.g., Focus on forklift operations" data-testid="input-wp-instructions">
+                                   placeholder="${s('msgphinstructions')}" data-testid="input-wp-instructions">
                         </div>
                     </div>
 
@@ -4930,24 +5632,24 @@ define([
                          back to a generic "employee" - the same defect fixed on the VET route in
                          v13.84. These fields are optional; blank keeps the previous behaviour. -->
                     <div class="cc-form-group">
-                        <label class="cc-form-label">Job Title <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                        <label class="cc-form-label">${s('msgjobtitleoptional')}</label>
                         <input type="text" class="cc-input" id="cc-wp-job-title-input" list="cc-wp-job-title-options"
-                               data-testid="input-wp-job-title" placeholder="e.g. Warehouse Operator, Duty Manager" style="width:100%;box-sizing:border-box;">
+                               data-testid="input-wp-job-title" placeholder="${s('msgphwpjobtitle')}" style="width:100%;box-sizing:border-box;">
                         <datalist id="cc-wp-job-title-options"></datalist>
-                        <small class="cc-form-hint">Naming the role makes every scenario speak to that learner. Leave blank to let the AI choose.</small>
+                        <small class="cc-form-hint">${s('msgjobrolehint')}</small>
                     </div>
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Typical Job Tasks <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                            <label class="cc-form-label">${s('msgtypicaljobtasks')}</label>
                             <textarea class="cc-input" id="cc-wp-job-tasks" rows="3" data-testid="textarea-wp-job-tasks"
-                                      placeholder="One per line, or separated by commas&#10;e.g. Receiving inbound stock&#10;Operating a pallet jack"
+                                      placeholder="${s('msgphwptasks')}"
                                       style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Equipment &amp; Tools <small style="font-weight:400;color:var(--cc-muted,#6b7280)">(optional)</small></label>
+                            <label class="cc-form-label">${s('msgequipmenttools')}</label>
                             <textarea class="cc-input" id="cc-wp-equipment" rows="3" data-testid="textarea-wp-equipment"
-                                      placeholder="One per line, or separated by commas&#10;e.g. Pallet jack&#10;RF scanner"
+                                      placeholder="${s('msgphwpequipment')}"
                                       style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
                         </div>
                     </div>
@@ -4957,7 +5659,7 @@ define([
                             <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
                         </svg>
                         <div class="cc-ai-info-text">
-                            <strong>Document + Context = Targeted Training</strong><br>
+                            <strong>${s('msgdoccontexttargeted')}</strong><br>
                             AI will extract key topics from your uploaded document and combine them with your training context to create realistic, scenario-based learning content.
                         </div>
                     </div>
@@ -4973,11 +5675,11 @@ define([
                             <circle cx="7.5" cy="14.5" r="1.5"/>
                             <circle cx="16.5" cy="14.5" r="1.5"/>
                         </svg>
-                        Suggest Subtopics
+                        ${s('msgsuggestsubtopics')}
                     </button>
                     <div id="cc-workplace-suggest-loading" class="cc-loading-state cc-hidden">
                         <div class="cc-spinner"></div>
-                        <span>AI is suggesting subtopics for your major topic...</span>
+                        <span>${s('msgsuggestingsubtopics')}</span>
                     </div>
                 </div>
 
@@ -4987,52 +5689,52 @@ define([
                         <div style="flex-shrink:0;width:28px;height:28px;background:#3b82f6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         </div>
-                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">Reference Content <span style="font-weight:400;font-size:12px;color:#6b7280;">(Optional)</span></h3>
+                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">${s('msgreferencecontent')}</h3>
                     </div>
 
                     <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;margin-bottom:14px;">
                         <div style="display:flex;align-items:flex-start;gap:10px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" width="20" height="20" style="flex-shrink:0;margin-top:1px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                             <div>
-                                <div style="font-weight:600;font-size:13px;color:#1e40af;margin-bottom:4px;">Ready to generate — no reference content needed</div>
-                                <div style="font-size:12px;color:#1d4ed8;line-height:1.5;">AI will build your slides directly from your uploaded document, topics, and context. Click <strong>Continue</strong> below to generate your slides now.</div>
+                                <div style="font-weight:600;font-size:13px;color:#1e40af;margin-bottom:4px;">${s('msgreadytogenerate')}</div>
+                                <div style="font-size:12px;color:#1d4ed8;line-height:1.5;">${s('msgbuilddirectwp')}</div>
                             </div>
                         </div>
                     </div>
 
                     <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;background:#fafafa;">
-                        <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">Or use the ChatGPT prompt for more control (optional)</div>
+                        <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">${s('msgchatgptprompt')}</div>
                         <div style="font-size:12px;color:#6b7280;line-height:1.6;margin-bottom:12px;padding:8px 12px;background:#fef9c3;border:1px solid #fbbf24;border-radius:6px;">
-                            <strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>review and edit the content before slides are generated</strong>, or when you want to provide <strong>additional documents as guides</strong> beyond your uploaded training document.
+                            ${s('msgwhentousewp')}
                         </div>
                         <div style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:12px;">
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bfdbfe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#1e3a5f;">1</div>
-                                <span>Download the prompt file below (includes your topics + context)</span>
+                                <span>${s('msgdownloadpromptcontext')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bfdbfe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#1e3a5f;">2</div>
-                                <span>Open ChatGPT, paste the prompt — then upload any additional documents you want to use as guides</span>
+                                <span>${s('msgopenchatgptwp')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bfdbfe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#1e3a5f;">3</div>
-                                <span>Review and refine the ChatGPT output until you are happy with it</span>
+                                <span>${s('msgchatgptreview')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bfdbfe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#1e3a5f;">4</div>
-                                <span>Paste the output below, then click Continue to generate your slides</span>
+                                <span>${s('msgchatgptpastecontinue')}</span>
                             </div>
                         </div>
                         <button type="button" id="cc-download-wp-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-wp-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#3b82f6;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            Download ChatGPT Prompt File (includes your topics + context)
+                            ${s('msgdownloadchatgptcontext')}
                         </button>
                         <div class="cc-paste-text-panel" id="cc-wp-paste-panel">
                             <textarea class="cc-paste-textarea" id="cc-wp-paste-text"
-                                      placeholder="Optional: Paste ChatGPT output or any reference material here to guide the AI..."
+                                      placeholder="${s('msgphchatgptoutput')}"
                                       data-testid="textarea-wp-paste" rows="6">${workplacePastedContent || ''}</textarea>
                             <div class="cc-paste-footer">
-                                <span class="cc-paste-word-count" id="cc-wp-paste-count">${workplacePastedContent ? countWords(workplacePastedContent) + ' words' : '0 words'}</span>
+                                <span class="cc-paste-word-count" id="cc-wp-paste-count">${workplacePastedContent ? countWords(workplacePastedContent) + s('msgwordsuffix') : s('msgzerowords')}</span>
                             </div>
                         </div>
                     </div>
@@ -5044,10 +5746,10 @@ define([
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                             <path d="M19 12H5M12 19l-7-7 7-7"/>
                         </svg>
-                        Back
+                        ${s('msgback')}
                     </button>
                     <button type="button" class="cc-btn cc-btn-primary cc-btn-lg cc-hidden" id="cc-next-step" data-testid="button-next">
-                        Continue
+                        ${s('msgcontinue')}
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon-right">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
                         </svg>
@@ -5061,15 +5763,15 @@ define([
         const hasOutcomes = storedOutcomes.length > 0;
         return `
             <div class="cc-step-content" data-testid="step-2-university">
-                <h2 class="cc-section-title">Learning Context - University</h2>
-                <p class="cc-section-subtitle">Follow the steps below to build your course content. Each section unlocks as you complete the previous one.</p>
+                <h2 class="cc-section-title">${s('msgcontextunititle')}</h2>
+                <p class="cc-section-subtitle">${s('msgcontextunisubtitle')}</p>
 
                 <div class="cc-instruction-card" data-testid="instruction-card-university">
                     <div class="cc-instruction-card-icon">
                         <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                     </div>
                     <div class="cc-instruction-card-text">
-                        <strong>One topic per content pack.</strong> Each Content Creator activity covers a single topic at a time (e.g. "Motivation Theories" or "Group Dynamics"). Each sub topic (A, B, C) becomes a learning slide. To cover more topics, create additional Content Creator activities in your course. <strong>Best practice:</strong> Place an <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> activity between each topic so students can consolidate their learning before moving on.
+                        ${s('msginstructionuni')}
                     </div>
                 </div>
 
@@ -5077,50 +5779,50 @@ define([
                 <div class="cc-form-section">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
                         <div style="flex-shrink:0;width:28px;height:28px;background:#8b5cf6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">1</div>
-                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">Course Information</h3>
+                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">${s('msgcourseinformation')}</h3>
                     </div>
                     
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Country *</label>
+                            <label class="cc-form-label">${s('msgcountryrequired')}</label>
                             <select class="cc-select" id="cc-uni-country" data-testid="select-uni-country">
-                                ${COUNTRIES.map(c => `<option value="${c.code}" ${c.code === 'AU' ? 'selected' : ''}>${c.name}</option>`).join('')}
+                                ${COUNTRIES.map(c => `<option value="${c.code}" ${c.code === 'AU' ? 'selected' : ''}>${s(c.key)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">State/Region</label>
+                            <label class="cc-form-label">${s('msgstateregion')}</label>
                             <select class="cc-select" id="cc-uni-state" data-testid="select-uni-state">
-                                <option value="">Select (optional)...</option>
+                                <option value="">${s('msgselectoptional')}</option>
                                 ${getStatesForCountry('AU').map(s => `<option value="${s}">${s}</option>`).join('')}
                             </select>
                         </div>
                     </div>
                     
                     <div class="cc-form-group">
-                        <label class="cc-form-label">Course / Topic Title *</label>
+                        <label class="cc-form-label">${s('msgcoursetitlerequired')}</label>
                         <input type="text" class="cc-input" id="cc-course-name" 
-                               placeholder="e.g., Motivation Theories, Group Dynamics, Organisational Behaviour" data-testid="input-course-name">
-                        <small class="cc-form-hint">This is your major topic. AI will suggest sub topics (A, B, C) under it.</small>
+                               placeholder="${s('msgphcoursename')}" data-testid="input-course-name">
+                        <small class="cc-form-hint">${s('msgmajortopichint')}</small>
                     </div>
 
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Course Level *</label>
+                            <label class="cc-form-label">${s('msgcourselevelrequired')}</label>
                             <select class="cc-select" id="cc-course-level" data-testid="select-course-level">
-                                ${COURSE_LEVELS.map(c => `<option value="${c.value}">${c.label}</option>`).join('')}
+                                ${COURSE_LEVELS.map(c => `<option value="${c.value}">${s(c.key)}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-form-label">Subject Area *</label>
+                            <label class="cc-form-label">${s('msgsubjectarearequired')}</label>
                             <input type="text" class="cc-input" id="cc-subject-area" 
-                                   placeholder="e.g., Psychology, Business, Engineering" data-testid="input-subject-area">
+                                   placeholder="${s('msgphsubjectarea')}" data-testid="input-subject-area">
                         </div>
                     </div>
 
                     <div class="cc-form-group">
-                        <label class="cc-form-label">Bloom's Taxonomy Focus *</label>
+                        <label class="cc-form-label">${s('msgbloomsfocus')}</label>
                         <select class="cc-select" id="cc-blooms-level" data-testid="select-blooms-level">
-                            ${BLOOMS_LEVELS.map(b => `<option value="${b.value}">${b.label}</option>`).join('')}
+                            ${BLOOMS_LEVELS.map(b => `<option value="${b.value}">${s(b.key)}</option>`).join('')}
                         </select>
                     </div>
                 </div>
@@ -5129,23 +5831,23 @@ define([
                 <div class="cc-form-section">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
                         <div style="flex-shrink:0;width:28px;height:28px;background:#8b5cf6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">2</div>
-                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">Subtopics</h3>
+                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">${s('msgsubtopics')}</h3>
                     </div>
 
                     <div style="background:linear-gradient(135deg,#faf5ff 0%,#f5f3ff 100%);border:1px solid #d8b4fe;border-radius:8px;padding:14px 16px;margin-bottom:14px;">
-                        <div style="font-weight:600;font-size:13px;color:#4c1d95;margin-bottom:8px;">How to paste your subtopics</div>
+                        <div style="font-weight:600;font-size:13px;color:#4c1d95;margin-bottom:8px;">${s('msghowtopaste')}</div>
                         <div style="font-size:12px;color:#6d28d9;line-height:1.6;">
-                            Paste the subtopics for your major topic below (one per line). Each subtopic will become a separate learning slide:<br><br>
+                            ${s('msgpastesubtopicsintro')}<br><br>
                             <div style="background:white;border:1px solid #e9d5ff;border-radius:6px;padding:10px 12px;font-family:monospace;font-size:11px;line-height:1.7;color:#581c87;">
-                                How visibility shifts meaning<br>
-                                Public disagreement and response pressure<br>
-                                Personal opinion vs institutional signal<br>
-                                Platform-specific risks<br>
-                                When personal becomes professional<br>
-                                Managing digital footprint
+                                ${s('msgsubtopicex1')}<br>
+                                ${s('msgsubtopicex2')}<br>
+                                ${s('msgsubtopicex3')}<br>
+                                ${s('msgsubtopicex4')}<br>
+                                ${s('msgsubtopicex5')}<br>
+                                ${s('msgsubtopicex6')}
                             </div>
                             <div style="margin-top:8px;color:#7c3aed;font-size:11px;">
-                                <strong>Tip:</strong> List 4-8 sub topics. Each sub topic (A, B, C) becomes one learning slide in your content pack. You can also paste lists or bullet points.
+                                ${s('msgtipsubtopics')}
                             </div>
                         </div>
                     </div>
@@ -5154,17 +5856,17 @@ define([
 
                     <div id="cc-bulk-paste-panel" data-testid="panel-bulk-paste">
                         <textarea class="cc-paste-textarea" id="cc-bulk-paste-text" 
-                                  placeholder="Paste your subtopics here (one per line)...&#10;&#10;How visibility shifts meaning&#10;Public disagreement and response pressure&#10;Personal opinion vs institutional signal&#10;Platform-specific risks&#10;When personal becomes professional&#10;Managing digital footprint" 
+                                  placeholder="${s('msgphbulkpaste')}" 
                                   data-testid="textarea-bulk-paste" rows="10">${storedOutcomes.length > 0 ? escapeHtml(storedOutcomes.join('\\n')) : ''}</textarea>
                         <div class="cc-bulk-paste-actions">
-                            <span class="cc-paste-word-count" id="cc-bulk-paste-count">${storedOutcomes.length > 0 ? storedOutcomes.length + ' items detected' : '0 items detected'}</span>
+                            <span class="cc-paste-word-count" id="cc-bulk-paste-count">${storedOutcomes.length > 0 ? storedOutcomes.length + s('msgitemssuffix') : s('msgzeroitems')}</span>
                             <div class="cc-bulk-paste-buttons">
                                 <button type="button" class="cc-btn cc-btn-primary cc-btn-sm" id="cc-bulk-paste-add" data-testid="button-bulk-paste-add">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                                         <polyline points="22 4 12 14.01 9 11.01"/>
                                     </svg>
-                                    Confirm Subtopics
+                                    ${s('msgconfirmsubtopics')}
                                 </button>
                             </div>
                         </div>
@@ -5176,7 +5878,7 @@ define([
                             <span style="font-weight:600;font-size:13px;color:#15803d;" id="cc-uni-topics-count">${countTopicsLabel(storedOutcomes)}</span>
                         </div>
                         <div id="cc-uni-topics-preview">${renderConfirmedTopicsHTML(storedOutcomes)}</div>
-                        <button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-uni-topics-edit" data-testid="button-edit-topics" style="margin-top:8px;font-size:11px;">Edit Subtopics</button>
+                        <button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-uni-topics-edit" data-testid="button-edit-topics" style="margin-top:8px;font-size:11px;">${s('msgeditsubtopics')}</button>
                     </div>
                 </div>
 
@@ -5184,53 +5886,53 @@ define([
                 <div id="cc-uni-chatgpt-section" class="cc-form-section ${hasOutcomes ? '' : 'cc-hidden'}">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
                         <div style="flex-shrink:0;width:28px;height:28px;background:#8b5cf6;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">3</div>
-                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">Reference Content <span style="font-weight:400;font-size:12px;color:#6b7280;">(Optional)</span></h3>
+                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">${s('msgreferencecontent')}</h3>
                     </div>
 
                     <div style="background:#faf5ff;border:1px solid #c4b5fd;border-radius:8px;padding:14px 16px;margin-bottom:14px;">
                         <div style="display:flex;align-items:flex-start;gap:10px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" width="20" height="20" style="flex-shrink:0;margin-top:1px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                             <div>
-                                <div style="font-weight:600;font-size:13px;color:#6d28d9;margin-bottom:4px;">Ready to generate — no reference content needed</div>
-                                <div style="font-size:12px;color:#7c3aed;line-height:1.5;">AI will build your slides directly from your topics and course context. Click <strong>Generate Topics</strong> below to generate your slides now.</div>
+                                <div style="font-weight:600;font-size:13px;color:#6d28d9;margin-bottom:4px;">${s('msgreadytogenerate')}</div>
+                                <div style="font-size:12px;color:#7c3aed;line-height:1.5;">${s('msgbuilddirectuni')}</div>
                             </div>
                         </div>
                     </div>
 
                     <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;background:#fafafa;">
-                        <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">Or use the ChatGPT prompt for more control (optional)</div>
+                        <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">${s('msgchatgptprompt')}</div>
                         <div style="font-size:12px;color:#6b7280;line-height:1.6;margin-bottom:12px;padding:8px 12px;background:#fef9c3;border:1px solid #fbbf24;border-radius:6px;">
-                            <strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>upload course readings or academic documents as guides</strong>, or when you want to <strong>review and edit content before slides are generated</strong> for full creative control.
+                            ${s('msgwhentouseuni')}
                         </div>
                         <div style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:12px;">
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#ddd6fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#7c3aed;">1</div>
-                                <span>Download the prompt file below (includes your topics)</span>
+                                <span>${s('msgdownloadpromptfile')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#ddd6fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#7c3aed;">2</div>
-                                <span>Open ChatGPT, paste the prompt — then upload any course readings or documents you want to use as guides</span>
+                                <span>${s('msgopenchatgptuni')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#ddd6fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#7c3aed;">3</div>
-                                <span>Review and refine the ChatGPT output until you are happy with it</span>
+                                <span>${s('msgchatgptreview')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#ddd6fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#7c3aed;">4</div>
-                                <span>Paste the output below, then click Generate Topics to generate your slides</span>
+                                <span>${s('msgchatgptpastegenerate')}</span>
                             </div>
                         </div>
                         <button type="button" id="cc-download-uni-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-uni-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#8b5cf6;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                            Download ChatGPT Prompt File (includes your topics)
+                            ${s('msgdownloadchatgpt')}
                         </button>
                         <div class="cc-paste-text-panel" id="cc-uni-paste-panel">
                             <textarea class="cc-paste-textarea" id="cc-uni-paste-text" 
-                                      placeholder="Optional: Paste ChatGPT output or any reference material here to guide the AI..."
+                                      placeholder="${s('msgphchatgptoutput')}"
                                       data-testid="textarea-uni-paste" rows="6">${escapeHtml(uniPastedContent)}</textarea>
                             <div class="cc-paste-footer">
-                                <span class="cc-paste-word-count" id="cc-uni-paste-count">${uniPastedContent ? countWords(uniPastedContent) + ' words' : '0 words'}</span>
-                                ${uniPastedContent ? '<button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-uni-paste-clear" data-testid="button-uni-paste-clear">Clear</button>' : ''}
+                                <span class="cc-paste-word-count" id="cc-uni-paste-count">${uniPastedContent ? countWords(uniPastedContent) + s('msgwordsuffix') : s('msgzerowords')}</span>
+                                ${uniPastedContent ? '<button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-uni-paste-clear" data-testid="button-uni-paste-clear">' + s('msgclear') + '</button>' : ''}
                             </div>
                         </div>
                     </div>
@@ -5242,10 +5944,10 @@ define([
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                             <path d="M19 12H5M12 19l-7-7 7-7"/>
                         </svg>
-                        Back
+                        ${s('msgback')}
                     </button>
                     <button type="button" class="cc-btn cc-btn-primary cc-btn-lg ${hasOutcomes ? '' : 'cc-hidden'}" id="cc-next-step" data-testid="button-next">
-                        Generate Topics
+                        ${s('msggeneratetopics')}
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon-right">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
                         </svg>
@@ -5259,16 +5961,16 @@ define([
         const hasOutcomes = storedOutcomes.length > 0;
         return `
             <div class="cc-step-content" data-testid="step-2-pd">
-                <h2 class="cc-section-title">Learning Context - ${selectedMode === 'topicstext'
-                    ? 'Topics and Text' : 'Professional Development'}</h2>
-                <p class="cc-section-subtitle">Enter your course details, then add topics by letting AI suggest them or paste your own.</p>
+                <h2 class="cc-section-title">${selectedMode === 'topicstext'
+                    ? s('msgcontexttopicstitle') : s('msgcontextpdtitle')}</h2>
+                <p class="cc-section-subtitle">${s('msgpdsubtitle')}</p>
 
                 <div class="cc-instruction-card" data-testid="instruction-card-pd">
                     <div class="cc-instruction-card-icon">
                         <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                     </div>
                     <div class="cc-instruction-card-text">
-                        <strong>One topic per content pack.</strong> Each Content Creator activity covers a single topic at a time (e.g. "Active Listening" or "Managing Conflict"). Each sub topic (A, B, C) becomes a learning slide. To cover more topics, create additional Content Creator activities in your course. <strong>Best practice:</strong> Place an <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> activity between each topic so students can consolidate their learning before moving on.
+                        ${s('msginstructionpd')}
                     </div>
                 </div>
 
@@ -5276,47 +5978,47 @@ define([
                 <div class="cc-form-section">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
                         <div style="flex-shrink:0;width:28px;height:28px;background:#0ea5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">1</div>
-                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">Course Information</h3>
+                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">${s('msgcourseinformation')}</h3>
                     </div>
                     
                     <div class="cc-form-group">
-                        <label class="cc-label" for="cc-pd-course-title">Course / Topic Title <span class="cc-required">*</span></label>
-                        <input type="text" id="cc-pd-course-title" class="cc-input" placeholder="e.g. Active Listening, Managing Conflict, Mental Health First Aid" data-testid="input-pd-course-title" />
-                        <small class="cc-form-hint">This is your major topic. AI will suggest sub topics (A, B, C) under it.</small>
+                        <label class="cc-label" for="cc-pd-course-title">${s('msgcoursetitle')}</label>
+                        <input type="text" id="cc-pd-course-title" class="cc-input" placeholder="${s('msgphpdcoursetitle')}" data-testid="input-pd-course-title" />
+                        <small class="cc-form-hint">${s('msgmajortopichint')}</small>
                     </div>
                     <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
                         <div class="cc-form-group">
-                            <label class="cc-label" for="cc-pd-audience">Target Audience</label>
+                            <label class="cc-label" for="cc-pd-audience">${s('msgtargetaudience')}</label>
                             <select id="cc-pd-audience" class="cc-select" data-testid="select-pd-audience">
-                                <option value="all-staff">All Staff</option>
-                                <option value="new-starters">New Starters</option>
-                                <option value="team-leaders">Team Leaders</option>
-                                <option value="managers">Managers</option>
-                                <option value="senior-leaders">Senior Leaders</option>
-                                <option value="frontline-workers">Frontline Workers</option>
-                                <option value="specialists">Specialists / Technical Staff</option>
-                                <option value="contractors">Contractors</option>
+                                <option value="all-staff">${s('msgtaallstaff')}</option>
+                                <option value="new-starters">${s('msgpdaudnewstarters')}</option>
+                                <option value="team-leaders">${s('msgpdaudteamleaders')}</option>
+                                <option value="managers">${s('msgtamanagers')}</option>
+                                <option value="senior-leaders">${s('msgpdaudseniorleaders')}</option>
+                                <option value="frontline-workers">${s('msgpdaudfrontlineworkers')}</option>
+                                <option value="specialists">${s('msgpdaudspecialists')}</option>
+                                <option value="contractors">${s('msgpdaudcontractors')}</option>
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-label" for="cc-pd-industry">Industry (Optional)</label>
-                            <input type="text" id="cc-pd-industry" class="cc-input" placeholder="e.g. Healthcare, Construction, Finance" data-testid="input-pd-industry" />
+                            <label class="cc-label" for="cc-pd-industry">${s('msgindustryoptional')}</label>
+                            <input type="text" id="cc-pd-industry" class="cc-input" placeholder="${s('msgphpdindustry')}" data-testid="input-pd-industry" />
                         </div>
                     </div>
                     <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
                         <div class="cc-form-group">
-                            <label class="cc-label" for="cc-pd-country">Country</label>
+                            <label class="cc-label" for="cc-pd-country">${s('msgcountry')}</label>
                             <select id="cc-pd-country" class="cc-select" data-testid="select-pd-country">
-                                <option value="AU" selected>Australia</option>
-                                <option value="NZ">New Zealand</option>
-                                <option value="GB">United Kingdom</option>
-                                <option value="US">United States</option>
-                                <option value="CA">Canada</option>
-                                <option value="SG">Singapore</option>
-                                <option value="AE">United Arab Emirates</option>
-                                <option value="IN">India</option>
-                                <option value="PH">Philippines</option>
-                                <option value="ZA">South Africa</option>
+                                <option value="AU" selected>${s('msgcountryau')}</option>
+                                <option value="NZ">${s('msgcountrynz')}</option>
+                                <option value="GB">${s('msgcountrygb')}</option>
+                                <option value="US">${s('msgcountryus')}</option>
+                                <option value="CA">${s('msgcountryca')}</option>
+                                <option value="SG">${s('msgcountrysg')}</option>
+                                <option value="AE">${s('msgcountryae')}</option>
+                                <option value="IN">${s('msgcountryin')}</option>
+                                <option value="PH">${s('msgcountryph')}</option>
+                                <option value="ZA">${s('msgcountryza')}</option>
                             </select>
                         </div>
                     </div>
@@ -5326,16 +6028,16 @@ define([
                 <div class="cc-form-section" style="margin-top:24px;">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
                         <div style="flex-shrink:0;width:28px;height:28px;background:#0ea5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">2</div>
-                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">Subtopics</h3>
+                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">${s('msgsubtopics')}</h3>
                     </div>
-                    <p class="cc-section-subtitle" style="margin-bottom:12px;">Add the subtopics for your major topic. You can let AI suggest them or paste your own.</p>
+                    <p class="cc-section-subtitle" style="margin-bottom:12px;">${s('msgaddsubtopics')}</p>
 
                     <div style="display:flex;gap:10px;margin-bottom:16px;" id="cc-pd-topic-actions">
                         <button type="button" class="cc-btn cc-btn-primary" id="cc-pd-suggest-topics" data-testid="button-pd-suggest-topics">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:16px;height:16px;">
                                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                             </svg>
-                            Suggest Subtopics with AI
+                            ${s('msgsuggestsubtopicsai')}
                         </button>
                         <button type="button" class="cc-btn cc-btn-ghost" id="cc-pd-paste-own" data-testid="button-pd-paste-own">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:16px;height:16px;">
@@ -5349,20 +6051,20 @@ define([
                     <!-- AI Suggest Loading -->
                     <div id="cc-pd-suggest-loading" class="cc-loading-state cc-hidden">
                         <div class="cc-spinner"></div>
-                        <span>AI is suggesting subtopics for your major topic...</span>
+                        <span>${s('msgsuggestingsubtopics')}</span>
                     </div>
 
                     <!-- Paste panel (hidden by default) -->
                     <div id="cc-pd-paste-panel" class="cc-hidden" style="background:var(--cc-bg);border:1px solid var(--cc-border);border-radius:8px;padding:16px;">
-                        <label class="cc-label" style="margin-bottom:8px;">Paste your subtopics (one per line)</label>
+                        <label class="cc-label" style="margin-bottom:8px;">${s('msgpastesubtopicslabel')}</label>
                         <textarea id="cc-pd-paste-text" class="cc-textarea" style="min-height:150px;font-family:monospace;" 
-                                  placeholder="What makes a good leader&#10;Leadership vs management&#10;Active listening techniques&#10;Giving constructive feedback&#10;Setting clear expectations"
+                                  placeholder="${s('msgphpdpaste')}"
                                   data-testid="textarea-pd-paste" rows="10">${storedOutcomes.length > 0 ? escapeHtml(storedOutcomes.join('\\n')) : ''}</textarea>
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
-                            <span class="cc-paste-word-count" id="cc-pd-paste-count">${storedOutcomes.length > 0 ? storedOutcomes.length + ' items detected' : '0 items detected'}</span>
+                            <span class="cc-paste-word-count" id="cc-pd-paste-count">${storedOutcomes.length > 0 ? storedOutcomes.length + s('msgitemssuffix') : s('msgzeroitems')}</span>
                             <div style="display:flex;gap:8px;">
-                                <button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-pd-paste-cancel" data-testid="button-pd-paste-cancel">Cancel</button>
-                                <button type="button" class="cc-btn cc-btn-primary cc-btn-sm" id="cc-pd-paste-confirm" data-testid="button-pd-paste-confirm">Confirm Subtopics</button>
+                                <button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-pd-paste-cancel" data-testid="button-pd-paste-cancel">${s('msgcancel')}</button>
+                                <button type="button" class="cc-btn cc-btn-primary cc-btn-sm" id="cc-pd-paste-confirm" data-testid="button-pd-paste-confirm">${s('msgconfirmsubtopics')}</button>
                             </div>
                         </div>
                     </div>
@@ -5371,7 +6073,7 @@ define([
                     <div id="cc-pd-topics-confirmed" class="${hasOutcomes ? '' : 'cc-hidden'}" style="background:var(--cc-bg);border:1px solid var(--cc-border-success, #86efac);border-radius:8px;padding:16px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                             <span style="font-weight:600;font-size:13px;color:#15803d;" id="cc-pd-topics-count">${countTopicsLabel(storedOutcomes)}</span>
-                            <button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-pd-topics-edit" data-testid="button-pd-edit-topics">Edit Subtopics</button>
+                            <button type="button" class="cc-btn cc-btn-ghost cc-btn-sm" id="cc-pd-topics-edit" data-testid="button-pd-edit-topics">${s('msgeditsubtopics')}</button>
                         </div>
                         <div id="cc-pd-topics-preview">${renderConfirmedTopicsHTML(storedOutcomes)}</div>
                     </div>
@@ -5381,40 +6083,40 @@ define([
                 <div id="cc-pd-chatgpt-section" class="cc-form-section ${hasOutcomes ? '' : 'cc-hidden'}" style="margin-top:24px;">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
                         <div style="flex-shrink:0;width:28px;height:28px;background:#0ea5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:white;">3</div>
-                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">Reference Content <span style="font-weight:400;font-size:12px;color:#6b7280;">(Optional)</span></h3>
+                        <h3 class="cc-form-section-title" style="margin:0;padding:0;border:none;">${s('msgreferencecontent')}</h3>
                     </div>
 
                     <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:14px 16px;margin-bottom:14px;">
                         <div style="display:flex;align-items:flex-start;gap:10px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" width="20" height="20" style="flex-shrink:0;margin-top:1px;"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                             <div>
-                                <div style="font-weight:600;font-size:13px;color:#0369a1;margin-bottom:4px;">Ready to generate — no reference content needed</div>
-                                <div style="font-size:12px;color:#0284c7;line-height:1.5;">AI will build your slides directly from your course title and subtopics. Click <strong>Generate Topics</strong> below to generate your slides now.</div>
+                                <div style="font-weight:600;font-size:13px;color:#0369a1;margin-bottom:4px;">${s('msgreadytogenerate')}</div>
+                                <div style="font-size:12px;color:#0284c7;line-height:1.5;">${s('msgbuilddirectpd')}</div>
                             </div>
                         </div>
                     </div>
 
                     <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;background:#fafafa;">
-                        <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">Or use the ChatGPT prompt for more control (optional)</div>
+                        <div style="font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">${s('msgchatgptprompt')}</div>
                         <div style="font-size:12px;color:#6b7280;line-height:1.6;margin-bottom:12px;padding:8px 12px;background:#fef9c3;border:1px solid #fbbf24;border-radius:6px;">
-                            <strong>When to use this:</strong> Use the ChatGPT prompt when you want to <strong>upload reference documents as guides</strong> (e.g. a course manual, company policy, or learning framework), or when you want to <strong>review and edit content before slides are generated</strong> for full creative control.
+                            ${s('msgwhentousepd')}
                         </div>
                         <div style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:12px;">
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bae6fd;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#0369a1;">1</div>
-                                <span>Download the prompt file below (includes your topics)</span>
+                                <span>${s('msgdownloadpromptfile')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bae6fd;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#0369a1;">2</div>
-                                <span>Open ChatGPT, paste the prompt — then upload any reference documents you want to use as guides</span>
+                                <span>${s('msgopenchatgptpd')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bae6fd;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#0369a1;">3</div>
-                                <span>Review and refine the ChatGPT output until you are happy with it</span>
+                                <span>${s('msgchatgptreview')}</span>
                             </div>
                             <div style="display:flex;align-items:flex-start;gap:8px;">
                                 <div style="flex-shrink:0;width:20px;height:20px;background:#bae6fd;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;color:#0369a1;">4</div>
-                                <span>Paste the output below, then click Generate Topics to generate your slides</span>
+                                <span>${s('msgchatgptpastegenerate')}</span>
                             </div>
                         </div>
                         <button type="button" class="cc-btn cc-btn-primary" id="cc-download-pd-prompt" data-testid="button-download-pd-prompt" style="margin-bottom:12px;">
@@ -5423,13 +6125,13 @@ define([
                                 <polyline points="7 10 12 15 17 10"/>
                                 <line x1="12" y1="15" x2="12" y2="3"/>
                             </svg>
-                            Download ChatGPT Prompt File (includes your topics)
+                            ${s('msgdownloadchatgpt')}
                         </button>
                         <textarea id="cc-pd-paste-chatgpt" class="cc-textarea" style="min-height:140px;" 
-                                  placeholder="Optional: Paste ChatGPT output or any reference material here to guide the AI..."
+                                  placeholder="${s('msgphchatgptoutput')}"
                                   data-testid="textarea-pd-chatgpt">${escapeHtml(pdPastedContent)}</textarea>
                         <div style="display:flex;justify-content:space-between;margin-top:4px;">
-                            <span class="cc-paste-word-count" id="cc-pd-chatgpt-count">${pdPastedContent ? pdPastedContent.split(/\\s+/).filter(Boolean).length + ' words' : '0 words'}</span>
+                            <span class="cc-paste-word-count" id="cc-pd-chatgpt-count">${pdPastedContent ? pdPastedContent.split(/\\s+/).filter(Boolean).length + s('msgwordsuffix') : s('msgzerowords')}</span>
                         </div>
                     </div>
                 </div>
@@ -5440,10 +6142,10 @@ define([
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                             <path d="M19 12H5M12 19l-7-7 7-7"/>
                         </svg>
-                        Back
+                        ${s('msgback')}
                     </button>
                     <button type="button" class="cc-btn cc-btn-primary cc-btn-lg" id="cc-next-step" data-testid="button-next">
-                        Generate Topics
+                        ${s('msggeneratetopics')}
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon-right">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
                         </svg>
@@ -5457,7 +6159,7 @@ define([
         return `
             <div class="cc-outcome-item" data-index="${index}">
                 <span class="cc-outcome-number">${index + 1}</span>
-                <textarea class="cc-textarea" placeholder="Enter learning outcome..." 
+                <textarea class="cc-textarea" placeholder="${s('msgphlearningoutcome')}" 
                           data-testid="input-outcome-${index}">${escapeHtml(text)}</textarea>
                 ${index > 0 ? `<button type="button" class="cc-btn-icon-only cc-btn-danger" data-action="delete-outcome">&times;</button>` : ''}
             </div>
@@ -5477,7 +6179,7 @@ define([
         return `
             <div class="cc-unit-card">
                 <div class="cc-unit-header">
-                    <span class="cc-unit-code">${escapeHtml(doc ? (doc.filename || 'Uploaded Document') : (majorTopic || 'Training Topic'))}</span>
+                    <span class="cc-unit-code">${escapeHtml(doc ? (doc.filename || s('msguploadeddocument')) : (majorTopic || s('msgtrainingtopicdefault')))}</span>
                     <span class="cc-unit-status">${doc ? 'Content Extracted' : 'No document - using your topic and context'}</span>
                 </div>
                 <h4 class="cc-unit-title">${escapeHtml(doc ? (doc.title || 'Training Content') : (majorTopic || 'Training Content'))}</h4>
@@ -5485,15 +6187,15 @@ define([
                     ${doc ? `
                     <div class="cc-stat">
                         <span class="cc-stat-value">${wordCount.toLocaleString()}</span>
-                        <span class="cc-stat-label">Words</span>
+                        <span class="cc-stat-label">${s('msgwords')}</span>
                     </div>
                     <div class="cc-stat">
                         <span class="cc-stat-value">${doc.sections?.length || 0}</span>
-                        <span class="cc-stat-label">Sections</span>
+                        <span class="cc-stat-label">${s('msgsections')}</span>
                     </div>` : ''}
                     <div class="cc-stat">
                         <span class="cc-stat-value">${topicCount}</span>
-                        <span class="cc-stat-label">Topics</span>
+                        <span class="cc-stat-label">${s('msgtopics')}</span>
                     </div>
                 </div>
                 
@@ -5506,11 +6208,11 @@ define([
                                 <circle cx="7.5" cy="14.5" r="1.5"/>
                                 <circle cx="16.5" cy="14.5" r="1.5"/>
                             </svg>
-                            Suggest Subtopics
+                            ${s('msgsuggestsubtopics')}
                         </button>
                         <div id="cc-workplace-inner-suggest-loading" class="cc-loading-state cc-hidden">
                             <div class="cc-spinner"></div>
-                            <span>AI is suggesting subtopics for your major topic...</span>
+                            <span>${s('msgsuggestingsubtopics')}</span>
                         </div>
                     </div>
                 `}
@@ -5556,7 +6258,7 @@ define([
 
     // v8.4.34: Render element list with radio-style single selection and PC details
     const renderElementList = (data) => {
-        if (!data.elements || data.elements.length === 0) return '<p class="cc-form-hint">No elements found in this unit.</p>';
+        if (!data.elements || data.elements.length === 0) return '<p class="cc-form-hint">' + s('msgnoelementsinunit') + '</p>';
         
         return data.elements.map((el, idx) => {
             const elementId = idx + 1;
@@ -5600,29 +6302,29 @@ define([
             <div class="cc-unit-card">
                 <div class="cc-unit-header">
                     <span class="cc-unit-code">${escapeHtml(data.unitCode)}</span>
-                    <span class="cc-unit-status">Fetched from TGA</span>
+                    <span class="cc-unit-status">${s('msgfetchedfromtga')}</span>
                 </div>
                 <h4 class="cc-unit-title">${escapeHtml(data.unitTitle)}</h4>
                 <div class="cc-unit-stats">
                     <div class="cc-stat">
                         <span class="cc-stat-value">${data.elements?.length || 0}</span>
-                        <span class="cc-stat-label">Elements</span>
+                        <span class="cc-stat-label">${s('msgelements')}</span>
                     </div>
                     <div class="cc-stat">
                         <span class="cc-stat-value">${allPcCount}</span>
-                        <span class="cc-stat-label">PC</span>
+                        <span class="cc-stat-label">${s('msgpc')}</span>
                     </div>
                     <div class="cc-stat">
                         <span class="cc-stat-value">${data.knowledgeEvidence?.length || 0}</span>
-                        <span class="cc-stat-label">KE</span>
+                        <span class="cc-stat-label">${s('msgke')}</span>
                     </div>
                     <div class="cc-stat">
                         <span class="cc-stat-value">${data.performanceEvidence?.length || 0}</span>
-                        <span class="cc-stat-label">PE</span>
+                        <span class="cc-stat-label">${s('msgpe')}</span>
                     </div>
                     <div class="cc-stat">
                         <span class="cc-stat-value">${data.foundationSkills?.length || 0}</span>
-                        <span class="cc-stat-label">FS</span>
+                        <span class="cc-stat-label">${s('msgfs')}</span>
                     </div>
                 </div>
                 
@@ -5643,13 +6345,13 @@ define([
                 <div class="cc-topic-selector-header">
                     <div class="cc-topic-selector-info">
                         <h5 class="cc-topic-selector-title">
-                            Compliance Coverage Map
-                            <span class="cc-planning-badge" title="This layer ensures audit coverage. Specific workplace examples appear in the Content Layers.">
+                            ${s('msgcompliancemap')}
+                            <span class="cc-planning-badge" title="${s('msgtitleauditlayer')}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-badge-icon"><path d="M3.5 5.5L5 7l2.5-2.5"/><path d="M3.5 11.5L5 13l2.5-2.5"/><path d="M3.5 17.5L5 19l2.5-2.5"/><path d="M11 6h9"/><path d="M11 12h9"/><path d="M11 18h9"/></svg>
-                                Planning Layer
+                                ${s('msgplanninglayer')}
                             </span>
                         </h5>
-                        <p class="cc-topic-selector-hint">What this unit must cover (expanded later with role-specific content)</p>
+                        <p class="cc-topic-selector-hint">${s('msgunitcoverhint')}</p>
                     </div>
                     <div class="cc-topic-selector-stats">
                         <span class="cc-stats-badge">${selectedCount}/${totalCount} selected</span>
@@ -5658,15 +6360,15 @@ define([
                 <div class="cc-planning-info-banner">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20" class="cc-info-icon"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                     <div class="cc-planning-info-text">
-                        <strong>About this section:</strong> These topics show what must be covered to meet unit requirements. They are planning markers, not learner-facing content. Each topic will be expanded in the next step into role-specific explanations, scenarios, and activities based on your selected context.
+                        ${s('msgaboutthissection')}
                     </div>
                 </div>
                 <div class="cc-topic-selector-actions">
                     <button type="button" class="cc-btn cc-btn-sm cc-btn-ghost" id="cc-select-all-topics" data-testid="button-select-all">
-                        Select All
+                        ${s('msgselectall')}
                     </button>
                     <button type="button" class="cc-btn cc-btn-sm cc-btn-ghost" id="cc-deselect-all-topics" data-testid="button-deselect-all">
-                        Deselect All
+                        ${s('msgdeselectall')}
                     </button>
                 </div>
                 <div class="cc-major-topic-list">
@@ -5693,7 +6395,7 @@ define([
                                         <span class="cc-topic-time-badge">${escapeHtml(topic.estimatedTime || '15-20 min')}</span>
                                     </div>
                                     <p class="cc-topic-card-description">${escapeHtml(topic.description)}</p>
-                                    ${topic.splitPart ? `<div style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:600;border-radius:4px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;display:inline-block;">Part ${topic.splitPart} of ${topic.splitTotal} — split (${MAX_PCS_PER_SECTION}+ PCs)</div>` : ''}
+                                    ${topic.splitPart ? `<div style="margin-top:4px;padding:2px 8px;font-size:11px;font-weight:600;border-radius:4px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;display:inline-block;">${s('msgsplitpart').split('{$a->part}').join(topic.splitPart).split('{$a->total}').join(topic.splitTotal).split('{$a->max}').join(MAX_PCS_PER_SECTION)}</div>` : ''}
                                     <div class="cc-topic-card-coverage">${escapeHtml(coverageText)}</div>
                                 </div>
                             </label>
@@ -6070,23 +6772,23 @@ define([
                 <div class="cc-step-content" data-testid="step-3-generating">
                     <div class="cc-loading-state">
                         <div class="cc-spinner cc-spinner-lg"></div>
-                        <h3>Generating Topic Structure...</h3>
-                        <p class="cc-text-muted">AI is analyzing your inputs and creating an optimized learning sequence.</p>
+                        <h3>${s('msggeneratingtopicstructure')}</h3>
+                        <p class="cc-text-muted">${s('msganalyzinginputs')}</p>
                     </div>
                 </div>
             `;
         }
 
         // Build subtitle using stored context
-        let subtitleText = 'Based on your course context and learning outcomes';
+        let subtitleText = s('msgbasedondefault');
         if (selectedMode === 'vet' && storedContext) {
             const industry = storedContext.industry || '';
             const industrySector = storedContext.industrySector || '';
             const jobLevelLabel = storedContext.jobLevel
-                ? storedContext.jobLevel.split(', ').map(v => JOB_LEVELS.find(j => j.value === v)?.label || v).join(' + ')
+                ? storedContext.jobLevel.split(', ').map(v => (JOB_LEVELS.find(j => j.value === v) ? s(JOB_LEVELS.find(j => j.value === v).key) : v)).join(' + ')
                 : '';
             const jobTitle = storedContext.jobTitle || '';
-            const parts = [tgaData?.unitCode || 'Unit'];
+            const parts = [tgaData?.unitCode || s('msgunitdefault')];
             // v6.6.76: Show industry with sector (e.g., "Building & Construction - Roofing")
             if (industry && industrySector) {
                 parts.push(`${industry} - ${industrySector}`);
@@ -6095,30 +6797,33 @@ define([
             }
             if (jobLevelLabel) parts.push(jobLevelLabel);
             if (jobTitle) parts.push(jobTitle);
-            subtitleText = `Based on ${parts.join(' * ')}`;
+            subtitleText = s('msgbasedon').split('{$a}').join(parts.join(' * '));
         } else if (selectedMode === 'workplace' && storedContext) {
             const parts = [];
             if (storedContext.companyName) parts.push(storedContext.companyName);
-            const trainingLabel = TRAINING_TYPES.find(t => t.value === storedContext.trainingType)?.label || '';
+            const _tt = TRAINING_TYPES.find(t => t.value === storedContext.trainingType);
+            const trainingLabel = _tt ? s(_tt.key) : '';
             if (trainingLabel) parts.push(trainingLabel);
-            subtitleText = parts.length > 0 ? `Based on ${parts.join(' * ')}` : 'Based on your workplace document';
+            subtitleText = parts.length > 0 ? s('msgbasedon').split('{$a}').join(parts.join(' * ')) : s('msgbasedonworkplacedoc');
         } else if ((selectedMode === 'pd' || selectedMode === 'topicstext') && storedContext) {
             const courseTitle = storedContext.courseTitle || storedContext.courseName || '';
-            subtitleText = courseTitle
-                ? `Based on ${courseTitle} * ${storedOutcomes.length} subtopic${storedOutcomes.length !== 1 ? 's' : ''}`
-                : `Based on ${storedOutcomes.length} subtopic${storedOutcomes.length !== 1 ? 's' : ''}`;
+            const _subPhrase = s(storedOutcomes.length === 1 ? 'msgnsubtopic' : 'msgnsubtopics')
+                .split('{$a}').join(storedOutcomes.length);
+            subtitleText = s('msgbasedon').split('{$a}')
+                .join(courseTitle ? courseTitle + ' * ' + _subPhrase : _subPhrase);
         } else if (selectedMode === 'university' && storedContext) {
             const parts = [];
             if (storedContext.courseName) parts.push(storedContext.courseName);
             if (storedContext.subjectArea) parts.push(storedContext.subjectArea);
-            subtitleText = parts.length > 0
-                ? `Based on ${parts.join(' * ')} * ${storedOutcomes.length} subtopic${storedOutcomes.length !== 1 ? 's' : ''}`
-                : `Based on ${storedOutcomes.length} subtopic${storedOutcomes.length !== 1 ? 's' : ''}`;
+            const _uniSubPhrase = s(storedOutcomes.length === 1 ? 'msgnsubtopic' : 'msgnsubtopics')
+                .split('{$a}').join(storedOutcomes.length);
+            parts.push(_uniSubPhrase);
+            subtitleText = s('msgbasedon').split('{$a}').join(parts.join(' * '));
         }
 
         return `
             <div class="cc-step-content" data-testid="step-3-topics">
-                <h2 class="cc-section-title">Proposed Learning Structure</h2>
+                <h2 class="cc-section-title">${s('msgproposedstructure')}</h2>
                 <p class="cc-section-subtitle">${subtitleText}</p>
 
                 ${selectedMode === 'vet' ? renderCoverageBadges() : ''}
@@ -6129,257 +6834,257 @@ define([
 
                 <!-- Appearance Settings (v6.4.4) - Header Color -->
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Appearance Settings</h3>
-                    <p class="cc-form-hint">Customize the look and feel of your learning content</p>
+                    <h3 class="cc-form-section-title">${s('msgappearancesettings')}</h3>
+                    <p class="cc-form-hint">${s('msgcustomizelook')}</p>
                     
                     <div class="cc-form-group">
-                        <label class="cc-form-label">Slide Header Color</label>
+                        <label class="cc-form-label">${s('msgslideheadercolor')}</label>
                         <div class="cc-color-picker-wrapper">
                             <input type="color" id="cc-header-color" class="cc-color-input" value="${getMoodlePrimaryColor()}" data-testid="input-header-color">
                             <input type="text" id="cc-header-color-hex" class="cc-color-hex-input" value="${getMoodlePrimaryColor()}" placeholder="${getMoodlePrimaryColor()}" data-testid="input-header-color-hex">
-                            <span class="cc-color-hint">Uses your site's primary color by default</span>
+                            <span class="cc-color-hint">${s('msgprimarycolorhint')}</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Voice Settings (v6.5.11) - with On/Off toggle, BEFORE progression mode -->
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Voiceover Settings</h3>
-                    <p class="cc-form-hint">Configure the AI-generated voiceover for each slide (Chirp 3 HD)</p>
+                    <h3 class="cc-form-section-title">${s('msgvoiceoversettings')}</h3>
+                    <p class="cc-form-hint">${s('msgvoiceoverhint')}</p>
                     
                     <!-- Voiceover Enable/Disable Toggle (v6.5.11) -->
                     <div class="cc-form-group cc-voiceover-toggle-group">
-                        <label class="cc-form-label">Enable Voiceover</label>
+                        <label class="cc-form-label">${s('msgenablevoiceover')}</label>
                         <div class="cc-toggle-wrapper">
                             <label class="cc-toggle" data-testid="toggle-voiceover">
                                 <input type="checkbox" id="cc-voiceover-enabled" checked>
                                 <span class="cc-toggle-slider"></span>
                             </label>
-                            <span class="cc-toggle-label" id="cc-voiceover-status">Enabled</span>
+                            <span class="cc-toggle-label" id="cc-voiceover-status">${s('msgenabled')}</span>
                         </div>
-                        <p class="cc-form-hint-sm">When disabled, slides will not have AI voiceovers</p>
+                        <p class="cc-form-hint-sm">${s('msgnovoiceoverhint')}</p>
                     </div>
                     
                     <div class="cc-voice-settings-grid" id="cc-voice-options">
                         <!-- Voice Selection (v13.1: 8 Chirp 3 HD voices) -->
                         <div class="cc-voice-setting cc-voice-setting-full">
-                            <label class="cc-form-label">Voice</label>
-                            <div class="cc-voice-group-label">Female</div>
+                            <label class="cc-form-label">${s('msgvoice')}</label>
+                            <div class="cc-voice-group-label">${s('msgfemale')}</div>
                             <div class="cc-voice-options">
                                 <label class="cc-voice-card selected" data-voice="Aoede">
                                     <input type="radio" name="voiceName" value="Aoede" checked data-testid="radio-voice-Aoede">
                                     <span class="cc-voice-card-name">Aoede</span>
-                                    <span class="cc-voice-card-style">Warm &amp; Friendly</span>
+                                    <span class="cc-voice-card-style">${s('msgvoicewarmfriendly')}</span>
                                 </label>
                                 <label class="cc-voice-card" data-voice="Kore">
                                     <input type="radio" name="voiceName" value="Kore" data-testid="radio-voice-Kore">
                                     <span class="cc-voice-card-name">Kore</span>
-                                    <span class="cc-voice-card-style">Clear &amp; Professional</span>
+                                    <span class="cc-voice-card-style">${s('msgvoiceclearprofessional')}</span>
                                 </label>
                                 <label class="cc-voice-card" data-voice="Leda">
                                     <input type="radio" name="voiceName" value="Leda" data-testid="radio-voice-Leda">
                                     <span class="cc-voice-card-name">Leda</span>
-                                    <span class="cc-voice-card-style">Soft &amp; Nurturing</span>
+                                    <span class="cc-voice-card-style">${s('msgvoicesoftnurturing')}</span>
                                 </label>
                                 <label class="cc-voice-card" data-voice="Zephyr">
                                     <input type="radio" name="voiceName" value="Zephyr" data-testid="radio-voice-Zephyr">
                                     <span class="cc-voice-card-name">Zephyr</span>
-                                    <span class="cc-voice-card-style">Energetic &amp; Youthful</span>
+                                    <span class="cc-voice-card-style">${s('msgvoiceenergeticyouthful')}</span>
                                 </label>
                             </div>
-                            <div class="cc-voice-group-label cc-voice-group-label-male">Male</div>
+                            <div class="cc-voice-group-label cc-voice-group-label-male">${s('msgmale')}</div>
                             <div class="cc-voice-options">
                                 <label class="cc-voice-card" data-voice="Puck">
                                     <input type="radio" name="voiceName" value="Puck" data-testid="radio-voice-Puck">
                                     <span class="cc-voice-card-name">Puck</span>
-                                    <span class="cc-voice-card-style">Upbeat &amp; Clear</span>
+                                    <span class="cc-voice-card-style">${s('msgvoiceupbeatclear')}</span>
                                 </label>
                                 <label class="cc-voice-card" data-voice="Charon">
                                     <input type="radio" name="voiceName" value="Charon" data-testid="radio-voice-Charon">
                                     <span class="cc-voice-card-name">Charon</span>
-                                    <span class="cc-voice-card-style">Informative &amp; Calm</span>
+                                    <span class="cc-voice-card-style">${s('msgvoiceinformativecalm')}</span>
                                 </label>
                                 <label class="cc-voice-card" data-voice="Fenrir">
                                     <input type="radio" name="voiceName" value="Fenrir" data-testid="radio-voice-Fenrir">
                                     <span class="cc-voice-card-name">Fenrir</span>
-                                    <span class="cc-voice-card-style">Excitable &amp; Bold</span>
+                                    <span class="cc-voice-card-style">${s('msgvoiceexcitablebold')}</span>
                                 </label>
                                 <label class="cc-voice-card" data-voice="Orus">
                                     <input type="radio" name="voiceName" value="Orus" data-testid="radio-voice-Orus">
                                     <span class="cc-voice-card-name">Orus</span>
-                                    <span class="cc-voice-card-style">Firm &amp; Direct</span>
+                                    <span class="cc-voice-card-style">${s('msgvoicefirmdirect')}</span>
                                 </label>
                             </div>
                         </div>
                         
                         <!-- Voice Language -->
                         <div class="cc-voice-setting">
-                            <label class="cc-form-label">Voiceover Language</label>
+                            <label class="cc-form-label">${s('msgvoiceoverlanguage')}</label>
                             <select id="cc-voice-language" class="cc-select" data-testid="select-voice-language">
-                                <option value="en-AU" selected>English (Australia)</option>
-                                <option value="en-GB">English (UK)</option>
-                                <option value="en-US">English (US)</option>
-                                <option value="en-IN">English (India)</option>
-                                <option value="ar-XA">Arabic</option>
-                                <option value="bn-IN">Bengali (India)</option>
-                                <option value="bg-BG">Bulgarian</option>
-                                <option value="ca-ES">Catalan</option>
-                                <option value="yue-HK">Cantonese (Hong Kong)</option>
-                                <option value="cs-CZ">Czech</option>
-                                <option value="da-DK">Danish</option>
-                                <option value="nl-BE">Dutch (Belgium)</option>
-                                <option value="nl-NL">Dutch (Netherlands)</option>
-                                <option value="fil-PH">Filipino</option>
-                                <option value="fi-FI">Finnish</option>
-                                <option value="fr-CA">French (Canada)</option>
-                                <option value="fr-FR">French (France)</option>
-                                <option value="de-DE">German</option>
-                                <option value="el-GR">Greek</option>
-                                <option value="gu-IN">Gujarati</option>
-                                <option value="he-IL">Hebrew</option>
-                                <option value="hi-IN">Hindi</option>
-                                <option value="hu-HU">Hungarian</option>
-                                <option value="is-IS">Icelandic</option>
-                                <option value="id-ID">Indonesian</option>
-                                <option value="it-IT">Italian</option>
-                                <option value="ja-JP">Japanese</option>
-                                <option value="kn-IN">Kannada</option>
-                                <option value="ko-KR">Korean</option>
-                                <option value="lv-LV">Latvian</option>
-                                <option value="lt-LT">Lithuanian</option>
-                                <option value="ms-MY">Malay</option>
-                                <option value="ml-IN">Malayalam</option>
-                                <option value="cmn-CN">Mandarin (China)</option>
-                                <option value="cmn-TW">Mandarin (Taiwan)</option>
-                                <option value="mr-IN">Marathi</option>
-                                <option value="nb-NO">Norwegian</option>
-                                <option value="pl-PL">Polish</option>
-                                <option value="pt-BR">Portuguese (Brazil)</option>
-                                <option value="pt-PT">Portuguese (Portugal)</option>
-                                <option value="pa-IN">Punjabi</option>
-                                <option value="ro-RO">Romanian</option>
-                                <option value="ru-RU">Russian</option>
-                                <option value="sr-RS">Serbian</option>
-                                <option value="sk-SK">Slovak</option>
-                                <option value="es-ES">Spanish (Spain)</option>
-                                <option value="es-US">Spanish (US)</option>
-                                <option value="sv-SE">Swedish</option>
-                                <option value="ta-IN">Tamil</option>
-                                <option value="te-IN">Telugu</option>
-                                <option value="th-TH">Thai</option>
-                                <option value="tr-TR">Turkish</option>
-                                <option value="uk-UA">Ukrainian</option>
-                                <option value="vi-VN">Vietnamese</option>
+                                <option value="en-AU" selected>${s('msglangenau')}</option>
+                                <option value="en-GB">${s('msglangengb')}</option>
+                                <option value="en-US">${s('msglangenus')}</option>
+                                <option value="en-IN">${s('msglangenin')}</option>
+                                <option value="ar-XA">${s('msglangarxa')}</option>
+                                <option value="bn-IN">${s('msglangbnin')}</option>
+                                <option value="bg-BG">${s('msglangbgbg')}</option>
+                                <option value="ca-ES">${s('msglangcaes')}</option>
+                                <option value="yue-HK">${s('msglangyuehk')}</option>
+                                <option value="cs-CZ">${s('msglangcscz')}</option>
+                                <option value="da-DK">${s('msglangdadk')}</option>
+                                <option value="nl-BE">${s('msglangnlbe')}</option>
+                                <option value="nl-NL">${s('msglangnlnl')}</option>
+                                <option value="fil-PH">${s('msglangfilph')}</option>
+                                <option value="fi-FI">${s('msglangfifi')}</option>
+                                <option value="fr-CA">${s('msglangfrca')}</option>
+                                <option value="fr-FR">${s('msglangfrfr')}</option>
+                                <option value="de-DE">${s('msglangdede')}</option>
+                                <option value="el-GR">${s('msglangelgr')}</option>
+                                <option value="gu-IN">${s('msglangguin')}</option>
+                                <option value="he-IL">${s('msglangheil')}</option>
+                                <option value="hi-IN">${s('msglanghiin')}</option>
+                                <option value="hu-HU">${s('msglanghuhu')}</option>
+                                <option value="is-IS">${s('msglangisis')}</option>
+                                <option value="id-ID">${s('msglangidid')}</option>
+                                <option value="it-IT">${s('msglangitit')}</option>
+                                <option value="ja-JP">${s('msglangjajp')}</option>
+                                <option value="kn-IN">${s('msglangknin')}</option>
+                                <option value="ko-KR">${s('msglangkokr')}</option>
+                                <option value="lv-LV">${s('msglanglvlv')}</option>
+                                <option value="lt-LT">${s('msglangltlt')}</option>
+                                <option value="ms-MY">${s('msglangmsmy')}</option>
+                                <option value="ml-IN">${s('msglangmlin')}</option>
+                                <option value="cmn-CN">${s('msgvoicelangcmncn')}</option>
+                                <option value="cmn-TW">${s('msgvoicelangcmntw')}</option>
+                                <option value="mr-IN">${s('msglangmrin')}</option>
+                                <option value="nb-NO">${s('msglangnbno')}</option>
+                                <option value="pl-PL">${s('msglangplpl')}</option>
+                                <option value="pt-BR">${s('msglangptbr')}</option>
+                                <option value="pt-PT">${s('msglangptpt')}</option>
+                                <option value="pa-IN">${s('msglangpain')}</option>
+                                <option value="ro-RO">${s('msglangroro')}</option>
+                                <option value="ru-RU">${s('msglangruru')}</option>
+                                <option value="sr-RS">${s('msglangsrrs')}</option>
+                                <option value="sk-SK">${s('msglangsksk')}</option>
+                                <option value="es-ES">${s('msglangeses')}</option>
+                                <option value="es-US">${s('msglangesus')}</option>
+                                <option value="sv-SE">${s('msglangsvse')}</option>
+                                <option value="ta-IN">${s('msglangtain')}</option>
+                                <option value="te-IN">${s('msglangtein')}</option>
+                                <option value="th-TH">${s('msglangthth')}</option>
+                                <option value="tr-TR">${s('msglangtrtr')}</option>
+                                <option value="uk-UA">${s('msglangukua')}</option>
+                                <option value="vi-VN">${s('msglangvivn')}</option>
                             </select>
                         </div>
                         <!-- Additional Student Languages (v12.55) -->
                         <div class="cc-voice-setting cc-voice-setting-full" id="cc-additional-langs-setting">
-                            <label class="cc-form-label">Additional Student Languages</label>
-                            <p class="cc-form-hint-sm" style="margin:4px 0 10px;">Students can switch between the primary language above and any language selected here. Full content and voiceover will be generated in each selected language.</p>
+                            <label class="cc-form-label">${s('msgadditionallanguages')}</label>
+                            <p class="cc-form-hint-sm" style="margin:4px 0 10px;">${s('msgadditionallangshint')}</p>
                             <div class="cc-multilang-checkboxes" id="cc-additional-langs">
-                                <label class="cc-multilang-option"><input type="checkbox" value="ar-XA" data-testid="chk-lang-ar"> Arabic</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="bn-IN" data-testid="chk-lang-bn"> Bengali (India)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="bg-BG" data-testid="chk-lang-bg"> Bulgarian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="ca-ES" data-testid="chk-lang-ca"> Catalan</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="yue-HK" data-testid="chk-lang-yue"> Cantonese (Hong Kong)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="cs-CZ" data-testid="chk-lang-cs"> Czech</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="da-DK" data-testid="chk-lang-da"> Danish</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="nl-BE" data-testid="chk-lang-nl-be"> Dutch (Belgium)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="nl-NL" data-testid="chk-lang-nl"> Dutch (Netherlands)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="en-AU" data-testid="chk-lang-en-au"> English (Australia)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="en-GB" data-testid="chk-lang-en-gb"> English (UK)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="en-IN" data-testid="chk-lang-en-in"> English (India)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="en-US" data-testid="chk-lang-en-us"> English (US)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="fil-PH" data-testid="chk-lang-fil"> Filipino</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="fi-FI" data-testid="chk-lang-fi"> Finnish</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="fr-CA" data-testid="chk-lang-fr-ca"> French (Canada)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="fr-FR" data-testid="chk-lang-fr"> French (France)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="de-DE" data-testid="chk-lang-de"> German</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="el-GR" data-testid="chk-lang-el"> Greek</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="gu-IN" data-testid="chk-lang-gu"> Gujarati</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="he-IL" data-testid="chk-lang-he"> Hebrew</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="hi-IN" data-testid="chk-lang-hi"> Hindi</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="hu-HU" data-testid="chk-lang-hu"> Hungarian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="is-IS" data-testid="chk-lang-is"> Icelandic</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="id-ID" data-testid="chk-lang-id"> Indonesian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="it-IT" data-testid="chk-lang-it"> Italian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="ja-JP" data-testid="chk-lang-ja"> Japanese</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="kn-IN" data-testid="chk-lang-kn"> Kannada</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="ko-KR" data-testid="chk-lang-ko"> Korean</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="lv-LV" data-testid="chk-lang-lv"> Latvian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="lt-LT" data-testid="chk-lang-lt"> Lithuanian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="ms-MY" data-testid="chk-lang-ms"> Malay</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="ml-IN" data-testid="chk-lang-ml"> Malayalam</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="cmn-CN" data-testid="chk-lang-cmn-cn"> Mandarin (Simplified)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="cmn-TW" data-testid="chk-lang-cmn-tw"> Mandarin (Traditional)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="mr-IN" data-testid="chk-lang-mr"> Marathi</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="nb-NO" data-testid="chk-lang-nb"> Norwegian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="pl-PL" data-testid="chk-lang-pl"> Polish</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="pt-BR" data-testid="chk-lang-pt"> Portuguese (Brazil)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="pt-PT" data-testid="chk-lang-pt-pt"> Portuguese (Portugal)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="pa-IN" data-testid="chk-lang-pa"> Punjabi</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="ro-RO" data-testid="chk-lang-ro"> Romanian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="ru-RU" data-testid="chk-lang-ru"> Russian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="sr-RS" data-testid="chk-lang-sr"> Serbian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="sk-SK" data-testid="chk-lang-sk"> Slovak</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="es-ES" data-testid="chk-lang-es-es"> Spanish (Spain)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="es-US" data-testid="chk-lang-es"> Spanish (US)</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="sv-SE" data-testid="chk-lang-sv"> Swedish</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="ta-IN" data-testid="chk-lang-ta"> Tamil</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="te-IN" data-testid="chk-lang-te"> Telugu</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="th-TH" data-testid="chk-lang-th"> Thai</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="tr-TR" data-testid="chk-lang-tr"> Turkish</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="uk-UA" data-testid="chk-lang-uk"> Ukrainian</label>
-                                <label class="cc-multilang-option"><input type="checkbox" value="vi-VN" data-testid="chk-lang-vi"> Vietnamese</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ar-XA" data-testid="chk-lang-ar"> ${s('msglangarxa')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="bn-IN" data-testid="chk-lang-bn"> ${s('msglangbnin')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="bg-BG" data-testid="chk-lang-bg"> ${s('msglangbgbg')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ca-ES" data-testid="chk-lang-ca"> ${s('msglangcaes')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="yue-HK" data-testid="chk-lang-yue"> ${s('msglangyuehk')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="cs-CZ" data-testid="chk-lang-cs"> ${s('msglangcscz')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="da-DK" data-testid="chk-lang-da"> ${s('msglangdadk')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="nl-BE" data-testid="chk-lang-nl-be"> ${s('msglangnlbe')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="nl-NL" data-testid="chk-lang-nl"> ${s('msglangnlnl')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="en-AU" data-testid="chk-lang-en-au"> ${s('msglangenau')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="en-GB" data-testid="chk-lang-en-gb"> ${s('msglangengb')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="en-IN" data-testid="chk-lang-en-in"> ${s('msglangenin')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="en-US" data-testid="chk-lang-en-us"> ${s('msglangenus')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="fil-PH" data-testid="chk-lang-fil"> ${s('msglangfilph')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="fi-FI" data-testid="chk-lang-fi"> ${s('msglangfifi')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="fr-CA" data-testid="chk-lang-fr-ca"> ${s('msglangfrca')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="fr-FR" data-testid="chk-lang-fr"> ${s('msglangfrfr')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="de-DE" data-testid="chk-lang-de"> ${s('msglangdede')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="el-GR" data-testid="chk-lang-el"> ${s('msglangelgr')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="gu-IN" data-testid="chk-lang-gu"> ${s('msglangguin')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="he-IL" data-testid="chk-lang-he"> ${s('msglangheil')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="hi-IN" data-testid="chk-lang-hi"> ${s('msglanghiin')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="hu-HU" data-testid="chk-lang-hu"> ${s('msglanghuhu')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="is-IS" data-testid="chk-lang-is"> ${s('msglangisis')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="id-ID" data-testid="chk-lang-id"> ${s('msglangidid')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="it-IT" data-testid="chk-lang-it"> ${s('msglangitit')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ja-JP" data-testid="chk-lang-ja"> ${s('msglangjajp')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="kn-IN" data-testid="chk-lang-kn"> ${s('msglangknin')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ko-KR" data-testid="chk-lang-ko"> ${s('msglangkokr')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="lv-LV" data-testid="chk-lang-lv"> ${s('msglanglvlv')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="lt-LT" data-testid="chk-lang-lt"> ${s('msglangltlt')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ms-MY" data-testid="chk-lang-ms"> ${s('msglangmsmy')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ml-IN" data-testid="chk-lang-ml"> ${s('msglangmlin')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="cmn-CN" data-testid="chk-lang-cmn-cn"> ${s('msgaddlangcmncn')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="cmn-TW" data-testid="chk-lang-cmn-tw"> ${s('msgaddlangcmntw')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="mr-IN" data-testid="chk-lang-mr"> ${s('msglangmrin')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="nb-NO" data-testid="chk-lang-nb"> ${s('msglangnbno')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="pl-PL" data-testid="chk-lang-pl"> ${s('msglangplpl')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="pt-BR" data-testid="chk-lang-pt"> ${s('msglangptbr')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="pt-PT" data-testid="chk-lang-pt-pt"> ${s('msglangptpt')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="pa-IN" data-testid="chk-lang-pa"> ${s('msglangpain')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ro-RO" data-testid="chk-lang-ro"> ${s('msglangroro')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ru-RU" data-testid="chk-lang-ru"> ${s('msglangruru')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="sr-RS" data-testid="chk-lang-sr"> ${s('msglangsrrs')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="sk-SK" data-testid="chk-lang-sk"> ${s('msglangsksk')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="es-ES" data-testid="chk-lang-es-es"> ${s('msglangeses')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="es-US" data-testid="chk-lang-es"> ${s('msglangesus')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="sv-SE" data-testid="chk-lang-sv"> ${s('msglangsvse')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="ta-IN" data-testid="chk-lang-ta"> ${s('msglangtain')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="te-IN" data-testid="chk-lang-te"> ${s('msglangtein')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="th-TH" data-testid="chk-lang-th"> ${s('msglangthth')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="tr-TR" data-testid="chk-lang-tr"> ${s('msglangtrtr')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="uk-UA" data-testid="chk-lang-uk"> ${s('msglangukua')}</label>
+                                <label class="cc-multilang-option"><input type="checkbox" value="vi-VN" data-testid="chk-lang-vi"> ${s('msglangvivn')}</label>
                             </div>
-                            <p class="cc-form-hint-sm cc-tip-box" style="margin-top:8px;background:var(--cc-bg-secondary,#f1f5f9);padding:8px 12px;border-radius:6px;"><strong>Note:</strong> Primary language costs 100 credits per subtopic. Each additional language costs 50 credits per subtopic (translation pass). A full set of slides and voiceovers is created for each language selected. The credit estimate above updates automatically as you select languages.</p>
+                            <p class="cc-form-hint-sm cc-tip-box" style="margin-top:8px;background:var(--cc-bg-secondary,#f1f5f9);padding:8px 12px;border-radius:6px;">${s('msgcreditnote')}</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Images Section (v6.6.68) - AI-generated slide images -->
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Images</h3>
-                    <p class="cc-form-hint">Add professional AI-generated images to learning slides</p>
+                    <h3 class="cc-form-section-title">${s('msgimages')}</h3>
+                    <p class="cc-form-hint">${s('msgaddimageshint')}</p>
                     
                     <div class="cc-form-group cc-images-toggle-group">
-                        <label class="cc-form-label">Apply AI Images to All Slides</label>
+                        <label class="cc-form-label">${s('msgapplyimagesall')}</label>
                         <div class="cc-toggle-row">
                             <label class="cc-toggle" data-testid="toggle-images">
                                 <input type="checkbox" id="cc-images-enabled" checked>
                                 <span class="cc-toggle-slider"></span>
                             </label>
-                            <span class="cc-toggle-label" id="cc-images-status">Enabled</span>
+                            <span class="cc-toggle-label" id="cc-images-status">${s('msgenabled')}</span>
                         </div>
-                        <p class="cc-form-hint-sm">When enabled, AI will generate images for each learning slide (5 credits per image)</p>
+                        <p class="cc-form-hint-sm">${s('msgimagecredits')}</p>
                         <p class="cc-form-hint-sm cc-tip-box" style="margin-top: 8px; background: var(--cc-bg-secondary, #f1f5f9); padding: 8px 12px; border-radius: 6px;">
-                            <strong>Tip:</strong> You can also manually add or upload images after slides are generated by clicking the purple Edit button on any slide.
+                            ${s('msgtipimages')}
                         </p>
                     </div>
                 </div>
 
                 <!-- Decision Challenge Activities (v11.11) -->
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Decision Challenge Activities</h3>
-                    <p class="cc-form-hint">Include the 3-activity challenge (quiz, flip cards, category sort) at the end of each topic</p>
+                    <h3 class="cc-form-section-title">${s('msgdecisionchallenge')}</h3>
+                    <p class="cc-form-hint">${s('msgchallengehint')}</p>
                     
                     <div class="cc-form-group cc-activities-toggle-group">
-                        <label class="cc-form-label">Include Decision Challenge</label>
+                        <label class="cc-form-label">${s('msgincludedecision')}</label>
                         <div class="cc-toggle-row">
                             <label class="cc-toggle" data-testid="toggle-activities">
                                 <input type="checkbox" id="cc-activities-enabled" checked>
                                 <span class="cc-toggle-slider"></span>
                             </label>
-                            <span class="cc-toggle-label" id="cc-activities-status">Enabled</span>
+                            <span class="cc-toggle-label" id="cc-activities-status">${s('msgenabled')}</span>
                         </div>
-                        <p class="cc-form-hint-sm">When disabled, content will be delivered without interactive challenge activities</p>
+                        <p class="cc-form-hint-sm">${s('msgnochallengehint')}</p>
                     </div>
                 </div>
 
                 <!-- Progression Mode Selector (v6.5.11) - AFTER voiceover settings so toggle can disable "Must Listen" -->
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Slide Progression Mode</h3>
-                    <p class="cc-form-hint">Choose how learners progress through the slides</p>
+                    <h3 class="cc-form-section-title">${s('msgprogressionmode')}</h3>
+                    <p class="cc-form-hint">${s('msgprogressionhint')}</p>
                     <div class="cc-progression-options" id="cc-progression-options">
                         <label class="cc-progression-card selected" data-mode="free">
                             <input type="radio" name="progressionMode" value="free" checked data-testid="radio-progression-free">
@@ -6387,8 +7092,8 @@ define([
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-progression-icon">
                                     <path d="M5 12h14M12 5l7 7-7 7"/>
                                 </svg>
-                                <span class="cc-progression-title">Free Navigation</span>
-                                <span class="cc-progression-desc">Learners can move freely between slides</span>
+                                <span class="cc-progression-title">${s('msgfreenavigation')}</span>
+                                <span class="cc-progression-desc">${s('msgprogressfree')}</span>
                             </div>
                         </label>
                         <label class="cc-progression-card" data-mode="timed">
@@ -6398,8 +7103,8 @@ define([
                                     <circle cx="12" cy="12" r="10"/>
                                     <polyline points="12 6 12 12 16 14"/>
                                 </svg>
-                                <span class="cc-progression-title">Timed Reading</span>
-                                <span class="cc-progression-desc">Minimum time per slide before continuing</span>
+                                <span class="cc-progression-title">${s('msgtimedreading')}</span>
+                                <span class="cc-progression-desc">${s('msgprogressmintime')}</span>
                             </div>
                         </label>
                         <label class="cc-progression-card" data-mode="voiceover" id="cc-progression-voiceover">
@@ -6409,36 +7114,36 @@ define([
                                     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
                                     <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
                                 </svg>
-                                <span class="cc-progression-title">Must Listen</span>
-                                <span class="cc-progression-desc">Learners must listen to voiceover before continuing</span>
+                                <span class="cc-progression-title">${s('msgmustlisten')}</span>
+                                <span class="cc-progression-desc">${s('msgprogressvoice')}</span>
                             </div>
                         </label>
                     </div>
                     <div id="cc-timed-duration" class="cc-timed-options cc-hidden">
-                        <label class="cc-form-label">Reading time per slide</label>
+                        <label class="cc-form-label">${s('msgreadingtime')}</label>
                         <select id="cc-slide-duration" class="cc-select" data-testid="select-slide-duration">
-                            <option value="5">5 seconds</option>
-                            <option value="10" selected>10 seconds</option>
-                            <option value="15">15 seconds</option>
-                            <option value="20">20 seconds</option>
-                            <option value="30">30 seconds</option>
-                            <option value="45">45 seconds</option>
-                            <option value="60">1 minute</option>
-                            <option value="90">1.5 minutes</option>
-                            <option value="120">2 minutes</option>
-                            <option value="180">3 minutes</option>
-                            <option value="240">4 minutes</option>
-                            <option value="300">5 minutes</option>
-                            <option value="420">7 minutes</option>
-                            <option value="600">10 minutes</option>
+                            <option value="5">${s('msgtime5seconds')}</option>
+                            <option value="10" selected>${s('msgtime10seconds')}</option>
+                            <option value="15">${s('msgtime15seconds')}</option>
+                            <option value="20">${s('msgtime20seconds')}</option>
+                            <option value="30">${s('msgtime30seconds')}</option>
+                            <option value="45">${s('msgtime45seconds')}</option>
+                            <option value="60">${s('msgtime1minute')}</option>
+                            <option value="90">${s('msgtime90seconds')}</option>
+                            <option value="120">${s('msgtime2minutes')}</option>
+                            <option value="180">${s('msgtime3minutes')}</option>
+                            <option value="240">${s('msgtime4minutes')}</option>
+                            <option value="300">${s('msgtime5minutes')}</option>
+                            <option value="420">${s('msgtime7minutes')}</option>
+                            <option value="600">${s('msgtime10minutes')}</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- Topic Navigation Mode (v6.5.3) - Lockstep or Free -->
                 <div class="cc-form-section">
-                    <h3 class="cc-form-section-title">Topic Navigation Mode</h3>
-                    <p class="cc-form-hint">Control whether learners must complete topics in order</p>
+                    <h3 class="cc-form-section-title">${s('msgtopicnavmode')}</h3>
+                    <p class="cc-form-hint">${s('msgtopicnavhint')}</p>
                     <div class="cc-progression-options">
                         <label class="cc-progression-card selected" data-mode="free">
                             <input type="radio" name="topicNavMode" value="free" checked data-testid="radio-topic-nav-free">
@@ -6449,8 +7154,8 @@ define([
                                     <rect x="14" y="14" width="7" height="7"/>
                                     <rect x="3" y="14" width="7" height="7"/>
                                 </svg>
-                                <span class="cc-progression-title">Free Navigation</span>
-                                <span class="cc-progression-desc">Learners can access any topic in any order</span>
+                                <span class="cc-progression-title">${s('msgfreenavigation')}</span>
+                                <span class="cc-progression-desc">${s('msgtopicnavfree')}</span>
                             </div>
                         </label>
                         <label class="cc-progression-card" data-mode="lockstep">
@@ -6460,8 +7165,8 @@ define([
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                                 </svg>
-                                <span class="cc-progression-title">Sequential (Lockstep)</span>
-                                <span class="cc-progression-desc">Learners must complete each topic before accessing the next</span>
+                                <span class="cc-progression-title">${s('msgsequentiallockstep')}</span>
+                                <span class="cc-progression-desc">${s('msgtopicnavsequential')}</span>
                             </div>
                         </label>
                     </div>
@@ -6478,12 +7183,12 @@ define([
                                     </svg>
                                 </span>
                                 ${getCreditEstimationHtml()}
-                                <span class="cc-credit-label">to generate content</span>
+                                <span class="cc-credit-label">${s('msgtogeneratecontent')}</span>
                             </div>
                             <div class="cc-credit-balance">
-                                <span class="cc-balance-label">Your balance:</span>
+                                <span class="cc-balance-label">${s('msgyourbalance')}</span>
                                 <span class="cc-balance-amount" id="cc-current-credits">${currentCredits !== null ? currentCredits.toLocaleString() : '...'}</span>
-                                <span class="cc-balance-unit">credits</span>
+                                <span class="cc-balance-unit">${s('msgcredits')}</span>
                                 <a href="https://lms-labs.com/pricing" target="_blank" class="cc-buy-credits-link" data-testid="link-buy-credits">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                                         <circle cx="12" cy="12" r="10"/>
@@ -6497,11 +7202,11 @@ define([
                 </div>
 
                 <div id="cc-progress-section" class="cc-progress-section cc-hidden">
-                    <h3 class="cc-progress-title">Generating Content</h3>
+                    <h3 class="cc-progress-title">${s('msggeneratingcontent')}</h3>
                     <div class="cc-progress-bar">
                         <div class="cc-progress-fill" id="cc-gen-progress" style="width: 0%"></div>
                     </div>
-                    <p id="cc-gen-status" class="cc-progress-status">Preparing...</p>
+                    <p id="cc-gen-status" class="cc-progress-status">${s('msgpreparing')}</p>
                     <!-- v12.57 FIX-CC-BUILDER-STUCK: "Skip voiceover" bypass button shown only
                          during voiceover pre-generation phase (toggled by JS). If the teacher
                          clicks it, the voiceover loop is cancelled and generation proceeds to
@@ -6509,10 +7214,10 @@ define([
                          (or the teacher) opens the activity, which is the existing fallback path. -->
                     <div id="cc-vo-skip-wrap" style="display:none;margin-top:12px;text-align:center;">
                         <button type="button" id="cc-vo-skip-btn" class="cc-btn cc-btn-ghost cc-btn-sm" style="font-size:0.82rem;opacity:0.8;">
-                            Skip voiceover generation and continue
+                            ${s('msgskipvoiceover')}
                         </button>
                         <p style="font-size:0.75rem;color:var(--cc-text-muted,#6b7280);margin:4px 0 0;">
-                            Voiceovers will be generated when the activity is first opened.
+                            ${s('msgvoiceoverslater')}
                         </p>
                     </div>
                     <div id="cc-live-qa" class="cc-qa-results" style="display:none;margin-top:16px;"></div>
@@ -6526,10 +7231,10 @@ define([
                                 <circle cx="12" cy="12" r="10"/>
                                 <path d="M12 6v6l4 2"/>
                             </svg>
-                            <span style="font-weight: 600; color: #92400e;">Estimated Credit Cost:</span>
+                            <span style="font-weight: 600; color: #92400e;">${s('msgestimatedcost')}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
-                            <span id="cc-credit-estimate-value" style="font-size: 1.25rem; font-weight: 700; color: #b45309;" data-testid="text-credit-estimate">0 credits</span>
+                            <span id="cc-credit-estimate-value" style="font-size: 1.25rem; font-weight: 700; color: #b45309;" data-testid="text-credit-estimate">${s('msgzerocredits')}</span>
                             <span id="cc-credit-breakdown" style="font-size: 0.875rem; color: #78350f;"></span>
                         </div>
                     </div>
@@ -6543,7 +7248,7 @@ define([
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                             <path d="M19 12H5M12 19l-7-7 7-7"/>
                         </svg>
-                        Back
+                        ${s('msgback')}
                     </button>
                     <button type="button" class="cc-btn cc-btn-secondary" id="cc-export-excel-btn" data-testid="button-export-excel" style="display: none;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
@@ -6553,9 +7258,9 @@ define([
                             <line x1="16" y1="17" x2="8" y2="17"/>
                             <polyline points="10 9 9 9 8 9"/>
                         </svg>
-                        Export Excel Mapping
+                        ${s('msgexportexcel')}
                     </button>
-                    <button type="button" class="cc-btn cc-btn-primary cc-btn-lg" id="cc-generate-btn" data-testid="button-generate" title="Topics will be expanded using your selected job role, industry, and location.">
+                    <button type="button" class="cc-btn cc-btn-primary cc-btn-lg" id="cc-generate-btn" data-testid="button-generate" title="${s('msgtitlegenerate')}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                         </svg>
@@ -6572,19 +7277,19 @@ define([
         return `
             <div class="cc-coverage-badges">
                 <div class="cc-coverage-badge ${pc.covered === pc.total ? 'complete' : 'partial'}">
-                    <span class="cc-badge-icon">PC</span>
+                    <span class="cc-badge-icon">${s('msgpc')}</span>
                     <span class="cc-badge-value">${pc.covered}/${pc.total}</span>
                 </div>
                 <div class="cc-coverage-badge ${ke.covered === ke.total ? 'complete' : 'partial'}">
-                    <span class="cc-badge-icon">KE</span>
+                    <span class="cc-badge-icon">${s('msgke')}</span>
                     <span class="cc-badge-value">${ke.covered}/${ke.total}</span>
                 </div>
                 <div class="cc-coverage-badge ${pe.covered === pe.total ? 'complete' : 'partial'}">
-                    <span class="cc-badge-icon">PE</span>
+                    <span class="cc-badge-icon">${s('msgpe')}</span>
                     <span class="cc-badge-value">${pe.covered}/${pe.total}</span>
                 </div>
                 <div class="cc-coverage-badge ${fs.covered === fs.total ? 'complete' : 'partial'}">
-                    <span class="cc-badge-icon">FS</span>
+                    <span class="cc-badge-icon">${s('msgfs')}</span>
                     <span class="cc-badge-value">${fs.covered}/${fs.total}</span>
                 </div>
             </div>
@@ -6664,7 +7369,7 @@ define([
         }
         
         if (items.length === 0 && Array.isArray(mappings) && mappings.length > 0) {
-            items.push(`<div class="cc-subsubtopic-item cc-muted">Covers: ${escapeHtml(mappings.join(', '))}</div>`);
+            items.push(`<div class="cc-subsubtopic-item cc-muted">${s('msgcovers').split('{$a}').join(escapeHtml(mappings.join(', ')))}</div>`);
         }
         
         if (items.length === 0) return '';
@@ -6806,7 +7511,7 @@ define([
             uniPasteTextarea.addEventListener('input', () => {
                 uniPastedContent = uniPasteTextarea.value;
                 const countEl = document.getElementById('cc-uni-paste-count');
-                if (countEl) countEl.textContent = countWords(uniPastedContent) + ' words';
+                if (countEl) countEl.textContent = countWords(uniPastedContent) + s('msgwordsuffix');
                 const nextBtn = document.getElementById('cc-next-step');
                 if (uniPastedContent.trim().length > 50) {
                     if (nextBtn) nextBtn.classList.remove('cc-hidden');
@@ -6885,7 +7590,7 @@ define([
         container.querySelector('#cc-pd-paste-chatgpt')?.addEventListener('input', (e) => {
             pdPastedContent = e.target.value;
             const count = document.getElementById('cc-pd-chatgpt-count');
-            if (count) count.textContent = pdPastedContent.trim().split(/\s+/).filter(Boolean).length + ' words';
+            if (count) count.textContent = pdPastedContent.trim().split(/\s+/).filter(Boolean).length + s('msgwordsuffix');
             // v13.33: Reference content is optional — Continue always visible when topics are confirmed
             const nextBtn = document.getElementById('cc-next-step');
             if (nextBtn) nextBtn.classList.remove('cc-hidden');
@@ -7209,7 +7914,7 @@ define([
             vetPasteTextarea.addEventListener('input', (e) => {
                 vetPastedContent = e.target.value;
                 const countEl = document.getElementById('cc-vet-paste-count');
-                if (countEl) countEl.textContent = countWords(vetPastedContent) + ' words';
+                if (countEl) countEl.textContent = countWords(vetPastedContent) + s('msgwordsuffix');
                 // v13.84: reference content is optional, so an empty box must not
                 // hide a button the author has already earned. On VET and Workplace
                 // the authority on that button is updateGenerateTopicsButton(), which
@@ -7230,7 +7935,7 @@ define([
                 const textarea = document.getElementById('cc-vet-paste-text');
                 if (textarea) textarea.value = '';
                 const countEl = document.getElementById('cc-vet-paste-count');
-                if (countEl) countEl.textContent = '0 words';
+                if (countEl) countEl.textContent = s('msgzerowords');
 
             });
         }
@@ -7240,7 +7945,7 @@ define([
             wpPasteTextarea.addEventListener('input', (e) => {
                 workplacePastedContent = e.target.value;
                 const countEl = document.getElementById('cc-wp-paste-count');
-                if (countEl) countEl.textContent = countWords(workplacePastedContent) + ' words';
+                if (countEl) countEl.textContent = countWords(workplacePastedContent) + s('msgwordsuffix');
                 // v13.84: reference content is optional. Reveal on enough pasted
                 // text OR on confirmed subtopics, and never re-hide a button the
                 // author has already earned by confirming subtopics.
@@ -7262,7 +7967,7 @@ define([
             uniPasteTextareaOld.addEventListener('input', (e) => {
                 uniPastedContent = e.target.value;
                 const countEl = document.getElementById('cc-uni-paste-count');
-                if (countEl) countEl.textContent = countWords(uniPastedContent) + ' words';
+                if (countEl) countEl.textContent = countWords(uniPastedContent) + s('msgwordsuffix');
                 revealNextStepIfTopicsConfirmed();
             });
         }
@@ -7273,7 +7978,7 @@ define([
                 const textarea = document.getElementById('cc-uni-paste-text');
                 if (textarea) textarea.value = '';
                 const countEl = document.getElementById('cc-uni-paste-count');
-                if (countEl) countEl.textContent = '0 words';
+                if (countEl) countEl.textContent = s('msgzerowords');
             });
         }
 
@@ -7441,7 +8146,7 @@ define([
         
         const statsBadge = document.querySelector('.cc-stats-badge');
         if (statsBadge) {
-            statsBadge.textContent = `${selectedCount}/${totalCount} selected`;
+            statsBadge.textContent = s('msgnofmselected').split('{$a->selected}').join(selectedCount).split('{$a->total}').join(totalCount);
         }
     };
 
@@ -7710,7 +8415,7 @@ define([
         const counter = document.getElementById('cc-bulk-paste-count');
         if (!textarea || !counter) return;
         const items = parseBulkOutcomes(textarea.value);
-        counter.textContent = items.length === 1 ? '1 item detected' : items.length + ' items detected';
+        counter.textContent = items.length === 1 ? s('msgoneitem') : items.length + s('msgitemssuffix');
     };
 
     /**
@@ -7853,7 +8558,7 @@ define([
         const counter = document.getElementById('cc-pd-paste-count');
         if (!textarea || !counter) return;
         const items = parseBulkOutcomes(textarea.value);
-        counter.textContent = items.length === 1 ? '1 item detected' : items.length + ' items detected';
+        counter.textContent = items.length === 1 ? s('msgoneitem') : items.length + s('msgitemssuffix');
     };
 
     const downloadDynamicPrompt = async (mode) => {
@@ -7874,7 +8579,7 @@ define([
             const industry = document.getElementById('cc-industry')?.value || '';
             const industrySector = document.getElementById('cc-industry-sector')?.value || '';
             const jobLevelsText = CC_SELECTED_JOB_LEVELS
-                .map(v => JOB_LEVELS.find(j => j.value === v)?.label || v)
+                .map(v => (JOB_LEVELS.find(j => j.value === v) ? s(JOB_LEVELS.find(j => j.value === v).key) : v))
                 .join(', ');
 
             const ctxLines = [];
@@ -9036,7 +9741,7 @@ The context and task details follow below.
 
         const parsed = parseElementsText(textarea.value);
         if (parsed.length === 0) {
-            if (statusEl) statusEl.textContent = 'No elements found  -  check the format.';
+            if (statusEl) statusEl.textContent = s('msgnoelements');
             return;
         }
 
@@ -9076,7 +9781,7 @@ The context and task details follow below.
         const unitCode = document.getElementById('cc-unit-code')?.value?.trim().toUpperCase();
         if (!unitCode) { showError(s('errneedunitcodefirst')); return; }
         const btn = document.getElementById('cc-refresh-elements');
-        if (btn) { btn.disabled = true; btn.textContent = 'Refreshing...'; }
+        if (btn) { btn.disabled = true; btn.textContent = s('msgrefreshing'); }
         try {
             const data = await CcState.vendorFetch(cmid, 'tgaunitrefresh', {unitcode: unitCode});
             const unit = data.data || data.unit;
@@ -9328,7 +10033,7 @@ The context and task details follow below.
         const processBtn      = document.getElementById('cc-process-paste-text');
 
         pdfLoadingEl?.classList.remove('cc-hidden');
-        if (pdfLoadingEl) pdfLoadingEl.querySelector('span').textContent = 'Extracting competency data from pasted text...';
+        if (pdfLoadingEl) pdfLoadingEl.querySelector('span').textContent = s('msgextractingtext');
         if (processBtn) processBtn.disabled = true;
 
         try {
@@ -9370,7 +10075,7 @@ The context and task details follow below.
             showError(s('errpastedtext'));
         } finally {
             pdfLoadingEl?.classList.add('cc-hidden');
-            if (pdfLoadingEl) pdfLoadingEl.querySelector('span').textContent = 'Extracting competency data from PDF...';
+            if (pdfLoadingEl) pdfLoadingEl.querySelector('span').textContent = s('msgextractingpdf');
             if (processBtn) processBtn.disabled = false;
         }
     };
@@ -9989,7 +10694,7 @@ The context and task details follow below.
         const exportBtn = document.getElementById('cc-export-excel-btn');
         if (exportBtn) {
             exportBtn.disabled = true;
-            exportBtn.textContent = 'Exporting...';
+            exportBtn.textContent = s('msgexporting');
         }
 
         try {
@@ -10000,7 +10705,7 @@ The context and task details follow below.
             // v6.6.34: Enhanced payload with quality/context information for audit documentation
             const context = storedContext || {};
             const jobLevelLabel = context.jobLevel
-                ? context.jobLevel.split(', ').map(v => JOB_LEVELS.find(j => j.value === v)?.label || v).join(', ')
+                ? context.jobLevel.split(', ').map(v => (JOB_LEVELS.find(j => j.value === v) ? s(JOB_LEVELS.find(j => j.value === v).key) : v)).join(', ')
                 : '';
             
             const payload = {
@@ -10088,7 +10793,7 @@ The context and task details follow below.
                         <line x1="16" y1="17" x2="8" y2="17"/>
                         <polyline points="10 9 9 9 8 9"/>
                     </svg>
-                    Export Excel Mapping
+                    ${s('msgexportexcel')}
                 `;
             }
         }
@@ -10123,8 +10828,7 @@ The context and task details follow below.
         const _genWatchdog = setTimeout(function () {
             if (_genStarted) { return; }
             ccError('[CC] generateContent() WATCHDOG: no status after 30s  -  generation never started');
-            showError('Generation did not start. This is usually a dropped connection. '
-                + 'Click Try Again to retry.', true);
+            showError(s('errgennotstarted'), true);
             progressSection?.classList.add('cc-hidden');
             if (generateBtn) generateBtn.disabled = false;
             if (prevBtn) prevBtn.disabled = false;
@@ -10227,7 +10931,7 @@ The context and task details follow below.
                     if (status === 'generating') {
                         _slowGenTimer = setTimeout(() => {
                             const el = document.getElementById('cc-gen-status');
-                            if (el) el.textContent = 'Still generating  -  the AI is working on your content. This can take 1\u20132 minutes for larger courses. Please do not close this page.';
+                            if (el) el.textContent = s('msgstillgenerating');
                         }, 75000);
                     }
                 },
@@ -10245,7 +10949,7 @@ The context and task details follow below.
                     const liveQa = document.getElementById('cc-live-qa');
                     if (liveQa && percent > 0) {
                         liveQa.style.display = '';
-                        liveQa.innerHTML = '<div class="cc-qa-results-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;vertical-align:middle;margin-right:6px;"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>Validating content structure...</div><p class="cc-qa-results-desc" style="margin-bottom:0;">Each topic is checked for correct card count, required fields, and voiceover length. Structurally broken content triggers one targeted repair pass.</p>';
+                        liveQa.innerHTML = '<div class="cc-qa-results-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;vertical-align:middle;margin-right:6px;"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>' + s('msgvalidatingstructure') + '</div><p class="cc-qa-results-desc" style="margin-bottom:0;">' + s('msgqadesclive') + '</p>';
                     }
                 },
                 onComplete: async (generatedManifest) => {
@@ -10261,7 +10965,7 @@ The context and task details follow below.
                     if (voiceoverEnabled && generatedManifest.topics) {
                         var _builderVoStart = Date.now();
                         ccLog('%c[VOICEOVER BUILDER v8.4.11] PRE-GEN START | lang: ' + voiceLanguage + ' | voice: ' + voiceName, 'color: #8b5cf6; font-weight: bold');
-                        document.getElementById('cc-gen-status').textContent = 'Pre-generating voiceovers...';
+                        document.getElementById('cc-gen-status').textContent = s('msgpregenvoice');
                         document.getElementById('cc-gen-progress').style.width = '0%';
 
                         // v12.57 FIX-CC-BUILDER-STUCK: Show the "Skip voiceover" bypass button
@@ -10275,8 +10979,8 @@ The context and task details follow below.
                             _voSkipBtn.onclick = function () {
                                 _voSkipRequested = true;
                                 _voSkipBtn.disabled = true;
-                                _voSkipBtn.textContent = 'Skipping\u2026';
-                                document.getElementById('cc-gen-status').textContent = 'Voiceover skipped  -  saving module\u2026';
+                                _voSkipBtn.textContent = s('msgskipping');
+                                document.getElementById('cc-gen-status').textContent = s('msgvoiceskipped');
                                 ccLog('[VOICEOVER BUILDER v12.57] PRE-GEN SKIPPED by user');
                             };
                         }
@@ -10336,6 +11040,7 @@ The context and task details follow below.
                                     _qFd.append('cmid', cmid);
                                     _qFd.append('text', fbText);
                                     _qFd.append('sectionid', String(section.id) + '_dpfb' + oi);
+                                    _qFd.append('subtopickey', section.billingKey || '');
                                     _qFd.append('language', voiceLanguage);
                                     _qFd.append('voice', voiceName);
                                     var _qResp = await ccPost(_qFd, 'quiz feedback TTS');
@@ -10391,6 +11096,7 @@ The context and task details follow below.
                                 formData.append('cmid', cmid);
                                 formData.append('text', voText);
                                 formData.append('sectionid', section.id);
+                                formData.append('subtopickey', section.billingKey || '');
                                 formData.append('language', voiceLanguage);
                                 formData.append('voice', voiceName);
                                 
@@ -10637,6 +11343,7 @@ The context and task details follow below.
                                                 fd.append('cmid', cmid);
                                                 fd.append('text', voText);
                                                 fd.append('sectionid', section.id);
+                                                fd.append('subtopickey', section.billingKey || '');
                                                 fd.append('language', langCode);
                                                 fd.append('voice', voiceName);
                                                 var r = await ccPost(fd, 'multilanguage TTS');
@@ -10753,10 +11460,10 @@ The context and task details follow below.
                     ccError('[CC] ManifestBuilder.build() onError callback:', error);
                     const errStr = String(error || '');
                     const friendlyMsg = /invalid request|too long|request.*param|400/i.test(errStr)
-                        ? 'Generation failed — the content may be too long. Try reducing your reference material, then click Try Again.'
+                        ? s('errgentoolong')
                         : /timeout|timed out/i.test(errStr)
-                            ? 'Generation timed out. The AI is under heavy load — click Try Again to retry.'
-                            : errStr || 'Content generation failed. Click Try Again to retry.';
+                            ? s('errgentimeoutload')
+                            : errStr || s('errgenfailedretry');
                     showError(friendlyMsg, true);
                     progressSection?.classList.add('cc-hidden');
                     if (generateBtn) generateBtn.disabled = false;
@@ -10768,10 +11475,10 @@ The context and task details follow below.
             ccError('[CC] generateContent() CATCH BLOCK:', err.message, err.stack);
             const catchMsg = String(err?.message || '');
             const catchFriendly = /invalid request|too long|request.*param|400/i.test(catchMsg)
-                ? 'Generation failed — the content may be too long. Try reducing your reference material, then click Try Again.'
+                ? s('errgentoolong')
                 : /timeout|timed out/i.test(catchMsg)
-                    ? 'Generation timed out. Click Try Again to retry.'
-                    : 'Content generation failed. Click Try Again to retry.';
+                    ? s('errgentimeout')
+                    : s('errgenfailedretry');
             showError(catchFriendly, true);
             progressSection?.classList.add('cc-hidden');
             if (generateBtn) generateBtn.disabled = false;
@@ -10834,9 +11541,139 @@ The context and task details follow below.
         if (section) section.style.display = 'none';
     };
 
+    // =======================================================================
+    // v13.95 FIX-CC-STALE-BUILD: applying a plugin update to content already built.
+    //
+    // Every fix that lands in the narration builder, the label translations or the
+    // voiceover schema only reaches content generated AFTER the upgrade. A module built
+    // on 13.91 keeps the .ogg files 13.91 synthesised - the audio is a stored artefact,
+    // not something re-derived on load - so a teacher who upgrades to pick up a voiceover
+    // fix hears exactly the same broken audio as before, forever, with nothing in the UI
+    // to tell them why. Their only recourse was "Reset & Start Over", which throws away
+    // every topic, card and hand-edit and costs a full generation run.
+    //
+    // The player has a staleness check of its own, but it is gated on canEdit/isTeacher
+    // and fires silently per section during playback. It cannot help a teacher who wants
+    // to know, before launching, whether this module is carrying old output; and it never
+    // runs for students at all.
+    //
+    // So: stamp the manifest with the version that built it (see saveManifest), compare
+    // it here, and offer a non-destructive re-apply. Clearing the voiceover artefacts is
+    // sufficient - text, cards, images, activities and appearance are all re-derived from
+    // the manifest at render time, so a plugin fix to any of those already applies on the
+    // next load without touching stored data. Only audio is baked.
+    // =======================================================================
+
+    /**
+     * Semver-ish comparison of two plugin release strings, e.g. '13.94.8' vs '13.91.2'.
+     *
+     * @param {String} a First version.
+     * @param {String} b Second version.
+     * @return {Number} -1 if a < b, 1 if a > b, 0 if equal.
+     */
+    const compareVersions = (a, b) => {
+        const pa = String(a || '0').split('.').map(n => parseInt(n, 10) || 0);
+        const pb = String(b || '0').split('.').map(n => parseInt(n, 10) || 0);
+        for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+            const x = pa[i] || 0;
+            const y = pb[i] || 0;
+            if (x !== y) { return x < y ? -1 : 1; }
+        }
+        return 0;
+    };
+
+    /**
+     * Walk every section of a manifest.
+     *
+     * @param {Object} m The manifest.
+     * @param {Function} fn Called with each section object.
+     * @return {void}
+     */
+    const forEachSection = (m, fn) => {
+        (m && m.topics ? m.topics : []).forEach((topic) => {
+            (topic && topic.sections ? topic.sections : []).forEach((section) => {
+                if (section && typeof section === 'object') { fn(section); }
+            });
+        });
+    };
+
+    /**
+     * Decide whether the running plugin has fixes this manifest was not built with.
+     *
+     * @param {Object} m The manifest.
+     * @return {Object|null} { builtWith, current, staleSections, reasons } or null when current.
+     */
+    const detectStaleBuild = (m) => {
+        if (!m || !m.locked) { return null; }
+
+        const current = CcState.CC_VERSION;
+        // v13.95: an unstamped manifest predates the stamp itself, so it was necessarily
+        // built by an older release. Treating a missing stamp as "current" would hide the
+        // update from exactly the modules that most need it.
+        const builtWith = m.builtWithVersion || null;
+        const reasons = [];
+
+        if (builtWith === null) {
+            reasons.push(s('msgreasonnostamp'));
+        } else if (compareVersions(builtWith, current) < 0) {
+            reasons.push(s('msgreasonolderbuild')
+                .split('{$a->built}').join(builtWith)
+                .split('{$a->current}').join(current));
+        }
+
+        // Independently of the release number, a section whose voiceover carries an old
+        // schema stamp is holding audio the current narration builder would not produce.
+        let staleSections = 0;
+        forEachSection(m, (section) => {
+            const hasAudio = !!(section.voiceoverUrl || section.voiceoverText);
+            if (!hasAudio) { return; }
+            if ((section.voiceoverSchemaVersion || '') !== CcState.VOICEOVER_SCHEMA_VERSION) {
+                staleSections++;
+            }
+        });
+        if (staleSections > 0) {
+            reasons.push(s(staleSections === 1 ? 'msgreasonstalesection' : 'msgreasonstalesections')
+                .split('{$a}').join(staleSections));
+        }
+
+        if (!reasons.length) { return null; }
+        return { builtWith: builtWith, current: current, staleSections: staleSections, reasons: reasons };
+    };
+
+    /**
+     * Non-destructively re-apply the running version to an existing manifest.
+     *
+     * Content is untouched. Only the baked voiceover artefacts are dropped, so the player
+     * re-synthesises them from the current narration builder on next open.
+     *
+     * @param {Object} m The manifest to update in place.
+     * @return {Number} How many sections had voiceover cleared.
+     */
+    const applyPluginUpdates = (m) => {
+        let cleared = 0;
+        forEachSection(m, (section) => {
+            const hadAudio = !!(section.voiceoverUrl || section.voiceoverText
+                || section.voiceoverTextHash || section.voiceoverSchemaVersion);
+            if (!hadAudio) { return; }
+            // Mirror exactly the field set player5.js drops when it detects staleness, so
+            // the two paths cannot disagree about what "cleared" means. voiceoverText is
+            // included here because the whole point is that the current builder computes
+            // narration text differently - keeping the old text would defeat the update.
+            delete section.voiceoverUrl;
+            delete section.voiceoverUrls;
+            delete section.voiceoverText;
+            delete section.voiceoverTextHash;
+            delete section.voiceoverWordCount;
+            delete section.voiceoverSchemaVersion;
+            cleared++;
+        });
+        m.builtWithVersion = CcState.CC_VERSION;
+        return cleared;
+    };
+
     const renderLocked = () => {
         if (!manifest) return;
-        
+
         // Calculate topic and activity counts from manifest structure
         const topicCount = manifest.topics?.length || 0;
         // v13.92.3 FIX-CC-ACTIVITY-COUNT: this counted sections carrying `section.activity`,
@@ -10868,7 +11705,7 @@ The context and task details follow below.
                     const passed = cards.some(function (c) { return c.qualityAction === 'VALIDITY_GATE_PASS'; });
                     const failed = cards.some(function (c) { return c.qualityAction === 'FAILED'; });
                     topicResults.push({
-                        title: topic.title || topic.name || 'Untitled Topic',
+                        title: topic.title || topic.name || s('msguntitledtopic'),
                         pass: passed && !failed
                     });
                 }
@@ -10876,19 +11713,42 @@ The context and task details follow below.
         }
 
         if (topicResults.length > 0) {
-            qaResultsHtml = '<div class="cc-qa-results"><h3 class="cc-qa-results-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>Structure Validation Results</h3><p class="cc-qa-results-desc">Each topic is checked for correct card count, required fields, and voiceover length. Broken structure triggers one targeted repair pass.</p>';
+            qaResultsHtml = '<div class="cc-qa-results"><h3 class="cc-qa-results-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>' + s('msgqaresultstitle') + '</h3><p class="cc-qa-results-desc">' + s('msgqadesc') + '</p>';
             topicResults.forEach(function (t) {
                 const badgeClass = 'cc-qa-badge-pass';
-                const badgeLabel = 'Valid';
+                const badgeLabel = s('msgvalid');
                 qaResultsHtml += '<div class="cc-qa-topic-row">';
                 qaResultsHtml += '<div class="cc-qa-topic-info">';
                 qaResultsHtml += '<div class="cc-qa-topic-name">' + t.title + '</div>';
-                qaResultsHtml += '<div class="cc-qa-topic-scores">Structure validated  -  card count, fields, and voiceover length checked.</div>';
+                qaResultsHtml += '<div class="cc-qa-topic-scores">' + s('msgstructurevalidated') + '</div>';
                 qaResultsHtml += '</div>';
                 qaResultsHtml += '<div class="cc-qa-badge ' + badgeClass + '">' + badgeLabel + '</div>';
                 qaResultsHtml += '</div>';
             });
             qaResultsHtml += '</div>';
+        }
+
+        // v13.95: only rendered when this build predates the running plugin version.
+        const staleInfo = detectStaleBuild(manifest);
+        let updateHtml = '';
+        if (staleInfo) {
+            updateHtml = '<div class="cc-update-panel">'
+                + '<div class="cc-update-head">'
+                + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '
+                + 'class="cc-update-icon"><path d="M21 2v6h-6"/>'
+                + '<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/>'
+                + '<path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>'
+                + '<h3 class="cc-update-title">' + s('msgpluginupdates') + '</h3>'
+                + '</div>'
+                + '<ul class="cc-update-reasons">'
+                + staleInfo.reasons.map(r => '<li>' + r + '</li>').join('')
+                + '</ul>'
+                + '<p class="cc-update-desc">' + s('msgupdatedesc') + '</p>'
+                + '<button type="button" class="cc-btn cc-btn-secondary" id="cc-apply-updates-btn" '
+                + 'data-testid="button-apply-updates">'
+                + s('msgapplyupdatesbtn').split('{$a}').join(staleInfo.current)
+                + '</button>'
+                + '</div>';
         }
 
         container.innerHTML = `
@@ -10900,7 +11760,7 @@ The context and task details follow below.
                             <polyline points="22 4 12 14.01 9 11.01"/>
                         </svg>
                     </div>
-                    <h2 class="cc-locked-title">Content Generated Successfully</h2>
+                    <h2 class="cc-locked-title">${s('msgcontentgenerated')}</h2>
                     <p class="cc-locked-subtitle">
                         Mode: ${modeLabel} | 
                         ${topicCount} topics | 
@@ -10910,13 +11770,15 @@ The context and task details follow below.
 
                 ${qaResultsHtml}
 
+                ${updateHtml}
+
                 <div class="cc-locked-actions">
                     <button type="button" class="cc-btn cc-btn-ghost" id="cc-reset-btn" data-testid="button-reset">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
                             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
                             <path d="M3 3v5h5"/>
                         </svg>
-                        Reset & Start Over
+                        ${s('msgresetstartover')}
                     </button>
                     <button type="button" class="cc-btn cc-btn-primary cc-btn-lg" id="cc-player-btn" data-testid="button-launch-player">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon">
@@ -10989,6 +11851,45 @@ The context and task details follow below.
                 // Rejection here now means one thing only: the user clicked Cancel or
                 // dismissed the modal. Errors from the body above no longer land here.
                 return false;
+            });
+        });
+
+        document.getElementById('cc-apply-updates-btn')?.addEventListener('click', () => {
+            const btn = document.getElementById('cc-apply-updates-btn');
+            if (!btn || btn.disabled) { return; }
+
+            // v13.95: disable immediately. saveManifest can take several seconds on a large
+            // module and a second click would fire a second concurrent save of the same
+            // manifest - the losing write would restore the voiceover fields this one just
+            // cleared, leaving the module stamped as updated but still holding old audio.
+            btn.disabled = true;
+            const original = btn.textContent;
+            btn.textContent = s('msgapplyingupdates');
+
+            const cleared = applyPluginUpdates(manifest);
+            ccLog('[CC UPDATE] applying v' + CcState.CC_VERSION + ' to existing build | '
+                + 'voiceover cleared on ' + cleared + ' section(s)');
+
+            saveManifest(manifest, (ok) => {
+                if (ok) {
+                    window.location.href = '?id=' + cmid;
+                    return;
+                }
+                // v13.95: the in-memory manifest has already had its voiceover stripped. If
+                // the save failed, the SERVER copy is untouched, so the correct recovery is
+                // to reload from the server rather than leave this page holding a mutated
+                // manifest that a later save could persist half-way.
+                ccError('[CC UPDATE] saveManifest failed  -  updates NOT applied');
+                btn.disabled = false;
+                btn.textContent = original;
+                Notification.alert(
+                    'Update failed',
+                    'The plugin updates could not be applied. Your session may have expired. '
+                        + 'Reload the page, sign in again if prompted, then try again. Your '
+                        + 'content has not been changed.',
+                    'OK'
+                );
+                loadManifest();
             });
         });
 

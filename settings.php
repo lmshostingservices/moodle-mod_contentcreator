@@ -301,6 +301,16 @@ if ($hassiteconfig && isset($settings)) {
 
     $settings->add(
         new admin_setting_configtext(
+            'mod_contentcreator/ratelimitvendorread',
+            get_string('ratelimitvendorread', 'mod_contentcreator'),
+            get_string('ratelimitvendorreaddesc', 'mod_contentcreator'),
+            600,
+            PARAM_INT
+        )
+    );
+
+    $settings->add(
+        new admin_setting_configtext(
             'mod_contentcreator/ratelimitvoice',
             get_string('ratelimitvoice', 'mod_contentcreator'),
             get_string('ratelimitvoicedesc', 'mod_contentcreator'),

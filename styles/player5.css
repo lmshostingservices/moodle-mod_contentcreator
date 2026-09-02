@@ -155,6 +155,28 @@
    Matching https://lms-labs.com/docs styling
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.95 FIX-CC-UNDEFINED-TOKENS
+   player5.js emits inline `border: 1px solid var(--border)` in 35 places and
+   `background: var(--background)` in 3 (the per-card move-up / move-down / delete
+   controls in teacher edit mode, and every repeatable-row editor block). Neither custom
+   property has ever been defined anywhere in this plugin - it uses the --cc5-* and
+   --cc-* namespaces - and an unresolvable var() makes the whole declaration invalid at
+   computed-value time, so `border` fell back to `medium none currentcolor` and
+   `background` to `transparent`.
+   The visible effect: those editor rows had no border at all, and the ↑/↓ buttons had
+   no fill - which left the site theme's `#region-main button:hover { color: #fff }`
+   free to paint white glyphs on a transparent light background. The inline declaration
+   still won the cascade, so no stylesheet could rescue them.
+   Defining the two aliases here fixes all 38 call sites at once, and scoping them to
+   .cc5-player rather than :root keeps two very generically-named properties from
+   leaking into the theme or another plugin.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.cc5-player {
+    --border: var(--cc5-border);
+    --background: var(--cc5-bg);
+}
+
 :root {
     /* Core Colors - v6.7.37 lms-labs.com HSL system */
     --cc5-bg: hsl(0deg 0% 100%);
@@ -188,11 +210,22 @@
     --cc5-purple: hsl(262deg 83% 58%);
     --cc5-purple-light: hsl(262deg 83% 97%);
     --cc5-red: hsl(0deg 84% 60%);
+    /* v13.95 FIX-CC-RED-CONTRAST: --cc5-red carries white at 4.20:1 and --cc5-red-dark
+       at 4.68:1 - the first fails AA outright and the second only passes at the dark
+       end, so a gradient between them does not. Every control that paints a white
+       label on red uses --cc5-red-solid / --cc5-red-solid-dark; the brand values stay
+       for borders, icons and translucent washes, which only need 3:1. */
+    --cc5-red-solid: hsl(0deg 74% 42%);       /* white on this: 5.35:1 */
+    --cc5-red-solid-dark: hsl(0deg 76% 36%);  /* white on this: 6.72:1 */
     --cc5-red-light: hsl(0deg 84% 97%);
     --cc5-yellow: hsl(48deg 96% 53%);
     --cc5-yellow-light: hsl(48deg 96% 97%);
     --cc5-teal: hsl(168deg 76% 42%);
     --cc5-teal-dark: hsl(168deg 76% 35%);
+    /* v13.95: white text needs 4.5:1; the teal ramp above tops out around 2.4:1 under
+       white, so anything that puts a white label on teal uses these two. */
+    --cc5-teal-darker: hsl(168deg 80% 22%);
+    --cc5-teal-darkest: hsl(168deg 82% 18%);
     --cc5-emerald: hsl(158deg 64% 52%);
     --cc5-teal-light: hsl(168deg 76% 97%);
     --cc5-purple-dark: hsl(262deg 83% 48%);
@@ -1082,8 +1115,10 @@ body.dark .cc5-player,
     font-size: 1.0625rem;
     font-weight: 600;
     color: white !important;
-    background: rgba(239, 68, 68, 0.3);
-    border: 2px solid rgba(239, 68, 68, 0.6);
+    /* v13.95: a 0.3-alpha wash of a mid red composites to about 3.8:1 under white.
+       Use the solid accessible red so the pair does not depend on what is behind it. */
+    background: var(--cc5-red-solid);
+    border: 2px solid var(--cc5-red-solid-dark);
     border-radius: var(--cc5-radius-lg);
     cursor: pointer;
     transition: all var(--cc5-transition-fast);
@@ -1094,8 +1129,8 @@ body.dark .cc5-player,
 }
 
 .cc5-voiceover-pause-btn:hover {
-    background: rgba(239, 68, 68, 0.5) !important;
-    border-color: rgba(239, 68, 68, 0.8) !important;
+    background: var(--cc5-red-solid-dark) !important;
+    border-color: var(--cc5-red-solid-dark) !important;
     color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
@@ -5520,8 +5555,16 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     color: var(--cc5-text);
 }
 
-.cc5-reset-sequence-btn:active {
-    background: var(--cc5-bg-muted);
+/* v13.95 FIX-CC-STATE-HALFPAIR: :active stated a background and left the colour to the
+   cascade. The base colour at the top of this block is not !important, so a theme's
+   `#region-main button:active { color: #fff }` at (1,1,1) outranked it and painted white
+   on --cc5-bg-muted (a 96%-lightness grey). Keyboard activation - Space or Enter, with
+   no hover - is the path that hits this. Pin the full pair, and pin :focus with it. */
+.cc5-reset-sequence-btn:active,
+.cc5-reset-sequence-btn:focus {
+    background: var(--cc5-bg-muted) !important;
+    color: var(--cc5-text) !important;
+    border-color: var(--cc5-text-secondary) !important;
 }
 
 .cc5-reset-sequence-btn svg {
@@ -6946,8 +6989,11 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     margin: 0 0 var(--cc5-space-lg);
 }
 
+/* v13.95 FIX-CC-FOCUSMODAL-CONTRAST: --cc5-teal carries white at 2.41:1 and the
+   hover gradient at 2.30:1. Use the dark end of the teal ramp for the fill so the
+   white label clears AA; the light teal stays for accents elsewhere. */
 .cc5-focus-modal-btn {
-    background: linear-gradient(135deg, var(--cc5-teal), var(--cc5-teal-dark));
+    background: linear-gradient(135deg, var(--cc5-teal-darker), var(--cc5-teal-darkest));
     color: white !important;
     border: none;
     padding: var(--cc5-space-4) var(--cc5-space-8);
@@ -6960,8 +7006,10 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 }
 
 /* v6.7.37: Subtle hover - shadow only */
-.cc5-focus-modal-btn:hover {
-    background: linear-gradient(135deg, var(--cc5-teal), var(--cc5-green)) !important;
+.cc5-focus-modal-btn:hover,
+.cc5-focus-modal-btn:focus,
+.cc5-focus-modal-btn:active {
+    background: linear-gradient(135deg, var(--cc5-teal-darkest), hsl(160 82% 16%)) !important;
     box-shadow: var(--cc5-shadow-sm);
     color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
@@ -7284,7 +7332,7 @@ body.dark .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num,
     display: flex !important;
     align-items: center ;
     justify-content: center ;
-    background: hsl(0deg 84% 55%) !important;
+    background: hsl(0deg 74% 40%) !important;
     border: 2px solid var(--cc5-teal) !important; /* v7.9.83: Emerald outline */
     border-radius: 50% !important;
     cursor: pointer ;
@@ -7394,7 +7442,7 @@ body.dark .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num,
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--cc5-red);
+    background: var(--cc5-red-solid);
     border: none;
     border-radius: var(--cc5-radius-md);
     cursor: pointer;
@@ -7405,7 +7453,7 @@ body.dark .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num,
 }
 
 .cc5-edit-delete-item:hover {
-    background: var(--cc5-red) !important;
+    background: var(--cc5-red-solid-dark) !important;
     transform: scale(1.05);
     box-shadow: 0 2px 6px rgb(220, 38, 38, 0.4);
     color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
@@ -7444,9 +7492,12 @@ body.dark .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num,
 }
 
 .cc5-edit-add-btn:hover {
-    background: rgb(59, 130, 246, 0.15) !important;
+    /* v13.95: #93c5fd is a DARK-mode blue; on the light translucent wash this rule
+       actually paints it measures 2.04:1. Use the same blue as the idle state, which
+       is a token that flips with the theme, and make the wash opaque. */
+    background: hsl(217 91% 94%) !important;
     border-style: solid;
-    color: #93c5fd !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
+    color: hsl(217 91% 35%) !important;
 }
 
 .cc5-edit-add-btn svg {
@@ -7529,7 +7580,7 @@ button.cc5-edit-modal-cancel {
     gap: 8px !important;
     padding: 12px 32px !important;
     min-width: 140px !important;
-    background: linear-gradient(135deg, var(--cc5-red), var(--cc5-red-dark)) !important;
+    background: linear-gradient(135deg, var(--cc5-red-solid), var(--cc5-red-solid-dark)) !important;
     border: 2px solid var(--cc5-teal) !important; /* v7.9.83: Emerald outline */
     border-radius: var(--cc5-radius-lg) !important;
     color: white !important;
@@ -7544,7 +7595,7 @@ button.cc5-edit-modal-cancel {
 .cc5-edit-modal-cancel:hover,
 .cc5-edit-modal .cc5-edit-modal-cancel:hover,
 button.cc5-edit-modal-cancel:hover {
-    background: linear-gradient(135deg, var(--cc5-red), var(--cc5-red-dark)) !important;
+    background: linear-gradient(135deg, var(--cc5-red-solid), var(--cc5-red-solid-dark)) !important;
     transform: translateY(-2px) !important;
     box-shadow: 0 4px 12px rgb(220, 38, 38, 0.4) !important;
     color: white !important;
@@ -7685,17 +7736,33 @@ body.dark .cc5-edit-list-item input[type="text"]:focus,
     border-color: #818cf8;
 }
 
+/* v13.95 FIX-CC-DELETEITEM-DARK: these two dark rules were left behind by the
+   FIX-CC-RED-CONTRAST token split. --cc5-red is the BRAND red, hsl(0 84% 60%), which
+   carries white at 4.20:1 - fine for a border or an icon (WCAG 1.4.11 asks 3:1 of
+   non-text UI) but short of AA for the white glyph this button draws on it, measured at
+   3.78:1 idle and hover. The light rules directly above were already moved onto
+   --cc5-red-solid / --cc5-red-solid-dark (5.35:1 / 6.72:1); these were not, so the same
+   control was accessible in light mode and not in dark.
+   The fill is a solid red in both themes - the button is destructive and reads the same
+   way on either ground - so this is a straight move onto the accessible variants, not a
+   separate dark palette. Note the hue is unchanged: only lightness moves. */
 [data-bs-theme="dark"] .cc5-edit-delete-item,
 body.dark .cc5-edit-delete-item,
 .cc5-dark .cc5-edit-delete-item {
-    background: var(--cc5-red);
+    background: var(--cc5-red-solid) !important;
     color: white !important;
 }
 
 [data-bs-theme="dark"] .cc5-edit-delete-item:hover,
+[data-bs-theme="dark"] .cc5-edit-delete-item:focus,
+[data-bs-theme="dark"] .cc5-edit-delete-item:active,
 body.dark .cc5-edit-delete-item:hover,
-.cc5-dark .cc5-edit-delete-item:hover {
-    background: var(--cc5-red) !important;
+body.dark .cc5-edit-delete-item:focus,
+body.dark .cc5-edit-delete-item:active,
+.cc5-dark .cc5-edit-delete-item:hover,
+.cc5-dark .cc5-edit-delete-item:focus,
+.cc5-dark .cc5-edit-delete-item:active {
+    background: var(--cc5-red-solid-dark) !important;
     color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
@@ -7917,7 +7984,7 @@ body.dark .cc5-edit-modal-cancel:hover,
     min-width: 36px !important;
     min-height: 36px !important;
     border: 2px solid var(--cc5-teal) !important; /* v7.9.83: Emerald outline */
-    background: hsl(0deg 84% 55%) !important;
+    background: hsl(0deg 74% 40%) !important;
     border-radius: 50% !important;
     cursor: pointer ;
     display: flex !important;
@@ -8849,6 +8916,42 @@ body.dark .cc5-edit-modal-cancel:hover,
     transition: all 0.2s ease;
 }
 
+/* v13.95 FIX-CC-ADDIMAGE-IDLE: the companion to FIX-CC-ADDIMAGE-CONTRAST further down.
+   That fix pinned the :hover/:focus/:active pair to a white fill with a dark label; the
+   IDLE state was never given a `color` at all, in either theme. A <button> does not
+   inherit `color` - the UA supplies `color: buttontext`, i.e. black - so the label was
+   black, measured against a background this file sets to var(--cc5-bg) and
+   `.dark .cc5-add-image-btn` sets to var(--cc5-bg-subtle): hsl(0 0% 9%) under a dark
+   theme. Black on near-black, 1.17:1.
+   The background is pinned white here rather than flipped dark because player5.js emits
+   this button with an inline `style="background:#fff !important"` at all three of its
+   call sites (and an onmouseover/onmouseout pair that re-asserts it). No stylesheet can
+   outrank an inline !important, so the fill IS white in dark mode whatever CSS says -
+   the honest fix is to state the label that white fill actually needs, and to state it
+   in both themes so the two can never drift apart. If the inline styles are ever removed
+   from player5.js, this rule and the pinned :hover group below are what must change with
+   them. The colour is the same hsl(220 15% 30%) that group uses: 8.6:1 on white. */
+.cc5-add-image-btn {
+    color: hsl(220deg 15% 30%) !important;
+    background: #fff !important;
+    border-color: var(--cc5-border) !important;
+}
+
+/* The label is a child <span> with a colour of its own - var(--cc5-text-secondary),
+   which the dark token block flips to hsl(0 0% 72%) - so pinning the button alone is
+   not enough: with the fill pinned white, that light grey measured 1.98:1. This is the
+   idle twin of the pinned :hover/:focus/:active label rule further down, and carries
+   the same value so the label does not change colour when the pointer arrives. The
+   icon keeps --cc5-primary (hsl 217 91% 45%, 4.87:1 on white) exactly as the hover
+   rule leaves it. */
+.cc5-add-image-btn .cc5-add-image-text {
+    color: hsl(220deg 15% 30%) !important;
+}
+
+.cc5-add-image-btn .cc5-add-image-icon {
+    color: var(--cc5-primary) !important;
+}
+
 /* v6.7.5: Keep background white on hover - only outline/transform animation */
 .cc5-add-image-btn:hover {
     background: white !important;
@@ -8970,7 +9073,7 @@ body.dark .cc5-edit-modal-cancel:hover,
     max-height: 36px !important;
     padding: 0 !important;
     margin: 0 !important;
-    background: hsl(0deg 84% 55%) !important;
+    background: hsl(0deg 74% 40%) !important;
     border: 2px solid var(--cc5-teal) !important; /* v7.9.83: Emerald outline */
     border-radius: 50% !important;
     color: white !important;
@@ -9004,7 +9107,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 .cc5-image-modal-close:focus {
     outline: 2px solid hsl(0deg 84% 55%) !important;
     outline-offset: 2px !important;
-    background: hsl(0deg 84% 55%) !important;
+    background: hsl(0deg 74% 40%) !important;
     color: white !important;
 }
 
@@ -9170,11 +9273,44 @@ body.dark .cc5-edit-modal-cancel:hover,
 }
 
 /* v6.7.9: Force white background on hover in both light and dark modes */
+/* v13.95 FIX-CC-ADDIMAGE-CONTRAST: forcing the background white in BOTH themes while
+   leaving the label on var(--cc5-text-secondary) - which flips to a light grey in dark
+   mode - put hsl(0 0% 72%) on #fff, about 2.1:1. Nothing in the plugin ever set `color`
+   on this button, in either theme, so in light mode the theme's own
+   `#region-main button:hover { color: #fff }` was free to take it and paint white on
+   the white this rule just forced. If the background is going to be pinned in both
+   themes then the foreground has to be pinned with it. */
 .dark .cc5-add-image-btn:hover,
+.dark .cc5-add-image-btn:focus,
+.dark .cc5-add-image-btn:active,
 .cc5-add-image-btn:hover,
-.cc5-slide-image-container .cc5-add-image-btn:hover {
+.cc5-add-image-btn:focus,
+.cc5-add-image-btn:active,
+.cc5-slide-image-container .cc5-add-image-btn:hover,
+.cc5-slide-image-container .cc5-add-image-btn:focus,
+.cc5-slide-image-container .cc5-add-image-btn:active {
     background: #fff !important;
     background-color: var(--cc5-primary-foreground) !important;
+    color: hsl(220deg 15% 30%) !important;
+}
+
+.dark .cc5-add-image-btn:hover .cc5-add-image-text,
+.dark .cc5-add-image-btn:focus .cc5-add-image-text,
+.dark .cc5-add-image-btn:active .cc5-add-image-text,
+.cc5-add-image-btn:hover .cc5-add-image-text,
+.cc5-add-image-btn:focus .cc5-add-image-text,
+.cc5-add-image-btn:active .cc5-add-image-text,
+.cc5-slide-image-container .cc5-add-image-btn:hover .cc5-add-image-text {
+    color: hsl(220deg 15% 30%) !important;
+}
+
+.dark .cc5-add-image-btn:hover .cc5-add-image-icon,
+.dark .cc5-add-image-btn:focus .cc5-add-image-icon,
+.cc5-add-image-btn:hover .cc5-add-image-icon,
+.cc5-add-image-btn:focus .cc5-add-image-icon,
+.cc5-add-image-btn:active .cc5-add-image-icon,
+.cc5-slide-image-container .cc5-add-image-btn:hover .cc5-add-image-icon {
+    color: var(--cc5-primary) !important;
 }
 
 .dark .cc5-image-loading {
@@ -9371,13 +9507,18 @@ body.dark .cc5-edit-modal-cancel:hover,
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgb(0, 0, 0, 0.6);
+    /* v13.95: a 0.6-alpha scrim under an icon drawn at opacity 0.7 gave 3.76:1 - and
+       these buttons sit on an arbitrary photograph, so the scrim is the only thing
+       guaranteeing legibility. Deepen the scrim and stop fading the icon: the resting
+       state is now 8.6:1 whatever the image behind it. Hover keeps its own darker
+       scrim, so the affordance is unchanged. */
+    background: rgb(0, 0, 0, 0.78);
     color: var(--cc5-primary-foreground);
     border: none;
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.2s ease;
-    opacity: 0.7;
+    opacity: 1;
     z-index: 5;
 }
 
@@ -9403,13 +9544,18 @@ body.dark .cc5-edit-modal-cancel:hover,
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgb(0, 0, 0, 0.6);
+    /* v13.95: a 0.6-alpha scrim under an icon drawn at opacity 0.7 gave 3.76:1 - and
+       these buttons sit on an arbitrary photograph, so the scrim is the only thing
+       guaranteeing legibility. Deepen the scrim and stop fading the icon: the resting
+       state is now 8.6:1 whatever the image behind it. Hover keeps its own darker
+       scrim, so the affordance is unchanged. */
+    background: rgb(0, 0, 0, 0.78);
     color: var(--cc5-primary-foreground);
     border: none;
     border-radius: 50%;
     cursor: pointer;
     transition: all 0.2s ease;
-    opacity: 0.7;
+    opacity: 1;
     z-index: 5;
 }
 
@@ -9461,7 +9607,8 @@ body.dark .cc5-edit-modal-cancel:hover,
     display: flex;
     align-items: center;
     justify-content: center;
-    background: hsl(0deg 84% 55%);
+    /* v13.95: white on this red is 4.20:1; the accessible variant gives 5.35:1. */
+    background: var(--cc5-red-solid);
     color: white;
     border: none;
     border-radius: 50%;
@@ -9544,13 +9691,17 @@ body.dark .cc5-edit-modal-cancel:hover,
 .cc5-show-community-btn {
     background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
     border-color: #81c784;
-    color: #2e7d32;
+    color: #1b5220;
 }
 
-.cc5-show-community-btn:hover {
+/* v13.95: :hover was pinned but :focus and :active were not, so keyboard use handed
+   the whole button to the theme - measured at 1.12:1 against a stand-in Boost sheet. */
+.cc5-show-community-btn:hover,
+.cc5-show-community-btn:focus,
+.cc5-show-community-btn:active {
     background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%) !important;
     border-color: #66bb6a !important;
-    color: #2e7d32 !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
+    color: #1b5220 !important;
 }
 
 /* Gallery Modal */
@@ -10231,7 +10382,7 @@ body.dark .cc5-edit-modal-cancel:hover,
     justify-content: center ;
     width: 36px !important;
     height: 36px !important;
-    background: hsl(0deg 84% 55%) !important;
+    background: hsl(0deg 74% 40%) !important;
     border: 2px solid var(--cc5-teal) !important; /* v7.9.83: Emerald outline */
     border-radius: 50% !important;
     color: white !important;
@@ -10788,7 +10939,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 .cc5-settings-modal-close:focus {
     outline: 3px solid white;
     outline-offset: 2px;
-    background: hsl(0deg 84% 55%) !important;
+    background: hsl(0deg 74% 40%) !important;
     color: white !important;
 }
 
@@ -12779,7 +12930,7 @@ body.dark .cc5-edit-modal-cancel:hover,
     justify-content: center ;
     border: 2px solid var(--cc5-teal) !important; /* v7.9.83: Emerald outline */
     border-radius: 50% !important;
-    background: hsl(0deg 84% 55%) !important;
+    background: hsl(0deg 74% 40%) !important;
     color: white !important;
     cursor: pointer ;
     transition: all 0.15s ease ;
@@ -17633,10 +17784,48 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 }
 .cc5-player .cc5-dp-try-again-btn:hover {
     background: hsl(22deg 95% 94%) !important;
-    color: hsl(22deg 85% 40%) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
+    /* v13.95: was 40% lightness - 4.27:1 on this pale peach, just under AA for 0.85rem
+       text. 35% brings it to 5.2:1 with no visible change of hue. */
+    color: hsl(22deg 85% 35%) !important;
 }
-.cc5-player .cc5-dp-try-again-btn:active {
-    background: hsl(22deg 85% 88%);
+/* v13.95 FIX-CC-DP-TRYAGAIN-DARK: the base rule states a transparent background and a
+   40%-lightness orange chosen against the white card. Inside a dark player the card
+   behind it is near-black and that orange measures 3.83:1. The card colours here are
+   literals, so nothing flips on its own - restate the pair for dark. */
+body[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn,
+body.dark .cc5-player .cc5-dp-try-again-btn,
+.dark .cc5-player .cc5-dp-try-again-btn,
+[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn {
+    color: hsl(22deg 90% 68%) !important;
+    border-color: hsl(22deg 70% 45%) !important;
+    background: transparent !important;
+}
+body[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:hover,
+body[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:focus,
+body[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:active,
+body.dark .cc5-player .cc5-dp-try-again-btn:hover,
+body.dark .cc5-player .cc5-dp-try-again-btn:focus,
+body.dark .cc5-player .cc5-dp-try-again-btn:active,
+.dark .cc5-player .cc5-dp-try-again-btn:hover,
+.dark .cc5-player .cc5-dp-try-again-btn:focus,
+.dark .cc5-player .cc5-dp-try-again-btn:active,
+[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:hover,
+[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:focus,
+[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:active {
+    color: hsl(22deg 95% 78%) !important;
+    background: hsl(22deg 40% 18%) !important;
+    border-color: hsl(22deg 70% 50%) !important;
+}
+
+/* v13.95 FIX-CC-STATE-HALFPAIR: :hover pins both halves with !important (v13.94.6) but
+   :active pinned neither, so a learner who activates this from the keyboard - the one
+   path that reaches :active without passing through :hover - handed both colour and
+   background to the theme. Same treatment as the hover rule directly above. */
+.cc5-player .cc5-dp-try-again-btn:active,
+.cc5-player .cc5-dp-try-again-btn:focus {
+    background: hsl(22deg 85% 88%) !important;
+    color: hsl(22deg 85% 30%) !important;
+    border-color: hsl(22deg 85% 55%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -17842,7 +18031,10 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     border: 2px solid hsl(22deg 80% 72%);
     border-radius: 10px;
     background: hsl(22deg 40% 98%);
-    color: hsl(22deg 60% 55%);
+    /* v13.95: 60%/55% gave 3.19:1 on this near-white fill. In practice the button is
+       always either :disabled or .cc5-enabled, so this pair is only ever seen for the
+       instant between the two - but a pair that fails AA should not be in the file. */
+    color: hsl(22deg 70% 35%);
     font-size: 0.88rem;
     font-weight: 700;
     cursor: pointer;
@@ -17850,17 +18042,33 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     max-width: 280px;
     letter-spacing: 0.01em;
 }
+/* v13.95 FIX-CC-NEXTACTIVITY-DISABLED: `opacity: 0.35` composites the ENTIRE button
+   towards the page background, text included. The base pair here is already only
+   3.07:1 (hsl(22 60% 55%) on hsl(22 40% 98%)), so at 0.35 it lands at roughly 1.44:1 -
+   the button the learner is waiting on was barely visible before it unlocked and, until
+   the fix above, invisible after. Opacity is the wrong tool for a disabled state; state
+   the muted pair explicitly instead, as .cc5-option.cc5-disabled and
+   .cc5-nav-chevron.cc5-disabled already do further down this file. */
 .cc5-challenge-next-btn:disabled,
 .cc5-challenge-finish-btn:disabled {
-    opacity: 0.35;
+    opacity: 1;
+    background: hsl(22deg 25% 96%);
+    color: hsl(22deg 30% 42%);
+    border-color: hsl(22deg 30% 82%);
+    box-shadow: none;
     cursor: not-allowed;
 }
+/* v13.95 FIX-CC-NEXTACTIVITY-CONTRAST: the gradient was hsl(22 90% 55%) -> hsl(22 85%
+   50%), which under white gives 2.71:1 at the light end. The label is 0.88rem / 700 -
+   14.1px, below WCAG's 18.66px threshold for "large" bold text - so it needs 4.5:1, not
+   3:1. Darkened to the lightest pair in this hue that clears 4.5:1 (4.61:1 / 5.57:1).
+   Hue and weight are unchanged, so the button still reads as the same brand orange. */
 .cc5-challenge-next-btn.cc5-enabled,
 .cc5-challenge-finish-btn.cc5-enabled {
-    background: linear-gradient(135deg, hsl(22deg 90% 55%) 0%, hsl(22deg 85% 50%) 100%);
+    background: linear-gradient(135deg, hsl(22deg 90% 41%) 0%, hsl(22deg 85% 37%) 100%);
     color: #fff;
-    border-color: hsl(22deg 90% 50%);
-    box-shadow: 0 3px 12px hsl(22deg 90% 55% / 0.3);
+    border-color: hsl(22deg 90% 37%);
+    box-shadow: 0 3px 12px hsl(22deg 90% 41% / 0.3);
 }
 .cc5-challenge-next-btn.cc5-enabled:hover,
 .cc5-challenge-finish-btn.cc5-enabled:hover {
@@ -18434,15 +18642,18 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     color: hsl(22 80% 32%);
 }
 .cc5-challenge-review-btn {
-    background: linear-gradient(135deg, hsl(22 90% 55%) 0%, hsl(22 85% 48%) 100%);
-    border: 2px solid hsl(22 90% 50%);
+    /* v13.95 FIX-CC-CHALLENGE-CONTRAST: white on hsl(22 90% 55%) is 2.90:1. Same
+       correction as the Next Activity button: drop to the lightest orange in this hue
+       that clears 4.5:1 under white 0.9rem text. */
+    background: linear-gradient(135deg, hsl(22 90% 41%) 0%, hsl(22 85% 36%) 100%);
+    border: 2px solid hsl(22 90% 37%);
     color: #fff;
-    box-shadow: 0 2px 8px hsl(22 90% 55% / 0.2);
+    box-shadow: 0 2px 8px hsl(22 90% 41% / 0.25);
 }
 .cc5-challenge-review-btn:hover {
-    background: linear-gradient(135deg, hsl(22 90% 50%) 0%, hsl(22 85% 42%) 100%);
+    background: linear-gradient(135deg, hsl(22 90% 35%) 0%, hsl(22 85% 30%) 100%);
     color: #fff;
-    box-shadow: 0 3px 12px hsl(22 90% 55% / 0.3);
+    box-shadow: 0 3px 12px hsl(22 90% 41% / 0.3);
     transform: translateY(-1px);
 }
 .cc5-challenge-review-btn:active {
@@ -18460,14 +18671,14 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    background: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 65% 38%) 100%);
-    border: 2px solid hsl(142 65% 40%);
+    background: linear-gradient(135deg, hsl(142 71% 29%) 0%, hsl(142 65% 25%) 100%);
+    border: 2px solid hsl(142 65% 25%);
     color: #fff;
     box-shadow: 0 2px 10px hsl(142 71% 45% / 0.25);
     order: -1; /* Show Continue first (leftmost) so eye lands on it naturally */
 }
 .cc5-challenge-continue-btn:hover {
-    background: linear-gradient(135deg, hsl(142 71% 40%) 0%, hsl(142 65% 32%) 100%);
+    background: linear-gradient(135deg, hsl(142 71% 24%) 0%, hsl(142 65% 20%) 100%);
     color: #fff;
     box-shadow: 0 4px 14px hsl(142 71% 45% / 0.35);
     transform: translateY(-1px);
@@ -19705,9 +19916,17 @@ button.cc5-single-start-btn,
     white-space: nowrap !important;
 }
 
+/* v13.95: 55% lightness gave 4.46:1 under white - marginally under AA, and a hover
+   should darken rather than lighten the 45% idle fill anyway. Also extended to :focus
+   and :active, which had no rule and so fell to the theme. */
 button.cc5-single-start-btn:hover,
-.cc5-single-start-btn:hover {
-    background: hsl(217deg 91% 55%) !important;
+button.cc5-single-start-btn:focus,
+button.cc5-single-start-btn:active,
+.cc5-single-start-btn:hover,
+.cc5-single-start-btn:focus,
+.cc5-single-start-btn:active {
+    background: hsl(217deg 91% 38%) !important;
+    border-color: hsl(217deg 91% 38%) !important;
     box-shadow: var(--cc5-shadow-md) !important;
     color: var(--cc5-primary-foreground) !important;
 }
@@ -19773,10 +19992,10 @@ body.dark .cc5-single-topic-right {
     gap: 4px;
     padding: 0 8px;
     height: 32px;
-    background: var(--cc5-muted, rgba(0,0,0,0.06));
+    background: var(--cc5-muted, hsl(0 0% 94%));
     border: 1px solid var(--cc5-border, rgba(0,0,0,0.12));
     border-radius: var(--cc5-radius-sm, 4px);
-    color: var(--cc5-muted-foreground, #555);
+    color: hsl(0 0% 25%);
     font-size: 0.78rem;
     cursor: pointer;
     white-space: nowrap;
@@ -19785,7 +20004,10 @@ body.dark .cc5-single-topic-right {
 }
 .cc5-icon-picker-btn:hover {
     background: var(--cc5-accent, rgba(0,0,0,0.10)) !important;
-    color: var(--cc5-muted-foreground, #555) !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
+    /* v13.95: the fallback #555 sits on a translucent black wash over whatever is
+       behind, measured at 2.82:1. Darken the label and make the wash opaque so the
+       pair is knowable rather than depending on the ancestor. */
+    color: hsl(0 0% 25%) !important;
 }
 .cc5-icon-picker-btn svg {
     width: 14px;
@@ -19938,6 +20160,146 @@ body.dark .cc5-icon-picker-popup {
     background: var(--cc5-card, #1e1e2e);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.95  FIX-CC-ICONPICKER-DARK
+   ───────────────────────────────────────────────────────────────────────────────
+   The icon picker got exactly one dark rule: the popup panel's background, above.
+   Everything drawn ON that panel kept its light-mode colours, and those colours are
+   literals (hsl(0 0% 25%), the #555/#666 var() fallbacks), so nothing flipped with it.
+   The panel went dark and its contents stayed dark-on-dark:
+
+     .cc5-icon-picker-btn:hover   hsl(0 0% 25%) on a 0.10-alpha black wash   1.83:1
+     .cc5-icon-picker-close       #555 on the panel                          2.51:1
+     .cc5-icon-picker-item        no `color` at ALL, in either theme         1.12:1
+
+   The last one is the interesting case. A <button> does not inherit `color` - the UA
+   sets `color: buttontext`, i.e. black - so a button that never states a colour is
+   black regardless of what its container says. In light mode that is invisibly correct
+   (black on the white panel); in dark mode it is black on near-black. Every rule below
+   therefore states BOTH halves, and the item gets an explicit pair in both themes
+   rather than a dark-only patch, because the light behaviour was luck, not design.
+
+   `:not(.cc5-ipi-selected)` guards the selected item, which is a solid primary fill
+   with a white label and is already correct in both themes.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* The grid item, LIGHT: state the colour the UA was accidentally supplying, so the
+   pair is declared rather than inherited from the user agent. Matches the #222 that
+   .cc5-ipi-item-svg svg already forces on the icon inside it. */
+.cc5-icon-picker-item:not(.cc5-ipi-selected) {
+    color: #222 !important;
+    background: transparent !important;
+}
+
+.cc5-icon-picker-item:not(.cc5-ipi-selected):hover,
+.cc5-icon-picker-item:not(.cc5-ipi-selected):focus,
+.cc5-icon-picker-item:not(.cc5-ipi-selected):active {
+    color: #222 !important;
+    background: hsl(239 60% 96%) !important;
+    border-color: rgba(0, 0, 0, 0.10) !important;
+}
+
+/* The grid item, DARK: #e5e7eb is the same value the icon SVG is already given at
+   `body[data-bs-theme="dark"] .cc5-ipi-item-svg svg`, so label and glyph match.
+   12.6:1 on the popup panel. */
+[data-bs-theme="dark"] .cc5-icon-picker-item:not(.cc5-ipi-selected),
+body[data-bs-theme="dark"] .cc5-icon-picker-item:not(.cc5-ipi-selected),
+body.dark .cc5-icon-picker-item:not(.cc5-ipi-selected),
+.dark .cc5-icon-picker-item:not(.cc5-ipi-selected),
+.cc5-dark .cc5-icon-picker-item:not(.cc5-ipi-selected) {
+    color: #e5e7eb !important;
+    background: transparent !important;
+}
+
+[data-bs-theme="dark"] .cc5-icon-picker-item:not(.cc5-ipi-selected):hover,
+[data-bs-theme="dark"] .cc5-icon-picker-item:not(.cc5-ipi-selected):focus,
+[data-bs-theme="dark"] .cc5-icon-picker-item:not(.cc5-ipi-selected):active,
+body[data-bs-theme="dark"] .cc5-icon-picker-item:not(.cc5-ipi-selected):hover,
+body.dark .cc5-icon-picker-item:not(.cc5-ipi-selected):hover,
+body.dark .cc5-icon-picker-item:not(.cc5-ipi-selected):focus,
+body.dark .cc5-icon-picker-item:not(.cc5-ipi-selected):active,
+.dark .cc5-icon-picker-item:not(.cc5-ipi-selected):hover,
+.dark .cc5-icon-picker-item:not(.cc5-ipi-selected):focus,
+.dark .cc5-icon-picker-item:not(.cc5-ipi-selected):active,
+.cc5-dark .cc5-icon-picker-item:not(.cc5-ipi-selected):hover,
+.cc5-dark .cc5-icon-picker-item:not(.cc5-ipi-selected):focus,
+.cc5-dark .cc5-icon-picker-item:not(.cc5-ipi-selected):active {
+    color: #f3f4f6 !important;
+    background: hsl(239 30% 24%) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+/* The item's caption is a child <span> and DOES inherit, but it states its own
+   #666 fallback, so it needs flipping alongside the button. */
+[data-bs-theme="dark"] .cc5-ipi-item-name,
+body[data-bs-theme="dark"] .cc5-ipi-item-name,
+body.dark .cc5-ipi-item-name,
+.dark .cc5-ipi-item-name,
+.cc5-dark .cc5-ipi-item-name {
+    color: #cbd0d8 !important;
+}
+
+/* The "Choose icon" trigger. Its idle pair is a light chip that survives on contrast
+   alone but reads as a light control in a dark panel; the hover pair does not survive
+   at all (1.83:1). Both restated as a dark chip. The 0.10-alpha wash is replaced with
+   an opaque fill for the reason given in FIX-CC-PROSENEXT-UNKNOWABLE: an alpha
+   background is only knowable if what is behind it is. */
+[data-bs-theme="dark"] .cc5-icon-picker-btn,
+body[data-bs-theme="dark"] .cc5-icon-picker-btn,
+body.dark .cc5-icon-picker-btn,
+.dark .cc5-icon-picker-btn,
+.cc5-dark .cc5-icon-picker-btn {
+    color: hsl(0 0% 88%) !important;
+    background: hsl(0 0% 22%) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+}
+
+[data-bs-theme="dark"] .cc5-icon-picker-btn:hover,
+[data-bs-theme="dark"] .cc5-icon-picker-btn:focus,
+[data-bs-theme="dark"] .cc5-icon-picker-btn:active,
+body[data-bs-theme="dark"] .cc5-icon-picker-btn:hover,
+body.dark .cc5-icon-picker-btn:hover,
+body.dark .cc5-icon-picker-btn:focus,
+body.dark .cc5-icon-picker-btn:active,
+.dark .cc5-icon-picker-btn:hover,
+.dark .cc5-icon-picker-btn:focus,
+.dark .cc5-icon-picker-btn:active,
+.cc5-dark .cc5-icon-picker-btn:hover,
+.cc5-dark .cc5-icon-picker-btn:focus,
+.cc5-dark .cc5-icon-picker-btn:active {
+    color: hsl(0 0% 96%) !important;
+    background: hsl(0 0% 32%) !important;
+    border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+/* The panel's close (X). #555 on the dark panel is 2.51:1 - the control the learner
+   needs in order to leave the picker was the least visible thing in it. */
+[data-bs-theme="dark"] .cc5-icon-picker-close,
+body[data-bs-theme="dark"] .cc5-icon-picker-close,
+body.dark .cc5-icon-picker-close,
+.dark .cc5-icon-picker-close,
+.cc5-dark .cc5-icon-picker-close {
+    color: hsl(0 0% 85%) !important;
+    background: transparent !important;
+}
+
+[data-bs-theme="dark"] .cc5-icon-picker-close:hover,
+[data-bs-theme="dark"] .cc5-icon-picker-close:focus,
+[data-bs-theme="dark"] .cc5-icon-picker-close:active,
+body[data-bs-theme="dark"] .cc5-icon-picker-close:hover,
+body.dark .cc5-icon-picker-close:hover,
+body.dark .cc5-icon-picker-close:focus,
+body.dark .cc5-icon-picker-close:active,
+.dark .cc5-icon-picker-close:hover,
+.dark .cc5-icon-picker-close:focus,
+.dark .cc5-icon-picker-close:active,
+.cc5-dark .cc5-icon-picker-close:hover,
+.cc5-dark .cc5-icon-picker-close:focus,
+.cc5-dark .cc5-icon-picker-close:active {
+    color: hsl(0 0% 96%) !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+}
+
 /* ── v12.21: Voiceover waiting screen ─────────────────────────────────────── */
 .cc5-vo-wait-screen {
     display: flex;
@@ -20034,9 +20396,18 @@ body.dark .cc5-vo-wait-bar {
     text-underline-offset: 3px;
     transition: color 0.2s, background 0.2s;
 }
-.cc5-vo-wait-continue-btn:hover {
-    color: #fff;
-    background: var(--cc5-primary, #4f46e5);
+/* v13.95 FIX-CC-VOWAIT-STATES: the voiceover gate stops the learner progressing, so
+   these two controls are the only way out of it - and they were missed entirely by the
+   v13.94.6 sweep. Neither carried !important and neither declared :focus or :active, so
+   a bare `button:focus` at (0,1,1) already beat the (0,1,0) base: `background: none`
+   gave way to the theme's dark grey while the muted slate label stayed, and the
+   underlined "continue anyway" control went grey-on-grey the instant it took keyboard
+   focus. Pin base and all three states, both halves. */
+.cc5-vo-wait-continue-btn:hover,
+.cc5-vo-wait-continue-btn:focus,
+.cc5-vo-wait-continue-btn:active {
+    color: #fff !important;
+    background: var(--cc5-primary, #4f46e5) !important;
     border-radius: 4px;
     text-decoration: none;
 }
@@ -20051,17 +20422,33 @@ body.dark .cc5-vo-wait-bar {
     cursor: pointer;
     transition: opacity 0.2s;
 }
-.cc5-vo-wait-retry-btn:hover {
-    opacity: 0.85;
+/* v13.95: `opacity: 0.85` was the entire hover state - it dims the label along with the
+   fill, and left colour and background unpinned in every state. */
+.cc5-vo-wait-retry-btn,
+.cc5-vo-wait-retry-btn:hover,
+.cc5-vo-wait-retry-btn:focus,
+.cc5-vo-wait-retry-btn:active {
+    background: var(--cc5-primary, #4f46e5) !important;
+    color: #fff !important;
+    opacity: 1;
+}
+.cc5-vo-wait-retry-btn:hover,
+.cc5-vo-wait-retry-btn:focus,
+.cc5-vo-wait-retry-btn:active {
+    filter: brightness(0.9);
 }
 body[data-bs-theme="dark"] .cc5-vo-wait-continue-btn,
 body.dark .cc5-vo-wait-continue-btn {
     color: var(--cc5-muted-foreground, #94a3b8);
 }
 body[data-bs-theme="dark"] .cc5-vo-wait-continue-btn:hover,
-body.dark .cc5-vo-wait-continue-btn:hover {
-    color: #fff;
-    background: var(--cc5-primary, #4f46e5);
+body[data-bs-theme="dark"] .cc5-vo-wait-continue-btn:focus,
+body[data-bs-theme="dark"] .cc5-vo-wait-continue-btn:active,
+body.dark .cc5-vo-wait-continue-btn:hover,
+body.dark .cc5-vo-wait-continue-btn:focus,
+body.dark .cc5-vo-wait-continue-btn:active {
+    color: #fff !important;
+    background: var(--cc5-primary, #4f46e5) !important;
     border-radius: 4px;
     text-decoration: none;
 }
@@ -20249,7 +20636,13 @@ body.dark .cc5-lang-pill {
     --cc5-prose-bg:      #fffbf5;
     --cc5-prose-bg-2:    #fdf3e5;
     --cc5-prose-border:  #f3e5cd;
-    --cc5-prose-accent:  #a9711f;
+    /* v13.95 FIX-CC-PROSE-AMBER: the accent is the colour of this tone's heading, eyebrow
+       and Next button label. At #a9711f it measured 4.14:1 on white and 4.02:1 on the
+       tone's own #fffbf5 card - the only one of the four tones below AA (blue 4.88,
+       violet 6.19, green 5.23). #8a5c19 is the same hue at a lower lightness and clears
+       AA against the card, the second background and the chip alike (5.62 / 5.28 / 5.05).
+       The glow below keeps the original value: it is a shadow, not text. */
+    --cc5-prose-accent:  #8a5c19;
     --cc5-prose-chip:    #fbeed8;
     --cc5-prose-glow:    rgba(169, 113, 31, 0.16);
 }
@@ -20482,9 +20875,24 @@ body.dark .cc5-lang-pill {
     font-weight: 600;
     font-family: inherit;
     text-decoration: none !important;
-    color: var(--cc5-prose-accent) !important;
-    background: rgba(255, 255, 255, 0.75) !important;
-    border: 1px solid var(--cc5-prose-border) !important;
+    /* v13.95 FIX-CC-PROSENEXT-UNKNOWABLE: this pair was unknowable in isolation, and both
+       halves for the same reason - each one depended on an ancestor to finish it.
+       `--cc5-prose-accent` is declared only on `.cc5-prose-card.cc5-prose-<tone>`, so on
+       any button that is not inside a toned card the var() is unresolvable, the whole
+       `color` declaration is invalid at computed-value time, and the button falls back to
+       the UA/theme colour - measured at rgb(250,250,250) under a dark theme, i.e. a
+       near-white label. The background was a 0.75-alpha white, which is only "white" if
+       whatever sits behind it is light; composited over a dark page ground it resolves to
+       about rgb(196,196,196), and rgb(250,250,250) on that is 1.68:1.
+       Both are now self-sufficient: the accent carries the blue tone's value as its
+       var() fallback (4.86:1 on this fill, and the tone classes still override it where
+       they are present), and the wash is stated as the opaque colour it composites to
+       over the card's own near-white gradient - visually the same inside the card, but
+       knowable everywhere else. Do not put the alpha back without also pinning an opaque
+       colour underneath it. */
+    color: var(--cc5-prose-accent, #2f6fd0) !important;
+    background: #fcfdfe !important;
+    border: 1px solid var(--cc5-prose-border, #dbe7f8) !important;
     border-radius: 999px;
     cursor: pointer;
     transition: background-color 200ms ease, border-color 200ms ease,
@@ -20496,8 +20904,10 @@ body.dark .cc5-lang-pill {
 .cc5-prose-next-btn:active,
 .cc5-prose-next-btn:focus:active {
     background: #fff !important;
-    border-color: var(--cc5-prose-accent) !important;
-    color: var(--cc5-prose-accent) !important;
+    /* v13.95: same fallback as the base rule - without it the hover state's pinned white
+       background was paired with an unresolvable colour, i.e. the theme's white, 1.04:1. */
+    border-color: var(--cc5-prose-accent, #2f6fd0) !important;
+    color: var(--cc5-prose-accent, #2f6fd0) !important;
     text-decoration: none !important;
 }
 
@@ -20520,7 +20930,11 @@ body.dark .cc5-lang-pill {
 
 .cc5-prose-next-btn:active {
     transform: translateX(1px) scale(0.985);
-    background: rgba(255, 255, 255, 0.92) !important;
+    /* v13.95: was rgba(255,255,255,0.92) - see FIX-CC-PROSENEXT-UNKNOWABLE above. The
+       press state needs to read as very slightly recessed from the :hover white, so it
+       is stated as the opaque near-white it composited to inside the card. */
+    background: #fdfdfd !important;
+    color: var(--cc5-prose-accent, #2f6fd0) !important;
     box-shadow: inset 0 1px 3px -1px var(--cc5-prose-glow) !important;
 }
 
@@ -20778,13 +21192,21 @@ body.dark .cc5-lang-pill {
    touches. Pin both states. */
 .cc5-challenge-next-btn:hover,
 .cc5-challenge-finish-btn:hover {
-    color: hsl(22deg 60% 55%);
+    color: hsl(22deg 70% 35%);
     background: hsl(22deg 40% 98%);
 }
 
+/* v13.95 FIX-CC-NEXTACTIVITY-INVISIBLE: colour-only, exactly as the !important copy of
+   this rule further down was, and with the same consequence in the non-important layer -
+   the pale background from the :hover group above outranks the .cc5-enabled gradient
+   because both are plain-class rules and this one comes later in the file. Superseded in
+   full by the pinned group below; kept and completed rather than deleted so the two
+   layers cannot disagree if the !important block is ever unwound. */
 .cc5-challenge-next-btn.cc5-enabled:hover,
 .cc5-challenge-finish-btn.cc5-enabled:hover {
     color: #fff;
+    background: linear-gradient(135deg, hsl(22deg 90% 35%) 0%, hsl(22deg 85% 31%) 100%);
+    border-color: hsl(22deg 90% 31%);
 }
 
 /* Focus and active share the theme's selector list, so a button that is
@@ -20792,7 +21214,10 @@ body.dark .cc5-lang-pill {
    pinning, same reason - and this is the path a keyboard-only learner takes. */
 .cc5-prose-next-btn:focus,
 .cc5-prose-next-btn:active {
-    color: var(--cc5-prose-accent);
+    /* v13.95: fallback added here too - see FIX-CC-PROSENEXT-UNKNOWABLE. This rule is the
+       non-important twin of the pinned group above and must not disagree with it. */
+    color: var(--cc5-prose-accent, #2f6fd0);
+    background: #fff;
 }
 
 
@@ -21087,10 +21512,21 @@ body.dark .cc5-lang-pill {
 .cc5-challenge-finish-btn:hover,
 .cc5-challenge-finish-btn:focus,
 .cc5-challenge-finish-btn:active {
-    color: hsl(22deg 60% 55%) !important;
+    color: hsl(22deg 70% 35%) !important;
     background: hsl(22deg 40% 98%) !important;
 }
 
+/* v13.95 FIX-CC-NEXTACTIVITY-INVISIBLE: this rule set colour and nothing else, and it
+   is the one rule in this whole block that broke the block's own stated contract above
+   ("if a :hover rule sets a background, it must set a colour too - and both must carry
+   !important"). Because it declares no background, the background contest is decided by
+   the group immediately above, whose `background: hsl(22deg 40% 98%) !important` - all
+   but white - beats the intended orange gradient at the .cc5-enabled base rule, which
+   carries no !important. So the ENABLED "Next Activity" / "See Results" button rendered
+   #fff on near-white the moment it was hovered, focused or clicked: contrast 1.02:1,
+   and the chevron went with it because the SVG uses stroke="currentColor". :focus is in
+   the selector list, so a mouse click left it invisible until focus moved away.
+   Pin all three properties here, as every sibling group in this block already does. */
 .cc5-challenge-next-btn.cc5-enabled:hover,
 .cc5-challenge-next-btn.cc5-enabled:focus,
 .cc5-challenge-next-btn.cc5-enabled:active,
@@ -21098,6 +21534,27 @@ body.dark .cc5-lang-pill {
 .cc5-challenge-finish-btn.cc5-enabled:focus,
 .cc5-challenge-finish-btn.cc5-enabled:active {
     color: #fff !important;
+    background: linear-gradient(135deg, hsl(22deg 90% 35%) 0%, hsl(22deg 85% 31%) 100%) !important;
+    border-color: hsl(22deg 90% 31%) !important;
+}
+
+/* v13.95 FIX-CC-NEXTACTIVITY-DISABLED: :disabled elements still match :hover in CSS, so
+   the pinned hover group above would repaint a locked button with the pale 3.07:1 pair
+   the moment the pointer crossed it. This must come after that group - equal importance
+   and specificity, later declaration wins - and must carry !important for the same
+   reason the rest of this block does. Mirrors the muted pair set at the base rule. */
+.cc5-challenge-next-btn:disabled,
+.cc5-challenge-next-btn:disabled:hover,
+.cc5-challenge-next-btn:disabled:focus,
+.cc5-challenge-finish-btn:disabled,
+.cc5-challenge-finish-btn:disabled:hover,
+.cc5-challenge-finish-btn:disabled:focus {
+    opacity: 1 !important;
+    background: hsl(22deg 25% 96%) !important;
+    color: hsl(22deg 30% 42%) !important;
+    border-color: hsl(22deg 30% 82%) !important;
+    box-shadow: none !important;
+    cursor: not-allowed;
 }
 
 .cc5-challenge-retry-btn {
@@ -21115,30 +21572,30 @@ body.dark .cc5-lang-pill {
 }
 
 .cc5-challenge-review-btn {
-    background: linear-gradient(135deg, hsl(22 90% 55%) 0%, hsl(22 85% 48%) 100%) !important;
-    border-color: hsl(22 90% 50%) !important;
+    background: linear-gradient(135deg, hsl(22 90% 41%) 0%, hsl(22 85% 36%) 100%) !important;
+    border-color: hsl(22 90% 37%) !important;
     color: #fff !important;
 }
 
 .cc5-challenge-review-btn:hover,
 .cc5-challenge-review-btn:focus,
 .cc5-challenge-review-btn:active {
-    background: linear-gradient(135deg, hsl(22 90% 50%) 0%, hsl(22 85% 42%) 100%) !important;
-    border-color: hsl(22 90% 50%) !important;
+    background: linear-gradient(135deg, hsl(22 90% 35%) 0%, hsl(22 85% 30%) 100%) !important;
+    border-color: hsl(22 90% 37%) !important;
     color: #fff !important;
 }
 
 .cc5-challenge-continue-btn {
-    background: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 65% 38%) 100%) !important;
-    border-color: hsl(142 65% 40%) !important;
+    background: linear-gradient(135deg, hsl(142 71% 29%) 0%, hsl(142 65% 25%) 100%) !important;
+    border-color: hsl(142 65% 25%) !important;
     color: #fff !important;
 }
 
 .cc5-challenge-continue-btn:hover,
 .cc5-challenge-continue-btn:focus,
 .cc5-challenge-continue-btn:active {
-    background: linear-gradient(135deg, hsl(142 71% 40%) 0%, hsl(142 65% 32%) 100%) !important;
-    border-color: hsl(142 65% 40%) !important;
+    background: linear-gradient(135deg, hsl(142 71% 24%) 0%, hsl(142 65% 20%) 100%) !important;
+    border-color: hsl(142 65% 25%) !important;
     color: #fff !important;
 }
 
@@ -21455,4 +21912,149 @@ body.dark .cc5-lang-pill:not(.cc5-lang-pill-active),
 .cc5-dark .cc5-lang-pill:not(.cc5-lang-pill-active) {
     border-color: rgba(255, 255, 255, 0.18) !important;
     color: #e2e8f0 !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.95  FIX-CC-PLAYER-DARK-INVERSION
+   ───────────────────────────────────────────────────────────────────────────────
+   Three outline-style buttons whose colours were chosen, correctly, against WHITE -
+   and which therefore fail on a dark ground for exactly the reason they pass on a
+   light one. This is the inversion trap, and it is worth stating plainly because the
+   instinct on seeing "contrast too low" is to darken the text, which is the wrong
+   direction here and makes it worse:
+
+       a colour dark enough to sit on white is, by definition, close to the
+       luminance of a dark page. One value cannot serve both grounds.
+
+   Measured in dark mode before this block:
+
+       .cc5-try-again-btn        --cc5-primary (hsl 217 91% 45%)
+                                 on --cc5-primary-light, which the dark token block
+                                 DOES flip to hsl(217 40% 15%)          2.63:1
+       .cc5-reveal-btn           the same 45% blue on the page ground   3.12:1 idle
+                                                                        2.63:1 hover
+       .cc5-challenge-retry-btn  hsl(22 80% 38%) on the page ground     3.43:1
+
+   Note what the try-again case shows: half the pair - the background token - already
+   flipped for dark, and the other half did not. That is worse than neither flipping,
+   because it moved the two colours TOWARDS each other. Wherever a dark override
+   exists for one half of a pair, the other half needs one too.
+
+   Each rule below states colour, background and border-colour together, with
+   !important, per the FIX-CC-FOCUS-ACTIVE-COLOUR convention. Hue and saturation are
+   carried over unchanged from the light values - only lightness moves - so these read
+   as the same brand blue and the same challenge orange, lit for a dark ground.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* -- "Try again" after an incorrect answer --------------------------------- */
+/* Light: hsl(217 91% 45%) on hsl(217 91% 97%). Dark: 78% on the flipped navy, 8.3:1. */
+[data-bs-theme="dark"] .cc5-try-again-btn,
+[data-bs-theme="dark"] .cc5-btn-try-again-incorrect,
+body[data-bs-theme="dark"] .cc5-try-again-btn,
+body[data-bs-theme="dark"] .cc5-btn-try-again-incorrect,
+body.dark .cc5-try-again-btn,
+body.dark .cc5-btn-try-again-incorrect,
+.dark .cc5-try-again-btn,
+.dark .cc5-btn-try-again-incorrect,
+.cc5-dark .cc5-try-again-btn,
+.cc5-dark .cc5-btn-try-again-incorrect {
+    color: hsl(217deg 91% 78%) !important;
+    background: hsl(217deg 40% 15%) !important;
+    border-color: hsl(217deg 91% 55%) !important;
+}
+
+[data-bs-theme="dark"] .cc5-try-again-btn:hover,
+[data-bs-theme="dark"] .cc5-try-again-btn:focus,
+[data-bs-theme="dark"] .cc5-try-again-btn:active,
+[data-bs-theme="dark"] .cc5-btn-try-again-incorrect:hover,
+[data-bs-theme="dark"] .cc5-btn-try-again-incorrect:focus,
+[data-bs-theme="dark"] .cc5-btn-try-again-incorrect:active,
+body[data-bs-theme="dark"] .cc5-try-again-btn:hover,
+body[data-bs-theme="dark"] .cc5-btn-try-again-incorrect:hover,
+body.dark .cc5-try-again-btn:hover,
+body.dark .cc5-try-again-btn:focus,
+body.dark .cc5-try-again-btn:active,
+body.dark .cc5-btn-try-again-incorrect:hover,
+body.dark .cc5-btn-try-again-incorrect:focus,
+body.dark .cc5-btn-try-again-incorrect:active,
+.dark .cc5-try-again-btn:hover,
+.dark .cc5-try-again-btn:focus,
+.dark .cc5-try-again-btn:active,
+.dark .cc5-btn-try-again-incorrect:hover,
+.dark .cc5-btn-try-again-incorrect:focus,
+.dark .cc5-btn-try-again-incorrect:active,
+.cc5-dark .cc5-try-again-btn:hover,
+.cc5-dark .cc5-try-again-btn:focus,
+.cc5-dark .cc5-try-again-btn:active,
+.cc5-dark .cc5-btn-try-again-incorrect:hover,
+.cc5-dark .cc5-btn-try-again-incorrect:focus,
+.cc5-dark .cc5-btn-try-again-incorrect:active {
+    color: hsl(217deg 91% 86%) !important;
+    background: hsl(217deg 45% 22%) !important;
+    border-color: hsl(217deg 91% 62%) !important;
+}
+
+/* -- "Show classification" / reveal, on the sorting and matching cards ------ */
+/* The idle and hover states both carried the 45% blue; hover additionally sat on the
+   flipped --cc5-primary-light, which is why it measured worse than idle. :active is
+   deliberately NOT included - it is a solid --cc5-primary fill with a white label,
+   4.87:1, and is correct on either ground. */
+[data-bs-theme="dark"] .cc5-reveal-btn,
+body[data-bs-theme="dark"] .cc5-reveal-btn,
+body.dark .cc5-reveal-btn,
+.dark .cc5-reveal-btn,
+.cc5-dark .cc5-reveal-btn {
+    color: hsl(217deg 91% 76%) !important;
+    background: transparent !important;
+    border-color: hsl(217deg 91% 58%) !important;
+}
+
+[data-bs-theme="dark"] .cc5-reveal-btn:hover,
+[data-bs-theme="dark"] .cc5-reveal-btn:focus,
+body[data-bs-theme="dark"] .cc5-reveal-btn:hover,
+body[data-bs-theme="dark"] .cc5-reveal-btn:focus,
+body.dark .cc5-reveal-btn:hover,
+body.dark .cc5-reveal-btn:focus,
+.dark .cc5-reveal-btn:hover,
+.dark .cc5-reveal-btn:focus,
+.cc5-dark .cc5-reveal-btn:hover,
+.cc5-dark .cc5-reveal-btn:focus {
+    color: hsl(217deg 91% 86%) !important;
+    background: hsl(217deg 45% 22%) !important;
+    border-color: hsl(217deg 91% 62%) !important;
+}
+
+/* -- "Try the challenge again" -------------------------------------------- */
+/* Same hue as the rest of the decision-challenge block (22deg). The light rule is
+   hsl(22 80% 38%) on transparent; 70% lightness gives 9.4:1 on the dark ground. The
+   hover fill hsl(22 90% 95%) is a pale peach that cannot be reused here at all. */
+[data-bs-theme="dark"] .cc5-challenge-retry-btn,
+body[data-bs-theme="dark"] .cc5-challenge-retry-btn,
+body.dark .cc5-challenge-retry-btn,
+.dark .cc5-challenge-retry-btn,
+.cc5-dark .cc5-challenge-retry-btn {
+    color: hsl(22deg 90% 70%) !important;
+    background: transparent !important;
+    border-color: hsl(22deg 70% 48%) !important;
+}
+
+[data-bs-theme="dark"] .cc5-challenge-retry-btn:hover,
+[data-bs-theme="dark"] .cc5-challenge-retry-btn:focus,
+[data-bs-theme="dark"] .cc5-challenge-retry-btn:active,
+body[data-bs-theme="dark"] .cc5-challenge-retry-btn:hover,
+body[data-bs-theme="dark"] .cc5-challenge-retry-btn:focus,
+body[data-bs-theme="dark"] .cc5-challenge-retry-btn:active,
+body.dark .cc5-challenge-retry-btn:hover,
+body.dark .cc5-challenge-retry-btn:focus,
+body.dark .cc5-challenge-retry-btn:active,
+.dark .cc5-challenge-retry-btn:hover,
+.dark .cc5-challenge-retry-btn:focus,
+.dark .cc5-challenge-retry-btn:active,
+.cc5-dark .cc5-challenge-retry-btn:hover,
+.cc5-dark .cc5-challenge-retry-btn:focus,
+.cc5-dark .cc5-challenge-retry-btn:active {
+    color: hsl(22deg 90% 80%) !important;
+    background: hsl(22deg 40% 20%) !important;
+    border-color: hsl(22deg 75% 55%) !important;
 }

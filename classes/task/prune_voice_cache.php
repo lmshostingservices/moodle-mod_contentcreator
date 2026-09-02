@@ -73,28 +73,34 @@ class prune_voice_cache extends \core\task\scheduled_task {
         $fs = get_file_storage();
         $context = \context_system::instance();
 
-        $files = $fs->get_area_files(
-            $context->id,
-            'mod_contentcreator',
-            'voice_cache',
-            0,
-            'timemodified',
-            false
-        );
-
+        // FIX-CC-DOCCACHE-UNPRUNED (v13.95.1): v13.95.1 added a site-wide document_cache so a
+        // document example is generated once instead of once per learner. That endpoint spends
+        // no site credits, but it does spend upstream AI budget and learner wait time. Nothing
+        // else ever removes those files, so they are pruned here on the same retention setting.
         $deleted = 0;
         $bytes = 0;
-        foreach ($files as $file) {
-            if ($file->get_timemodified() >= $cutoff) {
-                continue;
+        foreach (['voice_cache', 'document_cache'] as $filearea) {
+            $files = $fs->get_area_files(
+                $context->id,
+                'mod_contentcreator',
+                $filearea,
+                0,
+                'timemodified',
+                false
+            );
+
+            foreach ($files as $file) {
+                if ($file->get_timemodified() >= $cutoff) {
+                    continue;
+                }
+                $bytes += $file->get_filesize();
+                $file->delete();
+                $deleted++;
             }
-            $bytes += $file->get_filesize();
-            $file->delete();
-            $deleted++;
         }
 
         mtrace(
-            'Content Creator: pruned ' . $deleted . ' cached voiceover file(s), ' .
+            'Content Creator: pruned ' . $deleted . ' cached voiceover/document file(s), ' .
                 round($bytes / 1048576, 1) . ' MB, older than ' . $days . ' days.'
         );
     }

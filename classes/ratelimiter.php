@@ -64,6 +64,12 @@ class ratelimiter {
             'generate' => 'ratelimitgenerate',
             'vendor' => 'ratelimitvendor',
             'voice' => 'ratelimitvoice',
+            // FIX-CC-VENDORREAD-NOT-CONFIGURABLE (v13.95.1): the read-only bucket was the one
+            // bucket with no setting behind it, so its 600/hour ceiling could not be raised or
+            // disabled by an administrator - unlike every other bucket here. An author who met
+            // it was locked out of reading their own credit balance, which spends nothing, with
+            // no way for the site to do anything about it.
+            'vendorread' => 'ratelimitvendorread',
         ];
         $max = $default;
         if (isset($settingmap[$bucket])) {

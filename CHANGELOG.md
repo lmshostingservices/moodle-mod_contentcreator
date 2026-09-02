@@ -1,5 +1,314 @@
 # Changelog
 
+## 13.95.3 - 2026-09-01
+
+Marketplace compliance: all user-facing text in JavaScript is now translatable.
+
+### Fixed - every hardcoded user-facing string in the AMD modules
+
+A compliance sweep found that text a user actually reads was written as literals in
+`player5.js`, `builder.js` and `cc-activities.js` - notifications, button labels, form
+labels, placeholders, `title` and `aria-label` attributes, the whole print/PDF export, the
+country and voice-language pickers, and the mode-card body copy. None of it could be
+translated or reworded by a site, and none of it reached AMOS, so a non-English site saw
+English in the middle of otherwise translated content.
+
+The first pass found 36. That count was wrong: it only looked at notification and status
+text, and missed anything containing a double space, an HTML entity, a line break, or text
+sitting between `</strong>` and `<strong>`. Successive passes with wider detection closed
+**roughly 1,100 occurrences** across the three modules.
+
+Nothing new was invented to do it. Both large modules already had the right machinery and
+these strings had simply never been migrated into it:
+
+- `player5.js` and `cc-activities.js` resolve **441 keys** through the existing `getLabel()`,
+  which prefers a language pack, then a `cclabel_` string, then built-in English. New keys
+  were added to `UI_LABELS.en`, which also enrols them in the single batched prefetch.
+- `builder.js` resolves **566 keys** through the existing `s()` helper and its prefetched
+  `CC_MESSAGE_KEYS` batch.
+- `lang/en/contentcreator.php` now carries 1,364 strings, so a site can reword any of them.
+
+English wording is unchanged throughout - each value was machine-verified to appear verbatim
+in the v13.94.8 source. Sentences carrying a value use Moodle's `{$a}` convention rather than
+concatenation, so word order is translatable. Where a label and its inline hint were one
+string, they stayed one string: splitting a sentence across keys produces fragments no
+translator can work with.
+
+Deliberately not migrated, and recorded here rather than left implicit:
+
+- The **AI prompt templates** in `builder.js`. That text is sent to the model, never rendered
+  to a user, and translating it would change the generated content.
+- The **eight Google TTS voice names** (Aoede, Kore, Leda, Zephyr, Puck, Charon, Fenrir,
+  Orus). They are product identifiers, not copy.
+- Six **picker vocabulary tables** (country/state, industry, sub-industry, job title, task
+  category, equipment category) holding about 4,625 distinct terms. These are user-facing,
+  but keying them would grow the English language file roughly fivefold and hand translators
+  a vocabulary of trade equipment and job titles. That is a product decision, not a
+  mechanical one, and is left open deliberately.
+
+Also fixed along the way: two `.cc5-doc-link` handlers had been firing on every document
+click, and four keys introduced earlier in this release cycle had their English altered by a
+double space, an ellipsis character and an en-dash. All four were restored to the v13.94.8
+text.
+
+### Known - two pairs of strings disagree with themselves
+
+Four keys predating this work carry different English in their JavaScript fallback than in
+the language file, so the wording depends on whether the prefetch has landed:
+`quizVoiceEnabledDesc` and `questionsReadAloud` in the player, `errsaveregenerated` and
+`errtgaunavailable` in the builder. `errtgaunavailable` looks like a deliberate reword that
+never made it back to the fallback. Resolving them means choosing which wording is correct,
+which is an owner decision, so nothing was changed.
+
+`cclabel_completeActivity` is defined with an empty English value. It predates this work, no
+code references it, and other language packs carry real text for it - so it was left rather
+than have English invented for it.
+
+## 13.95.2 - 2026-09-01
+
+Adds the per-subtopic billing key the vendor needs in order to price a subtopic once. No
+pricing changes in the plugin: the estimator still quotes 100 credits per subtopic, which
+under the agreed tariff is exactly correct.
+
+### Added - every vendor call now says which subtopic it belongs to
+
+The agreed tariff is a flat **100 credits per subtopic**, covering the content, the first
+voiceover for each of its sections and the first image for each of its slides, with
+regeneration charged at 5. The vendor cannot derive any of that from the HTTP calls alone.
+One subtopic is one `/prompt` call **plus** a structural repair call whenever the first
+response comes back malformed (`generateFiveCardSequence()` runs `MAX_ATTEMPTS = 2`), plus an
+unpredictable number of `/tts` and image calls. Priced per request, a subtopic that needed
+repairing would cost 200 rather than 100, and every voiceover would be charged on top of a
+price meant to include it.
+
+`planner.js` now mints a `billingKey` for each subtopic as it is created, and it is carried
+by every downstream vendor call: content generation and its repair pass, translation passes,
+builder voiceover pre-generation, player preload and on-demand voiceover, the background
+regeneration after a slide edit, single image generation, and the bulk "images for all
+slides" sweep. `generate_voiceover.php` accepts it too, for the mobile app.
+
+The key is deliberately **not** derived from the subtopic id: `planner.js` emits ids like
+`subtopic_0_0`, which repeat in every module ever built, and a collision would hand a
+customer a free subtopic. It is minted fresh per build and restricted to `[a-z0-9_]` so it
+survives `PARAM_ALPHANUMEXT`.
+
+Both image routes now also send the section id. The single-image path already sent an
+`isRegeneration` flag, but that flag is set by the browser and the bulk route never sent one
+at all - so it cannot be the basis for pricing. The key and section id let the vendor keep
+its own record of which section has already had its covered image, rather than trusting the
+client's word for it.
+
+Every field is optional and empty-safe on both sides: a site running an older plugin sends
+nothing and is priced exactly as it is today.
+
+
+## 13.95.1 - 2026-09-01
+
+Credit accounting. Two independent audits of every credit-spending path - the PHP spend
+layer and the JavaScript that initiates the calls - converged on the same conclusion: the
+plugin was paying the vendor for work it then threw away, and in several places paying
+again for the same work. Every finding below was verified against the code, not inferred.
+
+### Fixed - voiceover charged, discarded, then charged again on every page load
+
+`ajax.php`'s `generate_voice` fell through to `contentcreator_api_call()`'s 180-second curl
+default. This plugin's own logs (v13.92) measured a 4-chunk Chirp 3 HD voiceover at
+143-153s, and `CONTENTCREATOR_VOICE_MAXCHARS` allows five chunks - which lands at or past
+that ceiling. When curl gave up, the vendor had already synthesised the audio and charged
+5 credits; the branch returned `success: false` and skipped the cache write, so nothing was
+kept. The client then retried three times, paying each time, and because the failed state
+is deliberately not persisted, the whole four-call cycle repeated on the next page load.
+Indefinitely.
+
+The server call now gets 280s, inside the 300s of PHP time `prepare_long_request()` already
+granted, and matching the web service twin in `generate_voiceover.php` which had used 300s
+all along. The browser deadlines that sat *below* the server's ceiling (200s in both the
+preload and on-demand paths) are now 300s, so the browser never abandons a synthesis the
+site is being charged for.
+
+### Fixed - a timed-out generation job was re-submitted, not resumed
+
+The server charges at submit: `ajax.php` sends `creditsToUse` to `/prompt/start`. When
+`pollJob()` gave up after six minutes it threw `OPENAI_TIMEOUT`, which `callAI()`'s own
+retry logic classified as transient and retried by calling itself - issuing a brand new
+billable job while the paid one was still running. Poll-error exhaustion did the same.
+With `MAX_RETRIES = 5` inside a caller that allows two attempts, one flaky section could
+bill six times.
+
+On a translation pass that is not a rounding error: `ml_translate_*` is priced at 50
+credits per submit, so a single subtopic quoted to the author at 50 credits could cost 300.
+
+`callAI()` now records the job id the moment one is issued and refuses to re-submit after
+that point, failing the section instead of buying the same content twice. Retrying is still
+allowed before a job exists, which is the only point at which it was ever safe.
+
+### Changed - document examples are generated once, not once per learner
+
+`generate_document_example` was the only AI-calling endpoint in the plugin with no cache at
+any layer, and the client never stored the result either - only the teacher's
+edit-and-save path populated `documentCache`. So every learner opening the same document in
+the same activity triggered a fresh generation, and so did the same learner opening it twice.
+
+To be precise about what that did and did not cost: the vendor endpoint carries **no credit
+logic at all**, so this was never a site-credit leak. It cost upstream AI spend, a full
+generation's wait for the learner on every single open, and repeated load on an endpoint
+that has no rate limit of its own.
+
+The generated document is a pure function of its request payload - it carries no user,
+course or activity identity - so it is now cached site-wide in the file store, keyed on that
+payload. The lookup happens before the gates so a hit is never blocked by a rate limiter.
+The write uses the same delete-before-create pattern as the voiceover cache, so two
+concurrent requests cannot lose a document, and a cache-write failure can never fail the
+request. The client now also keeps what it fetched, so a repeat open in one session costs
+not even a round trip. The 60-second timeout, well under the time a full workplace document
+takes, is now 180s.
+
+### Fixed - a cache purge could bill a second generation job
+
+The `jobowner` binding added in v13.94.3 lives in a `MODE_APPLICATION` cache, and
+`contentcreator_job_is_owned()` collapsed "no binding found" and "belongs to someone else"
+into a single refusal. On a site whose application cache is node-local, or any site where an
+administrator purges caches during a job's six-minute window, every poll for a live job was
+refused - and the client responded by starting a fresh, billable one.
+
+Absence is now allowed through and logged; a binding that is present but does not match is
+still refused, which is the case v13.94.3 was written to stop. The poll already sits behind
+`require_login()` and a manage-capability check on the nominated activity, so what remains
+is an author who has somehow learned another author's opaque vendor job id *and* whose
+binding has expired - against a job that is stale within minutes.
+
+### Fixed - bulk image generation discarded images it had paid for
+
+The bulk path used a 120-second client timeout against a server that allows the vendor 180s,
+for a call the code itself documents as taking 30-120s. On timeout the run reported "N of M
+generated" while the vendor had billed 5 credits for each image thrown away. Now 210s, in
+line with every other path in the plugin.
+
+### Fixed - every document link fired two handlers
+
+Two delegated `click .cc5-doc-link` handlers were bound on the same container: the real
+document modal, and a v7.6.1 placeholder popup that had been superseded but never removed.
+`e.stopPropagation()` does not suppress a sibling handler on the *same* element - that needs
+`stopImmediatePropagation` - so both ran on every click. The placeholder also interpolated
+the document name into HTML unescaped. Removed.
+
+### Changed - the document cache is pruned on the existing retention setting
+
+`prune_voice_cache` now sweeps `document_cache` alongside `voice_cache`. Deleting an entry
+costs only the work to regenerate that exact document, so the long default retention is
+deliberate.
+
+### Fixed - the read-only rate limit could not be raised, and said the wrong thing
+
+Reading the credit balance is a GET that spends nothing, and since v13.80 it has had its own
+bucket so it cannot starve the credit-consuming ones. But that bucket was the only one in the
+plugin with no setting behind it: 600/hour was hardcoded at the call site and absent from the
+settings map, so an administrator could neither raise it nor switch it off. An author who met
+it was locked out of reading their own balance with nothing the site could do about it. It is
+now `ratelimitvendorread`, configurable like every other bucket, 0 to disable.
+
+The message was wrong in three ways. `ratelimiter::enforce()` builds a detailed message naming
+the actual ceiling and window - `ajax.php` threw it away and substituted "You have made too
+many AI requests in a short time. Please wait a few minutes and try again." The window is an
+**hour**, so "a few minutes" sent authors back to retry into a wall; the ceiling that was
+actually hit was never shown; and a *read* is not an AI request, so someone who had merely
+opened the builder was pointed at entirely the wrong problem. The detail message is now passed
+through verbatim - it alone knows which admin-configured value was applied - and the read
+bucket has its own wording stating plainly that no credits were used.
+
+Note for anyone hitting a limit now: the counters live in the `ratelimit` application cache, so
+*Site administration > Development > Purge caches* clears them immediately.
+
+### Known - the server is under-charging for primary generation
+
+`builder.js` quotes 100 credits per subtopic. The vendor confirmed on 2026-09-01 that
+`/api/moodle/content-creator/prompt` honours the caller-supplied `creditsToUse` verbatim and
+applies no tariff of its own - and the plugin sends `creditsToUse: 1`. The owner has since
+confirmed that **100 credits per subtopic is the correct rate**, so the quote is right and the
+charge is wrong: primary generation has been billing roughly one hundredth of its intended
+price. Translation is unaffected and correct throughout (50 quoted, 50 sent, 50 charged).
+
+No plugin change is made here, deliberately. The correct place to hold a price is the server:
+this plugin is GPL and installed on customer sites, so any `creditsToUse` the client sends can
+be edited by whoever runs it, and a price the client chooses is not a price. The vendor's
+`/generate-slide-image` endpoint already demonstrates the right pattern - a server-side
+constant, with `creditsToUse` absent from the request schema entirely.
+
+One detail for whoever implements the server-side tariff: a subtopic is **not** one request.
+`generateFiveCardSequence()` runs a validity gate with `MAX_ATTEMPTS = 2` - attempt 1
+generates, attempt 2 is a structural repair issued only when the first response came back
+malformed. A flat 100-per-request tariff would therefore charge 200 for any subtopic that
+needed repairing. The billable unit is the subtopic, not the call.
+
+## 13.95.0 - 29 August 2026
+
+Two pieces of work: a fix for a Route 5 button that could render invisible, and the
+plugin-wide sweep that fix prompted. Plus a way to apply a plugin update to content that
+was already generated.
+
+### Fixed - "Next Activity" was invisible once it unlocked (Route 5)
+
+The button at the end of the three activities rendered white-on-white the moment it was
+hovered, focused or clicked - contrast 1.02:1, and the chevron went with it because the
+SVG uses `stroke="currentColor"`. Because `:focus` was in the selector list, a mouse click
+left it invisible until focus moved elsewhere.
+
+This was not a theme override. One rule in the v13.94.6 hover-hardening block set `color`
+and no background - the only rule in that block to break the block's own stated contract -
+so the background contest fell to the group above it, whose near-white `!important` value
+beat the intended orange gradient. All three properties are now pinned together, as every
+sibling group in that block already did.
+
+The same button's disabled state was `opacity: 0.35` over a pair that was only 3.07:1 to
+begin with, so the control a learner is waiting on measured about 1.44:1 before it
+unlocked. It now states a muted pair explicitly instead of fading the label.
+
+### Fixed - `--background` and `--border` were never defined
+
+`player5.js` emits `border: 1px solid var(--border)` in 35 inline styles and
+`background: var(--background)` in three. Neither custom property existed anywhere in the
+plugin, so both declarations were invalid at computed-value time: the card-editor rows had
+no border, and the move-up / move-down controls had no fill, which left the site theme free
+to paint white glyphs on a transparent light background. Both are now defined, scoped to
+the player so two very generically-named properties cannot leak into the theme.
+
+### Fixed - colour contrast across the plugin
+
+Verified with a harness that renders all 181 real button classes against a stand-in for the
+button rules Boost ships, in both themes and in all four interaction states. Light mode went
+from 71 failing state pairs to 3, dark mode from 31 to 4; the remainder in each are a probe
+artefact (a container class rendered as a bare button, which does not occur in the markup).
+
+Among the defects that fixed:
+
+- The builder's whole `.cc-btn` family had no `:focus` or `:active` rules at all, so
+  keyboard use handed both halves of the colour pair to the theme.
+- The builder and cards surfaces had no keyboard focus ring outside four one-off rules
+  (WCAG 2.4.7). The player got one in v13.94.6; the rest of the plugin now has one too.
+- Rules that paired a hard-coded light background with a theme-flipping colour token, which
+  resolve to light-on-light in dark mode. The dark input-method tab was 1.21:1.
+- The brand blue and the alert red were used both as accents and as text or fills behind
+  text. An accent needs 3:1; text needs 4.5:1. Both now have solid variants for the jobs
+  that involve text, and keep their brand values for borders and icons.
+- The amber prose tone's accent was 4.02:1 on its own card - the only one of the four tones
+  below AA.
+- Disabled states that used `opacity`, which fades the label along with the button.
+
+### Added - apply a plugin update to content already generated
+
+Every fix to the narration builder, the label translations or the voiceover schema used to
+reach only content generated after the upgrade, because the audio is a stored artefact
+rather than something re-derived on load. A teacher who upgraded to pick up a voiceover fix
+heard the same audio as before, with nothing in the interface to say why, and the only
+recourse was "Reset & Start Over" - which discards every topic, card and hand-edit.
+
+Manifests now record the version that built them. When that is older than the running
+plugin, the completion screen shows an "Apply updates & relaunch" panel naming what changed.
+Applying it keeps all content, images, activities and edits exactly as they are and clears
+only the baked voiceover, so it is re-recorded with the current narration engine on the next
+open. Re-recording uses voiceover credits, and the panel says so. It is not shown at all
+when the module is already current.
+
 ## 13.94.8 - 28 August 2026
 
 A self-review of the 13.94.3-13.94.7 changes, run adversarially on the assumption the author

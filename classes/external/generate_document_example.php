@@ -126,6 +126,62 @@ class generate_document_example extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
+        // FIX-CC-DOCEXAMPLE-NEVER-CACHED (v13.95.1): this endpoint had no cache of any kind,
+        // and the client never stored the result either, so EVERY learner opening the SAME
+        // document example in the SAME activity triggered a fresh AI generation - a
+        // 200-student cohort meant 200 generations of one identical document.
+        //
+        // Confirmed against the vendor on 2026-09-01: /generate-document-example carries no
+        // credit logic at all, so this costs ZERO site credits. It is NOT a credit leak. What
+        // it does cost is real upstream AI spend on the vendor's side, latency for the learner
+        // on every open, and load on an endpoint with no rate limit of its own. Those are the
+        // reasons for this cache; do not describe it as a credit fix.
+        //
+        // The generated document is a pure function of the payload below (it carries no user,
+        // course or activity identity), so the cache is site-wide, exactly like voice_cache.
+        // Looked up BEFORE the spend gates: a cache hit must cost nothing and must not be
+        // blocked by a rate limiter. Mirrors the ordering in generate_voiceover.php.
+        $cachekey = md5(implode('|', [
+            $params['docId'],
+            $params['docName'],
+            $params['country'],
+            $params['state'],
+            $params['industry'],
+            $params['subIndustry'],
+            $params['jobLevel'],
+            $params['jobTitle'],
+            $params['route'],
+            $params['unitCode'],
+            $params['unitTitle'],
+        ]));
+        $cachectx = \context_system::instance();
+        $fs = get_file_storage();
+        $cachefile = $fs->get_file(
+            $cachectx->id,
+            'mod_contentcreator',
+            'document_cache',
+            0,
+            '/',
+            $cachekey . '.json'
+        );
+        if ($cachefile) {
+            $cached = json_decode($cachefile->get_content(), true);
+            if (is_array($cached) && isset($cached['content'])) {
+                return [
+                    'success' => true,
+                    'content' => $cached['content'],
+                    'docId' => $cached['docId'] ?? $params['docId'],
+                    'docName' => $cached['docName'] ?? $params['docName'],
+                    'domain' => $cached['domain'] ?? '',
+                    'renderProfile' => $cached['renderProfile'] ?? '',
+                    'error' => '',
+                ];
+            }
+        }
+
+        // Billed path begins here. Everything past this point spends site credits, which is
+        // why the capability gate and the rate limiter sit below the cache lookup above.
+
         // v13.85: This call SPENDS SITE CREDITS. Gating it on :view alone meant every
         // enrolled learner in every course could draw on the same paid balance, with no
         // administrative control beyond disabling the feature site-wide. The new
@@ -141,7 +197,6 @@ class generate_document_example extends external_api {
         // set it to 0 to disable the bucket, changed nothing for this web service. enforce()
         // reads the setting and applies the site ceiling in one place, shared with ajax.php.
         \mod_contentcreator\ratelimiter::enforce($USER->id, 'generate', 60, HOURSECS);
-
 
         // Central Config integration with fallback.
         $aiconfiglib = $CFG->dirroot . '/local/aiconfig/lib.php';
@@ -180,7 +235,11 @@ class generate_document_example extends external_api {
         $curl = new \curl();
         $curl->setopt(
             [
-                'CURLOPT_TIMEOUT' => 60,
+                // FIX-CC-DOCEXAMPLE-TIMEOUT (v13.95.1): 60s was below the real generation
+                // time for a full workplace document, so the vendor completed and charged
+                // while this call reported failure and cached nothing - and the client's
+                // silent fallback made it look free. Matched to the AJAX paths.
+                'CURLOPT_TIMEOUT' => 180,
                 'CURLOPT_RETURNTRANSFER' => true,
                 'CURLOPT_SSL_VERIFYPEER' => true,
             ]
@@ -240,6 +299,55 @@ class generate_document_example extends external_api {
             ];
         }
 
+        // FIX-CC-DOCEXAMPLE-NEVER-CACHED (v13.95.1): store the generated result site-wide so
+        // the next learner to open this document is served from cache instead of triggering a
+        // second generation. Written before the return so a later reader gets the identical
+        // cleaned HTML this caller receives.
+        $cleaned = clean_text($data['content'] ?? '', FORMAT_HTML);
+        if ($cleaned !== '') {
+            try {
+                // Delete before create: two concurrent requests for the same key would
+                // otherwise both reach create_file_from_string() and the second would throw a
+                // duplicate-file exception, losing a document the site has already paid for.
+                // Same race, and the same fix, as FIX-CC-EXTVO-CACHE-RACE in the voiceover path.
+                $oldcachefile = $fs->get_file(
+                    $cachectx->id,
+                    'mod_contentcreator',
+                    'document_cache',
+                    0,
+                    '/',
+                    $cachekey . '.json'
+                );
+                if ($oldcachefile) {
+                    $oldcachefile->delete();
+                }
+                $fs->create_file_from_string(
+                    [
+                        'contextid' => $cachectx->id,
+                        'component' => 'mod_contentcreator',
+                        'filearea' => 'document_cache',
+                        'itemid' => 0,
+                        'filepath' => '/',
+                        'filename' => $cachekey . '.json',
+                    ],
+                    json_encode([
+                        'content' => $cleaned,
+                        'docId' => $data['docId'] ?? $params['docId'],
+                        'docName' => $data['docName'] ?? $params['docName'],
+                        'domain' => $data['domain'] ?? '',
+                        'renderProfile' => $data['renderProfile'] ?? '',
+                    ])
+                );
+            } catch (\Exception $e) {
+                // A cache write failure must never fail the request: the caller already has
+                // the content it paid for. Worst case the next reader pays again.
+                debugging(
+                    'Content Creator could not cache document example: ' . $e->getMessage(),
+                    DEBUG_DEVELOPER
+                );
+            }
+        }
+
         return [
             'success' => true,
             // v13.86: This HTML is injected straight into the player's DOM (player5.js
@@ -248,7 +356,7 @@ class generate_document_example extends external_api {
             // this the exception rather than a design decision. clean_text() strips
             // script, event handlers and anything outside Moodle's allowed tag set
             // while leaving the document markup intact.
-            'content' => clean_text($data['content'] ?? '', FORMAT_HTML),
+            'content' => $cleaned,
             'docId' => $data['docId'] ?? $params['docId'],
             'docName' => $data['docName'] ?? $params['docName'],
             'domain' => $data['domain'] ?? '',

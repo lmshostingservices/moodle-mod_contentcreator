@@ -89,7 +89,10 @@ class backup_restore_test extends advanced_testcase {
      * @return string The pluginfile URL written into the manifest.
      */
     /**
+     * Create a cached voiceover file for the activity under test.
+     *
      * @param bool $large Store a manifest large enough to be gzip-compressed (v13.85).
+     * @return string The cache key the file was stored under.
      */
     protected function create_voiceover(bool $large = false): string {
         global $DB;
@@ -129,6 +132,10 @@ class backup_restore_test extends advanced_testcase {
         $stored = \mod_contentcreator\manifest_storage::compress($manifest);
         if ($large) {
             $this->assertSame('gz:', substr($stored, 0, 3), 'Test fixture must be stored compressed.');
+            // compress() reports the saving through debugging(). That is intended plugin
+            // behaviour, so acknowledge it here - otherwise it surfaces at teardown as an
+            // unexpected debugging call and fails a test that is actually passing.
+            $this->assertDebuggingCalled();
         }
         $DB->set_field('contentcreator', 'manifestjson', $stored, ['id' => $this->contentcreator->id]);
 
@@ -253,10 +260,14 @@ class backup_restore_test extends advanced_testcase {
 
         // The manifest URL must have been rewritten to the new context and cmid.
         $manifest = $DB->get_field('contentcreator', 'manifestjson', ['id' => $newcm->instance]);
-        $this->assertStringNotContainsString($oldurl, $manifest);
+        // The manifest is JSON, so its slashes are escaped as \/ - compare against the
+        // unescaped form rather than against the raw column, or the needle can never match
+        // and the assertion passes or fails for the wrong reason.
+        $unescaped = str_replace('\\/', '/', $manifest);
+        $this->assertStringNotContainsString($oldurl, $unescaped);
         $this->assertStringContainsString(
             '/pluginfile.php/' . $newcontext->id . '/mod_contentcreator/voiceovers/' . $newcm->id . '/',
-            $manifest
+            $unescaped
         );
     }
 
@@ -275,6 +286,11 @@ class backup_restore_test extends advanced_testcase {
         $oldurl = $this->create_voiceover(true);
 
         $newcm = $this->backup_and_restore();
+        // The restore step re-compresses the manifest after repointing its URLs, and
+        // compress() reports the saving through debugging(). Intended behaviour, and
+        // invisible outside developer mode - acknowledged so it does not surface at
+        // teardown as an unexpected debugging call.
+        $this->resetDebugging();
         $newcontext = context_module::instance($newcm->id);
 
         $stored = $DB->get_field('contentcreator', 'manifestjson', ['id' => $newcm->instance]);
@@ -284,10 +300,14 @@ class backup_restore_test extends advanced_testcase {
         $this->assertNotSame($stored, $manifest, 'Restored manifest must still decompress.');
         $this->assertNotNull(json_decode($manifest), 'Restored manifest must still be valid JSON.');
 
-        $this->assertStringNotContainsString($oldurl, $manifest);
+        // The manifest is JSON, so its slashes are escaped as \/ - compare against the
+        // unescaped form rather than against the raw column, or the needle can never match
+        // and the assertion passes or fails for the wrong reason.
+        $unescaped = str_replace('\\/', '/', $manifest);
+        $this->assertStringNotContainsString($oldurl, $unescaped);
         $this->assertStringContainsString(
             '/pluginfile.php/' . $newcontext->id . '/mod_contentcreator/voiceovers/' . $newcm->id . '/',
-            $manifest
+            $unescaped
         );
     }
 }

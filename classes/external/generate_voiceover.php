@@ -82,6 +82,16 @@ class generate_voiceover extends external_api {
                 'language'  => new external_value(PARAM_TEXT, 'Language code override (e.g. fr-FR, ja-JP)', VALUE_DEFAULT, ''),
                 // Version 13.1: explicit voice name (Aoede/Kore/Leda/Zephyr/Puck/Charon/Fenrir/Orus).
                 // Falls back to site-level default when not supplied.
+                // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): the subtopic this narration belongs
+                // to, so the vendor can tell a first voiceover - covered by the subtopic's
+                // price - from a regeneration, which is charged. Optional: an older client
+                // that omits it is priced exactly as before.
+                'subtopicKey' => new external_value(
+                    PARAM_ALPHANUMEXT,
+                    'Billing key of the subtopic this audio belongs to',
+                    VALUE_DEFAULT,
+                    ''
+                ),
                 'voice'     => new external_value(PARAM_ALPHA, 'Chirp 3 HD voice name', VALUE_DEFAULT, ''),
             ]
         );
@@ -95,6 +105,7 @@ class generate_voiceover extends external_api {
      * @param string $sectionid Section identifier the audio belongs to.
      * @param string $language Language code override, for example 'fr-FR'.
      * @param string $voice Chirp 3 HD voice name.
+     * @param string $subtopickey Billing key of the subtopic this audio belongs to.
      * @return array Result structure as described by execute_returns().
      */
     public static function execute(
@@ -102,7 +113,8 @@ class generate_voiceover extends external_api {
         string $text,
         string $sectionid = '',
         string $language = '',
-        string $voice = ''
+        string $voice = '',
+        string $subtopickey = ''
     ): array {
         global $CFG, $USER;
 
@@ -114,6 +126,7 @@ class generate_voiceover extends external_api {
                 'sectionId' => $sectionid,
                 'language'  => $language,
                 'voice'     => $voice,
+                'subtopicKey' => $subtopickey,
             ]
         );
 
@@ -133,15 +146,17 @@ class generate_voiceover extends external_api {
         // always had this the right way round (cache first, gates only on a miss), and
         // this endpoint - the mobile app and web-service path - had it inverted.
         //
-        // Two consequences, both real:
-        //   1. A cache HIT costs zero credits but still consumed a slot in the shared
-        //      site:voice bucket. Sixty students replaying a narrated activity could
-        //      exhaust the site ceiling in an hour and stop voiceover generation for
-        //      everyone, teachers in the web builder included.
-        //   2. A site that prohibits :generateondemand for students - which the
-        //      capability's own description invites - broke playback of audio that was
-        //      already generated and free to serve. Web players kept working; the app
-        //      went silent.
+        /*
+         * Two consequences, both real:
+         *   1. A cache HIT costs zero credits but still consumed a slot in the shared
+         *      site:voice bucket. Sixty students replaying a narrated activity could
+         *      exhaust the site ceiling in an hour and stop voiceover generation for
+         *      everyone, teachers in the web builder included.
+         *   2. A site that prohibits :generateondemand for students - which the
+         *      capability's own description invites - broke playback of audio that was
+         *      already generated and free to serve. Web players kept working; the app
+         *      went silent.
+         */
         //
         // The gates now sit immediately before the billed vendor call, after the cache
         // lookup. See "BILLED PATH BEGINS" below.
@@ -308,6 +323,8 @@ class generate_voiceover extends external_api {
             'voiceId'      => $voiceid,
             'voiceGender'  => $voicename, // Version 13.1: send actual voice name.
             'creditsToUse' => 5, // Voiceover pricing: 5 credits per slide.
+            'subtopicKey'  => $params['subtopicKey'],
+            'sectionId'    => $params['sectionId'],
         ];
 
         $url      = 'https://lms-labs.com/api/moodle/content-creator/tts';

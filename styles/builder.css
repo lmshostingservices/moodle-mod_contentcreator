@@ -117,12 +117,16 @@ label.cc-radio-card.selected,
 }
 
 /* Primary buttons */
+/* v13.95 FIX-CC-PRIMARY-CONTRAST: 60% lightness put white text at 3.64:1. Darkened to
+   the 45%/38% pair defined in tokens.css - 4.87:1 idle, 6.55:1 hover - keeping the hue
+   and saturation so the button is the same blue. Borders elsewhere stay at 60%: a
+   border only has to clear 3:1, and 60% does. */
 button.cc-btn-primary,
 .cc-btn.cc-btn-primary {
-    background: hsl(217 91% 60%) !important;
-    background-color: hsl(217 91% 60%) !important;
+    background: hsl(217 91% 45%) !important;
+    background-color: hsl(217 91% 45%) !important;
     color: hsl(0 0% 100%) !important;
-    border-color: hsl(217 91% 60%) !important;
+    border-color: hsl(217 91% 45%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -171,10 +175,15 @@ button.cc-level-pill.cc-level-active::before,
 }
 
 button.cc-btn-primary:hover:not(:disabled),
-.cc-btn.cc-btn-primary:hover:not(:disabled) {
-    background: hsl(217 91% 55%) !important;
-    background-color: hsl(217 91% 55%) !important;
+button.cc-btn-primary:focus:not(:disabled),
+button.cc-btn-primary:active:not(:disabled),
+.cc-btn.cc-btn-primary:hover:not(:disabled),
+.cc-btn.cc-btn-primary:focus:not(:disabled),
+.cc-btn.cc-btn-primary:active:not(:disabled) {
+    background: hsl(217 91% 38%) !important;
+    background-color: hsl(217 91% 38%) !important;
     color: hsl(0 0% 100%) !important;
+    border-color: hsl(217 91% 38%) !important;
 }
 
 /* Ghost buttons */
@@ -219,10 +228,15 @@ button.cc-btn-icon-only,
 }
 
 button.cc-btn-icon-only:hover,
-.cc-btn-icon-only:hover {
+button.cc-btn-icon-only:focus,
+button.cc-btn-icon-only:active,
+.cc-btn-icon-only:hover,
+.cc-btn-icon-only:focus,
+.cc-btn-icon-only:active {
     background: hsl(0 70% 95%) !important;
     background-color: hsl(0 70% 95%) !important;
-    color: hsl(0 70% 50%) !important;
+    /* v13.95: 50% lightness gave 4.21:1 on this pale red; 40% gives 6.0:1. */
+    color: hsl(0 70% 40%) !important;
 }
 
 /* Subtopic items */
@@ -2167,15 +2181,24 @@ body.dark .cc-instruction-card-text strong,
     margin-left: var(--cc-space-1);
 }
 
-.cc-btn-danger {
-    background: transparent;
-    color: var(--cc-error);
-    border-color: var(--cc-error);
+/* v13.95: pinned across all states for the same theme-takeover reason as the rest of
+   the .cc-btn family, and moved onto the accessible red variants. */
+.cc-btn-danger,
+button.cc-btn-danger {
+    background: transparent !important;
+    color: var(--cc-error-text) !important;
+    border-color: var(--cc-error) !important;
 }
 
-.cc-btn-danger:hover:not(:disabled) {
-    background: var(--cc-error);
-    color: var(--cc-error-foreground);
+.cc-btn-danger:hover:not(:disabled),
+.cc-btn-danger:focus:not(:disabled),
+.cc-btn-danger:active:not(:disabled),
+button.cc-btn-danger:hover:not(:disabled),
+button.cc-btn-danger:focus:not(:disabled),
+button.cc-btn-danger:active:not(:disabled) {
+    background: var(--cc-error-solid) !important;
+    color: var(--cc-error-foreground) !important;
+    border-color: var(--cc-error-solid) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -2409,15 +2432,25 @@ body.dark .cc-alert-icon,
     margin: 0;
 }
 
+/* v13.95 FIX-CC-LINKBTN-THEME: `all: unset` clears the UA button styling but does not
+   defend against the theme, and neither rule ever stated a background. Boost paints
+   `#region-main button:hover|focus|active { background-color: #434343 }`, which put the
+   plugin's blue on near-black at about 2.2:1 - and on :focus the theme takes the colour
+   too. Pin a transparent background and the link colour across all three states. */
 .cc-link-btn {
     all: unset;
-    color: var(--cc-primary);
+    background: transparent !important;
+    color: var(--cc-primary-text) !important;
     cursor: pointer;
     text-decoration: underline;
 }
 
-.cc-link-btn:hover {
-    color: var(--cc-primary-dark, hsl(217 91% 50%));
+.cc-link-btn:hover,
+.cc-link-btn:focus,
+.cc-link-btn:active {
+    background: transparent !important;
+    color: var(--cc-primary-dark, hsl(217 91% 32%)) !important;
+    text-decoration: underline;
 }
 
 /* File preview after upload */
@@ -2507,15 +2540,19 @@ body.dark .cc-file-upload-zone:hover,
     height: 24px;
     border: none;
     background: transparent;
-    color: var(--cc-error);
+    color: var(--cc-error-text);
     cursor: pointer;
     border-radius: var(--cc-radius);
     font-size: 18px;
     transition: background var(--cc-duration-fast) var(--cc-ease);
 }
 
-.cc-error-close:hover {
-    background: rgba(0, 0, 0, 0.1);
+/* v13.95: background-only hover with no colour - the theme took the label. */
+.cc-error-close:hover,
+.cc-error-close:focus,
+.cc-error-close:active {
+    background: hsl(0 60% 95%) !important;
+    color: var(--cc-error-text) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -2642,6 +2679,74 @@ body.dark .cc-file-upload-zone:hover,
 .cc-qa-badge-warn {
     background: hsl(38 92% 90%);
     color: hsl(32 95% 30%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PLUGIN UPDATE PANEL (v13.95)
+   Shown on the completion screen only when the running plugin version is newer than
+   the version that built this module. Offers a non-destructive re-apply.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.cc-update-panel {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto var(--cc-space-6);
+    border: 1px solid hsl(38 92% 78%);
+    border-left: 4px solid hsl(32 95% 48%);
+    border-radius: var(--cc-radius);
+    padding: var(--cc-space-4) var(--cc-space-5);
+    background: hsl(38 92% 97%);
+    text-align: left;
+}
+.cc-update-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: var(--cc-space-2);
+}
+.cc-update-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    color: hsl(32 95% 38%);
+}
+.cc-update-title {
+    font-size: var(--cc-text-base);
+    font-weight: 700;
+    color: hsl(32 95% 26%);
+    margin: 0;
+}
+.cc-update-reasons {
+    margin: 0 0 var(--cc-space-3);
+    padding-left: 1.15rem;
+    font-size: var(--cc-text-sm);
+    color: hsl(32 40% 28%);
+    line-height: 1.55;
+}
+.cc-update-desc {
+    font-size: var(--cc-text-xs);
+    color: var(--cc-fg-muted);
+    line-height: 1.55;
+    margin: 0 0 var(--cc-space-4);
+}
+/* The .cc-btn-secondary family pins its own background/colour/border with !important in
+   tokens.css and builder.css, so this panel deliberately adds no colour of its own -
+   an override here would either lose silently or reintroduce exactly the half-a-pair
+   problem the v13.95 sweep removed. Spacing only. */
+.cc-update-panel .cc-btn {
+    margin: 0;
+}
+
+.dark .cc-update-panel {
+    border-color: hsl(38 40% 30%);
+    border-left-color: hsl(32 85% 50%);
+    background: hsl(32 25% 14%);
+}
+.dark .cc-update-title {
+    color: hsl(38 92% 78%);
+}
+.dark .cc-update-reasons {
+    color: hsl(38 25% 78%);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -4069,7 +4174,8 @@ body.dark .cc-category-checkmark,
     background: none !important;
     background-color: transparent !important;
     box-shadow: none !important;
-    color: var(--cc-primary) !important;
+    /* v13.95: was --cc-primary (60%), 3.64:1 as text on white. */
+    color: var(--cc-primary-text) !important;
     font: inherit;
     font-weight: 600;
     text-decoration: underline;
@@ -4080,8 +4186,9 @@ body.dark .cc-category-checkmark,
 }
 
 .cc-link-button:hover,
-.cc-link-button:focus {
-    color: var(--cc-primary-hover) !important;
+.cc-link-button:focus,
+.cc-link-button:active {
+    color: var(--cc-primary-solid-hover) !important;
     background: none !important;
     background-color: transparent !important;
     text-decoration: underline;
@@ -5461,7 +5568,12 @@ body.dark .cc-ai-card--selected,
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
 
-.cc-input-method-btn:hover:not(.active) {
+/* v13.95 FIX-CC-INPUTMETHOD-STATES: only :hover was defined, so the theme's
+   `#region-main button:focus { color:#fff; background-color:#434343 }` took the whole
+   button on keyboard focus - measured at 1.64:1 against a stand-in Boost sheet. */
+.cc-input-method-btn:hover:not(.active),
+.cc-input-method-btn:focus:not(.active),
+.cc-input-method-btn:active:not(.active) {
     color: hsl(220 15% 25%) !important;
     background: hsl(220 10% 90%) !important;
 }
@@ -5611,12 +5723,19 @@ body.dark .cc-input-method-btn.active,
     box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
+/* v13.95 FIX-CC-DARK-INPUTMETHOD-HOVER: this overrode only the colour, so the LIGHT
+   hover rule's `background: hsl(220 10% 90%) !important` was still the winning
+   background in dark mode - it is never contested. Hovering an input-method tab in dark
+   mode therefore painted #d1d5db on hsl(220 10% 90%): 1.21:1, the label vanished.
+   The sibling dark rules above all pin both halves; this one did not. It must, because
+   these overrides use literal hex rather than a token that flips with the theme. */
 .dark .cc-input-method-btn:hover:not(.active),
 .theme-dark .cc-input-method-btn:hover:not(.active),
 body.dark .cc-input-method-btn:hover:not(.active),
 [data-theme="dark"] .cc-input-method-btn:hover:not(.active),
 [data-bs-theme="dark"] .cc-input-method-btn:hover:not(.active) {
     color: #d1d5db !important;
+    background: hsl(217 30% 20%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -5812,9 +5931,12 @@ body.dark .cc-input-method-btn:hover:not(.active),
     color: var(--cc-text) !important;
 }
 
+/* v13.95 FIX-CC-PRIMARY-CONTRAST: --cc-primary is the 60% brand blue and carries
+   --cc-primary-foreground at 3.49:1. Anything that puts text ON the blue uses the
+   --cc-primary-solid variant instead; the border can stay on the brand value. */
 .cc-fallback-tab-active {
-    background: var(--cc-primary) !important;
-    border-color: var(--cc-primary) !important;
+    background: var(--cc-primary-solid) !important;
+    border-color: var(--cc-primary-solid) !important;
     color: var(--cc-primary-foreground) !important;
     font-weight: 600;
 }
@@ -5889,4 +6011,320 @@ body.dark .cc-input-method-btn:hover:not(.active),
     .cc-mode-cards > .cc-mode-card:last-child:nth-child(odd) {
         grid-column: auto;
     }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.95 FIX-CC-BUILDER-FOCUSRING
+   The player got a blanket keyboard focus ring in v13.94.6 (player5.css). The builder
+   and cards surfaces never did: outside four one-off rules, every interactive control
+   here declared a :hover state and no :focus-visible at all. `all: unset` on
+   .cc-link-btn removes even the UA outline, and Boost's reset suppresses outlines on
+   buttons generally, so a keyboard-only author had no visible caret anywhere in the
+   five-step wizard - WCAG 2.4.7 (Focus Visible), and one of the checks the Moodle
+   plugin review runs.
+
+   :focus-visible, not :focus, so pointer users never see the ring. box-shadow rather
+   than outline so it follows border-radius on pills and chips, plus an outline
+   fallback for forced-colors mode where box-shadow is dropped.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.cc-builder button:focus-visible,
+.cc-builder a[role="button"]:focus-visible,
+.cc-builder [tabindex]:not([tabindex="-1"]):focus-visible,
+.cc-wizard button:focus-visible,
+.cc-wizard a[role="button"]:focus-visible,
+.cc-wizard [tabindex]:not([tabindex="-1"]):focus-visible,
+.cc-locked button:focus-visible,
+.cc-toggle-btn:focus-visible,
+.cc-input-method-btn:focus-visible,
+.cc-link-btn:focus-visible,
+.cc-chip-remove:focus-visible,
+.cc-role-chip-remove:focus-visible,
+.cc-level-pill:focus-visible,
+.cc-fallback-tab:focus-visible,
+.cc-multilang-option:focus-visible,
+.cc-btn-danger:focus-visible,
+.cc-btn-icon-only:focus-visible,
+.cc-back-btn:focus-visible,
+.cc-footer-btn:focus-visible,
+.cc-quick-nav-pill:focus-visible,
+.cc-voiceover-btn:focus-visible,
+.cc-topic-action:focus-visible {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px hsl(0 0% 100%), 0 0 0 4px hsl(217 91% 50%) !important;
+}
+
+@media (forced-colors: active) {
+    .cc-builder button:focus-visible,
+    .cc-wizard button:focus-visible,
+    .cc-locked button:focus-visible,
+    .cc-link-btn:focus-visible,
+    .cc-level-pill:focus-visible,
+    .cc-fallback-tab:focus-visible,
+    .cc-quick-nav-pill:focus-visible {
+        outline: 3px solid Highlight;
+        outline-offset: 2px;
+    }
+}
+
+.dark .cc-builder button:focus-visible,
+.dark .cc-wizard button:focus-visible,
+.dark .cc-locked button:focus-visible,
+[data-bs-theme="dark"] .cc-builder button:focus-visible,
+[data-bs-theme="dark"] .cc-wizard button:focus-visible,
+[data-bs-theme="dark"] .cc-locked button:focus-visible {
+    box-shadow: 0 0 0 2px hsl(217 30% 12%), 0 0 0 4px hsl(217 91% 62%) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.95  FIX-CC-BUILDER-DARK-INVERSION
+   ───────────────────────────────────────────────────────────────────────────────
+   The builder half of the same inversion described in player5.css's
+   FIX-CC-PLAYER-DARK-INVERSION block. Four controls here state a colour that was
+   picked - deliberately, and correctly - to clear 4.5:1 as text ON WHITE, and then
+   sit on a transparent background. Transparent means "whatever is behind me", and
+   under a dark theme what is behind them is hsl(0 0% 7%)-ish. A value dark enough to
+   pass on white is close in luminance to that, so the requirement inverts and the
+   same value fails. Measured on the dark ground before this block:
+
+       .cc-link-button   --cc-primary-text  hsl(217 91% 40%)   2.52:1 idle
+                         --cc-primary-solid-hover hsl(217 91% 38%)  2.34:1 h/f/a
+       .cc-level-pill    hsl(217 19% 35%)                      2.38:1 idle/focus/active
+       .cc-btn-danger    --cc-error-text    hsl(0 72% 42%)     2.77:1
+       .cc-error-close   --cc-error-text                       2.77:1
+       .cc-btn-icon-only hsl(217 14% 45%)                      3.53:1
+
+   Do NOT "fix" these by darkening the token. The light-mode values are already
+   verified at 6.16:1 (--cc-primary-text) and 5.35:1 (--cc-error-text) on white and
+   are load-bearing there; a single value cannot serve both grounds, which is why
+   these are dark-scoped overrides rather than token edits.
+
+   Selector shape follows the FIX-CC-BUILDER-DARK convention in tokens.css: all six
+   hooks on every group, because Moodle 4.4+ sets `data-bs-theme="dark"` on <html>
+   and none of the four legacy class hooks is present there, while older sites have
+   only the legacy hooks.
+
+   SPECIFICITY, the trap that cost a pass on .cc-btn-ghost in this same release:
+   several of these controls are pinned at `button.<class>` - (0,1,1) - with
+   !important. A dark override written as `.dark .<class>` is (0,2,0), which beats
+   (0,1,1) on the class count, but `[data-bs-theme="dark"] .<class>` is (0,2,0) too
+   and both are safe only because they add a compound. Where the light rule also has
+   an element part the `button.` is carried through below to reach (0,2,1) and keep
+   the margin obvious rather than arithmetic. Every declaration carries !important
+   regardless, so a themed `#region-main button:focus` (1,1,1) cannot take them back.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* -- "browse files" in the reference-document dropzone --------------------- */
+/* The sibling .cc-link-btn already got this treatment in tokens.css; .cc-link-button
+   is a DIFFERENT class (the dropzone's own, styled at builder.css:4169) and was
+   missed. Same two values, so the two link-shaped controls match in dark mode. */
+.cc-dark .cc-link-button,
+.dark .cc-link-button,
+.theme-dark .cc-link-button,
+body.dark .cc-link-button,
+[data-theme="dark"] .cc-link-button,
+[data-bs-theme="dark"] .cc-link-button {
+    color: hsl(217 91% 72%) !important;
+    background: none !important;
+    background-color: transparent !important;
+}
+
+.cc-dark .cc-link-button:hover,
+.cc-dark .cc-link-button:focus,
+.cc-dark .cc-link-button:active,
+.dark .cc-link-button:hover,
+.dark .cc-link-button:focus,
+.dark .cc-link-button:active,
+.theme-dark .cc-link-button:hover,
+.theme-dark .cc-link-button:focus,
+.theme-dark .cc-link-button:active,
+body.dark .cc-link-button:hover,
+body.dark .cc-link-button:focus,
+body.dark .cc-link-button:active,
+[data-theme="dark"] .cc-link-button:hover,
+[data-theme="dark"] .cc-link-button:focus,
+[data-theme="dark"] .cc-link-button:active,
+[data-bs-theme="dark"] .cc-link-button:hover,
+[data-bs-theme="dark"] .cc-link-button:focus,
+[data-bs-theme="dark"] .cc-link-button:active {
+    color: hsl(217 91% 82%) !important;
+    background: none !important;
+    background-color: transparent !important;
+}
+
+/* -- Job-level pills (Step 1) --------------------------------------------- */
+/* The light rules at builder.css:138 are hard-coded literals with !important - the
+   comment there explains why - and a literal cannot flip. So all four states are
+   restated, not just the failing ones: leaving :hover and .cc-level-active on their
+   pale-blue light fills would have put a light chip in a dark form, and pairing a
+   dark-mode label with a light-mode fill is exactly the half-pair mistake this
+   release is unwinding. `button.` is carried through to match the (0,1,1) light
+   selectors at a full class ahead of them. */
+.cc-dark button.cc-level-pill,
+.dark button.cc-level-pill,
+.theme-dark button.cc-level-pill,
+body.dark button.cc-level-pill,
+[data-theme="dark"] button.cc-level-pill,
+[data-bs-theme="dark"] button.cc-level-pill,
+.cc-dark .cc-level-pill,
+.dark .cc-level-pill,
+.theme-dark .cc-level-pill,
+body.dark .cc-level-pill,
+[data-theme="dark"] .cc-level-pill,
+[data-bs-theme="dark"] .cc-level-pill {
+    color: hsl(217 15% 82%) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border-color: hsl(217 14% 38%) !important;
+}
+
+.cc-dark button.cc-level-pill:hover,
+.cc-dark button.cc-level-pill:focus,
+.cc-dark button.cc-level-pill:active,
+.dark button.cc-level-pill:hover,
+.dark button.cc-level-pill:focus,
+.dark button.cc-level-pill:active,
+.theme-dark button.cc-level-pill:hover,
+.theme-dark button.cc-level-pill:focus,
+.theme-dark button.cc-level-pill:active,
+body.dark button.cc-level-pill:hover,
+body.dark button.cc-level-pill:focus,
+body.dark button.cc-level-pill:active,
+[data-theme="dark"] button.cc-level-pill:hover,
+[data-theme="dark"] button.cc-level-pill:focus,
+[data-theme="dark"] button.cc-level-pill:active,
+[data-bs-theme="dark"] button.cc-level-pill:hover,
+[data-bs-theme="dark"] button.cc-level-pill:focus,
+[data-bs-theme="dark"] button.cc-level-pill:active,
+.cc-dark .cc-level-pill:hover,
+.dark .cc-level-pill:hover,
+.theme-dark .cc-level-pill:hover,
+body.dark .cc-level-pill:hover,
+[data-theme="dark"] .cc-level-pill:hover,
+[data-bs-theme="dark"] .cc-level-pill:hover {
+    color: hsl(217 91% 86%) !important;
+    background: hsl(217 40% 20%) !important;
+    background-color: hsl(217 40% 20%) !important;
+    border-color: hsl(217 91% 60%) !important;
+}
+
+/* The chosen pill. Kept a step brighter and a step lighter than plain hover so
+   "selected" still reads as a state, not just as "under the cursor". */
+.cc-dark button.cc-level-pill.cc-level-active,
+.dark button.cc-level-pill.cc-level-active,
+.theme-dark button.cc-level-pill.cc-level-active,
+body.dark button.cc-level-pill.cc-level-active,
+[data-theme="dark"] button.cc-level-pill.cc-level-active,
+[data-bs-theme="dark"] button.cc-level-pill.cc-level-active,
+.cc-dark .cc-level-pill.cc-level-active,
+.dark .cc-level-pill.cc-level-active,
+.theme-dark .cc-level-pill.cc-level-active,
+body.dark .cc-level-pill.cc-level-active,
+[data-theme="dark"] .cc-level-pill.cc-level-active,
+[data-bs-theme="dark"] .cc-level-pill.cc-level-active {
+    color: hsl(217 91% 88%) !important;
+    background: hsl(217 45% 26%) !important;
+    background-color: hsl(217 45% 26%) !important;
+    border-color: hsl(217 91% 65%) !important;
+}
+
+/* -- Destructive text button ("Delete module", "Remove") ------------------- */
+/* Idle only. The :hover/:focus/:active state is a solid --cc-error-solid fill under
+   --cc-error-foreground - 5.84:1 - which is a fill, not a transparent ground, and so
+   is already correct on either theme; it is left alone deliberately. */
+.cc-dark .cc-btn-danger,
+.cc-dark button.cc-btn-danger,
+.dark .cc-btn-danger,
+.dark button.cc-btn-danger,
+.theme-dark .cc-btn-danger,
+.theme-dark button.cc-btn-danger,
+body.dark .cc-btn-danger,
+body.dark button.cc-btn-danger,
+[data-theme="dark"] .cc-btn-danger,
+[data-theme="dark"] button.cc-btn-danger,
+[data-bs-theme="dark"] .cc-btn-danger,
+[data-bs-theme="dark"] button.cc-btn-danger {
+    color: hsl(0 85% 76%) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    border-color: hsl(0 70% 52%) !important;
+}
+
+/* -- The X on the error banner -------------------------------------------- */
+/* Its light :hover fill is hsl(0 60% 95%), a near-white pink, which under a dark
+   theme would be a white square appearing under the cursor - so hover is restated
+   here as well as idle, even though only idle was measuring below AA. */
+.cc-dark .cc-error-close,
+.dark .cc-error-close,
+.theme-dark .cc-error-close,
+body.dark .cc-error-close,
+[data-theme="dark"] .cc-error-close,
+[data-bs-theme="dark"] .cc-error-close {
+    color: hsl(0 85% 76%) !important;
+    background: transparent !important;
+}
+
+.cc-dark .cc-error-close:hover,
+.cc-dark .cc-error-close:focus,
+.cc-dark .cc-error-close:active,
+.dark .cc-error-close:hover,
+.dark .cc-error-close:focus,
+.dark .cc-error-close:active,
+.theme-dark .cc-error-close:hover,
+.theme-dark .cc-error-close:focus,
+.theme-dark .cc-error-close:active,
+body.dark .cc-error-close:hover,
+body.dark .cc-error-close:focus,
+body.dark .cc-error-close:active,
+[data-theme="dark"] .cc-error-close:hover,
+[data-theme="dark"] .cc-error-close:focus,
+[data-theme="dark"] .cc-error-close:active,
+[data-bs-theme="dark"] .cc-error-close:hover,
+[data-bs-theme="dark"] .cc-error-close:focus,
+[data-bs-theme="dark"] .cc-error-close:active {
+    color: hsl(0 85% 84%) !important;
+    background: hsl(0 45% 20%) !important;
+}
+
+/* -- Row-level remove buttons in the outcome / subtopic editors ------------ */
+/* Same pale-red hover fill as the banner X, restated for the same reason. */
+.cc-dark button.cc-btn-icon-only,
+.dark button.cc-btn-icon-only,
+.theme-dark button.cc-btn-icon-only,
+body.dark button.cc-btn-icon-only,
+[data-theme="dark"] button.cc-btn-icon-only,
+[data-bs-theme="dark"] button.cc-btn-icon-only,
+.cc-dark .cc-btn.cc-btn-icon-only,
+.dark .cc-btn.cc-btn-icon-only,
+.theme-dark .cc-btn.cc-btn-icon-only,
+body.dark .cc-btn.cc-btn-icon-only,
+[data-theme="dark"] .cc-btn.cc-btn-icon-only,
+[data-bs-theme="dark"] .cc-btn.cc-btn-icon-only {
+    color: hsl(217 14% 75%) !important;
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.cc-dark button.cc-btn-icon-only:hover,
+.cc-dark button.cc-btn-icon-only:focus,
+.cc-dark button.cc-btn-icon-only:active,
+.dark button.cc-btn-icon-only:hover,
+.dark button.cc-btn-icon-only:focus,
+.dark button.cc-btn-icon-only:active,
+.theme-dark button.cc-btn-icon-only:hover,
+.theme-dark button.cc-btn-icon-only:focus,
+.theme-dark button.cc-btn-icon-only:active,
+body.dark button.cc-btn-icon-only:hover,
+body.dark button.cc-btn-icon-only:focus,
+body.dark button.cc-btn-icon-only:active,
+[data-theme="dark"] button.cc-btn-icon-only:hover,
+[data-theme="dark"] button.cc-btn-icon-only:focus,
+[data-theme="dark"] button.cc-btn-icon-only:active,
+[data-bs-theme="dark"] button.cc-btn-icon-only:hover,
+[data-bs-theme="dark"] button.cc-btn-icon-only:focus,
+[data-bs-theme="dark"] button.cc-btn-icon-only:active {
+    color: hsl(0 85% 84%) !important;
+    background: hsl(0 45% 20%) !important;
+    background-color: hsl(0 45% 20%) !important;
 }

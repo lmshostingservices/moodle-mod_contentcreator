@@ -380,7 +380,7 @@ define([], function () {
             scrambledSteps.forEach(function (step, displayIndex) {
                 var stepTypeClass = 'cc5-step-' + (step.stepType || 'action');
                 html += '<div class="cc5-sequence-step ' + stepTypeClass + '" data-correct-position="' + step.correctPosition + '" draggable="true" tabindex="0">';
-                html += '<div class="cc5-step-drag-handle" title="Drag to reorder">' + dragIcon + '</div>';
+                html += '<div class="cc5-step-drag-handle" title="' + getLabel('dragToReorder') + '">' + dragIcon + '</div>';
                 html += '<span class="cc5-step-number cc5-step-current-pos">' + (displayIndex + 1) + '</span>';
                 html += '<div class="cc5-step-content">';
                 html += '<div class="cc5-step-main"><span class="cc5-step-text">' + formatText(step.text) + '</span></div>';

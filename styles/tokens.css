@@ -37,6 +37,21 @@
     /* Primary - matches lms-labs.com (217 91% 60%) */
     --cc-primary: hsl(217 91% 60%);
     --cc-primary-hover: hsl(217 91% 55%);
+
+    /* v13.95 FIX-CC-PRIMARY-CONTRAST: the brand blue at 60% lightness carries white text
+       at 3.64:1 - fine for a border or an icon (WCAG 1.4.11 asks 3:1 of non-text UI) but
+       short of the 4.5:1 that 14px body text needs, and the builder used it as the fill
+       behind the white label of every primary button and as the colour of every link
+       button. player5.css already solved this for the player by defining --cc5-primary
+       at 45% ("WCAG AA: 45% gives 4.87:1 on white"); the builder tokens were never
+       brought into line.
+       Rather than darken --cc-primary itself - it is correct where it is used for
+       borders, rings and accent bars, and the brand is 60% - add solid variants for the
+       two jobs that put text on or in the colour. Same hue and saturation, so the
+       button still reads as the same blue. */
+    --cc-primary-solid: hsl(217 91% 45%);        /* white on this: 4.87:1 */
+    --cc-primary-solid-hover: hsl(217 91% 38%);  /* white on this: 6.55:1 */
+    --cc-primary-text: hsl(217 91% 40%);         /* this on white:  6.16:1 */
     --cc-primary-muted: hsl(217 91% 95%);
     --cc-primary-foreground: hsl(0 0% 98%);
 
@@ -51,6 +66,12 @@
     --cc-error: hsl(0 84% 60%);
     --cc-error-muted: hsl(0 84% 95%);
     --cc-error-foreground: hsl(0 0% 98%);
+    /* v13.95 FIX-CC-ERROR-CONTRAST: --cc-error is the alert red, correct as a border or
+       an icon (3:1 suffices for non-text UI) but 3.78:1 as text on white and 4.20:1 as a
+       fill under white text - both short of AA. Same split as the primary tokens: keep
+       the brand value, add variants for the two jobs that involve text. */
+    --cc-error-text: hsl(0 72% 42%);   /* this on white: 5.35:1 */
+    --cc-error-solid: hsl(0 72% 40%);  /* white on this: 5.84:1 */
 
     /* Border Radius - matches website (0.5rem) */
     --cc-radius-sm: 0.375rem;
@@ -352,46 +373,199 @@ button.cc-btn {
     box-shadow: var(--cc-shadow-glow);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.95 FIX-CC-BUILDER-BTN-THEME
+   v13.94.6 hardened every player control against site-theme takeover but stopped at
+   player5.css. The builder's button family lived here, still in the pre-v13.92.2
+   pattern: plain single-class selectors, no !important, and - the part that actually
+   breaks - state rules that redefine one half of the colour pair and leave the other
+   to whatever wins the cascade.
+
+   Boost and its derivatives ship `#region-main button:hover, #region-main button:focus,
+   #region-main button:active { color: #fff; background-color: #434343; }` at
+   specificity (1,1,1). A rule like `.cc-btn-secondary:hover:not(:disabled)` is (0,3,0)
+   and loses, so the secondary button's hover took the theme's white text while keeping
+   this file's light-grey background: white on hsl(217 25% 90%), about 1.3:1.
+   Author !important beats a non-important theme declaration regardless of specificity,
+   which is what makes the fix work at this specificity.
+
+   Three rules, applied to every variant below:
+     1. Base and :hover / :focus / :active all state background-color, color AND
+        border-color - never a subset.
+     2. Every one of those declarations carries !important.
+     3. :disabled states a muted pair explicitly rather than relying on opacity, which
+        composites the label towards the page background along with everything else.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
 .cc-btn-primary,
 button.cc-btn-primary {
-    background-color: var(--cc-primary);
-    color: var(--cc-primary-foreground);
-    border-color: var(--cc-primary);
+    background-color: var(--cc-primary-solid) !important;
+    color: var(--cc-primary-foreground) !important;
+    border-color: var(--cc-primary-solid) !important;
 }
 
 .cc-btn-primary:hover:not(:disabled),
-button.cc-btn-primary:hover:not(:disabled) {
-    background-color: var(--cc-primary-hover);
+.cc-btn-primary:focus:not(:disabled),
+.cc-btn-primary:active:not(:disabled),
+button.cc-btn-primary:hover:not(:disabled),
+button.cc-btn-primary:focus:not(:disabled),
+button.cc-btn-primary:active:not(:disabled) {
+    background-color: var(--cc-primary-solid-hover) !important;
+    color: var(--cc-primary-foreground) !important;
+    border-color: var(--cc-primary-solid-hover) !important;
 }
 
 .cc-btn-secondary,
 button.cc-btn-secondary {
-    background-color: hsl(0 0% 100%);
-    color: hsl(217 19% 27%);
-    border-color: var(--cc-border);
+    background-color: hsl(0 0% 100%) !important;
+    color: hsl(217 19% 27%) !important;
+    border-color: var(--cc-border) !important;
 }
 
 .cc-btn-secondary:hover:not(:disabled),
-button.cc-btn-secondary:hover:not(:disabled) {
-    background-color: hsl(217 25% 90%);
-    border-color: var(--cc-border-strong);
+.cc-btn-secondary:focus:not(:disabled),
+.cc-btn-secondary:active:not(:disabled),
+button.cc-btn-secondary:hover:not(:disabled),
+button.cc-btn-secondary:focus:not(:disabled),
+button.cc-btn-secondary:active:not(:disabled) {
+    background-color: hsl(217 25% 90%) !important;
+    color: hsl(217 19% 22%) !important;
+    border-color: var(--cc-border-strong) !important;
 }
 
 .cc-btn-ghost,
 button.cc-btn-ghost {
-    background-color: transparent;
-    color: var(--cc-text-muted);
+    background-color: transparent !important;
+    color: var(--cc-text-muted) !important;
+    border-color: transparent !important;
 }
 
 .cc-btn-ghost:hover:not(:disabled),
-button.cc-btn-ghost:hover:not(:disabled) {
-    background-color: hsl(217 25% 90%);
-    color: var(--cc-text);
+.cc-btn-ghost:focus:not(:disabled),
+.cc-btn-ghost:active:not(:disabled),
+button.cc-btn-ghost:hover:not(:disabled),
+button.cc-btn-ghost:focus:not(:disabled),
+button.cc-btn-ghost:active:not(:disabled) {
+    background-color: hsl(217 25% 90%) !important;
+    color: var(--cc-text) !important;
+    border-color: transparent !important;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   v13.95 FIX-CC-BTN-DARK: the rules above pair a LITERAL light background with a
+   TOKEN colour. --cc-text flips to near-white under a dark theme; hsl(217 25% 90%)
+   does not flip, because a literal cannot. So in dark mode the ghost button's hover,
+   focus and active states resolved to white-on-light-grey - 1.22:1, measured.
+   This is the same mistake .cc-input-method-btn's dark override made, and the reason
+   this file should never mix a literal with a token inside one colour pair. Restate
+   both halves for dark, as literals on both sides so they cannot drift apart.
+   Selectors are one level deeper than the light rules so they win in dark mode without
+   needing to out-!important them.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+.cc-dark .cc-btn-ghost:hover:not(:disabled),
+.cc-dark .cc-btn-ghost:focus:not(:disabled),
+.cc-dark .cc-btn-ghost:active:not(:disabled),
+.dark .cc-btn-ghost:hover:not(:disabled),
+.dark .cc-btn-ghost:focus:not(:disabled),
+.dark .cc-btn-ghost:active:not(:disabled),
+.theme-dark .cc-btn-ghost:hover:not(:disabled),
+.theme-dark .cc-btn-ghost:focus:not(:disabled),
+.theme-dark .cc-btn-ghost:active:not(:disabled),
+[data-theme="dark"] .cc-btn-ghost:hover:not(:disabled),
+[data-theme="dark"] .cc-btn-ghost:focus:not(:disabled),
+[data-theme="dark"] .cc-btn-ghost:active:not(:disabled),
+[data-bs-theme="dark"] .cc-btn-ghost:hover:not(:disabled),
+[data-bs-theme="dark"] .cc-btn-ghost:focus:not(:disabled),
+[data-bs-theme="dark"] .cc-btn-ghost:active:not(:disabled) {
+    background-color: hsl(0 0% 18%) !important;
+    color: hsl(0 0% 95%) !important;
+    border-color: transparent !important;
+}
+
+/* The ghost button's idle colour is --cc-text-muted, which resolves to hsl(217 10% 30%)
+   outside .contentcreator-container - 3.69:1 on a dark page. Pin a light muted grey.
+   `button.` is on every selector because builder.css pins this button's idle colour at
+   `button.cc-btn-ghost` (0,2,1); a plain `.dark .cc-btn-ghost` is (0,2,0) and loses. */
+.cc-dark button.cc-btn-ghost,
+.cc-dark .cc-btn.cc-btn-ghost,
+.dark button.cc-btn-ghost,
+.dark .cc-btn.cc-btn-ghost,
+.theme-dark button.cc-btn-ghost,
+.theme-dark .cc-btn.cc-btn-ghost,
+[data-theme="dark"] button.cc-btn-ghost,
+[data-theme="dark"] .cc-btn.cc-btn-ghost,
+[data-bs-theme="dark"] button.cc-btn-ghost,
+[data-bs-theme="dark"] .cc-btn.cc-btn-ghost {
+    color: hsl(0 0% 78%) !important;
+}
+
+/* Same for the link button: --cc-primary-text is a 40%-lightness blue chosen to clear
+   4.5:1 on WHITE. On a dark ground it measures 2.63:1. Lighten it for dark mode - the
+   direction reverses, so a single token cannot serve both. */
+.cc-dark .cc-link-btn,
+.dark .cc-link-btn,
+.theme-dark .cc-link-btn,
+[data-theme="dark"] .cc-link-btn,
+[data-bs-theme="dark"] .cc-link-btn {
+    color: hsl(217 91% 72%) !important;
+}
+.cc-dark .cc-link-btn:hover,
+.cc-dark .cc-link-btn:focus,
+.cc-dark .cc-link-btn:active,
+.dark .cc-link-btn:hover,
+.dark .cc-link-btn:focus,
+.dark .cc-link-btn:active,
+.theme-dark .cc-link-btn:hover,
+.theme-dark .cc-link-btn:focus,
+.theme-dark .cc-link-btn:active,
+[data-theme="dark"] .cc-link-btn:hover,
+[data-theme="dark"] .cc-link-btn:focus,
+[data-theme="dark"] .cc-link-btn:active,
+[data-bs-theme="dark"] .cc-link-btn:hover,
+[data-bs-theme="dark"] .cc-link-btn:focus,
+[data-bs-theme="dark"] .cc-link-btn:active {
+    background: transparent !important;
+    color: hsl(217 91% 82%) !important;
+}
+
+/* v13.95: was `opacity: 0.5`, which fades the label along with the button. On the
+   secondary variant that took a 9.1:1 pair down to roughly 2.6:1. State the muted pair
+   instead, and pin the hover/focus states too - a disabled button still matches :hover
+   in CSS, so without these the rules above would repaint it on pointer-over. */
+/* Specificity note: builder.css pins `button.cc-btn-primary` (0,2,1) and
+   `.cc-btn.cc-btn-primary` (0,2,0) with !important. A disabled rule written as
+   `.cc-btn:disabled` (0,2,0) would tie or lose against those and leave a disabled
+   primary button in full brand blue under this muted grey label. The variant is
+   therefore named explicitly here so every selector below reaches (0,3,0) or higher. */
+.cc-btn.cc-btn-primary:disabled,
+.cc-btn.cc-btn-primary:disabled:hover,
+.cc-btn.cc-btn-primary:disabled:focus,
+.cc-btn.cc-btn-secondary:disabled,
+.cc-btn.cc-btn-secondary:disabled:hover,
+.cc-btn.cc-btn-secondary:disabled:focus,
+.cc-btn.cc-btn-ghost:disabled,
+.cc-btn.cc-btn-ghost:disabled:hover,
+.cc-btn.cc-btn-ghost:disabled:focus,
+button.cc-btn.cc-btn-primary:disabled,
+button.cc-btn.cc-btn-primary:disabled:hover,
+button.cc-btn.cc-btn-primary:disabled:focus,
+button.cc-btn.cc-btn-secondary:disabled,
+button.cc-btn.cc-btn-secondary:disabled:hover,
+button.cc-btn.cc-btn-secondary:disabled:focus,
+button.cc-btn.cc-btn-ghost:disabled,
+button.cc-btn.cc-btn-ghost:disabled:hover,
+button.cc-btn.cc-btn-ghost:disabled:focus,
 .cc-btn:disabled,
-button.cc-btn:disabled {
-    opacity: 0.5;
+.cc-btn:disabled:hover,
+.cc-btn:disabled:focus,
+button.cc-btn:disabled,
+button.cc-btn:disabled:hover,
+button.cc-btn:disabled:focus {
+    opacity: 1 !important;
+    background-color: hsl(217 20% 94%) !important;
+    color: hsl(217 14% 38%) !important;
+    border-color: hsl(217 18% 86%) !important;
+    box-shadow: none !important;
     cursor: not-allowed;
 }
 

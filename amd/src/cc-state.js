@@ -1420,9 +1420,39 @@ define([], function () {
             });
     }
 
+    /**
+     * Mint a billing key for one subtopic.
+     *
+     * FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): the vendor prices a SUBTOPIC at a flat rate that
+     * covers its content, its first voiceover per section and its first image per slide, with
+     * regeneration charged separately. The server cannot work any of that out from the HTTP
+     * calls alone: one subtopic is one /prompt call PLUS a structural repair call when the
+     * first response comes back malformed, PLUS an unpredictable number of /tts and image
+     * calls. Every one of those carries this key, so the server can charge the subtopic once
+     * and recognise every later asset as belonging to something already paid for.
+     *
+     * Deliberately NOT derived from the subtopic id: planner.js emits ids like
+     * 'subtopic_0_0', which repeat across every module ever built. A collision here would
+     * hand a customer a free subtopic, so the key must be unique per build.
+     *
+     * Kept to [a-z0-9_] so it survives PARAM_ALPHANUMEXT on the way through ajax.php.
+     *
+     * @return {string} A key unique to one subtopic in one build.
+     */
+    function newBillingKey() {
+        var rand = '';
+        // crypto.randomUUID is not available on every browser Moodle supports, and the
+        // hyphens it produces would not survive PARAM_ALPHANUMEXT anyway.
+        for (var i = 0; i < 4; i++) {
+            rand += Math.random().toString(36).slice(2, 10);
+        }
+        return 'cck_' + Date.now().toString(36) + '_' + rand.slice(0, 24);
+    }
+
     return {
         CC_VERSION: CC_VERSION,
         createLogger: createLogger,
+        newBillingKey: newBillingKey,
         fetchWithDeadline: fetchWithDeadline,
         VOICEOVER_SCHEMA_VERSION: VOICEOVER_SCHEMA_VERSION,
         voiceoverTextHash: voiceoverTextHash,

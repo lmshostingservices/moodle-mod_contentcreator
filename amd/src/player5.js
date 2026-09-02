@@ -642,6 +642,31 @@ define([
     }
 
     /**
+     * Find a section's subtopic billing key.
+     *
+     * FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): the on-demand voiceover path holds only a
+     * section id, but the vendor needs the subtopic key to tell a first narration (covered by
+     * the subtopic's price) from a regeneration (charged). Returns '' when the manifest
+     * predates this release, which the vendor treats as "price it the old way".
+     *
+     * @param {object} manifest - The player manifest.
+     * @param {string} sectionId - The section to look up.
+     * @returns {string} The billing key, or '' when unknown.
+     */
+    function billingKeyForSection(manifest, sectionId) {
+        var topics = (manifest && manifest.topics) || [];
+        for (var i = 0; i < topics.length; i++) {
+            var sections = topics[i].sections || topics[i].subtopics || [];
+            for (var j = 0; j < sections.length; j++) {
+                if (sections[j] && sections[j].id === sectionId) {
+                    return sections[j].billingKey || '';
+                }
+            }
+        }
+        return '';
+    }
+
+    /**
      * Find section by ID with fallback strategies (v6.5.58)
      * Handles ID format mismatches between old/new content generation
      * @param {Array} topics - The topics array from manifest
@@ -1414,7 +1439,7 @@ define([
          * Render preloading screen while voiceovers and documents are prepared (v6.5.63)
          */
         renderPreloadingScreen: function () {
-            var html = '<div class="cc5-player" role="region" aria-label="Content Player">';
+            var html = '<div class="cc5-player" role="region" aria-label="' + getLabel('contentPlayer') + '">';
             html += '<div class="cc5-preloading-screen">';
             html += '<div class="cc5-preloading-content">';
             html += '<div class="cc5-preloading-icon">' + getIcon('loader') + '</div>';
@@ -1689,9 +1714,9 @@ define([
             var modalHtml = '<div class="cc5-focus-modal-overlay">';
             modalHtml += '<div class="cc5-focus-modal">';
             modalHtml += '<div class="cc5-focus-modal-icon">' + getIcon('alert-triangle') + '</div>';
-            modalHtml += '<h3 class="cc5-focus-modal-title">Slide Paused</h3>';
-            modalHtml += '<p class="cc5-focus-modal-message">You navigated away from this learning content. Your voiceover has been paused. Click OK to continue from where you left off.</p>';
-            modalHtml += '<button type="button" class="cc5-focus-modal-btn">OK</button>';
+            modalHtml += '<h3 class="cc5-focus-modal-title">' + getLabel('slidePaused') + '</h3>';
+            modalHtml += '<p class="cc5-focus-modal-message">' + getLabel('focusPausedMessage') + '</p>';
+            modalHtml += '<button type="button" class="cc5-focus-modal-btn">' + getLabel('ok') + '</button>';
             modalHtml += '</div>';
             modalHtml += '</div>';
             
@@ -2037,14 +2062,14 @@ define([
                             // in-place so the user sees activity instead of a frozen progress bar.
                             var _n = _missingSections.length;
                             var _plural = _n === 1 ? '' : 's';
-                            self.container.find('.cc5-vo-wait-title').text('Almost there\u2026');
+                            self.container.find('.cc5-vo-wait-title').text(getLabel('voWaitAlmost'));
                             self.container.find('.cc5-vo-wait-sub').text(_n + ' section' + _plural + ' still generating \u2014 please keep this page open. Audio can take 1\u20133 minutes.');
                             setTimeout(function () {
                                 // v12.49 BUG-CC-ZOMBIE-CHAIN: If a new chain has started
                                 // (user clicked Retry again), don't fire  -  the new chain owns it.
                                 if (self._voiceoverChainGen !== _myChainGen) return;
                                 // Update message when the retry actually fires (10 s later)
-                                self.container.find('.cc5-vo-wait-title').text('Generating audio\u2026');
+                                self.container.find('.cc5-vo-wait-title').text(getLabel('voWaitGenerating'));
                                 self.container.find('.cc5-vo-wait-sub').text('Regenerating ' + _n + ' section' + _plural + '\u2026 This may take 1\u20133 minutes.');
                                 var _stillBlocked = [];
                                 _missingSections.forEach(function (s) {
@@ -2296,6 +2321,7 @@ define([
                 formData.append('cmid', self.cmid);
                 formData.append('text', text);
                 formData.append('sectionid', section.id);
+                formData.append('subtopickey', section.billingKey || '');
                 // v12.63 FIX-CC-MULTILANG-LANG: Use activeLang when set (teacher/student switched
                 // to an additional language).  Previously self.voiceLanguage (always the primary
                 // language, e.g. 'en-AU') was sent for ALL sections regardless of which language
@@ -2322,7 +2348,11 @@ define([
                 // v12.42: Store AbortController on section so the retry button can cancel
                 // any in-flight fetch immediately instead of waiting for it to time out.
                 section._preloadAbortCtrl = _preAbortCtrl;
-                var _preTimeoutId = setTimeout(function () { _preAbortCtrl.abort(); }, 200000);
+                // FIX-CC-TTS-CLIENT-DEADLINE (v13.95.1): the browser deadline must sit ABOVE the
+                // server's curl ceiling, now 280s (ajax.php generate_voice). At 200s the browser
+                // gave up while the vendor was still synthesising, the cache was never written,
+                // and the retry below paid for the same audio again.
+                var _preTimeoutId = setTimeout(function () { _preAbortCtrl.abort(); }, 300000);
                 CcState.fetchWithDeadline(ajaxUrl, {
                     method: 'POST',
                     body: formData,
@@ -2633,6 +2663,7 @@ define([
             formData.append('cmid', this.cmid);
             formData.append('text', text);
             formData.append('sectionid', currentSection.id);
+            formData.append('subtopickey', currentSection.billingKey || '');
             // v12.79 FIX-CC-PRIORITY-LANG: Use activeLang when the teacher/student is viewing
             // an additional language — was always sending the primary voiceLanguage.
             formData.append('language', (this.activeLang || this.voiceLanguage));
@@ -2713,7 +2744,7 @@ define([
                 if (indicator.length === 0) {
                     var html = '<div class="cc5-voiceover-preload-indicator">';
                     html += '<span class="cc5-preload-icon">' + getIcon('loader') + '</span>';
-                    html += '<span class="cc5-preload-text">Preparing audio...</span>';
+                    html += '<span class="cc5-preload-text">' + getLabel('preparingAudio') + '</span>';
                     html += '</div>';
                     this.container.find('.cc5-header').append(html);
                     var pct = Math.round((status.loaded / status.total) * 100);
@@ -2899,7 +2930,7 @@ define([
             animate();
             
             Notification.addNotification({
-                message: 'Congratulations! You have completed all sections.',
+                message: getLabel('allSectionsComplete'),
                 type: 'success'
             });
         },
@@ -3043,17 +3074,17 @@ define([
             var html = '<div class="cc5-player cc5-vo-wait-screen">';
             html += '<div class="cc5-vo-wait-inner">';
             html += '<div class="cc5-vo-wait-spinner"></div>';
-            html += '<h2 class="cc5-vo-wait-title">' + (_retrying ? 'Retrying audio\u2026' : 'Preparing audio\u2026') + '</h2>';
-            html += '<p class="cc5-vo-wait-sub">' + (_retrying ? 'Regenerating audio for failed sections. Please wait.' : 'Your audio is being generated. This only happens once.') + '</p>';
+            html += '<h2 class="cc5-vo-wait-title">' + (_retrying ? getLabel('voWaitRetrying') : getLabel('voWaitPreparing')) + '</h2>';
+            html += '<p class="cc5-vo-wait-sub">' + (_retrying ? getLabel('voWaitRegenSub') : getLabel('voWaitFirstTimeSub')) + '</p>';
             html += '<div class="cc5-vo-wait-bar-wrap">';
             html += '<div class="cc5-vo-wait-bar"><div class="cc5-vo-wait-fill" style="width:' + pct + '%"></div></div>';
             html += '<span class="cc5-vo-wait-count">' + prog.ready + ' / ' + prog.total + ' slides</span>';
             html += '</div>';
             // v12.36: Bypass buttons  -  always render so a stuck screen has an escape hatch.
             html += '<div class="cc5-vo-wait-actions">';
-            html += '<button type="button" class="cc5-vo-wait-continue-btn">Continue without audio</button>';
+            html += '<button type="button" class="cc5-vo-wait-continue-btn">' + getLabel('continueWithoutAudio') + '</button>';
             if (this.canEdit || this.isTeacher || this.editMode) {
-                html += '<button type="button" class="cc5-vo-wait-retry-btn">Reset &amp; retry audio</button>';
+                html += '<button type="button" class="cc5-vo-wait-retry-btn">' + getLabel('resetRetryAudio') + '</button>';
             }
             html += '</div>';
             html += '</div>';
@@ -3290,7 +3321,7 @@ define([
             var self = this;
             var manifest = this.manifest;
             var topics = manifest.topics || [];
-                        var html = '<div class="cc5-player" role="region" aria-label="Content Player">';
+                        var html = '<div class="cc5-player" role="region" aria-label="' + getLabel('contentPlayer') + '">';
             // Header with title and progress
             html += '<div class="cc5-header">';
             html += '<div class="cc5-header-content">';
@@ -3339,7 +3370,7 @@ define([
             }
             
             html += '<div class="cc5-progress-badge">';
-            html += '<span class="cc5-progress-text">Progress</span>';
+            html += '<span class="cc5-progress-text">' + getLabel('progressStatus') + '</span>';
             html += '<span class="cc5-progress-value">' + this.calculateOverallProgress() + '%</span>';
             html += '</div>';
             html += '</div>';
@@ -3427,18 +3458,18 @@ define([
                 html += '<div class="cc5-single-stat">';
                 html += '<div class="cc5-single-stat-icon cc5-single-stat-time">' + ccClockSvg + '</div>';
                 html += '<div class="cc5-single-stat-val">' + ccEtaTimeStr + '</div>';
-                html += '<div class="cc5-single-stat-lbl">Est. time</div>';
+                html += '<div class="cc5-single-stat-lbl">' + getLabel('estTime') + '</div>';
                 html += '</div>';
                 html += '<div class="cc5-single-stat">';
                 html += '<div class="cc5-single-stat-icon cc5-single-stat-slides">' + sBookSvg + '</div>';
                 html += '<div class="cc5-single-stat-val">' + sSlides + '</div>';
-                html += '<div class="cc5-single-stat-lbl">Slides</div>';
+                html += '<div class="cc5-single-stat-lbl">' + getLabel('slidesStat') + '</div>';
                 html += '</div>';
                 if (sActivity > 0) {
                     html += '<div class="cc5-single-stat">';
                     html += '<div class="cc5-single-stat-icon cc5-single-stat-activity">' + sStarSvg + '</div>';
                     html += '<div class="cc5-single-stat-val">' + sActivity + '</div>';
-                    html += '<div class="cc5-single-stat-lbl">Activities</div>';
+                    html += '<div class="cc5-single-stat-lbl">' + getLabel('activitiesStat') + '</div>';
                     html += '</div>';
                 }
                 html += '</div>'; // cc5-single-stats
@@ -3465,7 +3496,7 @@ define([
                 html += '<div class="cc5-eta-banner">';
                 html += '<div class="cc5-eta-icon-wrap">' + ccClockSvg + '</div>';
                 html += '<div class="cc5-eta-body">';
-                html += '<span class="cc5-eta-label">Estimated completion time</span>';
+                html += '<span class="cc5-eta-label">' + getLabel('estimatedCompletionTime') + '</span>';
                 html += '<span class="cc5-eta-time">' + ccEtaTimeStr + '</span>';
                 html += '<span class="cc5-eta-detail">' + topics.length + ' topics, ' + ccTotalLearning + ' learning slides, ' + ccTotalActivities + ' activities</span>';
                 html += '</div></div>';
@@ -3698,7 +3729,7 @@ define([
                         JSON.stringify(currentSection && currentSection.id) + ' topic=' + JSON.stringify(topic && topic.id) +
                         ' slideIndex=' + self.currentSlideIndex + '. Error: ' + renderErr);
                     html += '<div class="cc5-slide-error" style="padding:2rem;text-align:center;color:#b91c1c;">' +
-                        '<p>Unable to display this slide. Please try refreshing the page.</p>' +
+                        '<p>' + getLabel('slideRenderFailed') + '</p>' +
                         '<p style="font-size:0.8em;opacity:0.7;">' + escapeHtml(String(renderErr)) + '</p>' +
                         '</div>';
                 }
@@ -3755,7 +3786,7 @@ define([
             var nextDisabled = !canNavigateNext;
             html += '<button type="button" class="cc5-nav-chevron cc5-next ' + (nextDisabled ? 'cc5-disabled' : '') + '" data-action="next" ' + (nextDisabled ? 'disabled' : '') + ' aria-label="' + (isLastSlide && allSlidesComplete ? getLabel('finishTopic') : getLabel('nextSlide')) + '">';
             if (isLastSlide && allSlidesComplete) {
-                html += '<span class="cc5-finish-text">Finish</span>';
+                html += '<span class="cc5-finish-text">' + getLabel('finish') + '</span>';
             }
             html += getIcon('chevron-right');
             html += '</button>';
@@ -3944,9 +3975,9 @@ define([
             
             // Edit button for teachers (v6.5.0) - now also on activity slides (v6.5.26)
             if (this.canEdit) {
-                html += '<button type="button" class="cc5-edit-slide-btn" data-topic-id="' + escapeHtml(topic.id) + '" data-section-id="' + escapeHtml(section.id) + '" title="Edit this slide">';
+                html += '<button type="button" class="cc5-edit-slide-btn" data-topic-id="' + escapeHtml(topic.id) + '" data-section-id="' + escapeHtml(section.id) + '" title="' + getLabel('editThisSlide') + '">';
                 html += '<span class="cc5-edit-icon">' + getIcon('pencil') + '</span>';
-                html += '<span class="cc5-edit-label">Edit</span>';
+                html += '<span class="cc5-edit-label">' + getLabel('edit') + '</span>';
                 html += '</button>';
             }
             
@@ -5144,9 +5175,9 @@ define([
             var html = '<div class="cc5-tutorial-overlay">';
             html += '<div class="cc5-tutorial-card">';
             html += '<div class="cc5-tutorial-icon">' + getIcon('info') + '</div>';
-            html += '<h3 class="cc5-tutorial-title">Welcome</h3>';
+            html += '<h3 class="cc5-tutorial-title">' + getLabel('welcome') + '</h3>';
             html += '<p class="cc5-tutorial-message">' + message + '</p>';
-            html += '<button type="button" class="cc5-tutorial-btn" data-action="dismiss-tutorial">Got it</button>';
+            html += '<button type="button" class="cc5-tutorial-btn" data-action="dismiss-tutorial">' + getLabel('gotIt') + '</button>';
             html += '</div>';
             html += '</div>';
             
@@ -6446,7 +6477,7 @@ define([
                         printHtml += '<div class="scenario">';
                         printHtml += '<h4>' + getLabel('workplaceScenario') + '</h4>';
                         if (section.scenario.title || section.scenario.scenarioTitle) printHtml += '<p><strong>' + escapeHtml(fixGrammar(section.scenario.title || section.scenario.scenarioTitle)) + '</strong></p>';
-                        if (section.scenario.role) printHtml += '<p><em>Role: ' + escapeHtml(fixGrammar(section.scenario.role)) + '</em></p>';
+                        if (section.scenario.role) printHtml += '<p><em>' + getLabel('printRole') + ' ' + escapeHtml(fixGrammar(section.scenario.role)) + '</em></p>';
                         if (section.scenario.context) printHtml += '<p>' + escapeHtml(fixGrammar(section.scenario.context)) + '</p>';
                         if (section.scenario.complication) printHtml += '<p>' + escapeHtml(fixGrammar(section.scenario.complication)) + '</p>';
                         // v8.4.6: Mental Model (matches slide purple gradient card)
@@ -6455,7 +6486,7 @@ define([
                             var mmName = (typeof mmObj === 'string') ? mmObj : (mmObj.name || mmObj.concept || '');
                             var mmPrinciple = (typeof mmObj === 'object') ? (mmObj.principle || mmObj.application || '') : '';
                             if (mmName) {
-                                printHtml += '<div class="mental-model"><strong>Mental Model: ' + escapeHtml(fixGrammar(mmName)) + '</strong>';
+                                printHtml += '<div class="mental-model"><strong>' + getLabel('printMentalModel') + ' ' + escapeHtml(fixGrammar(mmName)) + '</strong>';
                                 if (mmPrinciple) printHtml += '<p>' + escapeHtml(fixGrammar(mmPrinciple)) + '</p>';
                                 printHtml += '</div>';
                             }
@@ -6466,7 +6497,7 @@ define([
                             var predQ = (typeof predObj === 'string') ? predObj : (predObj.question || '');
                             var predOpts = (typeof predObj === 'object' && Array.isArray(predObj.options)) ? predObj.options : [];
                             if (predQ) {
-                                printHtml += '<div class="prediction"><strong>Prediction: ' + escapeHtml(fixGrammar(predQ)) + '</strong>';
+                                printHtml += '<div class="prediction"><strong>' + getLabel('printPrediction') + ' ' + escapeHtml(fixGrammar(predQ)) + '</strong>';
                                 if (predOpts.length > 0) {
                                     printHtml += '<ul>';
                                     predOpts.forEach(function (opt) {
@@ -6540,7 +6571,7 @@ define([
                         }
                         if (card.legalLink && card.legalLink.legislationName) {
                             printHtml += '<div class="accent-card accent-blue">';
-                            printHtml += '<h4>What the Law Says</h4>';
+                            printHtml += '<h4>' + getLabel('whatTheLawSaysHeading') + '</h4>';
                             printHtml += '<p><strong>' + escapeHtml(fixGrammar(card.legalLink.legislationName)) + '</strong></p>';
                             if (card.legalLink.legalObligation) printHtml += '<p>' + escapeHtml(fixGrammar(card.legalLink.legalObligation)) + '</p>';
                             if (card.legalLink.scenarioConnection) printHtml += '<p><em>' + escapeHtml(fixGrammar(card.legalLink.scenarioConnection)) + '</em></p>';
@@ -6557,21 +6588,21 @@ define([
                             });
                         }
                         if (card.goodItems && card.goodItems.length) {
-                            printHtml += '<div class="dos"><h4>What Good Looks Like</h4><ul>';
+                            printHtml += '<div class="dos"><h4>' + getLabel('whatGoodLooksLike') + '</h4><ul>';
                             card.goodItems.forEach(function (gi) {
                                 printHtml += '<li>' + escapeHtml(fixGrammar(typeof gi === 'string' ? gi : (gi.text || gi))) + '</li>';
                             });
                             printHtml += '</ul></div>';
                         }
                         if (card.badItems && card.badItems.length) {
-                            printHtml += '<div class="donts"><h4>Common Mistakes</h4><ul>';
+                            printHtml += '<div class="donts"><h4>' + getLabel('commonMistakes') + '</h4><ul>';
                             card.badItems.forEach(function (bi) {
                                 printHtml += '<li>' + escapeHtml(fixGrammar(typeof bi === 'string' ? bi : (bi.text || bi))) + '</li>';
                             });
                             printHtml += '</ul></div>';
                         }
                         if (card.question) {
-                            printHtml += '<p><strong>Question:</strong> ' + escapeHtml(fixGrammar(card.question)) + '</p>';
+                            printHtml += '<p><strong>' + getLabel('printQuestion') + '</strong> ' + escapeHtml(fixGrammar(card.question)) + '</p>';
                         }
                         if (card.options && card.options.length) {
                             var dpLetters = ['A', 'B', 'C', 'D'];
@@ -6590,7 +6621,7 @@ define([
 
                         // Legacy card fields (pre-unified content)
                         if (card.bodyText) printHtml += '<p>' + escapeHtml(fixGrammar(card.bodyText)) + '</p>';
-                        if (card.pcStatement) printHtml += '<p><strong>PC:</strong> ' + escapeHtml(fixGrammar(card.pcStatement)) + '</p>';
+                        if (card.pcStatement) printHtml += '<p><strong>' + getLabel('printPc') + '</strong> ' + escapeHtml(fixGrammar(card.pcStatement)) + '</p>';
                         if (card.elementText) printHtml += '<p>' + escapeHtml(fixGrammar(card.elementText)) + '</p>';
                         if (card.summaryLine) printHtml += '<p><strong>' + escapeHtml(fixGrammar(card.summaryLine)) + '</strong></p>';
                         // v13.94.6: keyPoints on hook-scenario, concept-explainer and applied-scenario is an
@@ -6626,10 +6657,10 @@ define([
                             printHtml += '</ul>';
                         }
                         if (card.context) printHtml += '<p>' + escapeHtml(fixGrammar(card.context)) + '</p>';
-                        if (card.consequence) printHtml += '<p><strong>Consequence:</strong> ' + escapeHtml(fixGrammar(card.consequence)) + '</p>';
+                        if (card.consequence) printHtml += '<p><strong>' + getLabel('printConsequence') + '</strong> ' + escapeHtml(fixGrammar(card.consequence)) + '</p>';
                         if (card.errorItems && card.errorItems.length) {
                             card.errorItems.forEach(function (e) {
-                                printHtml += '<p><strong>Error:</strong> ' + escapeHtml(fixGrammar(e.error || '')) + '</p>';
+                                printHtml += '<p><strong>' + getLabel('printError') + '</strong> ' + escapeHtml(fixGrammar(e.error || '')) + '</p>';
                                 if (e.consequence) printHtml += '<p><em>' + escapeHtml(fixGrammar(e.consequence)) + '</em></p>';
                             });
                         }
@@ -6662,7 +6693,7 @@ define([
                             card.consequences.forEach(function (c) { printHtml += '<li>' + escapeHtml(fixGrammar(c)) + '</li>'; });
                             printHtml += '</ul>';
                         }
-                        if (card.impactStatement) printHtml += '<p><strong>Impact:</strong> ' + escapeHtml(fixGrammar(card.impactStatement)) + '</p>';
+                        if (card.impactStatement) printHtml += '<p><strong>' + getLabel('printImpact') + '</strong> ' + escapeHtml(fixGrammar(card.impactStatement)) + '</p>';
                         if (card.keyMetrics && card.keyMetrics.length) {
                             printHtml += '<ul>';
                             card.keyMetrics.forEach(function (m) { printHtml += '<li>' + escapeHtml(fixGrammar(m)) + '</li>'; });
@@ -6684,11 +6715,11 @@ define([
                         }
                         if (card.risks && card.risks.length) {
                             card.risks.forEach(function (r) {
-                                printHtml += '<p><strong>Risk:</strong> ' + escapeHtml(fixGrammar(r.risk || r.text || '')) + '</p>';
-                                if (r.likelihood) printHtml += '<p><strong>Likelihood:</strong> ' + escapeHtml(fixGrammar(r.likelihood)) + '</p>';
+                                printHtml += '<p><strong>' + getLabel('printRisk') + '</strong> ' + escapeHtml(fixGrammar(r.risk || r.text || '')) + '</p>';
+                                if (r.likelihood) printHtml += '<p><strong>' + getLabel('printLikelihood') + '</strong> ' + escapeHtml(fixGrammar(r.likelihood)) + '</p>';
                                 if (r.impact) printHtml += '<p>' + escapeHtml(fixGrammar(r.impact)) + '</p>';
                                 if (r.consequence) printHtml += '<p><em>' + escapeHtml(fixGrammar(r.consequence)) + '</em></p>';
-                                if (r.mitigation) printHtml += '<p><strong>Mitigation:</strong> ' + escapeHtml(fixGrammar(r.mitigation)) + '</p>';
+                                if (r.mitigation) printHtml += '<p><strong>' + getLabel('printMitigation') + '</strong> ' + escapeHtml(fixGrammar(r.mitigation)) + '</p>';
                             });
                         }
                         var prPolItems = card.policyItems || card.policies || [];
@@ -6706,10 +6737,10 @@ define([
                             });
                             printHtml += '</div>';
                         }
-                        if (card.keyInsight) printHtml += '<p><strong>Key Insight:</strong> ' + escapeHtml(fixGrammar(card.keyInsight)) + '</p>';
-                        if (card.criticalReflection) printHtml += '<p><strong>Critical Reflection:</strong> ' + escapeHtml(fixGrammar(card.criticalReflection)) + '</p>';
-                        if (card.conceptDefinition) printHtml += '<p><strong>Definition:</strong> ' + escapeHtml(fixGrammar(card.conceptDefinition)) + '</p>';
-                        if (card.significance) printHtml += '<p><strong>Significance:</strong> ' + escapeHtml(fixGrammar(card.significance)) + '</p>';
+                        if (card.keyInsight) printHtml += '<p><strong>' + getLabel('keyInsightColon') + '</strong> ' + escapeHtml(fixGrammar(card.keyInsight)) + '</p>';
+                        if (card.criticalReflection) printHtml += '<p><strong>' + getLabel('criticalReflectionColon') + '</strong> ' + escapeHtml(fixGrammar(card.criticalReflection)) + '</p>';
+                        if (card.conceptDefinition) printHtml += '<p><strong>' + getLabel('printDefinition') + '</strong> ' + escapeHtml(fixGrammar(card.conceptDefinition)) + '</p>';
+                        if (card.significance) printHtml += '<p><strong>' + getLabel('printSignificance') + '</strong> ' + escapeHtml(fixGrammar(card.significance)) + '</p>';
                         if (card.keyTerms && card.keyTerms.length) {
                             printHtml += '<dl>';
                             card.keyTerms.forEach(function (t) { printHtml += '<dt><strong>' + escapeHtml(fixGrammar(t.term)) + '</strong></dt><dd>' + escapeHtml(fixGrammar(t.definition)) + '</dd>'; });
@@ -6720,7 +6751,7 @@ define([
                             card.cognitiveConsiderations.forEach(function (c) { printHtml += '<li>' + escapeHtml(fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))) + '</li>'; });
                             printHtml += '</ul>';
                         }
-                        if (card.skillStatement) printHtml += '<p><strong>Skill:</strong> ' + escapeHtml(fixGrammar(card.skillStatement)) + '</p>';
+                        if (card.skillStatement) printHtml += '<p><strong>' + getLabel('printSkill') + '</strong> ' + escapeHtml(fixGrammar(card.skillStatement)) + '</p>';
                         if (card.relevance) printHtml += '<p>' + escapeHtml(fixGrammar(card.relevance)) + '</p>';
                         if (card.keyIndicators && card.keyIndicators.length) {
                             printHtml += '<ul>';
@@ -6732,36 +6763,36 @@ define([
                             card.frameworkSteps.forEach(function (s) {
                                 printHtml += '<li><strong>' + escapeHtml(fixGrammar(s.step || '')) + '</strong>';
                                 if (s.explanation) printHtml += '<br>' + escapeHtml(fixGrammar(s.explanation));
-                                if (s.example) printHtml += '<br><em>Example: ' + escapeHtml(fixGrammar(s.example)) + '</em>';
+                                if (s.example) printHtml += '<br><em>' + getLabel('printExample') + ' ' + escapeHtml(fixGrammar(s.example)) + '</em>';
                                 printHtml += '</li>';
                             });
                             printHtml += '</ol>';
                         }
-                        if (card.keyPrinciple) printHtml += '<p><strong>Principle:</strong> ' + escapeHtml(fixGrammar(card.keyPrinciple)) + '</p>';
+                        if (card.keyPrinciple) printHtml += '<p><strong>' + getLabel('printPrinciple') + '</strong> ' + escapeHtml(fixGrammar(card.keyPrinciple)) + '</p>';
                         if (card.applications && card.applications.length) {
                             card.applications.forEach(function (a) {
                                 printHtml += '<div style="margin-bottom:8px;">';
-                                printHtml += '<p><strong>Situation:</strong> ' + escapeHtml(fixGrammar(a.situation || '')) + '</p>';
-                                printHtml += '<p><strong>Action:</strong> ' + escapeHtml(fixGrammar(a.action || '')) + '</p>';
-                                if (a.rationale) printHtml += '<p><em>Rationale: ' + escapeHtml(fixGrammar(a.rationale)) + '</em></p>';
+                                printHtml += '<p><strong>' + getLabel('printSituation') + '</strong> ' + escapeHtml(fixGrammar(a.situation || '')) + '</p>';
+                                printHtml += '<p><strong>' + getLabel('printAction') + '</strong> ' + escapeHtml(fixGrammar(a.action || '')) + '</p>';
+                                if (a.rationale) printHtml += '<p><em>' + getLabel('printRationale') + ' ' + escapeHtml(fixGrammar(a.rationale)) + '</em></p>';
                                 printHtml += '</div>';
                             });
                         }
                         if (card.pitfallItems && card.pitfallItems.length) {
                             card.pitfallItems.forEach(function (p) {
                                 printHtml += '<div style="margin-bottom:8px;">';
-                                printHtml += '<p><strong>Pitfall:</strong> ' + escapeHtml(fixGrammar(p.pitfall || '')) + '</p>';
-                                if (p.consequence) printHtml += '<p><em>Consequence: ' + escapeHtml(fixGrammar(p.consequence)) + '</em></p>';
-                                if (p.correction) printHtml += '<p>Correction: ' + escapeHtml(fixGrammar(p.correction)) + '</p>';
+                                printHtml += '<p><strong>' + getLabel('printPitfall') + '</strong> ' + escapeHtml(fixGrammar(p.pitfall || '')) + '</p>';
+                                if (p.consequence) printHtml += '<p><em>' + getLabel('printConsequence') + ' ' + escapeHtml(fixGrammar(p.consequence)) + '</em></p>';
+                                if (p.correction) printHtml += '<p>' + getLabel('printCorrection') + ' ' + escapeHtml(fixGrammar(p.correction)) + '</p>';
                                 printHtml += '</div>';
                             });
                         }
-                        if (card.turningPoint) printHtml += '<p><strong>Turning Point:</strong> ' + escapeHtml(fixGrammar(card.turningPoint)) + '</p>';
+                        if (card.turningPoint) printHtml += '<p><strong>' + getLabel('turningPointColon') + '</strong> ' + escapeHtml(fixGrammar(card.turningPoint)) + '</p>';
                         if (card.reflection) {
                             if (typeof card.reflection === 'string') {
-                                printHtml += '<p><strong>Reflection:</strong> ' + escapeHtml(fixGrammar(card.reflection)) + '</p>';
+                                printHtml += '<p><strong>' + getLabel('printReflection') + '</strong> ' + escapeHtml(fixGrammar(card.reflection)) + '</p>';
                             } else if (card.reflection.question) {
-                                printHtml += '<p><strong>Reflection:</strong> ' + escapeHtml(fixGrammar(card.reflection.question)) + '</p>';
+                                printHtml += '<p><strong>' + getLabel('printReflection') + '</strong> ' + escapeHtml(fixGrammar(card.reflection.question)) + '</p>';
                                 if (card.reflection.sampleAnswers && Array.isArray(card.reflection.sampleAnswers)) {
                                     printHtml += '<ul>';
                                     card.reflection.sampleAnswers.forEach(function (a) { printHtml += '<li>' + escapeHtml(fixGrammar(a)) + '</li>'; });
@@ -6814,23 +6845,23 @@ define([
                         printHtml += '<span class="slide-badge activity">' + getLabel('activitySlide') + '</span>';
                         printHtml += '<h3 class="slide-title">' + escapeHtml(fixGrammar(section.title)) + ' - ' + getLabel('practiceActivity') + '</h3>';
                         printHtml += '</div>';
-                        printHtml += '<p class="slide-desc">Activity Type: ' + escapeHtml(fixGrammar(act.activityType)) + '</p>';
+                        printHtml += '<p class="slide-desc">' + getLabel('printActivityType') + ' ' + escapeHtml(fixGrammar(act.activityType)) + '</p>';
                         
                         // Common fields
                         if (act.title) printHtml += '<p><strong>' + escapeHtml(fixGrammar(act.title)) + '</strong></p>';
-                        if (act.question) printHtml += '<p><strong>Question:</strong> ' + escapeHtml(fixGrammar(act.question)) + '</p>';
-                        if (act.scenario) printHtml += '<p><strong>Scenario:</strong> ' + escapeHtml(fixGrammar(act.scenario)) + '</p>';
-                        if (act.scenarioIntro) printHtml += '<p><strong>Scenario:</strong> ' + escapeHtml(fixGrammar(act.scenarioIntro)) + '</p>';
-                        if (act.situation) printHtml += '<p><strong>Situation:</strong> ' + escapeHtml(fixGrammar(act.situation)) + '</p>';
-                        if (act.context) printHtml += '<p><strong>Context:</strong> ' + escapeHtml(fixGrammar(act.context)) + '</p>';
-                        if (act.caseDescription) printHtml += '<p><strong>Case:</strong> ' + escapeHtml(fixGrammar(act.caseDescription)) + '</p>';
-                        if (act.prompt) printHtml += '<p><strong>Prompt:</strong> ' + escapeHtml(fixGrammar(act.prompt)) + '</p>';
+                        if (act.question) printHtml += '<p><strong>' + getLabel('printQuestion') + '</strong> ' + escapeHtml(fixGrammar(act.question)) + '</p>';
+                        if (act.scenario) printHtml += '<p><strong>' + getLabel('printScenario') + '</strong> ' + escapeHtml(fixGrammar(act.scenario)) + '</p>';
+                        if (act.scenarioIntro) printHtml += '<p><strong>' + getLabel('printScenario') + '</strong> ' + escapeHtml(fixGrammar(act.scenarioIntro)) + '</p>';
+                        if (act.situation) printHtml += '<p><strong>' + getLabel('printSituation') + '</strong> ' + escapeHtml(fixGrammar(act.situation)) + '</p>';
+                        if (act.context) printHtml += '<p><strong>' + getLabel('printContext') + '</strong> ' + escapeHtml(fixGrammar(act.context)) + '</p>';
+                        if (act.caseDescription) printHtml += '<p><strong>' + getLabel('printCase') + '</strong> ' + escapeHtml(fixGrammar(act.caseDescription)) + '</p>';
+                        if (act.prompt) printHtml += '<p><strong>' + getLabel('printPrompt') + '</strong> ' + escapeHtml(fixGrammar(act.prompt)) + '</p>';
                         
                         // Scenario Branching: Decision points
                         if (act.decisionPoints && act.decisionPoints.length) {
-                            printHtml += '<div class="requirements"><h4>Decision Points</h4><ul>';
+                            printHtml += '<div class="requirements"><h4>' + getLabel('decisionPoints') + '</h4><ul>';
                             act.decisionPoints.forEach(function (point, pIdx) {
-                                printHtml += '<li><strong>Decision ' + (pIdx + 1) + ':</strong> ' + escapeHtml(fixGrammar(point.situation));
+                                printHtml += '<li><strong>' + getLabel('decisionNumber').replace('{number}', pIdx + 1) + '</strong> ' + escapeHtml(fixGrammar(point.situation));
                                 if (point.options && point.options.length) {
                                     printHtml += '<ul>';
                                     point.options.forEach(function (opt, oIdx) {
@@ -6848,7 +6879,7 @@ define([
                         
                         // Best Response: Responses
                         if (act.responses && act.responses.length) {
-                            printHtml += '<div class="requirements"><h4>Response Classification</h4><ul>';
+                            printHtml += '<div class="requirements"><h4>' + getLabel('responseClassification') + '</h4><ul>';
                             act.responses.forEach(function (resp, rIdx) {
                                 var classLabel = resp.classification === 'best' ? 'OK BEST' : 
                                                 (resp.classification === 'acceptable' ? '* OK' : 'x NO');
@@ -6861,7 +6892,7 @@ define([
                         
                         // What Went Wrong: Analysis questions
                         if (act.analysisQuestions && act.analysisQuestions.length) {
-                            printHtml += '<div class="requirements"><h4>Analysis Questions</h4><ul>';
+                            printHtml += '<div class="requirements"><h4>' + getLabel('analysisQuestions') + '</h4><ul>';
                             act.analysisQuestions.forEach(function (q, qIdx) {
                                 printHtml += '<li><strong>Q' + (qIdx + 1) + ':</strong> ' + escapeHtml(fixGrammar(q.question));
                                 if (q.modelAnswer) printHtml += '<br/><strong>A:</strong> ' + escapeHtml(fixGrammar(q.modelAnswer));
@@ -6872,7 +6903,7 @@ define([
                         
                         // Task Sequencing: Steps
                         if (act.steps && act.steps.length) {
-                            printHtml += '<div class="requirements"><h4>Correct Sequence</h4><ol>';
+                            printHtml += '<div class="requirements"><h4>' + getLabel('correctSequence') + '</h4><ol>';
                             act.steps.forEach(function (step) {
                                 var stepText = typeof step === 'string' ? step : (step.text || step.description || '');
                                 printHtml += '<li>' + escapeHtml(fixGrammar(stepText)) + '</li>';
@@ -6882,10 +6913,10 @@ define([
                         
                         // Escalation Decision: Scenarios
                         if (act.situations && act.situations.length) {
-                            printHtml += '<div class="requirements"><h4>Escalation Situations</h4><ul>';
+                            printHtml += '<div class="requirements"><h4>' + getLabel('escalationSituations') + '</h4><ul>';
                             act.situations.forEach(function (sit, sIdx) {
-                                printHtml += '<li><strong>Scenario ' + (sIdx + 1) + ':</strong> ' + escapeHtml(fixGrammar(sit.situation));
-                                if (sit.correctDecision) printHtml += '<br/><strong>Answer:</strong> ' + escapeHtml(fixGrammar(sit.correctDecision));
+                                printHtml += '<li><strong>' + getLabel('scenarioNumber').replace('{number}', sIdx + 1) + '</strong> ' + escapeHtml(fixGrammar(sit.situation));
+                                if (sit.correctDecision) printHtml += '<br/><strong>' + getLabel('printAnswer') + '</strong> ' + escapeHtml(fixGrammar(sit.correctDecision));
                                 if (sit.explanation) printHtml += '<br/><em> ->  ' + escapeHtml(fixGrammar(sit.explanation)) + '</em>';
                                 printHtml += '</li>';
                             });
@@ -6894,7 +6925,7 @@ define([
                         
                         // Reflection: Items
                         if (act.reflectionPrompts && act.reflectionPrompts.length) {
-                            printHtml += '<div class="requirements"><h4>Reflection Points</h4><ul>';
+                            printHtml += '<div class="requirements"><h4>' + getLabel('reflectionPoints') + '</h4><ul>';
                             act.reflectionPrompts.forEach(function (rp) {
                                 var itemText = typeof rp === 'string' ? rp : (rp.question || rp.prompt || '');
                                 printHtml += '<li>' + escapeHtml(fixGrammar(itemText)) + '</li>';
@@ -6904,10 +6935,10 @@ define([
                         
                         // Outcomes
                         if (act.finalOutcome) {
-                            printHtml += '<div class="outcome"><h4>Outcome</h4><p>' + escapeHtml(fixGrammar(act.finalOutcome)) + '</p></div>';
+                            printHtml += '<div class="outcome"><h4>' + getLabel('outcome') + '</h4><p>' + escapeHtml(fixGrammar(act.finalOutcome)) + '</p></div>';
                         }
                         if (act.learningTakeaway) {
-                            printHtml += '<div class="outcome"><h4>Key Takeaway</h4><p>' + escapeHtml(fixGrammar(act.learningTakeaway)) + '</p></div>';
+                            printHtml += '<div class="outcome"><h4>' + getLabel('keyTakeaway') + '</h4><p>' + escapeHtml(fixGrammar(act.learningTakeaway)) + '</p></div>';
                         }
                         
                         printHtml += '</div>';
@@ -7292,7 +7323,7 @@ define([
             
             if (slidesToProcess.length === 0) {
                 Notification.addNotification({
-                    message: 'All slides already have images',
+                    message: getLabel('allSlidesHaveImages'),
                     type: 'info'
                 });
                 return;
@@ -7406,7 +7437,7 @@ define([
             
             if (slidesToProcess.length === 0) {
                 Notification.addNotification({
-                    message: 'All slides already have up-to-date voiceover',
+                    message: getLabel('allSlidesHaveVoiceover'),
                     type: 'info'
                 });
                 return;
@@ -7773,6 +7804,7 @@ define([
             formData.append('cmid', this.cmid);
             formData.append('text', text);
             formData.append('sectionid', section.id);
+                formData.append('subtopickey', section.billingKey || '');
             // v12.79 FIX-CC-REGEN-LANG: Use activeLang when the teacher/student is viewing
             // an additional language — was always sending the primary voiceLanguage.
             formData.append('language', (this.activeLang || this.voiceLanguage));
@@ -7870,6 +7902,11 @@ define([
                 ? (_bulkFirstCard.title + '. ' + (_bulkFirstCard.content || _bulkFirstCard.description || '')).trim()
                 : (_bulkFirstCard.content || _bulkFirstCard.description || '');
             var requestData = {
+                // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): the bulk route sends no
+                // isRegeneration flag, so without these the vendor cannot tell a first fill
+                // from a second sweep over the same deck.
+                subtopicKey: section.billingKey || '',
+                sectionId: String(section.id || ''),
                 slideTitle: section.title,
                 slideDescription: _slideDesc,
                 requirements: (section.requirements || []).map(function (r) { return typeof r === 'string' ? r : r.text || ''; }),
@@ -7901,7 +7938,10 @@ define([
                 data: formData,
                 processData: false,
                 contentType: false,
-                timeout: 120000
+                // FIX-CC-IMAGE-TIMEOUT-DISCARDS-PAID-WORK (v13.95.1): the server allows the vendor
+                // 180s and image generation takes 30-120s, so a 120s client timeout threw away
+                // images that had already been charged at 5 credits each.
+                timeout: 210000
             }).done(function (response) {
                 try {
                     var data = typeof response === 'string' ? JSON.parse(response) : response;
@@ -8301,7 +8341,7 @@ define([
             html += '<div class="cc5-image-option-icon">' + getIcon('upload') + '</div>';
             html += '<div class="cc5-image-option-content">';
             html += '<div class="cc5-image-option-title">' + getLabel('uploadFromDevice') + '</div>';
-            html += '<div class="cc5-image-option-desc">JPEG, PNG, WebP, GIF (max 5MB). Landscape images work best &mdash; ideal ratio is 16:9 (e.g. 1920&times;1080).</div>';
+            html += '<div class="cc5-image-option-desc">' + getLabel('imageUploadHint') + '</div>';
             html += '</div>';
             html += '<div class="cc5-image-option-badge cc5-free-badge">' + getLabel('freeUpload') + '</div>';
             html += '</button>';
@@ -8524,7 +8564,13 @@ define([
                 },
                 aspectRatio: '16:9',
                 customPrompt: customPrompt || '',
-                isRegeneration: isRegeneration || false
+                isRegeneration: isRegeneration || false,
+                // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): isRegeneration alone cannot be the
+                // basis for pricing - it is set by the browser, and the bulk route below does
+                // not send it at all. These let the vendor keep its own record of which
+                // section has already had the image covered by its subtopic's price.
+                subtopicKey: section.billingKey || '',
+                sectionId: String(section.id || '')
             };
 
             CcState.vendorFetch(this.cmid, 'generateslideimage', {payload: requestData})
@@ -8552,7 +8598,7 @@ define([
                     }
                     self.render();
                     Notification.addNotification({
-                        message: 'Failed to generate image',
+                        message: getLabel('imageGenerateFailed'),
                         type: 'error'
                     });
                 })
@@ -8587,7 +8633,7 @@ define([
             html += '<div class="cc5-image-picker-grid">';
             images.forEach(function (imgUrl, index) {
                 html += '<div class="cc5-image-picker-item" data-index="' + index + '" data-section-id="' + escapeHtml(sectionId) + '">';
-                html += '<img src="' + escapeHtml(imgUrl) + '" alt="Option ' + (index + 1) + '">'; // v13.86: was raw
+                html += '<img src="' + escapeHtml(imgUrl) + '" alt="' + getLabel('optionLabel') + ' ' + (index + 1) + '">'; // v13.86: was raw
                 html += '<div class="cc5-picker-item-overlay">';
                 html += '<span class="cc5-picker-item-number">' + (index + 1) + '</span>';
                 html += '</div>';
@@ -8596,7 +8642,7 @@ define([
                 html += getIcon('zoomIn');
                 html += '</button>';
                 // v11.10: Download button for generated images
-                html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + imgUrl + '" aria-label="Download image" title="Download image">';
+                html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + imgUrl + '" aria-label="' + getLabel('downloadImage') + '" title="' + getLabel('downloadImage') + '">';
                 html += getIcon('download');
                 html += '</button>';
                 html += '</div>';
@@ -8886,7 +8932,7 @@ define([
                         allImages.push({
                             url: item.url,
                             prompt: item.prompt || 'Gallery image',
-                            sourceSlide: item.sourceSlide || 'Saved',
+                            sourceSlide: item.sourceSlide || getLabel('saved'),
                             inUse: false
                         });
                     }
@@ -8972,13 +9018,13 @@ define([
                     // v13.86: item.url is vendor-supplied and was interpolated raw.
                     html += '<button type="button" class="cc5-image-zoom-btn" data-image-url="' + escapeHtml(item.url) + '" aria-label="' + escapeHtml(getLabel('zoomImage')) + '">' + getIcon('search') + '</button>';
                     // v11.10: Download button for gallery images
-                    html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + escapeHtml(item.url) + '" aria-label="Download image" title="Download image">' + getIcon('download') + '</button>';
+                    html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + escapeHtml(item.url) + '" aria-label="' + getLabel('downloadImage') + '" title="' + getLabel('downloadImage') + '">' + getIcon('download') + '</button>';
                     // v11.61: onerror hides broken thumbnails (e.g. cc-images 404 after server restart)
                     // Improved alt text uses prompt or slide title instead of generic "Gallery image N"
                     var imgAlt = escapeHtml(item.prompt ? item.prompt.substring(0, 80) : (item.sourceSlide || ('Gallery image ' + (index + 1))));
                     html += '<img src="' + escapeHtml(item.url) + '" alt="' + escapeHtml(imgAlt) + '" loading="lazy" onerror="var p=this.closest(\'.cc5-gallery-item\');if(p)p.style.display=\'none\';">'; // v13.86: was raw
                     html += '<div class="cc5-gallery-item-overlay">';
-                    html += '<span class="cc5-gallery-item-source">' + escapeHtml(item.sourceSlide || 'Saved') + '</span>';
+                    html += '<span class="cc5-gallery-item-source">' + escapeHtml(item.sourceSlide || getLabel('saved')) + '</span>';
                     html += '</div>';
                     html += '</div>';
                 });
@@ -9078,7 +9124,7 @@ define([
             $('.cc5-gallery-modal-overlay').remove();
             
             Notification.addNotification({
-                message: 'Image selected from gallery',
+                message: getLabel('imageSelectedGallery'),
                 type: 'success'
             });
         },
@@ -9184,9 +9230,9 @@ define([
 
                     response.images.forEach(function (img) {
                         var html = '<div class="cc5-community-item" data-image-id="' + escapeHtml(img.id) + '" data-section-id="' + escapeHtml(sectionId) + '">';
-                        html += '<img src="' + escapeHtml(img.imageUrl) + '" alt="Community image">';
+                        html += '<img src="' + escapeHtml(img.imageUrl) + '" alt="' + getLabel('communityImage') + '">';
                         // v11.10: Download button for community gallery images
-                        html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + escapeHtml(img.imageUrl) + '" aria-label="Download image" title="Download image">' + getIcon('download') + '</button>';
+                        html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + escapeHtml(img.imageUrl) + '" aria-label="' + getLabel('downloadImage') + '" title="' + getLabel('downloadImage') + '">' + getIcon('download') + '</button>';
                         html += '<div class="cc5-community-item-overlay">';
                         if (img.unitCode) {
                             html += '<span class="cc5-community-item-tag">' + escapeHtml(img.unitCode) + '</span>';
@@ -9217,7 +9263,7 @@ define([
                         if (currentPage > 1) {
                             $pagination.append('<button type="button" class="cc5-community-page-btn" data-offset="' + ((currentPage - 2) * 12) + '">' + getIcon('chevronLeft') + '</button>');
                         }
-                        $pagination.append('<span class="cc5-community-page-info">Page ' + currentPage + ' of ' + totalPages + '</span>');
+                        $pagination.append('<span class="cc5-community-page-info">' + getLabel('pageXofY').replace('{current}', currentPage).replace('{total}', totalPages) + '</span>');
                         if (currentPage < totalPages) {
                             $pagination.append('<button type="button" class="cc5-community-page-btn" data-offset="' + (currentPage * 12) + '">' + getIcon('chevronRight') + '</button>');
                         }
@@ -9353,7 +9399,7 @@ define([
             }
 
             var $container = this.container.find('.cc5-slide-image-container[data-section-id="' + sectionId + '"]');
-            $container.html('<div class="cc5-image-loading"><div class="cc5-image-spinner"></div><span>Uploading...</span></div>');
+            $container.html('<div class="cc5-image-loading"><div class="cc5-image-spinner"></div><span>' + getLabel('uploading') + '</span></div>');
 
             CcState.vendorUpload(this.cmid, 'uploadslideimage', file)
                 .then(function (response) {
@@ -9523,7 +9569,7 @@ define([
             var $current = $arena.find('.cc5-sort-current-item');
             if (idx >= total) {
                 $current.addClass('cc5-sort-all-done');
-                $current.find('.cc5-sort-item-text').text('All items sorted!');
+                $current.find('.cc5-sort-item-text').text(getLabel('allItemsSorted'));
                 $current.find('.cc5-sort-tap-btns').hide();
                 var score = parseInt($arena.data('score'), 10) || 0;
                 $challenge.data('sort-passed', score === total);
@@ -10753,41 +10799,13 @@ define([
             });
             
             
-            // ===================================================================
-            // v7.6.1: Document Reference Popup Handler
-            // ===================================================================
-            this.container.on('click', '.cc5-doc-link', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                var $link = $(this);
-                var docId = $link.data('doc-id');
-                var docName = $link.data('doc-name') || docId;
-                
-                // Create popup overlay
-                var popupHtml = '<div class="cc5-doc-popup-overlay">';
-                popupHtml += '<div class="cc5-doc-popup">';
-                popupHtml += '<div class="cc5-doc-popup-header">';
-                popupHtml += '<div class="cc5-doc-popup-title">' + docName + '</div>';
-                popupHtml += '<button type="button" class="cc5-doc-popup-close">';
-                popupHtml += '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>';
-                popupHtml += '</button>';
-                popupHtml += '</div>';
-                popupHtml += '<div class="cc5-doc-popup-body">';
-                popupHtml += '<p>This is a reference to ' + docName + '. In a real workplace, you would locate this document using your site\'s document management system.</p>';
-                popupHtml += '</div>';
-                popupHtml += '</div>';
-                popupHtml += '</div>';
-                
-                $(document.body).append(popupHtml);
-            });
-            
-            // Close document popup
-            $(document).on('click', '.cc5-doc-popup-close, .cc5-doc-popup-overlay', function (e) {
-                if ($(e.target).hasClass('cc5-doc-popup-overlay') || $(e.target).closest('.cc5-doc-popup-close').length) {
-                    $('.cc5-doc-popup-overlay').remove();
-                }
-            });
+            // FIX-CC-DOCLINK-DOUBLE-HANDLER (v13.95.1): a second delegated 'click .cc5-doc-link'
+            // handler used to live here - the v7.6.1 placeholder popup ("In a real workplace you
+            // would locate this document..."). It was superseded by showDocumentModal() below,
+            // but never removed, and both were bound on this.container for the same selector.
+            // e.stopPropagation() does not suppress a sibling handler on the SAME element (that
+            // needs stopImmediatePropagation), so every document link opened the placeholder AND
+            // the real modal. It also interpolated docName into HTML unescaped. Removed.
 
             // Touch gestures for mobile - swipe left/right
             
@@ -10959,9 +10977,9 @@ define([
                 var list = $('.cc5-edit-knowledge-terminology');
                 var idx = list.find('.cc5-edit-term-item').length;
                 var newItem = '<div class="cc5-edit-term-item" data-idx="' + idx + '">';
-                newItem += '<input type="text" class="cc5-edit-term-name" placeholder="Term" value="">';
-                newItem += '<input type="text" class="cc5-edit-term-definition" placeholder="Definition" value="">';
-                newItem += '<button type="button" class="cc5-edit-remove-term" title="Remove">' + getIcon('x') + '</button>';
+                newItem += '<input type="text" class="cc5-edit-term-name" placeholder="' + getLabel('term') + '" value="">';
+                newItem += '<input type="text" class="cc5-edit-term-definition" placeholder="' + getLabel('definition') + '" value="">';
+                newItem += '<button type="button" class="cc5-edit-remove-term" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 newItem += '</div>';
                 list.append(newItem);
             });
@@ -11045,11 +11063,11 @@ define([
                 var idx = list.find('.cc5-edit-option-item').length;
                 var newItem = '<div class="cc5-edit-option-item" data-idx="' + idx + '">';
                 newItem += '<div class="cc5-edit-option-header">';
-                newItem += '<label class="cc5-edit-correct-checkbox"><input type="radio" name="cc5-correct-option" value="' + idx + '"> Correct</label>';
-                newItem += '<button type="button" class="cc5-edit-remove-option" title="Remove">' + getIcon('x') + '</button>';
+                newItem += '<label class="cc5-edit-correct-checkbox"><input type="radio" name="cc5-correct-option" value="' + idx + '"> ' + getLabel('correct') + '</label>';
+                newItem += '<button type="button" class="cc5-edit-remove-option" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 newItem += '</div>';
-                newItem += '<input type="text" class="cc5-edit-option-text" placeholder="Option text" value="">';
-                newItem += '<input type="text" class="cc5-edit-option-feedback" placeholder="Feedback when selected" value="">';
+                newItem += '<input type="text" class="cc5-edit-option-text" placeholder="' + getLabel('optionText') + '" value="">';
+                newItem += '<input type="text" class="cc5-edit-option-feedback" placeholder="' + getLabel('feedbackWhenSelected') + '" value="">';
                 newItem += '</div>';
                 list.append(newItem);
             });
@@ -11066,8 +11084,8 @@ define([
                 var list = $('.cc5-edit-checklist-list');
                 var idx = list.find('.cc5-edit-checklist-item').length;
                 var newItem = '<div class="cc5-edit-checklist-item" data-idx="' + idx + '">';
-                newItem += '<input type="text" class="cc5-edit-checklist-text" placeholder="Checklist item" value="">';
-                newItem += '<button type="button" class="cc5-edit-remove-checklist" title="Remove">' + getIcon('x') + '</button>';
+                newItem += '<input type="text" class="cc5-edit-checklist-text" placeholder="' + getLabel('checklistItem') + '" value="">';
+                newItem += '<button type="button" class="cc5-edit-remove-checklist" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 newItem += '</div>';
                 list.append(newItem);
             });
@@ -11084,9 +11102,9 @@ define([
                 var list = $('.cc5-edit-qc-terminology');
                 var idx = list.find('.cc5-edit-term-item').length;
                 var newItem = '<div class="cc5-edit-term-item" data-idx="' + idx + '">';
-                newItem += '<input type="text" class="cc5-edit-qc-term" placeholder="Term" value="">';
-                newItem += '<input type="text" class="cc5-edit-qc-definition" placeholder="Definition" value="">';
-                newItem += '<button type="button" class="cc5-edit-remove-term cc5-edit-remove-qc-term" title="Remove">' + getIcon('x') + '</button>';
+                newItem += '<input type="text" class="cc5-edit-qc-term" placeholder="' + getLabel('term') + '" value="">';
+                newItem += '<input type="text" class="cc5-edit-qc-definition" placeholder="' + getLabel('definition') + '" value="">';
+                newItem += '<button type="button" class="cc5-edit-remove-term cc5-edit-remove-qc-term" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 newItem += '</div>';
                 list.append(newItem);
             });
@@ -11109,10 +11127,10 @@ define([
                 // v10.49: include icon field in new step rows
                 row += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                 row += self.renderIconPickerInput('', 'cc5-edit-mm-step-icon', 'Icon (e.g. check)');
-                row += '<input type="text" class="cc5-edit-mm-step-title" placeholder="Step title" value="" style="flex:1;">';
+                row += '<input type="text" class="cc5-edit-mm-step-title" placeholder="' + getLabel('stepTitle') + '" value="" style="flex:1;">';
                 row += '</div>';
-                row += '<textarea class="cc5-edit-mm-step-detail" rows="2" placeholder="Step detail"></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-mm-step" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<textarea class="cc5-edit-mm-step-detail" rows="2" placeholder="' + getLabel('stepDetail') + '"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-mm-step" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11130,12 +11148,12 @@ define([
                 var row  = '<div class="cc5-edit-dp-option-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                 row += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
                 row += '<strong style="min-width:16px;">' + (letters[idx] || (idx + 1)) + '</strong>';
-                row += '<input type="checkbox" class="cc5-edit-dp-correct" title="Mark as correct">';
-                row += '<label style="font-size:0.8rem;margin:0;">Correct answer</label>';
+                row += '<input type="checkbox" class="cc5-edit-dp-correct" title="' + getLabel('markAsCorrect') + '">';
+                row += '<label style="font-size:0.8rem;margin:0;">' + getLabel('correctAnswerLabel') + '</label>';
                 row += '</div>';
-                row += '<input type="text" class="cc5-edit-dp-option-text" placeholder="Option text" value="" style="margin-bottom:4px;">';
-                row += '<textarea class="cc5-edit-dp-feedback" rows="2" placeholder="Feedback for this option"></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-dp-option" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<input type="text" class="cc5-edit-dp-option-text" placeholder="' + getLabel('optionText') + '" value="" style="margin-bottom:4px;">';
+                row += '<textarea class="cc5-edit-dp-feedback" rows="2" placeholder="' + getLabel('feedbackForThisOption') + '"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-dp-option" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11150,10 +11168,10 @@ define([
                 var list = $(this).siblings('.cc5-edit-mistakes-list');
                 var idx  = list.find('.cc5-edit-mistake-item').length;
                 var row  = '<div class="cc5-edit-mistake-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<input type="text" class="cc5-edit-mistake-text" placeholder="Mistake" value="" style="margin-bottom:4px;">';
-                row += '<textarea class="cc5-edit-mistake-consequence" rows="3" placeholder="Consequence"></textarea>';
+                row += '<input type="text" class="cc5-edit-mistake-text" placeholder="' + getLabel('mistake') + '" value="" style="margin-bottom:4px;">';
+                row += '<textarea class="cc5-edit-mistake-consequence" rows="3" placeholder="' + getLabel('consequence') + '"></textarea>';
                 row += self.renderIconPickerInput('', 'cc5-edit-mistake-icon', 'Icon (e.g. alert-triangle)');
-                row += '<button type="button" class="cc5-edit-remove-mistake" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<button type="button" class="cc5-edit-remove-mistake" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11169,7 +11187,7 @@ define([
                 var idx  = list.find('.cc5-edit-good-item').length;
                 var row  = '<div class="cc5-edit-good-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-good-item-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-good-item" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-good-item" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11196,7 +11214,7 @@ define([
                 idx = idx + 1;
                 var row  = '<div class="cc5-edit-bad-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-bad-item-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-bad-item" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-bad-item" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11212,8 +11230,8 @@ define([
                 var idx  = list.find('.cc5-edit-beat-item').length;
                 var row  = '<div class="cc5-edit-beat-item" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">';
                 row += '<span style="min-width:22px;height:22px;border-radius:50%;background:var(--cc5-accent,#6366f1);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;">' + (idx + 1) + '</span>';
-                row += '<textarea class="cc5-edit-beat-text" rows="2" style="flex:1;" placeholder="Enter sentence..."></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-beat" title="Remove beat" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
+                row += '<textarea class="cc5-edit-beat-text" rows="2" style="flex:1;" placeholder="' + getLabel('enterSentence') + '"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-beat" title="' + getLabel('removeBeat') + '" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11229,8 +11247,8 @@ define([
                 var idx  = list.find('.cc5-edit-insight-item').length;
                 var row  = '<div class="cc5-edit-insight-item" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">';
                 row += '<span style="min-width:22px;height:22px;border-radius:50%;background:hsl(217deg 80% 55%);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;">' + (idx + 1) + '</span>';
-                row += '<textarea class="cc5-edit-insight-text" rows="2" style="flex:1;" placeholder="Enter insight sentence..."></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-insight" title="Remove insight" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
+                row += '<textarea class="cc5-edit-insight-text" rows="2" style="flex:1;" placeholder="' + getLabel('enterInsightSentence') + '"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-insight" title="' + getLabel('removeInsight') + '" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11247,10 +11265,10 @@ define([
                 var row  = '<div class="cc5-edit-concept-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                 row += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                 row += self.renderIconPickerInput('', 'cc5-edit-ci-icon', 'Icon name');
-                row += '<input type="text" class="cc5-edit-ci-title" placeholder="Card title" value="" style="flex:1;">';
+                row += '<input type="text" class="cc5-edit-ci-title" placeholder="' + getLabel('cardTitle') + '" value="" style="flex:1;">';
                 row += '</div>';
-                row += '<textarea class="cc5-edit-ci-description" rows="2" placeholder="Card description"></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-concept-item" title="Remove card" style="margin-top:4px;">' + getIcon('x') + ' Remove</button>';
+                row += '<textarea class="cc5-edit-ci-description" rows="2" placeholder="' + getLabel('cardDescription') + '"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-concept-item" title="' + getLabel('removeCard') + '" style="margin-top:4px;">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11267,10 +11285,10 @@ define([
                 var row  = '<div class="cc5-edit-scene-part-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                 row += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                 row += self.renderIconPickerInput('', 'cc5-edit-sp-icon', 'Icon (e.g. map-pin)');
-                row += '<input type="text" class="cc5-edit-sp-title" placeholder="Part title" value="" style="flex:1;">';
+                row += '<input type="text" class="cc5-edit-sp-title" placeholder="' + getLabel('partTitle') + '" value="" style="flex:1;">';
                 row += '</div>';
-                row += '<textarea class="cc5-edit-sp-text" rows="4" placeholder="Scene text"></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-scene-part" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<textarea class="cc5-edit-sp-text" rows="4" placeholder="' + getLabel('sceneText') + '"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-scene-part" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11287,10 +11305,10 @@ define([
                 var row  = '<div class="cc5-edit-concept-insight-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                 row += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                 row += self.renderIconPickerInput('', 'cc5-edit-cins-icon', 'Icon (e.g. lightbulb)');
-                row += '<input type="text" class="cc5-edit-cins-title" placeholder="Insight title" value="" style="flex:1;">';
+                row += '<input type="text" class="cc5-edit-cins-title" placeholder="' + getLabel('insightTitle') + '" value="" style="flex:1;">';
                 row += '</div>';
-                row += '<textarea class="cc5-edit-cins-text" rows="3" placeholder="Insight text"></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-concept-insight" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<textarea class="cc5-edit-cins-text" rows="3" placeholder="' + getLabel('insightText') + '"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-concept-insight" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11309,7 +11327,7 @@ define([
                 var idx = list.find('.cc5-edit-standard-item').length;
                 var row = '<div class="cc5-edit-standard-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-standard-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-standard" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-standard" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11323,9 +11341,9 @@ define([
                 var list = $(this).siblings('.cc5-edit-error-items');
                 var idx = list.find('.cc5-edit-error-item').length;
                 var row = '<div class="cc5-edit-error-item" data-idx="' + idx + '">';
-                row += '<input type="text" class="cc5-edit-error-text" placeholder="Error" value="">';
-                row += '<input type="text" class="cc5-edit-error-consequence" placeholder="Consequence" value="">';
-                row += '<button type="button" class="cc5-edit-remove-error" title="Remove">' + getIcon('x') + '</button>';
+                row += '<input type="text" class="cc5-edit-error-text" placeholder="' + getLabel('error') + '" value="">';
+                row += '<input type="text" class="cc5-edit-error-consequence" placeholder="' + getLabel('consequence') + '" value="">';
+                row += '<button type="button" class="cc5-edit-remove-error" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11339,9 +11357,9 @@ define([
                 var list = $(this).siblings('.cc5-edit-action-items');
                 var idx = list.find('.cc5-edit-action-item').length;
                 var row = '<div class="cc5-edit-action-item" data-idx="' + idx + '">';
-                row += '<input type="text" class="cc5-edit-action-heading" placeholder="Action heading" value="">';
-                row += '<textarea class="cc5-edit-action-bullets" placeholder="Bullets (one per line)" rows="3"></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-action" title="Remove">' + getIcon('x') + '</button>';
+                row += '<input type="text" class="cc5-edit-action-heading" placeholder="' + getLabel('actionHeading') + '" value="">';
+                row += '<textarea class="cc5-edit-action-bullets" placeholder="' + getLabel('bulletsOnePerLine') + '" rows="3"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-action" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11357,7 +11375,7 @@ define([
                 var idx = list.find('.cc5-edit-keypoint-item').length;
                 var row = '<div class="cc5-edit-keypoint-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-keypoint-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-keypoint" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-keypoint" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11371,9 +11389,9 @@ define([
                 var list = $(this).siblings('.cc5-edit-card-keyterms-list');
                 var idx = list.find('.cc5-edit-card-keyterm-item').length;
                 var row = '<div class="cc5-edit-card-keyterm-item" data-idx="' + idx + '">';
-                row += '<input type="text" class="cc5-edit-cardterm-name" placeholder="Term" value="">';
-                row += '<input type="text" class="cc5-edit-cardterm-def" placeholder="Definition" value="">';
-                row += '<button type="button" class="cc5-edit-remove-cardterm" title="Remove">' + getIcon('x') + '</button>';
+                row += '<input type="text" class="cc5-edit-cardterm-name" placeholder="' + getLabel('term') + '" value="">';
+                row += '<input type="text" class="cc5-edit-cardterm-def" placeholder="' + getLabel('definition') + '" value="">';
+                row += '<button type="button" class="cc5-edit-remove-cardterm" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11387,16 +11405,16 @@ define([
                 var list = $(this).siblings('.cc5-edit-prose-paras');
                 var idx = list.find('.cc5-edit-prose-para').length;
                 list.append('<textarea class="cc5-edit-prose-para" rows="5" data-idx="' + idx +
-                    '" placeholder="Paragraph ' + (idx + 1) + '" style="margin-bottom:8px;"></textarea>');
+                    '" placeholder="' + getLabel('paragraph') + ' ' + (idx + 1) + '" style="margin-bottom:8px;"></textarea>');
             });
             $(document).on('click', '.cc5-edit-add-prose-term', function (e) {
                 e.preventDefault();
                 var list = $(this).siblings('.cc5-edit-prose-terms-list');
                 var idx = list.find('.cc5-edit-prose-term-item').length;
                 var row = '<div class="cc5-edit-prose-term-item" data-idx="' + idx + '">';
-                row += '<input type="text" class="cc5-edit-prose-term-name" placeholder="Term" value="">';
-                row += '<input type="text" class="cc5-edit-prose-term-def" placeholder="Definition" value="">';
-                row += '<button type="button" class="cc5-edit-remove-prose-term" title="Remove">' + getIcon('x') + '</button>';
+                row += '<input type="text" class="cc5-edit-prose-term-name" placeholder="' + getLabel('term') + '" value="">';
+                row += '<input type="text" class="cc5-edit-prose-term-def" placeholder="' + getLabel('definition') + '" value="">';
+                row += '<button type="button" class="cc5-edit-remove-prose-term" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11410,8 +11428,8 @@ define([
                     var list = $(this).siblings('.cc5-edit-prose-' + kind + '-list');
                     var idx = list.find('.cc5-edit-prose-' + kind + '-item').length;
                     var row = '<div class="cc5-edit-prose-' + kind + '-item" data-idx="' + idx + '">';
-                    row += '<input type="text" class="cc5-edit-prose-' + kind + '-text" placeholder="Statement" value="">';
-                    row += '<button type="button" class="cc5-edit-remove-prose-item" title="Remove">' + getIcon('x') + '</button>';
+                    row += '<input type="text" class="cc5-edit-prose-' + kind + '-text" placeholder="' + getLabel('statement') + '" value="">';
+                    row += '<button type="button" class="cc5-edit-remove-prose-item" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                     row += '</div>';
                     list.append(row);
                 });
@@ -11427,12 +11445,12 @@ define([
                 var list = $(this).siblings('.cc5-edit-frameworks-list');
                 var idx = list.find('.cc5-edit-framework-item').length;
                 var row = '<div class="cc5-edit-framework-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<input type="text" class="cc5-edit-fw-name" placeholder="Framework name" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-fw-originator" placeholder="Originator" value="" style="margin-bottom:4px;">';
-                row += '<textarea class="cc5-edit-fw-principle" rows="2" placeholder="Principle"></textarea>';
-                row += '<input type="text" class="cc5-edit-fw-application" placeholder="Application" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-fw-limitation" placeholder="Limitation" value="" style="margin-bottom:4px;">';
-                row += '<button type="button" class="cc5-edit-remove-framework" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<input type="text" class="cc5-edit-fw-name" placeholder="' + getLabel('frameworkName') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-fw-originator" placeholder="' + getLabel('originator') + '" value="" style="margin-bottom:4px;">';
+                row += '<textarea class="cc5-edit-fw-principle" rows="2" placeholder="' + getLabel('principle') + '"></textarea>';
+                row += '<input type="text" class="cc5-edit-fw-application" placeholder="' + getLabel('application') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-fw-limitation" placeholder="' + getLabel('limitation') + '" value="" style="margin-bottom:4px;">';
+                row += '<button type="button" class="cc5-edit-remove-framework" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11447,7 +11465,7 @@ define([
                 var idx = list.find('.cc5-edit-cogconsideration-item').length;
                 var row = '<div class="cc5-edit-cogconsideration-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-cogconsideration-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-cogconsideration" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-cogconsideration" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11462,7 +11480,7 @@ define([
                 var idx = list.find('.cc5-edit-analysisprompt-item').length;
                 var row = '<div class="cc5-edit-analysisprompt-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-analysisprompt-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-analysisprompt" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-analysisprompt" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11476,9 +11494,9 @@ define([
                 var list = $(this).siblings('.cc5-edit-ethicsconsiderations-list');
                 var idx = list.find('.cc5-edit-ethicsconsideration-item').length;
                 var row = '<div class="cc5-edit-ethicsconsideration-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<input type="text" class="cc5-edit-ethicsdim-text" placeholder="Dimension (e.g. Autonomy)" value="" style="margin-bottom:4px;">';
-                row += '<textarea class="cc5-edit-ethicsdesc-text" rows="2" placeholder="Description"></textarea>';
-                row += '<button type="button" class="cc5-edit-remove-ethicsconsideration" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<input type="text" class="cc5-edit-ethicsdim-text" placeholder="' + getLabel('dimensionExample') + '" value="" style="margin-bottom:4px;">';
+                row += '<textarea class="cc5-edit-ethicsdesc-text" rows="2" placeholder="' + getLabel('description') + '"></textarea>';
+                row += '<button type="button" class="cc5-edit-remove-ethicsconsideration" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11493,7 +11511,7 @@ define([
                 var idx = list.find('.cc5-edit-casestudyprompt-item').length;
                 var row = '<div class="cc5-edit-casestudyprompt-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-casestudyprompt-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-casestudyprompt" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-casestudyprompt" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11508,7 +11526,7 @@ define([
                 var idx = list.find('.cc5-edit-keymetric-item').length;
                 var row = '<div class="cc5-edit-keymetric-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-keymetric-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-keymetric" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-keymetric" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11523,7 +11541,7 @@ define([
                 var idx = list.find('.cc5-edit-consequence-item').length;
                 var row = '<div class="cc5-edit-consequence-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-consequence-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-consequence" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-consequence" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11537,10 +11555,10 @@ define([
                 var list = $(this).siblings('.cc5-edit-actionsteps-list');
                 var idx = list.find('.cc5-edit-actionstep-item').length;
                 var row = '<div class="cc5-edit-actionstep-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<input type="text" class="cc5-edit-step-action" placeholder="Action" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-step-detail" placeholder="Detail (optional)" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-step-timeframe" placeholder="Timeframe (optional)" value="" style="margin-bottom:4px;">';
-                row += '<button type="button" class="cc5-edit-remove-actionstep" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<input type="text" class="cc5-edit-step-action" placeholder="' + getLabel('action') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-step-detail" placeholder="' + getLabel('detailOptional') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-step-timeframe" placeholder="' + getLabel('timeframeOptional') + '" value="" style="margin-bottom:4px;">';
+                row += '<button type="button" class="cc5-edit-remove-actionstep" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11554,12 +11572,12 @@ define([
                 var list = $(this).siblings('.cc5-edit-risks-list');
                 var idx = list.find('.cc5-edit-risk-item').length;
                 var row = '<div class="cc5-edit-risk-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<input type="text" class="cc5-edit-risk-text" placeholder="Risk" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-risk-likelihood" placeholder="Likelihood (e.g. High)" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-risk-impact" placeholder="Impact (e.g. Severe)" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-risk-consequence" placeholder="Consequence" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-risk-mitigation" placeholder="Mitigation strategy" value="" style="margin-bottom:4px;">';
-                row += '<button type="button" class="cc5-edit-remove-risk" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<input type="text" class="cc5-edit-risk-text" placeholder="' + getLabel('risk') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-risk-likelihood" placeholder="' + getLabel('likelihoodExample') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-risk-impact" placeholder="' + getLabel('impactExample') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-risk-consequence" placeholder="' + getLabel('consequence') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-risk-mitigation" placeholder="' + getLabel('mitigationStrategy') + '" value="" style="margin-bottom:4px;">';
+                row += '<button type="button" class="cc5-edit-remove-risk" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11573,10 +11591,10 @@ define([
                 var list = $(this).siblings('.cc5-edit-policyitems-list');
                 var idx = list.find('.cc5-edit-policyitem-item').length;
                 var row = '<div class="cc5-edit-policyitem-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<textarea class="cc5-edit-policy-text" rows="2" placeholder="Policy statement"></textarea>';
-                row += '<input type="text" class="cc5-edit-policy-requirement" placeholder="Requirement" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-policy-consequence" placeholder="Consequence of non-compliance" value="" style="margin-bottom:4px;">';
-                row += '<button type="button" class="cc5-edit-remove-policyitem" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<textarea class="cc5-edit-policy-text" rows="2" placeholder="' + getLabel('policyStatement') + '"></textarea>';
+                row += '<input type="text" class="cc5-edit-policy-requirement" placeholder="' + getLabel('requirement') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-policy-consequence" placeholder="' + getLabel('consequenceNonCompliance') + '" value="" style="margin-bottom:4px;">';
+                row += '<button type="button" class="cc5-edit-remove-policyitem" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11591,7 +11609,7 @@ define([
                 var idx = list.find('.cc5-edit-opttip-item').length;
                 var row = '<div class="cc5-edit-opttip-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-opttip-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-opttip" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-opttip" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11606,7 +11624,7 @@ define([
                 var idx = list.find('.cc5-edit-keyindicator-item').length;
                 var row = '<div class="cc5-edit-keyindicator-item" data-idx="' + idx + '">';
                 row += '<input type="text" class="cc5-edit-keyindicator-text" value="">';
-                row += '<button type="button" class="cc5-edit-remove-keyindicator" title="Remove">' + getIcon('x') + '</button>';
+                row += '<button type="button" class="cc5-edit-remove-keyindicator" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11620,10 +11638,10 @@ define([
                 var list = $(this).siblings('.cc5-edit-frameworksteps-list');
                 var idx = list.find('.cc5-edit-frameworkstep-item').length;
                 var row = '<div class="cc5-edit-frameworkstep-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<input type="text" class="cc5-edit-fwstep-step" placeholder="Step name" value="" style="margin-bottom:4px;">';
-                row += '<textarea class="cc5-edit-fwstep-explanation" rows="2" placeholder="Explanation"></textarea>';
-                row += '<input type="text" class="cc5-edit-fwstep-example" placeholder="Example" value="" style="margin-bottom:4px;">';
-                row += '<button type="button" class="cc5-edit-remove-frameworkstep" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<input type="text" class="cc5-edit-fwstep-step" placeholder="' + getLabel('stepName') + '" value="" style="margin-bottom:4px;">';
+                row += '<textarea class="cc5-edit-fwstep-explanation" rows="2" placeholder="' + getLabel('explanation') + '"></textarea>';
+                row += '<input type="text" class="cc5-edit-fwstep-example" placeholder="' + getLabel('example') + '" value="" style="margin-bottom:4px;">';
+                row += '<button type="button" class="cc5-edit-remove-frameworkstep" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11637,10 +11655,10 @@ define([
                 var list = $(this).siblings('.cc5-edit-applications-list');
                 var idx = list.find('.cc5-edit-application-item').length;
                 var row = '<div class="cc5-edit-application-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<input type="text" class="cc5-edit-app-situation" placeholder="Situation" value="" style="margin-bottom:4px;">';
-                row += '<textarea class="cc5-edit-app-action" rows="2" placeholder="Action"></textarea>';
-                row += '<input type="text" class="cc5-edit-app-rationale" placeholder="Rationale" value="" style="margin-bottom:4px;">';
-                row += '<button type="button" class="cc5-edit-remove-application" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<input type="text" class="cc5-edit-app-situation" placeholder="' + getLabel('situation') + '" value="" style="margin-bottom:4px;">';
+                row += '<textarea class="cc5-edit-app-action" rows="2" placeholder="' + getLabel('action') + '"></textarea>';
+                row += '<input type="text" class="cc5-edit-app-rationale" placeholder="' + getLabel('rationale') + '" value="" style="margin-bottom:4px;">';
+                row += '<button type="button" class="cc5-edit-remove-application" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -11654,10 +11672,10 @@ define([
                 var list = $(this).siblings('.cc5-edit-pitfalls-list');
                 var idx = list.find('.cc5-edit-pitfall-item').length;
                 var row = '<div class="cc5-edit-pitfall-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                row += '<input type="text" class="cc5-edit-pitfall-text" placeholder="Pitfall" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-pitfall-consequence" placeholder="Consequence" value="" style="margin-bottom:4px;">';
-                row += '<input type="text" class="cc5-edit-pitfall-correction" placeholder="Correction" value="" style="margin-bottom:4px;">';
-                row += '<button type="button" class="cc5-edit-remove-pitfall" title="Remove">' + getIcon('x') + ' Remove</button>';
+                row += '<input type="text" class="cc5-edit-pitfall-text" placeholder="' + getLabel('pitfall') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-pitfall-consequence" placeholder="' + getLabel('consequence') + '" value="" style="margin-bottom:4px;">';
+                row += '<input type="text" class="cc5-edit-pitfall-correction" placeholder="' + getLabel('correction') + '" value="" style="margin-bottom:4px;">';
+                row += '<button type="button" class="cc5-edit-remove-pitfall" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                 row += '</div>';
                 list.append(row);
             });
@@ -12619,7 +12637,7 @@ define([
             html += '<div class="cc5-icon-picker-wrap">';
             html += '<span class="' + previewClass + '">' + previewSvg + '</span>';
             html += '<input type="text" class="' + cssClass + ' cc5-ipi-input" placeholder="' + escapeHtml(placeholder) + '" value="' + escapeHtml(currentVal || '') + '" style="flex:1;min-width:0;">';
-            html += '<button type="button" class="cc5-icon-picker-btn" title="Browse all icons">Browse</button>';
+            html += '<button type="button" class="cc5-icon-picker-btn" title="' + getLabel('browseAllIcons') + '">' + getLabel('browse') + '</button>';
             html += '</div>';
             return html;
         },
@@ -12634,8 +12652,8 @@ define([
             var html = '<div id="cc5-icon-picker-overlay">';
             html += '<div class="cc5-icon-picker-popup">';
             html += '<div class="cc5-icon-picker-header">';
-            html += '<input type="text" class="cc5-icon-picker-search" placeholder="Search icons\u2026" autocomplete="off">';
-            html += '<button type="button" class="cc5-icon-picker-close" title="Close">' + getIcon('x') + '</button>';
+            html += '<input type="text" class="cc5-icon-picker-search" placeholder="' + getLabel('searchIcons') + '" autocomplete="off">';
+            html += '<button type="button" class="cc5-icon-picker-close" title="' + getLabel('close') + '">' + getIcon('x') + '</button>';
             html += '</div>';
             html += '<div class="cc5-icon-picker-grid">';
             for (var ni = 0; ni < allNames.length; ni++) {
@@ -12763,32 +12781,32 @@ define([
                 html += '<div class="cc5-edit-field cc5-edit-route-card-section">';
                 html += '<h4 class="cc5-edit-section-title">' + getIcon('layers') + ' Route Card: ' + escapeHtml(section.cardType) + '</h4>';
                 html += '<div class="cc5-edit-field">';
-                html += '<label for="cc5-edit-card-heading">Heading</label>';
+                html += '<label for="cc5-edit-card-heading">' + getLabel('heading') + '</label>';
                 html += '<input type="text" id="cc5-edit-card-heading" value="' + escapeHtml(section.heading || '') + '">';
                 html += '</div>';
                 html += '<div class="cc5-edit-field">';
-                html += '<label for="cc5-edit-card-bodytext">Body Text</label>';
+                html += '<label for="cc5-edit-card-bodytext">' + getLabel('bodyText') + '</label>';
                 html += '<textarea id="cc5-edit-card-bodytext" rows="4">' + escapeHtml(section.bodyText || '') + '</textarea>';
                 html += '</div>';
                 if (section.cardType === 'scenario-1' || section.cardType === 'scenario-2' || section.cardType === 'case-study-1' || section.cardType === 'case-study-2') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-card-context">Context</label>';
+                    html += '<label for="cc5-edit-card-context">' + getLabel('context') + '</label>';
                     html += '<textarea id="cc5-edit-card-context" rows="3">' + escapeHtml(section.context || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-card-consequence">Consequence</label>';
+                    html += '<label for="cc5-edit-card-consequence">' + getLabel('consequence') + '</label>';
                     html += '<textarea id="cc5-edit-card-consequence" rows="2">' + escapeHtml(section.consequence || '') + '</textarea>';
                     html += '</div>';
                 }
                 if (section.cardType === 'competence-standard') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Standard Items</label>';
+                    html += '<label>' + getLabel('standardItems') + '</label>';
                     html += '<div class="cc5-edit-standard-items">';
                     (section.standardItems || []).forEach(function (item, idx) {
                         var text = typeof item === 'string' ? item : (item.text || '');
                         html += '<div class="cc5-edit-standard-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-standard-text" value="' + escapeHtml(text) + '">';
-                        html += '<button type="button" class="cc5-edit-remove-standard" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-standard" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -12797,13 +12815,13 @@ define([
                 }
                 if (section.cardType === 'common-errors') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Error Items</label>';
+                    html += '<label>' + getLabel('errorItems') + '</label>';
                     html += '<div class="cc5-edit-error-items">';
                     (section.errorItems || []).forEach(function (item, idx) {
                         html += '<div class="cc5-edit-error-item" data-idx="' + idx + '">';
-                        html += '<input type="text" class="cc5-edit-error-text" placeholder="Error" value="' + escapeHtml(item.error || '') + '">';
-                        html += '<input type="text" class="cc5-edit-error-consequence" placeholder="Consequence" value="' + escapeHtml(item.consequence || '') + '">';
-                        html += '<button type="button" class="cc5-edit-remove-error" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<input type="text" class="cc5-edit-error-text" placeholder="' + getLabel('error') + '" value="' + escapeHtml(item.error || '') + '">';
+                        html += '<input type="text" class="cc5-edit-error-consequence" placeholder="' + getLabel('consequence') + '" value="' + escapeHtml(item.consequence || '') + '">';
+                        html += '<button type="button" class="cc5-edit-remove-error" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -12812,13 +12830,13 @@ define([
                 }
                 if (section.cardType === 'action-breakdown') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Action Items</label>';
+                    html += '<label>' + getLabel('actionItems') + '</label>';
                     html += '<div class="cc5-edit-action-items">';
                     (section.actions || []).forEach(function (action, idx) {
                         html += '<div class="cc5-edit-action-item" data-idx="' + idx + '">';
-                        html += '<input type="text" class="cc5-edit-action-heading" placeholder="Action heading" value="' + escapeHtml(action.heading || '') + '">';
-                        html += '<textarea class="cc5-edit-action-bullets" placeholder="Bullets (one per line)" rows="3">' + escapeHtml((action.bullets || []).join('\n')) + '</textarea>';
-                        html += '<button type="button" class="cc5-edit-remove-action" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<input type="text" class="cc5-edit-action-heading" placeholder="' + getLabel('actionHeading') + '" value="' + escapeHtml(action.heading || '') + '">';
+                        html += '<textarea class="cc5-edit-action-bullets" placeholder="' + getLabel('bulletsOnePerLine') + '" rows="3">' + escapeHtml((action.bullets || []).join('\n')) + '</textarea>';
+                        html += '<button type="button" class="cc5-edit-remove-action" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -12832,15 +12850,15 @@ define([
                 // VET: performance-anchor  -  pcStatement, elementText, summaryLine
                 if (section.cardType === 'performance-anchor') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-pc-statement">Performance Criteria Statement</label>';
+                    html += '<label for="cc5-edit-pc-statement">' + getLabel('performanceCriteriaStatement') + '</label>';
                     html += '<textarea id="cc5-edit-pc-statement" rows="2">' + escapeHtml(section.pcStatement || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-element-text">Element of Competency</label>';
+                    html += '<label for="cc5-edit-element-text">' + getLabel('elementOfCompetency') + '</label>';
                     html += '<input type="text" id="cc5-edit-element-text" value="' + escapeHtml(section.elementText || '') + '">';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-summary-line">Summary Line</label>';
+                    html += '<label for="cc5-edit-summary-line">' + getLabel('summaryLine') + '</label>';
                     html += '<input type="text" id="cc5-edit-summary-line" value="' + escapeHtml(section.summaryLine || '') + '">';
                     html += '</div>';
                 }
@@ -12848,12 +12866,12 @@ define([
                 // VET/All: plain-english  -  keyPoints[]
                 if (section.cardType === 'plain-english') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Key Points</label>';
+                    html += '<label>' + getLabel('keyPoints') + '</label>';
                     html += '<div class="cc5-edit-keypoints-list">';
                     (section.keyPoints || []).forEach(function (pt, idx) {
                         html += '<div class="cc5-edit-keypoint-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-keypoint-text" value="' + escapeHtml(pt || '') + '">';
-                        html += '<button type="button" class="cc5-edit-remove-keypoint" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-keypoint" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -12864,21 +12882,21 @@ define([
                 // UNI: concept-anchor  -  conceptDefinition, significance, keyTerms[]
                 if (section.cardType === 'concept-anchor') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-concept-definition">Concept Definition</label>';
+                    html += '<label for="cc5-edit-concept-definition">' + getLabel('conceptDefinition') + '</label>';
                     html += '<textarea id="cc5-edit-concept-definition" rows="3">' + escapeHtml(section.conceptDefinition || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-significance">Significance</label>';
+                    html += '<label for="cc5-edit-significance">' + getLabel('significance') + '</label>';
                     html += '<textarea id="cc5-edit-significance" rows="2">' + escapeHtml(section.significance || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Card-Level Key Terms</label>';
+                    html += '<label>' + getLabel('cardLevelKeyTerms') + '</label>';
                     html += '<div class="cc5-edit-card-keyterms-list">';
                     (section.keyTerms || []).forEach(function (t, idx) {
                         html += '<div class="cc5-edit-card-keyterm-item" data-idx="' + idx + '">';
-                        html += '<input type="text" class="cc5-edit-cardterm-name" placeholder="Term" value="' + escapeHtml(t.term || '') + '">';
-                        html += '<input type="text" class="cc5-edit-cardterm-def" placeholder="Definition" value="' + escapeHtml(t.definition || t.meaning || '') + '">';
-                        html += '<button type="button" class="cc5-edit-remove-cardterm" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<input type="text" class="cc5-edit-cardterm-name" placeholder="' + getLabel('term') + '" value="' + escapeHtml(t.term || '') + '">';
+                        html += '<input type="text" class="cc5-edit-cardterm-def" placeholder="' + getLabel('definition') + '" value="' + escapeHtml(t.definition || t.meaning || '') + '">';
+                        html += '<button type="button" class="cc5-edit-remove-cardterm" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -12889,16 +12907,16 @@ define([
                 // UNI: theoretical-framework  -  frameworks[] (name, originator, principle, limitation)
                 if (section.cardType === 'theoretical-framework') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Theoretical Frameworks</label>';
+                    html += '<label>' + getLabel('theoreticalFrameworks') + '</label>';
                     html += '<div class="cc5-edit-frameworks-list">';
                     (section.frameworks || []).forEach(function (fw, idx) {
                         html += '<div class="cc5-edit-framework-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<input type="text" class="cc5-edit-fw-name" placeholder="Framework name" value="' + escapeHtml(fw.name || '') + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-fw-originator" placeholder="Originator / Author" value="' + escapeHtml(fw.originator || '') + '" style="margin-bottom:4px;">';
-                        html += '<textarea class="cc5-edit-fw-principle" rows="2" placeholder="Core principle">' + escapeHtml(fw.principle || fw.description || '') + '</textarea>';
-                        html += '<input type="text" class="cc5-edit-fw-application" placeholder="Practical application" value="' + escapeHtml(fw.application || '') + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-fw-limitation" placeholder="Limitation / critique" value="' + escapeHtml(fw.limitation || '') + '" style="margin-bottom:4px;">';
-                        html += '<button type="button" class="cc5-edit-remove-framework" title="Remove">' + getIcon('x') + ' Remove framework</button>';
+                        html += '<input type="text" class="cc5-edit-fw-name" placeholder="' + getLabel('frameworkName') + '" value="' + escapeHtml(fw.name || '') + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-fw-originator" placeholder="' + getLabel('originatorAuthor') + '" value="' + escapeHtml(fw.originator || '') + '" style="margin-bottom:4px;">';
+                        html += '<textarea class="cc5-edit-fw-principle" rows="2" placeholder="' + getLabel('corePrinciple') + '">' + escapeHtml(fw.principle || fw.description || '') + '</textarea>';
+                        html += '<input type="text" class="cc5-edit-fw-application" placeholder="' + getLabel('practicalApplication') + '" value="' + escapeHtml(fw.application || '') + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-fw-limitation" placeholder="' + getLabel('limitationCritique') + '" value="' + escapeHtml(fw.limitation || '') + '" style="margin-bottom:4px;">';
+                        html += '<button type="button" class="cc5-edit-remove-framework" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove framework</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -12909,25 +12927,25 @@ define([
                 // UNI: analytical-lens  -  cognitiveConsiderations[], analysisPrompts[]
                 if (section.cardType === 'analytical-lens') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Cognitive Considerations</label>';
+                    html += '<label>' + getLabel('cognitiveConsiderations') + '</label>';
                     html += '<div class="cc5-edit-cogconsiderations-list">';
                     (section.cognitiveConsiderations || []).forEach(function (c, idx) {
                         var txt = typeof c === 'string' ? c : (c.text || c.description || '');
                         html += '<div class="cc5-edit-cogconsideration-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-cogconsideration-text" value="' + escapeHtml(txt) + '">';
-                        html += '<button type="button" class="cc5-edit-remove-cogconsideration" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-cogconsideration" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
                     html += '<button type="button" class="cc5-edit-add-btn cc5-edit-add-cogconsideration">' + getIcon('plus') + ' Add Consideration</button>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Analysis Prompts</label>';
+                    html += '<label>' + getLabel('analysisPrompts') + '</label>';
                     html += '<div class="cc5-edit-analysisprompts-list">';
                     (section.analysisPrompts || []).forEach(function (p, idx) {
                         html += '<div class="cc5-edit-analysisprompt-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-analysisprompt-text" value="' + escapeHtml(p || '') + '">';
-                        html += '<button type="button" class="cc5-edit-remove-analysisprompt" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-analysisprompt" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -12938,15 +12956,15 @@ define([
                 // UNI: ethics-considerations  -  considerations[] (dimension, description)
                 if (section.cardType === 'ethics-considerations') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Ethical Considerations</label>';
+                    html += '<label>' + getLabel('ethicalConsiderations') + '</label>';
                     html += '<div class="cc5-edit-ethicsconsiderations-list">';
                     (section.considerations || []).forEach(function (c, idx) {
                         var dim = (typeof c === 'object' && c) ? (c.dimension || c.title || '') : '';
                         var desc = (typeof c === 'object' && c) ? (c.description || c.text || '') : (c || '');
                         html += '<div class="cc5-edit-ethicsconsideration-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<input type="text" class="cc5-edit-ethicsdim-text" placeholder="Dimension (e.g. Autonomy)" value="' + escapeHtml(dim) + '" style="margin-bottom:4px;">';
-                        html += '<textarea class="cc5-edit-ethicsdesc-text" rows="2" placeholder="Description">' + escapeHtml(desc) + '</textarea>';
-                        html += '<button type="button" class="cc5-edit-remove-ethicsconsideration" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<input type="text" class="cc5-edit-ethicsdim-text" placeholder="' + getLabel('dimensionExample') + '" value="' + escapeHtml(dim) + '" style="margin-bottom:4px;">';
+                        html += '<textarea class="cc5-edit-ethicsdesc-text" rows="2" placeholder="' + getLabel('description') + '">' + escapeHtml(desc) + '</textarea>';
+                        html += '<button type="button" class="cc5-edit-remove-ethicsconsideration" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -12957,23 +12975,23 @@ define([
                 // UNI/WP: case-study-1 / case-study-2  -  analysisPrompts[], keyInsight, criticalReflection
                 if (section.cardType === 'case-study-1' || section.cardType === 'case-study-2') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Analysis Prompts</label>';
+                    html += '<label>' + getLabel('analysisPrompts') + '</label>';
                     html += '<div class="cc5-edit-casestudyprompts-list">';
                     (section.analysisPrompts || []).forEach(function (p, idx) {
                         html += '<div class="cc5-edit-casestudyprompt-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-casestudyprompt-text" value="' + escapeHtml(p || '') + '">';
-                        html += '<button type="button" class="cc5-edit-remove-casestudyprompt" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-casestudyprompt" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
                     html += '<button type="button" class="cc5-edit-add-btn cc5-edit-add-casestudyprompt">' + getIcon('plus') + ' Add Analysis Prompt</button>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-key-insight">Key Insight</label>';
+                    html += '<label for="cc5-edit-key-insight">' + getLabel('keyInsight') + '</label>';
                     html += '<textarea id="cc5-edit-key-insight" rows="2">' + escapeHtml(section.keyInsight || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-critical-reflection">Critical Reflection Question</label>';
+                    html += '<label for="cc5-edit-critical-reflection">' + getLabel('criticalReflectionQuestion') + '</label>';
                     html += '<textarea id="cc5-edit-critical-reflection" rows="2">' + escapeHtml(section.criticalReflection || '') + '</textarea>';
                     html += '</div>';
                 }
@@ -12981,28 +12999,28 @@ define([
                 // WP: business-impact  -  impactStatement, keyMetrics[], consequences[]
                 if (section.cardType === 'business-impact') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-impact-statement">Impact Statement</label>';
+                    html += '<label for="cc5-edit-impact-statement">' + getLabel('impactStatement') + '</label>';
                     html += '<textarea id="cc5-edit-impact-statement" rows="2">' + escapeHtml(section.impactStatement || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Key Metrics</label>';
+                    html += '<label>' + getLabel('keyMetrics') + '</label>';
                     html += '<div class="cc5-edit-keymetrics-list">';
                     (section.keyMetrics || []).forEach(function (m, idx) {
                         html += '<div class="cc5-edit-keymetric-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-keymetric-text" value="' + escapeHtml(typeof m === 'string' ? m : (m.metric || m.text || '')) + '">';
-                        html += '<button type="button" class="cc5-edit-remove-keymetric" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-keymetric" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
                     html += '<button type="button" class="cc5-edit-add-btn cc5-edit-add-keymetric">' + getIcon('plus') + ' Add Metric</button>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Consequences</label>';
+                    html += '<label>' + getLabel('consequences') + '</label>';
                     html += '<div class="cc5-edit-consequences-list">';
                     (section.consequences || []).forEach(function (c, idx) {
                         html += '<div class="cc5-edit-consequence-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-consequence-text" value="' + escapeHtml(typeof c === 'string' ? c : (c.text || '')) + '">';
-                        html += '<button type="button" class="cc5-edit-remove-consequence" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-consequence" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13013,17 +13031,17 @@ define([
                 // WP: action-framework  -  steps[] (action, detail, timeframe)
                 if (section.cardType === 'action-framework') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Action Steps</label>';
+                    html += '<label>' + getLabel('actionSteps') + '</label>';
                     html += '<div class="cc5-edit-actionsteps-list">';
                     (section.steps || []).forEach(function (s, idx) {
                         var action = typeof s === 'string' ? s : (s.action || s.text || '');
                         var detail = (typeof s === 'object' && s) ? (s.detail || '') : '';
                         var timeframe = (typeof s === 'object' && s) ? (s.timeframe || '') : '';
                         html += '<div class="cc5-edit-actionstep-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<input type="text" class="cc5-edit-step-action" placeholder="Action" value="' + escapeHtml(action) + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-step-detail" placeholder="Detail (optional)" value="' + escapeHtml(detail) + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-step-timeframe" placeholder="Timeframe (optional)" value="' + escapeHtml(timeframe) + '" style="margin-bottom:4px;">';
-                        html += '<button type="button" class="cc5-edit-remove-actionstep" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<input type="text" class="cc5-edit-step-action" placeholder="' + getLabel('action') + '" value="' + escapeHtml(action) + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-step-detail" placeholder="' + getLabel('detailOptional') + '" value="' + escapeHtml(detail) + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-step-timeframe" placeholder="' + getLabel('timeframeOptional') + '" value="' + escapeHtml(timeframe) + '" style="margin-bottom:4px;">';
+                        html += '<button type="button" class="cc5-edit-remove-actionstep" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13034,16 +13052,16 @@ define([
                 // WP: risk-card  -  risks[] (risk, likelihood, impact, consequence, mitigation)
                 if (section.cardType === 'risk-card') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Risks</label>';
+                    html += '<label>' + getLabel('risks') + '</label>';
                     html += '<div class="cc5-edit-risks-list">';
                     (section.risks || []).forEach(function (r, idx) {
                         html += '<div class="cc5-edit-risk-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<input type="text" class="cc5-edit-risk-text" placeholder="Risk" value="' + escapeHtml(r.risk || r.text || '') + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-risk-likelihood" placeholder="Likelihood (e.g. High)" value="' + escapeHtml(r.likelihood || '') + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-risk-impact" placeholder="Impact (e.g. Severe)" value="' + escapeHtml(r.impact || '') + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-risk-consequence" placeholder="Consequence" value="' + escapeHtml(r.consequence || '') + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-risk-mitigation" placeholder="Mitigation strategy" value="' + escapeHtml(r.mitigation || '') + '" style="margin-bottom:4px;">';
-                        html += '<button type="button" class="cc5-edit-remove-risk" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<input type="text" class="cc5-edit-risk-text" placeholder="' + getLabel('risk') + '" value="' + escapeHtml(r.risk || r.text || '') + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-risk-likelihood" placeholder="' + getLabel('likelihoodExample') + '" value="' + escapeHtml(r.likelihood || '') + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-risk-impact" placeholder="' + getLabel('impactExample') + '" value="' + escapeHtml(r.impact || '') + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-risk-consequence" placeholder="' + getLabel('consequence') + '" value="' + escapeHtml(r.consequence || '') + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-risk-mitigation" placeholder="' + getLabel('mitigationStrategy') + '" value="' + escapeHtml(r.mitigation || '') + '" style="margin-bottom:4px;">';
+                        html += '<button type="button" class="cc5-edit-remove-risk" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13054,7 +13072,7 @@ define([
                 // WP: policy-alignment  -  policyItems[] (policy, requirement, consequence)
                 if (section.cardType === 'policy-alignment') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Policy Items</label>';
+                    html += '<label>' + getLabel('policyItems') + '</label>';
                     html += '<div class="cc5-edit-policyitems-list">';
                     var polItems = section.policyItems || section.policies || [];
                     polItems.forEach(function (p, idx) {
@@ -13062,10 +13080,10 @@ define([
                         var reqText = (typeof p === 'object' && p) ? (p.requirement || '') : '';
                         var consText = (typeof p === 'object' && p) ? (p.consequence || '') : '';
                         html += '<div class="cc5-edit-policyitem-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<textarea class="cc5-edit-policy-text" rows="2" placeholder="Policy statement">' + escapeHtml(policyText) + '</textarea>';
-                        html += '<input type="text" class="cc5-edit-policy-requirement" placeholder="Requirement" value="' + escapeHtml(reqText) + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-policy-consequence" placeholder="Consequence of non-compliance" value="' + escapeHtml(consText) + '" style="margin-bottom:4px;">';
-                        html += '<button type="button" class="cc5-edit-remove-policyitem" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<textarea class="cc5-edit-policy-text" rows="2" placeholder="' + getLabel('policyStatement') + '">' + escapeHtml(policyText) + '</textarea>';
+                        html += '<input type="text" class="cc5-edit-policy-requirement" placeholder="' + getLabel('requirement') + '" value="' + escapeHtml(reqText) + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-policy-consequence" placeholder="' + getLabel('consequenceNonCompliance') + '" value="' + escapeHtml(consText) + '" style="margin-bottom:4px;">';
+                        html += '<button type="button" class="cc5-edit-remove-policyitem" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13076,12 +13094,12 @@ define([
                 // WP/VET/PD: scenario-1, scenario-2  -  optimisationTips[]
                 if (section.cardType === 'scenario-1' || section.cardType === 'scenario-2') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Optimisation Tips</label>';
+                    html += '<label>' + getLabel('optimisationTips') + '</label>';
                     html += '<div class="cc5-edit-opttips-list">';
                     (section.optimisationTips || []).forEach(function (tip, idx) {
                         html += '<div class="cc5-edit-opttip-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-opttip-text" value="' + escapeHtml(tip || '') + '">';
-                        html += '<button type="button" class="cc5-edit-remove-opttip" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-opttip" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13090,16 +13108,16 @@ define([
                     // PD scenarios also have turningPoint + reflection
                     if (section.reflection || section.turningPoint) {
                         html += '<div class="cc5-edit-field">';
-                        html += '<label for="cc5-edit-turning-point">Turning Point</label>';
+                        html += '<label for="cc5-edit-turning-point">' + getLabel('turningPoint') + '</label>';
                         html += '<textarea id="cc5-edit-turning-point" rows="2">' + escapeHtml(section.turningPoint || '') + '</textarea>';
                         html += '</div>';
                         var reflObj = section.reflection || {};
                         html += '<div class="cc5-edit-field">';
-                        html += '<label for="cc5-edit-reflection-question">Reflection Question</label>';
+                        html += '<label for="cc5-edit-reflection-question">' + getLabel('reflectionQuestion') + '</label>';
                         html += '<input type="text" id="cc5-edit-reflection-question" value="' + escapeHtml(reflObj.question || '') + '">';
                         html += '</div>';
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Sample Answers (one per line)</label>';
+                        html += '<label>' + getLabel('sampleAnswersOnePerLine') + '</label>';
                         html += '<textarea id="cc5-edit-reflection-answers" rows="3">' + escapeHtml((reflObj.sampleAnswers || []).join('\n')) + '</textarea>';
                         html += '</div>';
                     }
@@ -13108,21 +13126,21 @@ define([
                 // PD: skill-anchor  -  skillStatement, relevance, keyIndicators[]
                 if (section.cardType === 'skill-anchor') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-skill-statement">Skill Statement</label>';
+                    html += '<label for="cc5-edit-skill-statement">' + getLabel('skillStatement') + '</label>';
                     html += '<textarea id="cc5-edit-skill-statement" rows="2">' + escapeHtml(section.skillStatement || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-relevance">Relevance</label>';
+                    html += '<label for="cc5-edit-relevance">' + getLabel('relevance') + '</label>';
                     html += '<textarea id="cc5-edit-relevance" rows="2">' + escapeHtml(section.relevance || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Key Indicators</label>';
+                    html += '<label>' + getLabel('keyIndicators') + '</label>';
                     html += '<div class="cc5-edit-keyindicators-list">';
                     (section.keyIndicators || []).forEach(function (ind, idx) {
                         var txt = typeof ind === 'string' ? ind : (ind.text || ind.indicator || '');
                         html += '<div class="cc5-edit-keyindicator-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-keyindicator-text" value="' + escapeHtml(txt) + '">';
-                        html += '<button type="button" class="cc5-edit-remove-keyindicator" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-keyindicator" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13133,18 +13151,18 @@ define([
                 // PD: core-framework  -  frameworkSteps[] (step, explanation, example), keyPrinciple
                 if (section.cardType === 'core-framework') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-key-principle">Key Principle</label>';
+                    html += '<label for="cc5-edit-key-principle">' + getLabel('keyPrinciple') + '</label>';
                     html += '<textarea id="cc5-edit-key-principle" rows="2">' + escapeHtml(section.keyPrinciple || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Framework Steps</label>';
+                    html += '<label>' + getLabel('frameworkSteps') + '</label>';
                     html += '<div class="cc5-edit-frameworksteps-list">';
                     (section.frameworkSteps || []).forEach(function (s, idx) {
                         html += '<div class="cc5-edit-frameworkstep-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<input type="text" class="cc5-edit-fwstep-step" placeholder="Step name" value="' + escapeHtml(s.step || '') + '" style="margin-bottom:4px;">';
-                        html += '<textarea class="cc5-edit-fwstep-explanation" rows="2" placeholder="Explanation">' + escapeHtml(s.explanation || '') + '</textarea>';
-                        html += '<input type="text" class="cc5-edit-fwstep-example" placeholder="Example" value="' + escapeHtml(s.example || '') + '" style="margin-bottom:4px;">';
-                        html += '<button type="button" class="cc5-edit-remove-frameworkstep" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<input type="text" class="cc5-edit-fwstep-step" placeholder="' + getLabel('stepName') + '" value="' + escapeHtml(s.step || '') + '" style="margin-bottom:4px;">';
+                        html += '<textarea class="cc5-edit-fwstep-explanation" rows="2" placeholder="' + getLabel('explanation') + '">' + escapeHtml(s.explanation || '') + '</textarea>';
+                        html += '<input type="text" class="cc5-edit-fwstep-example" placeholder="' + getLabel('example') + '" value="' + escapeHtml(s.example || '') + '" style="margin-bottom:4px;">';
+                        html += '<button type="button" class="cc5-edit-remove-frameworkstep" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13155,14 +13173,14 @@ define([
                 // PD: application-guide  -  applications[] (situation, action, rationale)
                 if (section.cardType === 'application-guide') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Application Scenarios</label>';
+                    html += '<label>' + getLabel('applicationScenarios') + '</label>';
                     html += '<div class="cc5-edit-applications-list">';
                     (section.applications || []).forEach(function (a, idx) {
                         html += '<div class="cc5-edit-application-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<input type="text" class="cc5-edit-app-situation" placeholder="Situation" value="' + escapeHtml(a.situation || '') + '" style="margin-bottom:4px;">';
-                        html += '<textarea class="cc5-edit-app-action" rows="2" placeholder="Action">' + escapeHtml(a.action || '') + '</textarea>';
-                        html += '<input type="text" class="cc5-edit-app-rationale" placeholder="Rationale" value="' + escapeHtml(a.rationale || '') + '" style="margin-bottom:4px;">';
-                        html += '<button type="button" class="cc5-edit-remove-application" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<input type="text" class="cc5-edit-app-situation" placeholder="' + getLabel('situation') + '" value="' + escapeHtml(a.situation || '') + '" style="margin-bottom:4px;">';
+                        html += '<textarea class="cc5-edit-app-action" rows="2" placeholder="' + getLabel('action') + '">' + escapeHtml(a.action || '') + '</textarea>';
+                        html += '<input type="text" class="cc5-edit-app-rationale" placeholder="' + getLabel('rationale') + '" value="' + escapeHtml(a.rationale || '') + '" style="margin-bottom:4px;">';
+                        html += '<button type="button" class="cc5-edit-remove-application" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13173,14 +13191,14 @@ define([
                 // PD: common-pitfalls  -  pitfallItems[] (pitfall, consequence, correction)
                 if (section.cardType === 'common-pitfalls') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Pitfall Items</label>';
+                    html += '<label>' + getLabel('pitfallItems') + '</label>';
                     html += '<div class="cc5-edit-pitfalls-list">';
                     (section.pitfallItems || []).forEach(function (p, idx) {
                         html += '<div class="cc5-edit-pitfall-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<input type="text" class="cc5-edit-pitfall-text" placeholder="Pitfall" value="' + escapeHtml(p.pitfall || '') + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-pitfall-consequence" placeholder="Consequence" value="' + escapeHtml(p.consequence || '') + '" style="margin-bottom:4px;">';
-                        html += '<input type="text" class="cc5-edit-pitfall-correction" placeholder="Correction" value="' + escapeHtml(p.correction || '') + '" style="margin-bottom:4px;">';
-                        html += '<button type="button" class="cc5-edit-remove-pitfall" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<input type="text" class="cc5-edit-pitfall-text" placeholder="' + getLabel('pitfall') + '" value="' + escapeHtml(p.pitfall || '') + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-pitfall-consequence" placeholder="' + getLabel('consequence') + '" value="' + escapeHtml(p.consequence || '') + '" style="margin-bottom:4px;">';
+                        html += '<input type="text" class="cc5-edit-pitfall-correction" placeholder="' + getLabel('correction') + '" value="' + escapeHtml(p.correction || '') + '" style="margin-bottom:4px;">';
+                        html += '<button type="button" class="cc5-edit-remove-pitfall" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13198,7 +13216,7 @@ define([
                     if (section.sceneParts && section.sceneParts.length) {
                         // -- Structured sceneParts[] editor (with icon pickers) --------------
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Scene Parts <small> -  each part shown as an icon-card panel on screen</small></label>';
+                        html += '<label>' + getLabel('scenePartsLabel') + '</label>';
                         html += '<div class="cc5-edit-scene-parts-list">';
                         section.sceneParts.forEach(function (part, pidx) {
                             // v12.07 FIX: Pre-populate with resolved display icon so the
@@ -13206,10 +13224,10 @@ define([
                             var _spPartText = part.text || part.content || part.description || '';
                             var _spDisplayIcon = part.icon || resolveScenePartIcon('', part.title || '', _spPartText, pidx, section.cardType, new Set());
                             html += '<div class="cc5-edit-scene-part-item" data-idx="' + pidx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                            html += '<input type="text" class="cc5-edit-sp-title" placeholder="Title" value="' + escapeHtml(part.title || '') + '" style="margin-bottom:4px;">';
-                            html += '<textarea class="cc5-edit-sp-text" rows="3" placeholder="Text">' + escapeHtml(_spPartText) + '</textarea>';
+                            html += '<input type="text" class="cc5-edit-sp-title" placeholder="' + getLabel('title') + '" value="' + escapeHtml(part.title || '') + '" style="margin-bottom:4px;">';
+                            html += '<textarea class="cc5-edit-sp-text" rows="3" placeholder="' + getLabel('text') + '">' + escapeHtml(_spPartText) + '</textarea>';
                             html += self.renderIconPickerInput(_spDisplayIcon, 'cc5-edit-sp-icon', 'Icon (e.g. map-pin)');
-                            html += '<button type="button" class="cc5-edit-remove-scene-part" title="Remove">' + getIcon('x') + ' Remove</button>';
+                            html += '<button type="button" class="cc5-edit-remove-scene-part" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                             html += '</div>';
                         });
                         html += '</div>';
@@ -13228,13 +13246,13 @@ define([
                         }
                         if (_hsBeats.length < 2 && _hsRaw) _hsBeats = [_hsRaw];
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Story Beats <small style="font-weight:400;opacity:0.7;"> -  each sentence shown as a numbered card on screen</small></label>';
+                        html += '<label>' + getLabel('storyBeats') + ' <small style="font-weight:400;opacity:0.7;">' + getLabel('storyBeatsHint') + '</small></label>';
                         html += '<div class="cc5-edit-beats-list">';
                         _hsBeats.forEach(function (beat, idx) {
                             html += '<div class="cc5-edit-beat-item" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">';
                             html += '<span style="min-width:22px;height:22px;border-radius:50%;background:var(--cc5-accent,#6366f1);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;">' + (idx + 1) + '</span>';
                             html += '<textarea class="cc5-edit-beat-text" rows="2" style="flex:1;">' + escapeHtml(beat) + '</textarea>';
-                            html += '<button type="button" class="cc5-edit-remove-beat" title="Remove beat" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
+                            html += '<button type="button" class="cc5-edit-remove-beat" title="' + getLabel('removeBeat') + '" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
                             html += '</div>';
                         });
                         html += '</div>';
@@ -13242,7 +13260,7 @@ define([
                         html += '</div>';
                     }
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-unified-highlight">Highlight / Pull-Quote <small>(optional  -  shown as an accent banner below the beats)</small></label>';
+                    html += '<label for="cc5-edit-unified-highlight">' + getLabel('highlightPullQuoteLabel') + '</label>';
                     html += '<textarea id="cc5-edit-unified-highlight" rows="2">' + escapeHtml(section.highlightText || '') + '</textarea>';
                     html += '</div>';
                 }
@@ -13263,13 +13281,13 @@ define([
                     if (_ceChips.length < 2 && _ceRaw) _ceChips = [_ceRaw];
 
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Insight Sentences <small style="font-weight:400;opacity:0.7;"> -  each sentence shown as a numbered blue chip on screen</small></label>';
+                    html += '<label>' + getLabel('insightSentencesLabel') + '</label>';
                     html += '<div class="cc5-edit-insights-list">';
                     _ceChips.forEach(function (chip, idx) {
                         html += '<div class="cc5-edit-insight-item" data-idx="' + idx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">';
                         html += '<span style="min-width:22px;height:22px;border-radius:50%;background:hsl(217deg 80% 55%);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;">' + (idx + 1) + '</span>';
                         html += '<textarea class="cc5-edit-insight-text" rows="2" style="flex:1;">' + escapeHtml(chip) + '</textarea>';
-                        html += '<button type="button" class="cc5-edit-remove-insight" title="Remove insight" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-insight" title="' + getLabel('removeInsight') + '" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13278,16 +13296,16 @@ define([
 
                     // conceptItems[] grid  -  each item has an icon, title, and description
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Detail Cards <small style="font-weight:400;opacity:0.7;"> -  optional icon-title-description cards shown in a grid below the insights</small></label>';
+                    html += '<label>' + getLabel('detailCardsLabel') + '</label>';
                     html += '<div class="cc5-edit-concept-items-list">';
                     (section.conceptItems || []).forEach(function (ci, idx) {
                         html += '<div class="cc5-edit-concept-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                         html += self.renderIconPickerInput(ci.icon || '', 'cc5-edit-ci-icon', 'Icon name');
-                        html += '<input type="text" class="cc5-edit-ci-title" placeholder="Card title" value="' + escapeHtml(ci.title || '') + '" style="flex:1;">';
+                        html += '<input type="text" class="cc5-edit-ci-title" placeholder="' + getLabel('cardTitle') + '" value="' + escapeHtml(ci.title || '') + '" style="flex:1;">';
                         html += '</div>';
-                        html += '<textarea class="cc5-edit-ci-description" rows="2" placeholder="Card description">' + escapeHtml(ci.description || '') + '</textarea>';
-                        html += '<button type="button" class="cc5-edit-remove-concept-item" title="Remove card" style="margin-top:4px;">' + getIcon('x') + ' Remove</button>';
+                        html += '<textarea class="cc5-edit-ci-description" rows="2" placeholder="' + getLabel('cardDescription') + '">' + escapeHtml(ci.description || '') + '</textarea>';
+                        html += '<button type="button" class="cc5-edit-remove-concept-item" title="' + getLabel('removeCard') + '" style="margin-top:4px;">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13298,16 +13316,16 @@ define([
                 // mental-model: title + steps[] {step, detail}
                 if (section.cardType === 'mental-model') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Steps <small style="font-weight:400;opacity:0.7;"> -  icon shown in step circle; leave blank for step number</small></label>';
+                    html += '<label>' + getLabel('steps') + ' <small style="font-weight:400;opacity:0.7;">' + getLabel('stepsIconHint') + '</small></label>';
                     html += '<div class="cc5-edit-mm-steps-list">';
                     (section.steps || []).forEach(function (s, idx) {
                         html += '<div class="cc5-edit-mm-step-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                         html += self.renderIconPickerInput(s.icon || '', 'cc5-edit-mm-step-icon', 'Icon (e.g. check)');
-                        html += '<input type="text" class="cc5-edit-mm-step-title" placeholder="Step title" value="' + escapeHtml(s.step || s.action || s.title || '') + '" style="flex:1;">';
+                        html += '<input type="text" class="cc5-edit-mm-step-title" placeholder="' + getLabel('stepTitle') + '" value="' + escapeHtml(s.step || s.action || s.title || '') + '" style="flex:1;">';
                         html += '</div>';
-                        html += '<textarea class="cc5-edit-mm-step-detail" rows="2" placeholder="Step detail">' + escapeHtml(s.detail || s.description || '') + '</textarea>';
-                        html += '<button type="button" class="cc5-edit-remove-mm-step" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<textarea class="cc5-edit-mm-step-detail" rows="2" placeholder="' + getLabel('stepDetail') + '">' + escapeHtml(s.detail || s.description || '') + '</textarea>';
+                        html += '<button type="button" class="cc5-edit-remove-mm-step" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13318,23 +13336,23 @@ define([
                 // decision-point: title + question + options[] {text, feedback, correct}
                 if (section.cardType === 'decision-point') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label for="cc5-edit-dp-question">Question</label>';
+                    html += '<label for="cc5-edit-dp-question">' + getLabel('question') + '</label>';
                     html += '<textarea id="cc5-edit-dp-question" rows="3">' + escapeHtml(section.question || '') + '</textarea>';
                     html += '</div>';
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Options</label>';
+                    html += '<label>' + getLabel('options') + '</label>';
                     html += '<div class="cc5-edit-dp-options-list">';
                     var dpLetters = ['A', 'B', 'C', 'D'];
                     (section.options || []).forEach(function (opt, idx) {
                         html += '<div class="cc5-edit-dp-option-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                         html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
                         html += '<strong style="min-width:16px;">' + (dpLetters[idx] || (idx + 1)) + '</strong>';
-                        html += '<input type="checkbox" class="cc5-edit-dp-correct" ' + (opt.correct ? 'checked' : '') + ' title="Mark as correct">';
-                        html += '<label style="font-size:0.8rem;margin:0;">Correct answer</label>';
+                        html += '<input type="checkbox" class="cc5-edit-dp-correct" ' + (opt.correct ? 'checked' : '') + ' title="' + getLabel('markAsCorrect') + '">';
+                        html += '<label style="font-size:0.8rem;margin:0;">' + getLabel('correctAnswerLabel') + '</label>';
                         html += '</div>';
-                        html += '<input type="text" class="cc5-edit-dp-option-text" placeholder="Option text" value="' + escapeHtml(opt.text || '') + '" style="margin-bottom:4px;">';
-                        html += '<textarea class="cc5-edit-dp-feedback" rows="2" placeholder="Feedback for this option">' + escapeHtml(opt.feedback || '') + '</textarea>';
-                        html += '<button type="button" class="cc5-edit-remove-dp-option" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<input type="text" class="cc5-edit-dp-option-text" placeholder="' + getLabel('optionText') + '" value="' + escapeHtml(opt.text || '') + '" style="margin-bottom:4px;">';
+                        html += '<textarea class="cc5-edit-dp-feedback" rows="2" placeholder="' + getLabel('feedbackForThisOption') + '">' + escapeHtml(opt.feedback || '') + '</textarea>';
+                        html += '<button type="button" class="cc5-edit-remove-dp-option" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13345,7 +13363,7 @@ define([
                 // mistakes: title + items[] {mistake, consequence, icon}
                 if (section.cardType === 'mistakes') {
                     html += '<div class="cc5-edit-field">';
-                    html += '<label>Mistakes</label>';
+                    html += '<label>' + getLabel('mistakes') + '</label>';
                     html += '<div class="cc5-edit-mistakes-list">';
                     (section.items || []).forEach(function (item, idx) {
                         // v12.07 FIX: Pre-populate picker with resolved display icon, not just stored icon.
@@ -13354,10 +13372,10 @@ define([
                         // empty field while the card showed an icon, making saves appear silent.
                         var _mkDisplayIcon = item.icon || resolveScenePartIcon('', item.mistake || '', item.consequence || '', idx, 'mistakes', new Set());
                         html += '<div class="cc5-edit-mistake-item" data-idx="' + idx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                        html += '<input type="text" class="cc5-edit-mistake-text" placeholder="Mistake" value="' + escapeHtml(item.mistake || '') + '" style="margin-bottom:4px;">';
-                        html += '<textarea class="cc5-edit-mistake-consequence" rows="3" placeholder="Consequence">' + escapeHtml(item.consequence || '') + '</textarea>';
+                        html += '<input type="text" class="cc5-edit-mistake-text" placeholder="' + getLabel('mistake') + '" value="' + escapeHtml(item.mistake || '') + '" style="margin-bottom:4px;">';
+                        html += '<textarea class="cc5-edit-mistake-consequence" rows="3" placeholder="' + getLabel('consequence') + '">' + escapeHtml(item.consequence || '') + '</textarea>';
                         html += self.renderIconPickerInput(_mkDisplayIcon, 'cc5-edit-mistake-icon', 'Icon (e.g. alert-triangle)');
-                        html += '<button type="button" class="cc5-edit-remove-mistake" title="Remove">' + getIcon('x') + ' Remove</button>';
+                        html += '<button type="button" class="cc5-edit-remove-mistake" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13369,13 +13387,13 @@ define([
                 if (section.cardType === 'competency-summary') {
                     // "What Good Looks Like" column
                     html += '<div class="cc5-edit-field">';
-                    html += '<label style="color:var(--cc5-green)">What Good Looks Like</label>';
+                    html += '<label style="color:var(--cc5-green)">' + getLabel('whatGoodLooksLike') + '</label>';
                     html += '<div class="cc5-edit-good-items-list">';
                     (section.goodItems || []).forEach(function (item, idx) {
                         var text = typeof item === 'string' ? item : (item.text || '');
                         html += '<div class="cc5-edit-good-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-good-item-text" value="' + escapeHtml(text) + '">';
-                        html += '<button type="button" class="cc5-edit-remove-good-item" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-good-item" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13383,13 +13401,13 @@ define([
                     html += '</div>';
                     // "What to Avoid" column
                     html += '<div class="cc5-edit-field">';
-                    html += '<label style="color:var(--cc5-red)">What to Avoid</label>';
+                    html += '<label style="color:var(--cc5-red)">' + getLabel('whatToAvoid') + '</label>';
                     html += '<div class="cc5-edit-bad-items-list">';
                     (section.badItems || []).forEach(function (item, idx) {
                         var text = typeof item === 'string' ? item : (item.text || '');
                         html += '<div class="cc5-edit-bad-item" data-idx="' + idx + '">';
                         html += '<input type="text" class="cc5-edit-bad-item-text" value="' + escapeHtml(text) + '">';
-                        html += '<button type="button" class="cc5-edit-remove-bad-item" title="Remove">' + getIcon('x') + '</button>';
+                        html += '<button type="button" class="cc5-edit-remove-bad-item" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                         html += '</div>';
                     });
                     html += '</div>';
@@ -13442,9 +13460,9 @@ define([
                     'boundaries': 'Key Takeaways'
                 };
                 html += '<div class="cc5-edit-field">';
-                html += '<h4 class="cc5-edit-section-title" style="margin:12px 0 4px;font-size:0.95rem;font-weight:700;color:var(--cc5-accent,#6366f1);">Individual Card Content</h4>';
-                html += '<p style="font-size:0.8rem;opacity:0.7;margin:0 0 6px;">Edit each card\'s content, title, and voiceover script below.</p>';
-                html += '<p style="font-size:0.78rem;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.45);border-radius:4px;padding:6px 10px;margin:0 0 12px;">Moving or removing cards will regenerate the voiceover when you save <strong>(5 credits)</strong>.</p>';
+                html += '<h4 class="cc5-edit-section-title" style="margin:12px 0 4px;font-size:0.95rem;font-weight:700;color:var(--cc5-accent,#6366f1);">' + getLabel('individualCardContent') + '</h4>';
+                html += '<p style="font-size:0.8rem;opacity:0.7;margin:0 0 6px;">' + getLabel('editEachCardHint') + '</p>';
+                html += '<p style="font-size:0.78rem;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.45);border-radius:4px;padding:6px 10px;margin:0 0 12px;">' + getLabel('movingCardsRegenVo') + '</p>';
                 html += '</div>';
 
                 section.cards.forEach(function (card, cardIdx) {
@@ -13456,9 +13474,9 @@ define([
                     html += '<summary style="padding:8px 12px;cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:8px;">';
                     html += '<span style="font-weight:600;font-size:0.9rem;">' + escapeHtml(cardLabel) + '</span>';
                     html += '<span class="cc5-card-mgmt-btns" style="display:flex;gap:4px;flex-shrink:0;">';
-                    html += '<button type="button" class="cc5-edit-card-move-up" title="Move card up"' + (_isFirstCard ? ' disabled' : '') + ' style="padding:1px 8px;font-size:0.85rem;line-height:1.7;border:1px solid var(--border);border-radius:4px;background:var(--background);cursor:' + (_isFirstCard ? 'default' : 'pointer') + ';opacity:' + (_isFirstCard ? '0.3' : '1') + ';">\u2191</button>';
-                    html += '<button type="button" class="cc5-edit-card-move-down" title="Move card down"' + (_isLastCard ? ' disabled' : '') + ' style="padding:1px 8px;font-size:0.85rem;line-height:1.7;border:1px solid var(--border);border-radius:4px;background:var(--background);cursor:' + (_isLastCard ? 'default' : 'pointer') + ';opacity:' + (_isLastCard ? '0.3' : '1') + ';">\u2193</button>';
-                    html += '<button type="button" class="cc5-edit-card-delete" title="Remove this card" style="padding:1px 8px;font-size:0.85rem;line-height:1.7;border:1px solid rgba(220,38,38,0.45);border-radius:4px;background:var(--background);cursor:pointer;color:#dc2626;">\u00d7</button>';
+                    html += '<button type="button" class="cc5-edit-card-move-up" title="' + getLabel('moveCardUp') + '"' + (_isFirstCard ? ' disabled' : '') + ' style="padding:1px 8px;font-size:0.85rem;line-height:1.7;border:1px solid var(--border);border-radius:4px;background:var(--background);color:var(--cc5-text);cursor:' + (_isFirstCard ? 'default' : 'pointer') + ';opacity:' + (_isFirstCard ? '0.3' : '1') + ';">\u2191</button>';
+                    html += '<button type="button" class="cc5-edit-card-move-down" title="' + getLabel('moveCardDown') + '"' + (_isLastCard ? ' disabled' : '') + ' style="padding:1px 8px;font-size:0.85rem;line-height:1.7;border:1px solid var(--border);border-radius:4px;background:var(--background);color:var(--cc5-text);cursor:' + (_isLastCard ? 'default' : 'pointer') + ';opacity:' + (_isLastCard ? '0.3' : '1') + ';">\u2193</button>';
+                    html += '<button type="button" class="cc5-edit-card-delete" title="' + getLabel('removeThisCard') + '" style="padding:1px 8px;font-size:0.85rem;line-height:1.7;border:1px solid rgba(220,38,38,0.45);border-radius:4px;background:var(--background);cursor:pointer;color:#dc2626;">\u00d7</button>';
                     html += '</span>';
                     html += '</summary>';
                     html += '<div style="padding:0 12px 12px;">';
@@ -13470,23 +13488,23 @@ define([
                         // verbatim. Both inputs are still emitted, hidden and empty, because
                         // the save collector reads .val() on them unconditionally.
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Heading <small>(fixed for this route)</small></label>';
+                        html += '<label>' + getLabel('headingFixedForRoute') + '</label>';
                         html += '<input type="text" value="' + escapeHtml(_PROSE_EDIT_HEADINGS[ct] || '') + '" disabled>';
-                        html += '<p style="font-size:0.75rem;opacity:0.7;margin:4px 0 0;">The four headings are the same on every topic and never carry the topic name.</p>';
+                        html += '<p style="font-size:0.75rem;opacity:0.7;margin:4px 0 0;">' + getLabel('fixedHeadingsNote') + '</p>';
                         html += '</div>';
                         html += '<input type="hidden" class="cc5-edit-card-title" value="">';
                         html += '<textarea class="cc5-edit-card-voiceover" style="display:none;"></textarea>';
-                        html += '<p style="font-size:0.75rem;opacity:0.7;margin:0 0 10px;">Narration reads the paragraphs below word for word, so the card reveal and the highlighted paragraph stay in step with the audio. Edit the paragraphs and the voiceover follows.</p>';
+                        html += '<p style="font-size:0.75rem;opacity:0.7;margin:0 0 10px;">' + getLabel('narrationVerbatimNote') + '</p>';
                     } else {
                         // Card title
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Card Title</label>';
+                        html += '<label>' + getLabel('cardTitleLabel') + '</label>';
                         html += '<input type="text" class="cc5-edit-card-title" value="' + escapeHtml(card.title || '') + '">';
                         html += '</div>';
 
                         // Card voiceover
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Voiceover Script <small>(read aloud for this card)</small></label>';
+                        html += '<label>' + getLabel('voiceoverScriptLabel') + '</label>';
                         html += '<textarea class="cc5-edit-card-voiceover" rows="3">' + escapeHtml(card.voiceoverText || '') + '</textarea>';
                         html += '</div>';
                     }
@@ -13500,11 +13518,11 @@ define([
                         });
                         while (_pParas.length < 2) { _pParas.push(''); }
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Paragraphs <small>(two, 55-70 words each)</small></label>';
+                        html += '<label>' + getLabel('paragraphsLabel') + '</label>';
                         html += '<div class="cc5-edit-prose-paras">';
                         _pParas.forEach(function (para, pIdx) {
                             html += '<textarea class="cc5-edit-prose-para" rows="5" data-idx="' + pIdx + '" ' +
-                                'placeholder="Paragraph ' + (pIdx + 1) + '" style="margin-bottom:8px;">' +
+                                'placeholder="' + getLabel('paragraph') + ' ' + (pIdx + 1) + '" style="margin-bottom:8px;">' +
                                 escapeHtml(para) + '</textarea>';
                         });
                         html += '</div>';
@@ -13513,13 +13531,13 @@ define([
 
                         if (ct === 'key-concepts' || ct === 'foundations') {
                             html += '<div class="cc5-edit-field">';
-                            html += '<label>Key Terms <small>(become the Flip &amp; Learn cards)</small></label>';
+                            html += '<label>' + getLabel('keyTermsFlipLabel') + '</label>';
                             html += '<div class="cc5-edit-prose-terms-list">';
                             (card.keyTerms || []).forEach(function (t, tIdx) {
                                 html += '<div class="cc5-edit-prose-term-item" data-idx="' + tIdx + '">';
-                                html += '<input type="text" class="cc5-edit-prose-term-name" placeholder="Term" value="' + escapeHtml(t.term || '') + '">';
-                                html += '<input type="text" class="cc5-edit-prose-term-def" placeholder="Definition" value="' + escapeHtml(t.definition || '') + '">';
-                                html += '<button type="button" class="cc5-edit-remove-prose-term" title="Remove">' + getIcon('x') + '</button>';
+                                html += '<input type="text" class="cc5-edit-prose-term-name" placeholder="' + getLabel('term') + '" value="' + escapeHtml(t.term || '') + '">';
+                                html += '<input type="text" class="cc5-edit-prose-term-def" placeholder="' + getLabel('definition') + '" value="' + escapeHtml(t.definition || '') + '">';
+                                html += '<button type="button" class="cc5-edit-remove-prose-term" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                                 html += '</div>';
                             });
                             html += '</div>';
@@ -13531,13 +13549,13 @@ define([
                             [['good', 'Sound Understanding', card.goodItems], ['bad', 'Common Misconceptions', card.badItems]].forEach(function (pair) {
                                 var kind = pair[0];
                                 html += '<div class="cc5-edit-field">';
-                                html += '<label>' + pair[1] + ' <small>(become the Category Sort items)</small></label>';
+                                html += '<label>' + pair[1] + ' <small>' + getLabel('categorySortItemsHint') + '</small></label>';
                                 html += '<div class="cc5-edit-prose-' + kind + '-list">';
                                 (pair[2] || []).forEach(function (it, iIdx) {
                                     var txt = typeof it === 'string' ? it : ((it && it.text) || '');
                                     html += '<div class="cc5-edit-prose-' + kind + '-item" data-idx="' + iIdx + '">';
-                                    html += '<input type="text" class="cc5-edit-prose-' + kind + '-text" placeholder="Statement" value="' + escapeHtml(txt) + '">';
-                                    html += '<button type="button" class="cc5-edit-remove-prose-item" title="Remove">' + getIcon('x') + '</button>';
+                                    html += '<input type="text" class="cc5-edit-prose-' + kind + '-text" placeholder="' + getLabel('statement') + '" value="' + escapeHtml(txt) + '">';
+                                    html += '<button type="button" class="cc5-edit-remove-prose-item" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                                     html += '</div>';
                                 });
                                 html += '</div>';
@@ -13555,7 +13573,7 @@ define([
                         if (card.sceneParts && card.sceneParts.length) {
                             // -- Structured sceneParts[] editor -----------------
                             html += '<div class="cc5-edit-field">';
-                            html += '<label>Scene Parts <small> -  each part shown as an icon-card panel on screen</small></label>';
+                            html += '<label>' + getLabel('scenePartsLabel') + '</label>';
                             html += '<div class="cc5-edit-scene-parts-list">';
                             card.sceneParts.forEach(function (part, pidx) {
                                 // v12.07 FIX: Pre-populate with resolved display icon (multi-card accordion path).
@@ -13564,10 +13582,10 @@ define([
                                 html += '<div class="cc5-edit-scene-part-item" data-idx="' + pidx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                                 html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                                 html += self.renderIconPickerInput(_mcSpDisplayIcon, 'cc5-edit-sp-icon', 'Icon (e.g. map-pin)');
-                                html += '<input type="text" class="cc5-edit-sp-title" placeholder="Part title" value="' + escapeHtml(part.title || '') + '" style="flex:1;">';
+                                html += '<input type="text" class="cc5-edit-sp-title" placeholder="' + getLabel('partTitle') + '" value="' + escapeHtml(part.title || '') + '" style="flex:1;">';
                                 html += '</div>';
-                                html += '<textarea class="cc5-edit-sp-text" rows="4" placeholder="Scene text">' + escapeHtml(_mcSpText) + '</textarea>';
-                                html += '<button type="button" class="cc5-edit-remove-scene-part" title="Remove">' + getIcon('x') + ' Remove</button>';
+                                html += '<textarea class="cc5-edit-sp-text" rows="4" placeholder="' + getLabel('sceneText') + '">' + escapeHtml(_mcSpText) + '</textarea>';
+                                html += '<button type="button" class="cc5-edit-remove-scene-part" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                                 html += '</div>';
                             });
                             html += '</div>';
@@ -13586,13 +13604,13 @@ define([
                             }
                             if (_mcBeats.length < 2 && _mcRaw) _mcBeats = [_mcRaw];
                             html += '<div class="cc5-edit-field">';
-                            html += '<label>Story Beats <small> -  each sentence shown as a numbered card on screen</small></label>';
+                            html += '<label>' + getLabel('storyBeats') + ' <small>' + getLabel('storyBeatsHint') + '</small></label>';
                             html += '<div class="cc5-edit-beats-list">';
                             _mcBeats.forEach(function (beat, bidx) {
                                 html += '<div class="cc5-edit-beat-item" data-idx="' + bidx + '" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">';
                                 html += '<span style="min-width:22px;height:22px;border-radius:50%;background:var(--cc5-accent,#6366f1);color:#fff;font-size:0.75rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:8px;">' + (bidx + 1) + '</span>';
                                 html += '<textarea class="cc5-edit-beat-text" rows="2" style="flex:1;">' + escapeHtml(beat) + '</textarea>';
-                                html += '<button type="button" class="cc5-edit-remove-beat" title="Remove beat" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
+                                html += '<button type="button" class="cc5-edit-remove-beat" title="' + getLabel('removeBeat') + '" style="flex-shrink:0;margin-top:4px;">' + getIcon('x') + '</button>';
                                 html += '</div>';
                             });
                             html += '</div>';
@@ -13600,7 +13618,7 @@ define([
                             html += '</div>';
                         }
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Highlight / Pull-Quote <small>(optional  -  shown as accent banner)</small></label>';
+                        html += '<label>' + getLabel('highlightPullQuotePlainLabel') + '</label>';
                         html += '<textarea class="cc5-edit-card-highlight" rows="2">' + escapeHtml(card.highlightText || '') + '</textarea>';
                         html += '</div>';
                     }
@@ -13611,16 +13629,16 @@ define([
                     // and buildFullVoiceoverText. conceptItems was a non-existent field alias.
                     if (ct === 'concept-explainer') {
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Concept Insights <small> -  icon / title / text panels shown in a grid</small></label>';
+                        html += '<label>' + getLabel('conceptInsightsLabel') + '</label>';
                         html += '<div class="cc5-edit-concept-insights-list">';
                         (card.conceptInsights || []).forEach(function (ci, ciidx) {
                             html += '<div class="cc5-edit-concept-insight-item" data-idx="' + ciidx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                             html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                             html += self.renderIconPickerInput(ci.icon || '', 'cc5-edit-cins-icon', 'Icon (e.g. lightbulb)');
-                            html += '<input type="text" class="cc5-edit-cins-title" placeholder="Insight title" value="' + escapeHtml(ci.title || '') + '" style="flex:1;">';
+                            html += '<input type="text" class="cc5-edit-cins-title" placeholder="' + getLabel('insightTitle') + '" value="' + escapeHtml(ci.title || '') + '" style="flex:1;">';
                             html += '</div>';
-                            html += '<textarea class="cc5-edit-cins-text" rows="3" placeholder="Insight text">' + escapeHtml(ci.text || '') + '</textarea>';
-                            html += '<button type="button" class="cc5-edit-remove-concept-insight" title="Remove">' + getIcon('x') + ' Remove</button>';
+                            html += '<textarea class="cc5-edit-cins-text" rows="3" placeholder="' + getLabel('insightText') + '">' + escapeHtml(ci.text || '') + '</textarea>';
+                            html += '<button type="button" class="cc5-edit-remove-concept-insight" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                             html += '</div>';
                         });
                         html += '</div>';
@@ -13633,16 +13651,16 @@ define([
                     // else step number shown. Was missing from editor causing icon to be lost on save.
                     if (ct === 'mental-model') {
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Steps <small> -  icon shown in step circle; leave blank for step number</small></label>';
+                        html += '<label>' + getLabel('steps') + ' <small>' + getLabel('stepsIconHint') + '</small></label>';
                         html += '<div class="cc5-edit-mm-steps-list">';
                         (card.steps || []).forEach(function (s, sidx) {
                             html += '<div class="cc5-edit-mm-step-item" data-idx="' + sidx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                             html += '<div style="display:flex;gap:8px;margin-bottom:4px;">';
                             html += self.renderIconPickerInput(s.icon || '', 'cc5-edit-mm-step-icon', 'Icon (e.g. check)');
-                            html += '<input type="text" class="cc5-edit-mm-step-title" placeholder="Step title" value="' + escapeHtml(s.step || s.action || s.title || '') + '" style="flex:1;">';
+                            html += '<input type="text" class="cc5-edit-mm-step-title" placeholder="' + getLabel('stepTitle') + '" value="' + escapeHtml(s.step || s.action || s.title || '') + '" style="flex:1;">';
                             html += '</div>';
-                            html += '<textarea class="cc5-edit-mm-step-detail" rows="2" placeholder="Step detail">' + escapeHtml(s.detail || s.description || '') + '</textarea>';
-                            html += '<button type="button" class="cc5-edit-remove-mm-step" title="Remove">' + getIcon('x') + ' Remove</button>';
+                            html += '<textarea class="cc5-edit-mm-step-detail" rows="2" placeholder="' + getLabel('stepDetail') + '">' + escapeHtml(s.detail || s.description || '') + '</textarea>';
+                            html += '<button type="button" class="cc5-edit-remove-mm-step" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                             html += '</div>';
                         });
                         html += '</div>';
@@ -13653,23 +13671,23 @@ define([
                     // -- decision-point ----------------------------------------
                     if (ct === 'decision-point') {
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Question</label>';
+                        html += '<label>' + getLabel('question') + '</label>';
                         html += '<textarea class="cc5-edit-card-dp-question" rows="3">' + escapeHtml(card.question || '') + '</textarea>';
                         html += '</div>';
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Options</label>';
+                        html += '<label>' + getLabel('options') + '</label>';
                         html += '<div class="cc5-edit-dp-options-list">';
                         var _mcDpLetters = ['A','B','C','D'];
                         (card.options || []).forEach(function (opt, oidx) {
                             html += '<div class="cc5-edit-dp-option-item" data-idx="' + oidx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
                             html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
                             html += '<strong style="min-width:16px;">' + (_mcDpLetters[oidx] || (oidx + 1)) + '</strong>';
-                            html += '<input type="checkbox" class="cc5-edit-dp-correct" ' + (opt.correct ? 'checked' : '') + ' title="Mark as correct">';
-                            html += '<label style="font-size:0.8rem;margin:0;">Correct answer</label>';
+                            html += '<input type="checkbox" class="cc5-edit-dp-correct" ' + (opt.correct ? 'checked' : '') + ' title="' + getLabel('markAsCorrect') + '">';
+                            html += '<label style="font-size:0.8rem;margin:0;">' + getLabel('correctAnswerLabel') + '</label>';
                             html += '</div>';
-                            html += '<input type="text" class="cc5-edit-dp-option-text" placeholder="Option text" value="' + escapeHtml(opt.text || '') + '" style="margin-bottom:4px;">';
-                            html += '<textarea class="cc5-edit-dp-feedback" rows="2" placeholder="Feedback for this option">' + escapeHtml(opt.feedback || '') + '</textarea>';
-                            html += '<button type="button" class="cc5-edit-remove-dp-option" title="Remove">' + getIcon('x') + ' Remove</button>';
+                            html += '<input type="text" class="cc5-edit-dp-option-text" placeholder="' + getLabel('optionText') + '" value="' + escapeHtml(opt.text || '') + '" style="margin-bottom:4px;">';
+                            html += '<textarea class="cc5-edit-dp-feedback" rows="2" placeholder="' + getLabel('feedbackForThisOption') + '">' + escapeHtml(opt.feedback || '') + '</textarea>';
+                            html += '<button type="button" class="cc5-edit-remove-dp-option" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                             html += '</div>';
                         });
                         html += '</div>';
@@ -13680,16 +13698,16 @@ define([
                     // -- mistakes ----------------------------------------------
                     if (ct === 'mistakes') {
                         html += '<div class="cc5-edit-field">';
-                        html += '<label>Mistakes</label>';
+                        html += '<label>' + getLabel('mistakes') + '</label>';
                         html += '<div class="cc5-edit-mistakes-list">';
                         (card.items || []).forEach(function (item, midx) {
                             // v12.07 FIX: Pre-populate with resolved display icon (mirrors single-section fix).
                             var _mkDisplayIcon = item.icon || resolveScenePartIcon('', item.mistake || '', item.consequence || '', midx, 'mistakes', new Set());
                             html += '<div class="cc5-edit-mistake-item" data-idx="' + midx + '" style="border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px;">';
-                            html += '<input type="text" class="cc5-edit-mistake-text" placeholder="Mistake" value="' + escapeHtml(item.mistake || '') + '" style="margin-bottom:4px;">';
-                            html += '<textarea class="cc5-edit-mistake-consequence" rows="3" placeholder="Consequence">' + escapeHtml(item.consequence || '') + '</textarea>';
+                            html += '<input type="text" class="cc5-edit-mistake-text" placeholder="' + getLabel('mistake') + '" value="' + escapeHtml(item.mistake || '') + '" style="margin-bottom:4px;">';
+                            html += '<textarea class="cc5-edit-mistake-consequence" rows="3" placeholder="' + getLabel('consequence') + '">' + escapeHtml(item.consequence || '') + '</textarea>';
                             html += self.renderIconPickerInput(_mkDisplayIcon, 'cc5-edit-mistake-icon', 'Icon (e.g. alert-triangle)');
-                            html += '<button type="button" class="cc5-edit-remove-mistake" title="Remove">' + getIcon('x') + ' Remove</button>';
+                            html += '<button type="button" class="cc5-edit-remove-mistake" title="' + getLabel('remove') + '">' + getIcon('x') + ' Remove</button>';
                             html += '</div>';
                         });
                         html += '</div>';
@@ -13700,26 +13718,26 @@ define([
                     // -- competency-summary ------------------------------------
                     if (ct === 'competency-summary') {
                         html += '<div class="cc5-edit-field">';
-                        html += '<label style="color:var(--cc5-green,#10b981)">What Good Looks Like</label>';
+                        html += '<label style="color:var(--cc5-green,#10b981)">' + getLabel('whatGoodLooksLike') + '</label>';
                         html += '<div class="cc5-edit-good-items-list">';
                         (card.goodItems || []).forEach(function (item, giidx) {
                             var gtext = typeof item === 'string' ? item : (item.text || '');
                             html += '<div class="cc5-edit-good-item" data-idx="' + giidx + '">';
                             html += '<input type="text" class="cc5-edit-good-item-text" value="' + escapeHtml(gtext) + '">';
-                            html += '<button type="button" class="cc5-edit-remove-good-item" title="Remove">' + getIcon('x') + '</button>';
+                            html += '<button type="button" class="cc5-edit-remove-good-item" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                             html += '</div>';
                         });
                         html += '</div>';
                         html += '<button type="button" class="cc5-edit-add-btn cc5-edit-add-good-item">' + getIcon('plus') + ' Add Good Item</button>';
                         html += '</div>';
                         html += '<div class="cc5-edit-field">';
-                        html += '<label style="color:var(--cc5-red,#ef4444)">What to Avoid</label>';
+                        html += '<label style="color:var(--cc5-red,#ef4444)">' + getLabel('whatToAvoid') + '</label>';
                         html += '<div class="cc5-edit-bad-items-list">';
                         (card.badItems || []).forEach(function (item, biidx) {
                             var btext = typeof item === 'string' ? item : (item.text || '');
                             html += '<div class="cc5-edit-bad-item" data-idx="' + biidx + '">';
                             html += '<input type="text" class="cc5-edit-bad-item-text" value="' + escapeHtml(btext) + '">';
-                            html += '<button type="button" class="cc5-edit-remove-bad-item" title="Remove">' + getIcon('x') + '</button>';
+                            html += '<button type="button" class="cc5-edit-remove-bad-item" title="' + getLabel('remove') + '">' + getIcon('x') + '</button>';
                             html += '</div>';
                         });
                         html += '</div>';
@@ -13782,10 +13800,10 @@ define([
                 html += '<input type="text" class="cc5-edit-item-text" value="' + escapeHtml(data || '') + '" placeholder="' + (getLabel('keyFactPlaceholder') || 'Enter a key fact...') + '">';
             } else {
                 // Default fallback for any other type
-                html += '<input type="text" class="cc5-edit-item-text" value="' + escapeHtml(typeof data === 'string' ? data : (data.text || '')) + '" placeholder="Enter text...">';
+                html += '<input type="text" class="cc5-edit-item-text" value="' + escapeHtml(typeof data === 'string' ? data : (data.text || '')) + '" placeholder="' + getLabel('enterText') + '">';
             }
             
-            html += '<button type="button" class="cc5-edit-delete-item" title="Remove" aria-label="' + getLabel('deleteItem') + '">' + getIcon('x') + '</button>';
+            html += '<button type="button" class="cc5-edit-delete-item" title="' + getLabel('remove') + '" aria-label="' + getLabel('deleteItem') + '">' + getIcon('x') + '</button>';
             html += '</div>';
             
             return html;
@@ -13932,7 +13950,7 @@ define([
             
             
             if (!title) {
-                Notification.addNotification({ message: 'Title is required', type: 'error' });
+                Notification.addNotification({ message: getLabel('titleRequired'), type: 'error' });
                 saveBtn.prop('disabled', false).removeClass('cc5-saving');
                 return;
             }
@@ -14554,7 +14572,7 @@ define([
                             var voText = self.buildFullVoiceoverText(sec);
                             if (voText && voText.trim().length > 10) {                                // v12.25: Notify user that voiceover is regenerating in background
                                 Notification.addNotification({
-                                    message: 'Voiceover is being regenerated in the background \u2014 this may take a moment.',
+                                    message: getLabel('voRegenBackground'),
                                     type: 'info'
                                 });
                                 var voFormData = new FormData();
@@ -14563,6 +14581,7 @@ define([
                                 voFormData.append('cmid', self.cmid);
                                 voFormData.append('text', voText);
                                 voFormData.append('sectionid', sectionId);
+                                voFormData.append('subtopickey', sec.billingKey || '');
                                 // v12.79 FIX-CC-BGVO-LANG: Use activeLang for background regen.
                                 voFormData.append('language', (self.activeLang || self.voiceLanguage));
                                 voFormData.append('voice', self.voiceName);
@@ -14584,7 +14603,7 @@ define([
                                     if (voData.pending) {
                                         ccWarn('[VOICEOVER v' + CC_VERSION + '] AUTO-GEN PENDING section ' + sectionId + '  -  PHP mutex busy (preload in progress); voiceover will be available shortly');
                                         Notification.addNotification({
-                                            message: 'Slide saved. Voiceover is still being generated in the background \u2014 please try the play button again in a few minutes.',
+                                            message: getLabel('slideSavedVoPending'),
                                             type: 'info'
                                         });
                                     } else if (voData.success && voData.audioContent) {
@@ -14608,7 +14627,7 @@ define([
                                         self.voiceoverCacheHash[sectionId] = section.voiceoverTextHash
                                             || voiceoverTextHash(self.buildFullVoiceoverText(section));                                        // v12.25: Confirm voiceover is ready
                                         Notification.addNotification({
-                                            message: 'Voiceover updated successfully for this slide.',
+                                            message: getLabel('voUpdated'),
                                             type: 'success'
                                         });
                                         self.persistVoiceoverToFileStore(voData.audioContent, voData.audioType, sectionId, sec);
@@ -14616,7 +14635,7 @@ define([
                                         ccError('[VOICEOVER v' + CC_VERSION + '] AUTO-GEN FAIL section ' + sectionId + ': ' + (voData.error || 'unknown'));
                                         // v12.25: Warn user that voiceover regen failed
                                         Notification.addNotification({
-                                            message: 'Slide saved but voiceover regeneration failed. Try again by re-saving.',
+                                            message: getLabel('voRegenFailed'),
                                             type: 'warning'
                                         });
                                     }
@@ -14625,7 +14644,7 @@ define([
                                     ccError('[VOICEOVER v' + CC_VERSION + '] AUTO-GEN ERROR section ' + sectionId + ': ' + voErr.message);
                                     // v12.25: Warn user on network error
                                     Notification.addNotification({
-                                        message: 'Slide saved but voiceover could not be generated (network error). Try again.',
+                                        message: getLabel('voRegenNetworkError'),
                                         type: 'warning'
                                     });
                                 });
@@ -14662,7 +14681,7 @@ define([
             // v7.9.1: Guard against undefined sectionId
             if (!sectionId || sectionId === 'undefined') {
                 Notification.addNotification({
-                    message: 'Voiceover unavailable for this content.',
+                    message: getLabel('voUnavailable'),
                     type: 'warning'
                 });
                 return;
@@ -14685,7 +14704,7 @@ define([
                 _btn86.prop('disabled', true).attr('title', 'Audio not yet ready  -  teacher must open this content first');
                 ccWarn('[VOICEOVER v' + CC_VERSION + '] GLOBAL BLOCK section ' + sectionId + '  -  manifest.voiceoversComplete=' + this.manifest.voiceoversComplete + '. Content not ready for students.');
                 Notification.addNotification({
-                    message: 'This content is still preparing. Please check back shortly.',
+                    message: getLabel('contentPreparing'),
                     type: 'warning'
                 });
                 return;
@@ -14748,7 +14767,7 @@ define([
                         btn.removeClass('cc5-playing cc5-loading cc5-attention');
                         _resumeSelf.container.find('.cc5-voiceover-pause-btn[data-section-id="' + sectionId + '"]').hide();
                         Notification.addNotification({
-                            message: 'Audio playback was blocked by the browser. Click play again to retry.',
+                            message: getLabel('audioBlocked'),
                             type: 'warning'
                         });
                     });
@@ -14844,7 +14863,7 @@ define([
             
             if (!section) {
                 Notification.addNotification({
-                    message: 'Section not found',
+                    message: getLabel('sectionNotFound'),
                     type: 'error'
                 });
                 return;
@@ -15028,7 +15047,7 @@ define([
             if (this.voiceoverWaitBypassed && this.voiceoverLoading[sectionId]) {
                 ccWarn('[VOICEOVER v' + CC_VERSION + '] BYPASSED+LOADING section ' + sectionId + '  -  user bypassed audio wait, skipping 230s loop');
                 Notification.addNotification({
-                    message: 'Voiceover is still being generated in the background. Please try the play button again in a few minutes.',
+                    message: getLabel('voStillGenerating'),
                     type: 'info'
                 });
                 return;
@@ -15060,7 +15079,7 @@ define([
                         delete self.voiceoverLoading[sectionId];
                         btn.removeClass('cc5-loading');
                         Notification.addNotification({
-                            message: 'Voiceover timed out. Please try again.',
+                            message: getLabel('voTimedOut'),
                             type: 'warning'
                         });
                         return;
@@ -15096,7 +15115,7 @@ define([
                 ccWarn('[VOICEOVER v' + CC_VERSION + '] STUDENT GUARD section ' + sectionId + '  -  on-demand blocked. Button disabled. manifest.voiceoversComplete=' + this.manifest.voiceoversComplete);
                 btn.removeClass('cc5-loading').prop('disabled', true).attr('title', 'Audio not ready  -  please check back shortly');
                 Notification.addNotification({
-                    message: 'This content is still preparing. Please check back shortly.',
+                    message: getLabel('contentPreparing'),
                     type: 'warning'
                 });
                 return;
@@ -15132,6 +15151,7 @@ define([
             // overwriting — or being overwritten by — additional-language audio.
             var _odSectionId = this.activeLang ? (this.activeLang + '_' + sectionId) : sectionId;
             formData.append('sectionid', _odSectionId);
+            formData.append('subtopickey', billingKeyForSection(this.manifest, sectionId));
             // v12.63 FIX-CC-MULTILANG-LANG: Use activeLang when the student/teacher is viewing
             // an additional language (activeLang set by setActiveLang).  Sending the primary
             // voiceLanguage for a Vietnamese section, for example, generated English TTS for
@@ -15148,7 +15168,9 @@ define([
             // v12.43: raised from 120s to 200s  -  server logs confirm 4-chunk voiceovers
             // take 143-153s; 120s was timing out on-demand fetches before server responded.
             var _odAbortCtrl = new AbortController();
-            var _odTimeoutId = setTimeout(function () { _odAbortCtrl.abort(); }, 200000);
+            // FIX-CC-TTS-CLIENT-DEADLINE (v13.95.1): raised to 300s to sit above the server's
+            // 280s curl ceiling, so the browser never abandons a synthesis the vendor charges for.
+            var _odTimeoutId = setTimeout(function () { _odAbortCtrl.abort(); }, 300000);
             CcState.fetchWithDeadline(ajaxUrl, {
                 method: 'POST',
                 body: formData,
@@ -15178,7 +15200,7 @@ define([
                         btn.removeClass('cc5-loading');
                         ccWarn('[VOICEOVER v' + CC_VERSION + '] ON-DEMAND PENDING section ' + sectionId + ' | ' + _onDemandDur + 's  -  server busy (lock held by another process)');
                         Notification.addNotification({
-                            message: 'Voiceover is still being generated in the background. Please try the play button again in a few minutes.',
+                            message: getLabel('voStillGenerating'),
                             type: 'info'
                         });
                         return;
@@ -15393,7 +15415,7 @@ define([
                 ccError('[CC v' + CC_VERSION + '] Audio playback error - code: ' + errorCode + ', message: ' + errorMsg + ', sectionId: ' + sectionId);
                 if (isPreGenerated) {
                     Notification.addNotification({
-                        message: 'Error playing audio. Try regenerating the voiceover.',
+                        message: getLabel('audioPlayError'),
                         type: 'error'
                     });
                 } else {
@@ -15406,7 +15428,7 @@ define([
                     } else {
                         self.voiceoverRetryCount = 0;
                         Notification.addNotification({
-                            message: 'Error playing audio after retry. Try regenerating the voiceover.',
+                            message: getLabel('audioPlayErrorRetry'),
                             type: 'error'
                         });
                     }
@@ -15423,7 +15445,7 @@ define([
                     self.currentAudio = null;
                     self.currentAudioSectionId = null;
                     Notification.addNotification({
-                        message: 'Audio playback was blocked by the browser. Click play again to retry.',
+                        message: getLabel('audioBlocked'),
                         type: 'warning'
                     });
                 });
@@ -15485,9 +15507,9 @@ define([
             html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>';
             html += escapeHtml(docName);
             html += '</h3>';
-            html += '<span class="cc5-doc-modal-subtitle">Training Example Document</span>';
+            html += '<span class="cc5-doc-modal-subtitle">' + getLabel('trainingExampleDocument') + '</span>';
             html += '</div>';
-            html += '<button type="button" class="cc5-doc-modal-close" aria-label="Close modal">';
+            html += '<button type="button" class="cc5-doc-modal-close" aria-label="' + getLabel('closeModal') + '">';
             html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
             html += '</button>';
             html += '</div>';
@@ -15511,7 +15533,7 @@ define([
                 // Fallback: Show loading and fetch from API (legacy behavior)
                 html += '<div class="cc5-doc-modal-loading">';
                 html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
-                html += '<span>Generating contextual example...</span>';
+                html += '<span>' + getLabel('generatingContextualExample') + '</span>';
                 html += '</div>';
             }
             html += '</div>';
@@ -15734,17 +15756,17 @@ define([
             
             // Page navigation controls
             html += '<div class="cc5-pdf-nav-controls">';
-            html += '<button type="button" class="cc5-pdf-nav-btn cc5-pdf-prev" data-action="pdf-prev" ' + (page <= 1 ? 'disabled' : '') + ' aria-label="Previous page">';
+            html += '<button type="button" class="cc5-pdf-nav-btn cc5-pdf-prev" data-action="pdf-prev" ' + (page <= 1 ? 'disabled' : '') + ' aria-label="' + getLabel('previousPage') + '">';
             html += '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>';
             html += '</button>';
-            html += '<span class="cc5-pdf-page-info">Page <span class="cc5-pdf-current-page">' + page + '</span> of ' + totalPages + '</span>';
-            html += '<button type="button" class="cc5-pdf-nav-btn cc5-pdf-next" data-action="pdf-next" ' + (page >= totalPages ? 'disabled' : '') + ' aria-label="Next page">';
+            html += '<span class="cc5-pdf-page-info">' + getLabel('pageXofY').replace('{current}', '<span class="cc5-pdf-current-page">' + page + '</span>').replace('{total}', totalPages) + '</span>';
+            html += '<button type="button" class="cc5-pdf-nav-btn cc5-pdf-next" data-action="pdf-next" ' + (page >= totalPages ? 'disabled' : '') + ' aria-label="' + getLabel('nextPage') + '">';
             html += '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
             html += '</button>';
             html += '</div>';
             
             // Close button
-            html += '<button type="button" class="cc5-pdf-modal-close" aria-label="Close PDF viewer">';
+            html += '<button type="button" class="cc5-pdf-modal-close" aria-label="' + getLabel('closePdfViewer') + '">';
             html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
             html += '</button>';
             html += '</div>';
@@ -15752,7 +15774,7 @@ define([
             // PDF viewer body - v7.2.62: Use Blob URL for better browser compatibility
             html += '<div class="cc5-pdf-modal-body">';
             // Create placeholder iframe - will set src after DOM insertion using Blob URL
-            html += '<iframe class="cc5-pdf-iframe" data-page="' + page + '" title="PDF Document Viewer"></iframe>';
+            html += '<iframe class="cc5-pdf-iframe" data-page="' + page + '" title="' + getLabel('pdfDocumentViewer') + '"></iframe>';
             html += '</div>';
             
             html += '</div>'; // .cc5-pdf-modal
@@ -15783,7 +15805,7 @@ define([
                     // v7.2.80: Add page navigation guidance since #page=X doesn't work with blob URLs
                     if (page > 1) {
                         var $body = $('.cc5-pdf-modal-body');
-                        $body.prepend('<div class="cc5-pdf-page-hint">Scroll or use Ctrl+G to navigate to page ' + page + '</div>');
+                        $body.prepend('<div class="cc5-pdf-page-hint">' + getLabel('pdfPageHint').replace('{page}', page) + '</div>');
                     }
                     
                     // Store blob URL for cleanup and navigation
@@ -15905,6 +15927,15 @@ define([
                 args: requestData
             }])[0].done(function (response) {
                 if (response.success && response.content) {
+                    // FIX-CC-DOCEXAMPLE-NEVER-CACHED (v13.95.1): store what we just paid for.
+                    // Only the teacher edit-and-save path used to populate documentCache, so a
+                    // learner re-opening the same document in the same session billed a fresh
+                    // generation every time. The server-side cache added in this release makes
+                    // the repeat free site-wide; this makes it free without a round trip at all.
+                    if (!self.documentCache) {
+                        self.documentCache = {};
+                    }
+                    self.documentCache[docId] = response.content;
                     self.renderDocumentContent(response.content, docName, context);
                 } else {
                     self.renderDocumentError(response.error || 'Failed to generate document example');
@@ -15993,15 +16024,15 @@ define([
          */
         getFallbackDocumentContent: function (docId, context) {
             var fallbacks = {
-                swms: '<h3>Safe Work Method Statement</h3><p>A SWMS is a document that sets out the high-risk work activities, hazards, and controls for a specific task.</p><table><tr><th>Step</th><th>Hazard</th><th>Control</th></tr><tr><td>1. Site setup</td><td>Slips, trips, falls</td><td>Clear work area, use barriers</td></tr><tr><td>2. Equipment check</td><td>Faulty equipment</td><td>Pre-start inspection</td></tr><tr><td>3. Task execution</td><td>Task-specific hazards</td><td>Follow SOPs, use PPE</td></tr></table>',
-                jsa: '<h3>Job Safety Analysis</h3><p>A JSA breaks down a job into steps and identifies hazards and controls for each step.</p><table><tr><th>Job Step</th><th>Potential Hazard</th><th>Control Measure</th></tr><tr><td>Prepare work area</td><td>Slips, trips</td><td>Clean and organise area</td></tr><tr><td>Set up equipment</td><td>Strain injury</td><td>Use correct lifting technique</td></tr><tr><td>Complete task</td><td>Various</td><td>Follow established procedures</td></tr></table>',
-                risk_assessment: '<h3>Risk Assessment</h3><p>Risk assessments identify hazards and evaluate risks to determine appropriate controls.</p><ul><li><strong>Identify hazards</strong> - What could cause harm?</li><li><strong>Assess risks</strong> - How likely? How severe?</li><li><strong>Implement controls</strong> - Eliminate, substitute, engineer, admin, PPE</li><li><strong>Review and monitor</strong> - Is it working?</li></ul>',
-                incident_report: '<h3>Incident Report Form</h3><p>Used to record details of workplace incidents, injuries, or near misses.</p><ul><li>Date and time of incident</li><li>Location and description</li><li>People involved</li><li>Immediate actions taken</li><li>Root cause analysis</li><li>Corrective actions</li></ul>',
-                sop: '<h3>Standard Operating Procedure</h3><p>An SOP provides step-by-step instructions for performing a specific task consistently and safely.</p><ol><li>Purpose and scope</li><li>Required equipment and materials</li><li>Step-by-step procedure</li><li>Safety precautions</li><li>Quality checks</li></ol>'
+                swms: getLabel('docFallbackSwms'),
+                jsa: getLabel('docFallbackJsa'),
+                risk_assessment: getLabel('docFallbackRiskAssessment'),
+                incident_report: getLabel('docFallbackIncidentReport'),
+                sop: getLabel('docFallbackSop')
             };
             
             // v6.6.6: Fixed banned phrase "ensure compliance"  ->  use observable action language
-            return fallbacks[docId] || '<h3>' + escapeHtml(docId.replace(/_/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); })) + '</h3><p>This workplace document supports organisational policies and procedures.</p><p>Key elements typically include:</p><ul><li>Purpose and scope</li><li>Responsibilities</li><li>Procedure steps</li><li>Required approvals</li><li>Record keeping</li></ul>';
+            return fallbacks[docId] || '<h3>' + escapeHtml(docId.replace(/_/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); })) + '</h3>' + getLabel('docFallbackGenericBody');
         }
     };
 
@@ -16040,9 +16071,9 @@ define([
                         // blank with no visible feedback when manifest was empty.
                         var html = '<div class="cc5-no-content">';
                         html += '<div class="cc5-no-content-icon">' + getIcon('sparkles') + '</div>';
-                        html += '<h2>Content Coming Soon</h2>';
-                        html += '<p>Your instructor is preparing learning content for this activity.</p>';
-                        html += '<p>Please check back later.</p>';
+                        html += '<h2>' + getLabel('contentComingSoon') + '</h2>';
+                        html += '<p>' + getLabel('instructorPreparingContent') + '</p>';
+                        html += '<p>' + getLabel('pleaseCheckBackLater') + '</p>';
                         html += '</div>';
                         container.html(html);
                         return;
@@ -16056,7 +16087,7 @@ define([
                         // v13.85: the container.html() call had been merged onto the end of
                         // that comment, so a corrupted manifest returned silently and the
                         // learner got a blank page with no explanation.
-                        container.html('<div class="cc5-error">Content data is corrupted. Please contact your instructor.</div>');
+                        container.html('<div class="cc5-error">' + getLabel('contentDataCorrupted') + '</div>');
                         return;
                     }
 
@@ -16181,9 +16212,9 @@ define([
                         // comment above describes, reintroduced by a line merge.
                         var emptyHtml = '<div class="cc5-no-content">';
                         emptyHtml += '<div class="cc5-no-content-icon">' + getIcon('sparkles') + '</div>';
-                        emptyHtml += '<h2>Content Coming Soon</h2>';
-                        emptyHtml += '<p>Your instructor is preparing learning content for this activity.</p>';
-                        emptyHtml += '<p>Please check back later.</p>';
+                        emptyHtml += '<h2>' + getLabel('contentComingSoon') + '</h2>';
+                        emptyHtml += '<p>' + getLabel('instructorPreparingContent') + '</p>';
+                        emptyHtml += '<p>' + getLabel('pleaseCheckBackLater') + '</p>';
                         emptyHtml += '</div>';
                         container.html(emptyHtml);
                     }
@@ -16193,9 +16224,9 @@ define([
                     // onclick attribute, which any Content-Security-Policy without
                     // 'unsafe-inline' would block.
                     container.html('<div class="cc5-error"><div class="cc5-error-icon">' + getIcon('alertTriangle') +
-                        '</div><h3>Unable to Load Content</h3><p>We encountered a problem loading this activity. ' +
+                        '</div><h3>' + getLabel('unableToLoadContent') + '</h3><p>We encountered a problem loading this activity. ' +
                         'Please try refreshing the page.</p>' +
-                        '<button type="button" class="cc5-btn cc5-retry-btn">Refresh Page</button></div>');
+                        '<button type="button" class="cc5-btn cc5-retry-btn">' + getLabel('refreshPage') + '</button></div>');
                     container.find('.cc5-retry-btn').on('click', function () {
                         window.location.reload();
                     });

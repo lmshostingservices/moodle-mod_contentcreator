@@ -439,8 +439,12 @@ class save_slide_edit extends external_api {
                                     // below. cards was checked but cards[0] was not, so a manifest
                                     // whose first card is a bare string (older generator output)
                                     // made this a fatal TypeError on PHP 8 and lost the whole save.
-                                    if (!empty($section['cards']) && is_array($section['cards'])
-                                            && isset($section['cards'][0]) && is_array($section['cards'][0])) {
+                                    if (
+                                        !empty($section['cards'])
+                                        && is_array($section['cards'])
+                                        && isset($section['cards'][0])
+                                        && is_array($section['cards'][0])
+                                    ) {
                                         foreach ($carddataarr as $cdkey => $cdval) {
                                             $section['cards'][0][$cdkey] = $cdval;
                                         }
