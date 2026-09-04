@@ -46,8 +46,14 @@ define([], function () {
     // version stamped on a saved manifest) silently thought the plugin was still on 13.94.8.
     // That breaks the "stale voiceover, re-apply?" prompt for every one of those releases,
     // since compareVersions(currentVersion, manifestVersion) never sees an increase.
+    // v15.1.1: recurred a THIRD time. 15.1.0 bumped version.php to '15.1.0' and its own
+    // CHANGELOG entry claimed this constant had been "bumped to match $plugin->release" -
+    // but the constant was left on '15.0.0', so 15.1.0 shipped stale exactly like the two
+    // releases before it. Manual sync discipline has now failed three times; tests/js/
+    // test-version-mirror.js asserts this equals $plugin->release and runs with the suite,
+    // so a fourth recurrence fails a test instead of reaching production.
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.0.0';
+    var CC_VERSION = '15.1.1';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was

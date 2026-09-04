@@ -123,7 +123,7 @@ define([
         'msgwizardsubtitle', 'msgchoosemode', 'msgchoosemodesubtitle', 'msgstepchoosemode',
         'msgstepaddcontext', 'msgstepgenerate', 'msgmodevetdesc', 'msguploadrefdocs',
         'msguploadcompanydocs', 'msgrealworkplacescenarios', 'msgmodeunidesc',
-        'msgoutcomedriven', 'msgcriticalthinking', 'msgacademictone', 'msgnoquizcard',
+        'msgoutcomedriven', 'msgcriticalthinking', 'msgacademictone', 'msgnojurisdictionlegislation',
         'msgentercoursetitleai', 'msgorpasteowntopics', 'msgmodetopicstitle',
         'msgmodetopicsdesc', 'msgworksanysubject', 'msgcardsreveal', 'msgtopicscardnote',
         'msgcontextvettitle', 'msgcontextvetsubtitle', 'msgunitofcompetency', 'msgfetchingtga',
@@ -353,7 +353,7 @@ define([
         msgoutcomedriven: 'Learning outcome-driven structure',
         msgcriticalthinking: 'Critical thinking emphasis',
         msgacademictone: 'Academic tone and terminology',
-        msgnoquizcard: 'No quiz card and no jurisdiction legislation on this route.',
+        msgnojurisdictionlegislation: 'No jurisdiction legislation on this route.',
         msgentercoursetitleai: 'Enter course title, AI suggests topics',
         msgorpasteowntopics: 'Or paste your own topics',
         msgmodetopicstitle: 'Topics and Text',
@@ -5092,7 +5092,7 @@ define([
                             <li>${s('msgacademictone')}</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">${s('msggenerates6cardspersection')}</span>
+                            <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
                                 <li>${s('msgcardnameconceptanchor')}</li>
                                 <li>${s('msgcardnametheoreticalframework')}</li>
@@ -5100,8 +5100,9 @@ define([
                                 <li>${s('msgcardnameethics')}</li>
                                 <li>${s('msgcardnamecasestudy1')}</li>
                                 <li>${s('msgcardnamecasestudy2')}</li>
+                                <li>${s('msgcardnamedecisionpoint')}</li>
                             </ol>
-                            <span class="cc-mode-cardlist-note">${s('msgnoquizcard')}</span>
+                            <span class="cc-mode-cardlist-note">${s('msgnojurisdictionlegislation')}</span>
                         </div>
                     </div>
 
@@ -11456,7 +11457,14 @@ define([
             sum + (topic.sections?.filter(s => s.activity
                 || (s.cards || []).some(c => c && c.cardType === 'decision-point'))?.length || 0), 0) || 0;
         
-        const modeLabel = selectedMode === 'vet' ? 'Vocational (RTO)' : selectedMode === 'workplace' ? 'Workplace Training' : selectedMode === 'university' ? 'University' : 'General Learning';
+        // v15.1.1: was read from `selectedMode`, a module-scoped variable set only by the
+        // mode-picker click handler and draft restore. Opening an already-completed
+        // activity goes init() -> loadManifest() -> renderLocked() and never touches it,
+        // so on the overwhelmingly common path it was still null and the final ternary
+        // branch reported EVERY completed VET/Workplace/University module as
+        // "General Learning". The manifest records the route it was built with; use it.
+        const lockedMode = ccNormaliseTeacherRoute(manifest.mode) || selectedMode;
+        const modeLabel = lockedMode === 'vet' ? 'Vocational (RTO)' : lockedMode === 'workplace' ? 'Workplace Training' : lockedMode === 'university' ? 'University' : 'General Learning';
 
         // v11.73: Extract validity gate results per topic from manifest cards (replaces dual scoring)
         let qaResultsHtml = '';

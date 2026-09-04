@@ -983,10 +983,16 @@ define([], function () {
 
     function renderCompetencySummary(section) {
         var html = '<div class="cc5-card cc5-competency-summary-card">';
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-summary">You Are Ready When You Can\u2026</span></div>';
+        // v15.1.1: was a hard-coded English literal while all six sibling flow badges went
+        // through getLabel() in v13.94.3 - this one card type was missed, so every language
+        // showed an English badge on competency-summary (VET/Workplace/PD card 6, and
+        // General's Consolidate card). The key already exists in all 52 languages.
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-summary">' + escapeHtml(getLabel('youAreReadyWhenYouCan')) + '\u2026</span></div>';
         // v11.02 FIX-COMP-TITLE-DOUBLE: Suppress the title if it essentially duplicates
-        // the hardcoded badge text (old prompts used "You Are Ready When You Can" as the
-        // example, so ChatGPT copied it verbatim).
+        // the badge text (old prompts used "You Are Ready When You Can" as the
+        // example, so ChatGPT copied it verbatim). Compared against the English forms
+        // deliberately: the duplication being guarded against comes from the prompt, which
+        // is always English, regardless of the display language of the badge above.
         var _compTitle = (section.title || '').replace(/[^a-zA-Z]/g, '').toLowerCase();
         var _compBadgeDupe = _compTitle === 'youarereadywhenyoucan' || _compTitle === 'youhavethisskillwhenyoucan';
         if (!_compBadgeDupe && section.title) {

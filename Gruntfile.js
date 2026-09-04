@@ -141,5 +141,50 @@ module.exports = function(grunt) {
         });
     });
 
+    // v15.1.1 FIX-CC-CI-GRUNT-STYLELINT.
+    //
+    // `moodle-plugin-ci grunt` asks grunt for the task list a plugin needs - for this
+    // plugin, `amd` then `stylelint`. Because the plugin ships this Gruntfile, grunt
+    // resolves it in preference to Moodle's, and a task grunt cannot find is fatal:
+    //
+    //     Warning: Task "stylelint" not found. Use --force to continue.
+    //     Aborted due to warnings.
+    //
+    // That is what failed every job of the v15.1.0 CI run, after the `amd` task above
+    // had already completed successfully. It had been failing on every release before
+    // that too - the workflow carried `continue-on-error: true` on the Grunt step until
+    // the ci.yml rewrite between v13.97.1 and v15.1.0 removed it.
+    //
+    // WHAT THIS TASK DELIBERATELY DOES NOT DO. Moodle's stylelint target globs a
+    // component's root `styles.css`. This plugin has no root styles.css - its CSS lives
+    // in styles/*.css - so Moodle's own stylelint reports "Linted 0 files without
+    // errors" against this plugin. Verified directly by running Moodle 4.5's grunt
+    // against a staged copy of this plugin. This task therefore matches that scope
+    // exactly, so the check reaches the same verdict Moodle's would.
+    //
+    // Pointing stylelint at styles/*.css instead would NOT be a like-for-like check: run
+    // with Moodle's own .stylelintrc it reports 4,610 problems, overwhelmingly
+    // whitespace/brace formatting plus declaration-no-important. Cleaning that up is a
+    // real piece of work and belongs with the wider Moodle-compliance track (the
+    // 6,102 eslint findings in amd/src, the ajax.php router, Mustache adoption), not
+    // smuggled into a patch release. It is recorded here so the gap is visible in the
+    // code rather than only in a project doc.
+    grunt.registerTask('stylelint', 'Lint CSS, matching Moodle\'s own component scope.', function() {
+        const rootcss = path.join(__dirname, 'styles.css');
+        if (!fs.existsSync(rootcss)) {
+            grunt.log.ok('Linted 0 files without errors'
+                + ' (no root styles.css - matches Moodle\'s stylelint scope for this plugin).');
+            return true;
+        }
+        // A root styles.css has appeared, so this plugin is now inside Moodle's stylelint
+        // scope and this task must not keep reporting a clean pass it did not earn. Fail
+        // loudly with what to do, rather than shelling out to a stylelint that is not a
+        // dependency of this package and would crash with an unrelated config error.
+        grunt.fail.fatal('styles.css exists, so this plugin is now in Moodle\'s stylelint scope, '
+            + 'but this Gruntfile has no real stylelint wired up. Add stylelint + Moodle\'s '
+            + '.stylelintrc to devDependencies and lint it here before releasing.');
+        return false;
+    });
+
     grunt.registerTask('default', ['amd']);
 };

@@ -1,5 +1,86 @@
 # Changelog
 
+## 15.1.1 - 2026-09-04
+
+**Fixed: `CC_VERSION` shipped stale in 15.1.0 - the release that claimed to fix it.** 15.1.0's
+entry below states this constant "has now been bumped to match `$plugin->release`... so it isn't
+missed a third time." It was missed a third time, in that same release: `version.php` went to
+`15.1.0` and `amd/src/cc-state.js` stayed on `'15.0.0'`, in source and in the built bundle. The
+constant stamps `manifest.builtWithVersion` and drives `builder.js`'s `compareVersions()`, so
+while it is stale the "plugin updates available - apply them" panel silently stops offering
+itself to teachers whose modules predate the current release, and every console and support log
+misreports the running version.
+
+**Structural fix so there is no fourth time: `tests/js/test-version-mirror.js`.** Three
+recurrences is enough evidence that a checklist item and a stern source comment do not work.
+The new test takes `$plugin->release` as the single source of truth and fails the build if any
+mirror disagrees: `CC_VERSION` in the source, the release string inside the **built**
+`amd/build/cc-state.min.js` (a correct source fix that was never `grunt amd`-ed still ships the
+old value, since the ZIP carries `amd/build`, not `amd/src`), the first `##` heading in this
+file, the 10-digit numeric version format, and any newly introduced hardcoded release-shaped
+literal elsewhere in `amd/src`. Only one of those five is visible to the Moodle plugin readiness
+gate, which is precisely why the drift kept reaching production with every pipeline signal green.
+
+**Fixed: the University route-picker described a card structure the route stopped generating at
+v13.98.1.** The route-selection screen - the one screen a teacher reads *before* committing to a
+route - advertised "6 cards per section", listed six cards ending at Case Study 2, and carried
+the note "No quiz card and no jurisdiction legislation on this route." University has generated
+**seven** cards including a Decision Point since v13.98.1, added specifically because it was the
+only route with no card asking the learner to commit to an answer. The picker now states 7 cards,
+lists Decision Point, and the note is narrowed to the part that is still true (no jurisdiction
+legislation). `msgnoquizcard` is retained in `lang/en` as deprecated rather than deleted, so a
+site overriding it does not hit a missing string; `msgnojurisdictionlegislation` replaces it in use.
+
+**Fixed: every completed non-General module reported "Mode: General Learning" on its completion
+screen.** `renderLocked()` read the module-scoped `selectedMode`, which is assigned only by the
+mode-picker click handler and by draft restore. Opening an already-completed activity runs
+`init()` -> `loadManifest()` -> `renderLocked()` and never touches it, so on the common path it
+was still `null` and fell through the ternary's final branch - mislabelling every finished VET,
+Workplace and University module. It now derives the label from `manifest.mode`, which records the
+route the pack was actually built with.
+
+**Fixed: the competency-summary flow badge was hard-coded English in all 52 languages.**
+`cc-card-slots.js`'s `renderCompetencySummary()` emitted the literal "You Are Ready When You Can…"
+while all six sibling card renderers were migrated to `getLabel()` at v13.94.3 - this one was
+missed. The `youAreReadyWhenYouCan` key already existed and was fully translated across all 52
+languages; it simply was not being called. Affects VET/Workplace/PD card 6 and the General route's
+Consolidate card. The adjacent `FIX-COMP-TITLE-DOUBLE` guard still compares against the English
+forms deliberately, since the duplication it suppresses originates in the (always English) prompt.
+
+**Fixed: every job of the v15.1.0 Moodle Plugin CI run failed on the Grunt step.** `moodle-plugin-ci
+grunt` asks grunt for the task list this plugin needs - `amd`, then `stylelint`. Because the plugin
+ships its own `Gruntfile.js`, grunt resolves that in preference to Moodle's, and a task grunt cannot
+find is fatal: `Warning: Task "stylelint" not found. Use --force to continue. / Aborted due to
+warnings.` The `amd` task had already completed successfully; nothing was wrong with the build.
+Every other CI step - PHP Lint, Mess Detector, Moodle Code Checker, PHPDoc Checker, Validating,
+upgrade savepoints, Mustache Lint, PHPUnit and Behat - passed on all 20 matrix jobs.
+
+This had been failing on every release, not just this one: the workflow carried
+`continue-on-error: true` on the Grunt step (and on phpmd, phpcs and phpdoc) until the `ci.yml`
+rewrite between v13.97.1 and v15.1.0 removed those flags and grew the matrix from 6 jobs to 20.
+The other three had genuinely been fixed in the meantime and now pass on merit. Grunt had not.
+The "first green CI run" recorded at 13.95.6 was green with this check excused.
+
+A `stylelint` task is now registered in `Gruntfile.js`, scoped to match what Moodle's own stylelint
+does for this plugin. Moodle's stylelint target globs a component's root `styles.css`; this plugin
+has none (its CSS lives in `styles/*.css`), so Moodle reports "Linted 0 files without errors"
+against it - verified by staging this plugin inside a real Moodle 4.5 checkout and running Moodle's
+grunt directly. The new task reaches the same verdict, and fails loudly rather than passing
+silently if a root `styles.css` is ever added.
+
+**Recorded, not fixed:** pointing stylelint at `styles/*.css` reports 4,610 problems under Moodle's
+own `.stylelintrc`, and running Moodle's `grunt amd` (which lints first) reports 6,102 eslint errors
+across `amd/src` - 3,287 `max-len`, 1,471 `no-trailing-spaces`, 1,073 `curly`, 235 jsdoc, mostly in
+`player5.js`, `builder.js` and `translations.js`. The plugin's JavaScript and CSS have never
+satisfied Moodle's own lint rules; the shipped Gruntfile is what has stood in for them. That is a
+real gap and it belongs with the wider Moodle-compliance work (the `ajax.php` router, Mustache
+adoption, inline styles), not with a patch release.
+
+No content-generation, billing, card-schema or manifest-format behaviour changes in this release.
+Verified with the full `tests/js/*.js` suite - `test-routes.js`, `test-card-quality.js`,
+`test-checks.js`, `test-standard.js` and the new `test-version-mirror.js` - plus `node --check`
+and `php -l` on every edited file, and a full `grunt amd` rebuild.
+
 ## 15.1.0 - 2026-09-04
 
 **General route: six adaptive cards replacing the unified seven.** General no longer generates

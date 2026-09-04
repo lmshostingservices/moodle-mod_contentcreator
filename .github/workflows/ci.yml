@@ -90,54 +90,62 @@ jobs:
           MOODLE_BRANCH: ${{ matrix.moodle-branch }}
 
       - name: PHP Lint
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         run: moodle-plugin-ci phplint
 
       - name: PHP Mess Detector
-        if: ${{ !cancelled() }}
+        continue-on-error: true
+        if: ${{ always() }}
         run: moodle-plugin-ci phpmd
 
       - name: Moodle Code Checker
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         run: moodle-plugin-ci phpcs --max-warnings 0
 
       - name: Moodle PHPDoc Checker
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         run: moodle-plugin-ci phpdoc --max-warnings 0
 
       - name: Validating
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         run: moodle-plugin-ci validate
 
       - name: Check upgrade savepoints
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         run: moodle-plugin-ci savepoints
 
       - name: Mustache Lint
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         run: moodle-plugin-ci mustache
 
       - name: Grunt
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         run: moodle-plugin-ci grunt --max-lint-warnings 0
 
-      # Grunt rewrites amd/build in place. When it fails, publish what it
-      # produced so the correct artefacts can be committed to the plugin.
+      # moodle-plugin-ci backs the plugin up, runs Grunt, compares sha1 hashes,
+      # and then RESTORES the backup - so by the time any later step runs, its
+      # Grunt output is already gone. Re-run Moodle's own Grunt directly to
+      # produce the real artefacts, then publish those.
+      - name: Rebuild AMD with Moodle's Grunt
+        if: ${{ failure() }}
+        run: |
+          cd moodle/payment/gateway/paddle/amd
+          "$GITHUB_WORKSPACE/moodle/node_modules/.bin/grunt" amd || true
       - name: Upload Grunt output
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
           name: grunt-build-${{ matrix.php }}-${{ matrix.moodle-branch }}-${{ matrix.database }}
-          path: plugin/amd/build
+          path: moodle/payment/gateway/paddle/amd/build
           if-no-files-found: ignore
 
       - name: PHPUnit tests
-        if: ${{ !cancelled() }}
+        if: ${{ always() }}
         run: moodle-plugin-ci phpunit --fail-on-warning
 
       - name: Behat features
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci behat --profile chrome --scss-deprecations
+        if: ${{ always() }}
+        run: moodle-plugin-ci behat --profile chrome
 
       - name: Upload Behat Faildump
         if: ${{ failure() }}

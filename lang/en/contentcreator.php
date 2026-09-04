@@ -845,7 +845,11 @@ $string['msgmodeunidesc'] = 'Academic courses with Bloom\'s Taxonomy alignment';
 $string['msgoutcomedriven'] = 'Learning outcome-driven structure';
 $string['msgcriticalthinking'] = 'Critical thinking emphasis';
 $string['msgacademictone'] = 'Academic tone and terminology';
+// Deprecated at v15.1.1: University gained a Decision Point (quiz) card at v13.98.1, so this
+// string became factually wrong on the only screen that used it. Kept defined so any site
+// overriding it does not hit a missing-string error; replaced in use by the string below.
 $string['msgnoquizcard'] = 'No quiz card and no jurisdiction legislation on this route.';
+$string['msgnojurisdictionlegislation'] = 'No jurisdiction legislation on this route.';
 $string['msgentercoursetitleai'] = 'Enter course title, AI suggests topics';
 $string['msgorpasteowntopics'] = 'Or paste your own topics';
 $string['msgmodetopicstitle'] = 'Topics and Text';
