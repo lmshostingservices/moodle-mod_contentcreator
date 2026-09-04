@@ -97,6 +97,37 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
         respond: [ACTIVITY_TYPES.BEST_RESPONSE, ACTIVITY_TYPES.ESCALATION_DECISION]
     };
 
+    // v15 WORLD-CLASS: Four teacher-facing routes. Legacy pd/topicstext remain readable,
+    // but new generation should normalise them to General. Pedagogy is selected from the
+    // learning job, not from the old route name.
+    const WORLD_CLASS_ROUTES = Object.freeze(['vet', 'workplace', 'university', 'general']);
+    const normaliseRoute = (mode) => {
+        if (mode === 'pd' || mode === 'topicstext') return 'general';
+        return WORLD_CLASS_ROUTES.includes(mode) ? mode : 'general';
+    };
+
+    const LEARNING_JOB_HINTS = Object.freeze({
+        procedure: ['perform', 'complete', 'follow', 'operate', 'use', 'sequence', 'implement'],
+        decision: ['decide', 'choose', 'judge', 'determine', 'select', 'prioritise', 'prioritize'],
+        troubleshooting: ['diagnose', 'troubleshoot', 'fault', 'investigate', 'test', 'correct'],
+        risk: ['hazard', 'risk', 'control', 'safety', 'incident', 'verify'],
+        communication: ['communicate', 'feedback', 'coach', 'complaint', 'consult', 'conversation'],
+        analysis: ['analyse', 'analyze', 'evaluate', 'compare', 'critique', 'synthesise', 'synthesize'],
+        behaviour: ['habit', 'behaviour', 'behavior', 'conduct', 'culture', 'practice'],
+        concept: ['understand', 'explain', 'describe', 'recognise', 'recognize']
+    });
+
+    const classifyLearningJob = (text) => {
+        const haystack = String(text || '').toLowerCase();
+        let best = 'concept';
+        let bestScore = 0;
+        Object.keys(LEARNING_JOB_HINTS).forEach((job) => {
+            const score = LEARNING_JOB_HINTS[job].reduce((n, term) => n + (haystack.includes(term) ? 1 : 0), 0);
+            if (score > bestScore) { best = job; bestScore = score; }
+        });
+        return best;
+    };
+
     const DURATION_CONFIG = {
         5: { topics: 2, subtopicsPerTopic: 2 },
         10: { topics: 3, subtopicsPerTopic: 2 },
@@ -149,6 +180,43 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
         const ke = tgaData.knowledgeEvidence || [];
         const pe = tgaData.performanceEvidence || [];
         const fs = tgaData.foundationSkills || [];
+        const ac = tgaData.assessmentConditions || [];
+
+        // v15: Source-grounded VET evidence must reach the card-generation prompt, not
+        // stop at the planner. AI mapping objects usually carry evidence codes; resolve
+        // those codes back to the official TGA text so each subtopic can teach and assess
+        // the requirement without inventing detail.
+        const evidenceText = function(item) {
+            if (item === null || item === undefined) return '';
+            if (typeof item === 'string') return item.trim();
+            return String(item.text || item.description || item.requirement || item.title || item.name || '').trim();
+        };
+        const evidenceCode = function(item) {
+            if (!item || typeof item === 'string') return '';
+            return String(item.code || item.id || item.number || '').trim();
+        };
+        const resolveEvidence = function(items, refs) {
+            const wanted = (Array.isArray(refs) ? refs : []).map(function(v) {
+                if (typeof v === 'string') return v.trim();
+                return String(v?.code || v?.id || v?.text || '').trim();
+            }).filter(Boolean);
+            if (!wanted.length) return [];
+            const out = [];
+            items.forEach(function(item) {
+                const code = evidenceCode(item);
+                const text = evidenceText(item);
+                const hit = wanted.some(function(ref) {
+                    return (code && ref === code) || (text && (ref === text || text.indexOf(ref) !== -1 || ref.indexOf(text) !== -1));
+                });
+                if (hit && text && out.indexOf(text) === -1) out.push(text);
+            });
+            // If the mapping itself already contains full text rather than a code, keep it.
+            wanted.forEach(function(ref) {
+                const looksLikeText = /\s/.test(ref) && ref.length > 12;
+                if (looksLikeText && out.indexOf(ref) === -1) out.push(ref);
+            });
+            return out;
+        };
 
         const topics = [];
         const usedActivityTypes = [];
@@ -249,6 +317,14 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
                         pe: Array.isArray(aiCoversMappings.pe) ? aiCoversMappings.pe : [],
                         fs: Array.isArray(aiCoversMappings.fs) ? aiCoversMappings.fs : []
                     };
+                    const coverageSummary = majorTopic.coverageSummary || {};
+                    const keRefs = coversMappings.ke.length ? coversMappings.ke : (coverageSummary.knowledgeEvidence || []);
+                    const peRefs = coversMappings.pe.length ? coversMappings.pe : (coverageSummary.performanceEvidence || []);
+                    const fsRefs = coversMappings.fs.length ? coversMappings.fs : (coverageSummary.foundationSkills || []);
+                    const subtopicKnowledgeEvidence = resolveEvidence(ke, keRefs);
+                    const subtopicPerformanceEvidence = resolveEvidence(pe, peRefs);
+                    const subtopicFoundationSkills = resolveEvidence(fs, fsRefs);
+                    const subtopicAssessmentConditions = (Array.isArray(ac) ? ac : [ac]).map(evidenceText).filter(Boolean);
                     
                     // v6.6.65: PC Mapping for Instructional Clarity
                     // Stores both official TGA PC and AI-rewritten instructional PC
@@ -281,7 +357,11 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
                         elementText: (context && context.selectedElement && context.selectedElement.title)
                             ? context.selectedElement.title
                             : (majorTopic.elementTitle || ''),
-                        criterionText: pcText || ''
+                        criterionText: pcText || '',
+                        knowledgeEvidence: subtopicKnowledgeEvidence,
+                        performanceEvidence: subtopicPerformanceEvidence,
+                        foundationSkills: subtopicFoundationSkills,
+                        assessmentConditions: subtopicAssessmentConditions
                     });
                 }
                 
@@ -392,7 +472,13 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
                                 fs: fsCodes
                             },
                             activityType: activityType,
-                            pc: pcItem
+                            pc: pcItem,
+                            elementText: primaryElement?.title || primaryElement?.name || '',
+                            criterionText: pcItem.text || '',
+                            knowledgeEvidence: relatedKE.map(evidenceText).filter(Boolean),
+                            performanceEvidence: s < pe.length ? [evidenceText(pe[s])].filter(Boolean) : [],
+                            foundationSkills: s < fs.length ? [evidenceText(fs[s])].filter(Boolean) : [],
+                            assessmentConditions: (Array.isArray(ac) ? ac : [ac]).map(evidenceText).filter(Boolean)
                         });
                     }
 
@@ -421,7 +507,12 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
                             number: `${t + 1}.${s + 1}`,
                             title: pcItem.text || `Section ${s + 1}`,
                             mappings: [pcItem.code || `PC${t + 1}.${s + 1}`],
-                            activityType: activityType
+                            activityType: activityType,
+                            criterionText: pcItem.text || '',
+                            knowledgeEvidence: ke.slice(Math.floor(pcIndex * ke.length / Math.max(1, pc.length)), Math.floor((pcIndex + 1) * ke.length / Math.max(1, pc.length))).map(evidenceText).filter(Boolean),
+                            performanceEvidence: pe.length ? [evidenceText(pe[pcIndex % pe.length])].filter(Boolean) : [],
+                            foundationSkills: fs.length ? [evidenceText(fs[pcIndex % fs.length])].filter(Boolean) : [],
+                            assessmentConditions: (Array.isArray(ac) ? ac : [ac]).map(evidenceText).filter(Boolean)
                         });
                     }
 
@@ -695,7 +786,8 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
      */
     const planTopics = (inputs) => {
         
-        const { mode, duration, context, tgaData, outcomes, selectedMajorTopics, workplaceTopics, topicHierarchy } = inputs;
+        const mode = normaliseRoute(inputs.mode);
+        const { duration, context, tgaData, outcomes, selectedMajorTopics, workplaceTopics, topicHierarchy } = inputs;
 
         if (mode === 'vet' && tgaData) {
             const result = planVETTopics(tgaData, duration, context, selectedMajorTopics);
@@ -708,7 +800,7 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
         // "Failed to generate topic structure. Please try again." before a single AI call was
         // made. planUniversityTopics is mode-agnostic - it reads only outcomes, duration and
         // context - so naming the mode here is the whole fix.
-        } else if ((mode === 'university' || mode === 'pd' || mode === 'topicstext')
+        } else if ((mode === 'university' || mode === 'general')
                    && (outcomes || topicHierarchy)) {
             return planUniversityTopics(outcomes, duration, context, topicHierarchy);
         } else if (mode === 'workplace' && (selectedMajorTopics || workplaceTopics)) {
@@ -719,13 +811,14 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
     };
 
     const plan = (inputData) => {
-        const { mode, context, criteria, duration } = inputData;
+        const mode = normaliseRoute(inputData.mode);
+        const { context, criteria, duration } = inputData;
         const config = DURATION_CONFIG[duration] || DURATION_CONFIG[10];
         
         
         // FIX: Handle University mode where criteria is { outcomes: [...] }
         let criteriaArray = [];
-        if (mode === 'university' && criteria?.outcomes) {
+        if ((mode === 'university' || mode === 'general') && criteria?.outcomes) {
             criteriaArray = criteria.outcomes.map((outcome, idx) => ({
                 code: `LO${idx + 1}`,
                 text: outcome
@@ -812,6 +905,7 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
             locked: false,
             createdAt: new Date().toISOString(),
             mode: mode,
+            learningJob: classifyLearningJob((context?.desiredOutcome || '') + ' ' + (context?.courseTitle || context?.unitTitle || '') + ' ' + (context?.instructions || '')),
             context: context,
             topics: topics,
             totalSections: topics.reduce((sum, t) => sum + t.sections.length, 0),
@@ -826,6 +920,9 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
         planUniversityTopics: planUniversityTopics,
         planWorkplaceTopics: planWorkplaceTopics,
         ACTIVITY_TYPES: ACTIVITY_TYPES,
-        selectActivityType: selectActivityType
+        selectActivityType: selectActivityType,
+        normaliseRoute: normaliseRoute,
+        classifyLearningJob: classifyLearningJob,
+        WORLD_CLASS_ROUTES: WORLD_CLASS_ROUTES
     };
 });

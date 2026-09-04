@@ -1669,6 +1669,12 @@ try {
         $route = $data['route'] ?? 'vet';
         // Hook scenario narrative, for richer image context.
         $scenariocontext = $data['scenarioContext'] ?? '';
+        // v13.98.2: constrained to a short allowlist rather than passed through, because it
+        // reaches the vendor's image composer.
+        $aspectratio = (string)($data['aspectRatio'] ?? '16:9');
+        if (!in_array($aspectratio, ['16:9', '4:3', '3:2', '1:1'], true)) {
+            $aspectratio = '16:9';
+        }
 
         if (empty($slidetitle)) {
             mod_contentcreator_fail('errornoslidetitle');
@@ -1697,6 +1703,10 @@ try {
                 'requirements' => $requirements,
                 'route' => $route,
                 'scenarioContext' => $scenariocontext,
+                // v13.98.2: forwarded so the bulk route composes for the shape the player
+                // actually displays. The single-slide route has always sent this; the bulk
+                // route - which produces almost every image in a pack - never did.
+                'aspectRatio' => $aspectratio,
                 'subtopicKey' => $imgsubtopickey,
                 'sectionId' => $imgsectionid,
             ]

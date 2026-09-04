@@ -187,6 +187,12 @@ define([
         'msgcardnameexamplesapplication', 'msgcardnamekeytakeaways', 'msghowitdiffers',
         'msgdiffervet', 'msgdifferworkplace', 'msgdifferuniversity', 'msgdifferpd',
         'msgdiffertopicstext', 'msggenerates6cardspersection',
+        // v16: General's own six adaptive cards - internal instructional-job labels only.
+        // Learner-facing headings are AI-generated per topic; these names describe the
+        // route's structure on the route-picker screen, the same way University's fixed
+        // academic card names do above.
+        'msgcardnamegeneralorient', 'msgcardnamegeneralunderstand', 'msgcardnamegeneralexplore',
+        'msgcardnamegeneralapply', 'msgcardnamegeneralchallenge', 'msgcardnamegeneralconsolidate',
         'msggenerates4cardspersectionplus3activities', 'msgsuggestedbasedon', 'msganalyzingdoc',
         'msgaiextractedcontext', 'msgjobtitles', 'msgjobtitleshint', 'msgprocedurestasks',
         'msgtaskshint', 'msgtoolsequipment', 'msgequipmenthint', 'msgstep1label',
@@ -252,7 +258,18 @@ define([
         'msgwordsuffix', 'msgzerowords', 'msgitemssuffix', 'msgzeroitems', 'msgoneitem',
         'msgnselected', 'msgnofmselected', 'msguploadeddocument', 'msgtrainingtopicdefault',
         'msguntitledtopic', 'msgvalid', 'msgunitdefault', 'msgbasedondefault', 'msgbasedon',
-        'msgbasedonworkplacedoc', 'msgnsubtopic', 'msgnsubtopics'
+        'msgbasedonworkplacedoc', 'msgnsubtopic', 'msgnsubtopics',
+        // v15 four-route architecture
+        'msgmodegeneraltitle', 'msgmodegeneraldesc', 'msgdiffergeneral',
+        'msggeneraladaptive', 'msggeneralmodelrouter', 'msggeneralstorytelling', 'msggeneralanysubject',
+        'msgcontextgeneraltitle', 'msggeneralsubtitle', 'msginstructiongeneral',
+        'msglearneraudience', 'msgsubjectareaoptional', 'msgphgeneralarea', 'msglearnerlevel',
+        'msglevelbeginner', 'msglevelintermediate', 'msgleveladvanced', 'msglevelmixed',
+        'msgdesiredlearningoutcome', 'msgphdesiredlearningoutcome',
+        'msglearnerstrugglesoptional', 'msgphlearnerstruggles', 'msgrealexampleoptional', 'msgphrealexample',
+        'msgphvetstruggles', 'msgphvetexample', 'msgwhatusuallygoeswrongoptional', 'msgphwpstruggles', 'msgphwpexample',
+        'msgkeytheoryoptional', 'msgphkeytheory', 'msgstudentmisunderstandingoptional',
+        'msgphstudentmisunderstanding', 'msgcaseexampleoptional', 'msgphuniexample'
     ];
 
     /**
@@ -576,10 +593,16 @@ define([
         msgcardnamekeyconcepts: 'Key Concepts',
         msgcardnameexamplesapplication: 'Examples & Application',
         msgcardnamekeytakeaways: 'Key Takeaways',
+        msgcardnamegeneralorient: 'Orient',
+        msgcardnamegeneralunderstand: 'Understand',
+        msgcardnamegeneralexplore: 'Explore',
+        msgcardnamegeneralapply: 'Apply',
+        msgcardnamegeneralchallenge: 'Challenge',
+        msgcardnamegeneralconsolidate: 'Consolidate',
         msghowitdiffers: 'How it differs',
         msgdiffervet: 'Written to be assessable. Names the tool, the form, the reading and the sign-off, and cites the Act or code of practice behind it. The only route that imports a unit of competency and maps performance criteria.',
         msgdifferworkplace: 'Built around what the business measures &ndash; the customer, the cost, the turnaround. Points at your own policies, SOPs and systems by name, with no RTO or assessment language anywhere.',
-        msgdifferuniversity: 'Six academic cards, not seven vocational ones. Frameworks with their originators and limits, ethics dimensions, and two full case studies. Bloom\'s level drives the verbs. No workplace scenarios.',
+        msgdifferuniversity: 'Seven academic cards. Frameworks with their originators and limits, ethics dimensions, two full case studies that disagree with each other, and a decision question that tests the analysis. Bloom\'s level drives the verbs. No workplace scenarios.',
         msgdifferpd: 'About judgement, not procedure. Lives in conversations and decisions &ndash; what you notice, what you say next, how you repair it. Cites a principle or professional standard rather than a law.',
         msgdiffertopicstext: 'Plain explanatory prose on any subject, written in the third person. No workplace framing, no compliance, no scenarios or characters &ndash; just the subject, explained well.',
         msggenerates6cardspersection: '6 cards per section',
@@ -835,7 +858,42 @@ define([
         msgbasedon: 'Based on {$a}',
         msgbasedonworkplacedoc: 'Based on your workplace document',
         msgnsubtopic: '{$a} subtopic',
-        msgnsubtopics: '{$a} subtopics'
+        msgnsubtopics: '{$a} subtopics',
+        msgmodegeneraltitle: 'General Learning',
+        msgmodegeneraldesc: 'Adaptive learning for short courses, professional development and general subjects.',
+        msgdiffergeneral: 'The AI identifies the learning job and chooses the teaching model that fits it.',
+        msggeneraladaptive: 'Adapts the teaching method to the content',
+        msggeneralmodelrouter: 'Selects the best mental model automatically',
+        msggeneralstorytelling: 'Uses memorable scenarios, contrast and application',
+        msggeneralanysubject: 'Works across almost any general learning subject',
+        msgcontextgeneraltitle: 'Learning Context - General Learning',
+        msggeneralsubtitle: 'Tell us the topic, who the learners are and what you want them to understand or do.',
+        msginstructiongeneral: '<strong>Keep the brief simple.</strong> The AI handles the instructional design.',
+        msglearneraudience: 'Who is this for?',
+        msgsubjectareaoptional: 'Subject area (optional)',
+        msgphgeneralarea: 'e.g. Personal finance, communication, software skills',
+        msglearnerlevel: 'Learner experience level',
+        msglevelbeginner: 'Beginner',
+        msglevelintermediate: 'Intermediate',
+        msgleveladvanced: 'Advanced',
+        msglevelmixed: 'Mixed / not sure',
+        msgdesiredlearningoutcome: 'What should learners understand or be able to do?',
+        msgphdesiredlearningoutcome: 'e.g. Apply the skill confidently in a realistic situation',
+        msglearnerstrugglesoptional: 'What do learners usually struggle with? (optional)',
+        msgphlearnerstruggles: 'e.g. They jump to solutions before understanding the problem',
+        msgrealexampleoptional: 'Real example to include (optional)',
+        msgphrealexample: 'e.g. A realistic situation learners will recognise',
+        msgphvetstruggles: 'e.g. Learners trust an existing isolation tag instead of verifying it themselves',
+        msgphvetexample: 'e.g. A real job, incident or workplace situation learners will recognise',
+        msgwhatusuallygoeswrongoptional: 'What usually goes wrong? (optional)',
+        msgphwpstruggles: 'e.g. Staff resolve high-risk complaints themselves instead of escalating them',
+        msgphwpexample: 'e.g. A recent customer, safety or process situation from your workplace',
+        msgkeytheoryoptional: 'Key theory or researcher to emphasise (optional)',
+        msgphkeytheory: 'e.g. Festinger, cognitive dissonance',
+        msgstudentmisunderstandingoptional: 'What do students commonly misunderstand? (optional)',
+        msgphstudentmisunderstanding: 'e.g. Students confuse correlation with causation',
+        msgcaseexampleoptional: 'Case or example to include (optional)',
+        msgphuniexample: 'e.g. A prescribed study, case, experiment or current application'
     };
 
     /** Resolved strings, filled by preloadMessages(). */
@@ -927,6 +985,12 @@ define([
     let manifest = null;
     let currentStep = 1;
     let selectedMode = null;
+
+    // v15: Four teacher-facing routes. Legacy PD / Topics & Text values remain readable
+    // for saved content, but new authoring normalises them to General.
+    const ccNormaliseTeacherRoute = function(mode) {
+        return (mode === 'pd' || mode === 'topicstext') ? 'general' : (mode || null);
+    };
     let tgaData = null;
     let topicPlan = null;
     let suggestedMajorTopics = []; // AI-suggested Major Learning Topics (Stage 1)
@@ -4554,7 +4618,7 @@ define([
         }
 
         currentStep = d.currentStep || 1;
-        selectedMode = d.selectedMode;
+        selectedMode = ccNormaliseTeacherRoute(d.selectedMode);
         tgaData = d.tgaData || null;
         workplaceData = d.workplaceData || null;
         suggestedMajorTopics = d.suggestedMajorTopics || [];
@@ -5041,73 +5105,35 @@ define([
                         </div>
                     </div>
 
-                    <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'pd' ? 'selected' : ''}" 
-                            data-mode="pd" data-testid="button-mode-pd">
+                    <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'general' ? 'selected' : ''}"
+                            data-mode="general" data-testid="button-mode-general">
                         <div class="cc-mode-icon">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                <circle cx="9" cy="7" r="4"/>
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>
                             </svg>
                         </div>
-                        <h3 class="cc-mode-title">${s('msgmodepdtitle')}</h3>
-                        <p class="cc-mode-description">${s('msgmodepddesc')}</p>
+                        <h3 class="cc-mode-title">${s('msgmodegeneraltitle')}</h3>
+                        <p class="cc-mode-description">${s('msgmodegeneraldesc')}</p>
                         <div class="cc-mode-differs">
                             <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
-                            <p>${s('msgdifferpd')}</p>
+                            <p>${s('msgdiffergeneral')}</p>
                         </div>
                         <ul class="cc-mode-features">
-                            <li>${s('msgentercoursetitleai')}</li>
-                            <li>${s('msgorpasteowntopics')}</li>
-                            <li>${s('msgpracticalskills')}</li>
-                            <li>${s('msgcpdmicrocreds')}</li>
+                            <li>${s('msggeneraladaptive')}</li>
+                            <li>${s('msggeneralmodelrouter')}</li>
+                            <li>${s('msggeneralstorytelling')}</li>
+                            <li>${s('msggeneralanysubject')}</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
+                            <span class="cc-mode-cardlist-label">${s('msggenerates6cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
-                                <li>${s('msgcardnamehookscenario')}</li>
-                                <li>${s('msgcardnameconceptexplainer')}</li>
-                                <li>${s('msgcardnamementalmodel')}</li>
-                                <li>${s('msgcardnameappliedscenario')}</li>
-                                <li>${s('msgcardnamemistakes')}</li>
-                                <li>${s('msgcardnamecompetencysummary')}</li>
-                                <li>${s('msgcardnamedecisionpoint')}</li>
+                                <li>${s('msgcardnamegeneralorient')}</li>
+                                <li>${s('msgcardnamegeneralunderstand')}</li>
+                                <li>${s('msgcardnamegeneralexplore')}</li>
+                                <li>${s('msgcardnamegeneralapply')}</li>
+                                <li>${s('msgcardnamegeneralchallenge')}</li>
+                                <li>${s('msgcardnamegeneralconsolidate')}</li>
                             </ol>
-                        </div>
-                    </div>
-
-                    <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'topicstext' ? 'selected' : ''}"
-                            data-mode="topicstext" data-testid="button-mode-topicstext">
-                        <div class="cc-mode-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M4 6h16"/>
-                                <path d="M4 10h10"/>
-                                <path d="M4 14h16"/>
-                                <path d="M4 18h10"/>
-                            </svg>
-                        </div>
-                        <h3 class="cc-mode-title">${s('msgmodetopicstitle')}</h3>
-                        <p class="cc-mode-description">${s('msgmodetopicsdesc')}</p>
-                        <div class="cc-mode-differs">
-                            <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
-                            <p>${s('msgdiffertopicstext')}</p>
-                        </div>
-                        <ul class="cc-mode-features">
-                            <li>${s('msgworksanysubject')}</li>
-                            <li>${s('msguniversalheadings')}</li>
-                            <li>${s('msgshortbydesign')}</li>
-                            <li>${s('msgcardsreveal')}</li>
-                        </ul>
-                        <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">${s('msggenerates4cardspersectionplus3activities')}</span>
-                            <ol class="cc-mode-cardlist-items">
-                                <li>${s('msgcardnameoverview')}</li>
-                                <li>${s('msgcardnamekeyconcepts')}</li>
-                                <li>${s('msgcardnameexamplesapplication')}</li>
-                                <li>${s('msgcardnamekeytakeaways')}</li>
-                            </ol>
-                            <span class="cc-mode-cardlist-note">${s('msgtopicscardnote')}</span>
                         </div>
                     </div>
                 </div>
@@ -5131,9 +5157,9 @@ define([
             return renderStep2VET();
         } else if (selectedMode === 'workplace') {
             return renderStep2Workplace();
-        } else if (selectedMode === 'pd' || selectedMode === 'topicstext') {
-            // v13.91: Topics-and-Text reuses PD's step-2 form verbatim - same DOM ids, so
-            // every downstream reader, validator and button handler works unchanged.
+        } else if (selectedMode === 'general' || selectedMode === 'pd' || selectedMode === 'topicstext') {
+            // v15: General reuses the mature PD form plumbing while presenting a neutral, adaptive learning brief.
+            // Legacy PD / Topics & Text values also resolve here for saved-course compatibility.
             return renderStep2PD();
         } else {
             return renderStep2University();
@@ -5403,6 +5429,17 @@ define([
                         <label class="cc-form-label">${s('msgadditionalinstructions')}</label>
                         <input type="text" class="cc-input" id="cc-vet-instructions"
                                placeholder="${s('msgphinstructions')}" data-testid="input-vet-instructions">
+                    </div>
+
+                    <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
+                        <div class="cc-form-group">
+                            <label class="cc-form-label" for="cc-vet-struggles">${s('msglearnerstrugglesoptional')}</label>
+                            <input type="text" class="cc-input" id="cc-vet-struggles" placeholder="${s('msgphvetstruggles')}" data-testid="input-vet-struggles">
+                        </div>
+                        <div class="cc-form-group">
+                            <label class="cc-form-label" for="cc-vet-example">${s('msgrealexampleoptional')}</label>
+                            <input type="text" class="cc-input" id="cc-vet-example" placeholder="${s('msgphvetexample')}" data-testid="input-vet-example">
+                        </div>
                     </div>
 
                     <div class="cc-ai-info-banner">
@@ -5750,6 +5787,17 @@ define([
                         </div>
                     </div>
 
+                    <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
+                        <div class="cc-form-group">
+                            <label class="cc-form-label" for="cc-wp-struggles">${s('msgwhatusuallygoeswrongoptional')}</label>
+                            <input type="text" class="cc-input" id="cc-wp-struggles" placeholder="${s('msgphwpstruggles')}" data-testid="input-wp-struggles">
+                        </div>
+                        <div class="cc-form-group">
+                            <label class="cc-form-label" for="cc-wp-example">${s('msgrealexampleoptional')}</label>
+                            <input type="text" class="cc-input" id="cc-wp-example" placeholder="${s('msgphwpexample')}" data-testid="input-wp-example">
+                        </div>
+                    </div>
+
                     <!-- v13.86: the Workplace prompt has always interpolated context.jobTitle,
                          context.jobRoles, context.jobTasks and context.equipmentList, but the only
                          source for them was CC_WP_AI_CONTEXT, which is assigned inside a function
@@ -5937,6 +5985,21 @@ define([
                                placeholder="${s('msgphinstructions')}" data-testid="input-uni-instructions">
                     </div>
 
+                    <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
+                        <div class="cc-form-group">
+                            <label class="cc-form-label" for="cc-uni-theory">${s('msgkeytheoryoptional')}</label>
+                            <input type="text" class="cc-input" id="cc-uni-theory" placeholder="${s('msgphkeytheory')}" data-testid="input-uni-theory">
+                        </div>
+                        <div class="cc-form-group">
+                            <label class="cc-form-label" for="cc-uni-struggles">${s('msgstudentmisunderstandingoptional')}</label>
+                            <input type="text" class="cc-input" id="cc-uni-struggles" placeholder="${s('msgphstudentmisunderstanding')}" data-testid="input-uni-struggles">
+                        </div>
+                    </div>
+                    <div class="cc-form-group" style="margin-top:12px;">
+                        <label class="cc-form-label" for="cc-uni-example">${s('msgcaseexampleoptional')}</label>
+                        <input type="text" class="cc-input" id="cc-uni-example" placeholder="${s('msgphuniexample')}" data-testid="input-uni-example">
+                    </div>
+
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
                             <label class="cc-form-label">${s('msgcourselevelrequired')}</label>
@@ -6093,16 +6156,15 @@ define([
         const hasOutcomes = storedOutcomes.length > 0;
         return `
             <div class="cc-step-content" data-testid="step-2-pd">
-                <h2 class="cc-section-title">${selectedMode === 'topicstext'
-                    ? s('msgcontexttopicstitle') : s('msgcontextpdtitle')}</h2>
-                <p class="cc-section-subtitle">${s('msgpdsubtitle')}</p>
+                <h2 class="cc-section-title">${selectedMode === 'general' ? s('msgcontextgeneraltitle') : (selectedMode === 'topicstext' ? s('msgcontexttopicstitle') : s('msgcontextpdtitle'))}</h2>
+                <p class="cc-section-subtitle">${selectedMode === 'general' ? s('msggeneralsubtitle') : s('msgpdsubtitle')}</p>
 
                 <div class="cc-instruction-card" data-testid="instruction-card-pd">
                     <div class="cc-instruction-card-icon">
                         <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                     </div>
                     <div class="cc-instruction-card-text">
-                        ${s('msginstructionpd')}
+                        ${selectedMode === 'general' ? s('msginstructiongeneral') : s('msginstructionpd')}
                     </div>
                 </div>
 
@@ -6129,7 +6191,7 @@ define([
                              industry box would have taken away the only way to tell the model the
                              subject, on the one route whose whole premise is an open subject. -->
                         <div class="cc-form-group">
-                            <label class="cc-label" for="cc-pd-audience">${selectedMode === 'topicstext' ? s('msgwrittenfor') : s('msgtargetaudience')}</label>
+                            <label class="cc-label" for="cc-pd-audience">${selectedMode === 'general' ? s('msglearneraudience') : (selectedMode === 'topicstext' ? s('msgwrittenfor') : s('msgtargetaudience'))}</label>
                             <select id="cc-pd-audience" class="cc-select" data-testid="select-pd-audience">
                                 <option value="all-staff">${s('msgtaallstaff')}</option>
                                 <option value="new-starters">${s('msgpdaudnewstarters')}</option>
@@ -6142,8 +6204,8 @@ define([
                             </select>
                         </div>
                         <div class="cc-form-group">
-                            <label class="cc-label" for="cc-pd-industry">${selectedMode === 'topicstext' ? s('msgsubjectarea') : s('msgindustryoptional')}</label>
-                            <input type="text" id="cc-pd-industry" class="cc-input" placeholder="${selectedMode === 'topicstext' ? s('msgphsubjectarea') : s('msgphpdindustry')}" data-testid="input-pd-industry" />
+                            <label class="cc-label" for="cc-pd-industry">${selectedMode === 'general' ? s('msgsubjectareaoptional') : (selectedMode === 'topicstext' ? s('msgsubjectarea') : s('msgindustryoptional'))}</label>
+                            <input type="text" id="cc-pd-industry" class="cc-input" placeholder="${selectedMode === 'general' ? s('msgphgeneralarea') : (selectedMode === 'topicstext' ? s('msgphsubjectarea') : s('msgphpdindustry'))}" data-testid="input-pd-industry" />
                         </div>
                     </div>
                     <div class="cc-form-group" style="margin-top:12px;">
@@ -6151,6 +6213,33 @@ define([
                         <input type="text" class="cc-input" id="cc-pd-instructions"
                                placeholder="${s('msgphinstructions')}" data-testid="input-pd-instructions">
                     </div>
+                    ${selectedMode === 'general' ? `
+                    <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
+                        <div class="cc-form-group">
+                            <label class="cc-label" for="cc-general-level">${s('msglearnerlevel')}</label>
+                            <select id="cc-general-level" class="cc-select" data-testid="select-general-level">
+                                <option value="beginner">${s('msglevelbeginner')}</option>
+                                <option value="intermediate">${s('msglevelintermediate')}</option>
+                                <option value="advanced">${s('msgleveladvanced')}</option>
+                                <option value="mixed" selected>${s('msglevelmixed')}</option>
+                            </select>
+                        </div>
+                        <div class="cc-form-group">
+                            <label class="cc-label" for="cc-general-outcome">${s('msgdesiredlearningoutcome')}</label>
+                            <input type="text" id="cc-general-outcome" class="cc-input" placeholder="${s('msgphdesiredlearningoutcome')}" data-testid="input-general-outcome" />
+                        </div>
+                    </div>
+                    <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
+                        <div class="cc-form-group">
+                            <label class="cc-label" for="cc-general-struggles">${s('msglearnerstrugglesoptional')}</label>
+                            <input type="text" id="cc-general-struggles" class="cc-input" placeholder="${s('msgphlearnerstruggles')}" data-testid="input-general-struggles" />
+                        </div>
+                        <div class="cc-form-group">
+                            <label class="cc-label" for="cc-general-example">${s('msgrealexampleoptional')}</label>
+                            <input type="text" id="cc-general-example" class="cc-input" placeholder="${s('msgphrealexample')}" data-testid="input-general-example" />
+                        </div>
+                    </div>` : ''}
+
                     <div class="cc-form-grid cc-form-grid-2" style="margin-top:12px;">
                         <div class="cc-form-group">
                             <label class="cc-label" for="cc-pd-country">${s('msgcountry')}</label>
@@ -6951,7 +7040,7 @@ define([
             const trainingLabel = _tt ? s(_tt.key) : '';
             if (trainingLabel) parts.push(trainingLabel);
             subtitleText = parts.length > 0 ? s('msgbasedon').split('{$a}').join(parts.join(' * ')) : s('msgbasedonworkplacedoc');
-        } else if ((selectedMode === 'pd' || selectedMode === 'topicstext') && storedContext) {
+        } else if ((selectedMode === 'general' || selectedMode === 'pd' || selectedMode === 'topicstext') && storedContext) {
             const courseTitle = storedContext.courseTitle || storedContext.courseName || '';
             const _subPhrase = s(storedOutcomes.length === 1 ? 'msgnsubtopic' : 'msgnsubtopics')
                 .split('{$a}').join(storedOutcomes.length);
@@ -7564,7 +7653,7 @@ define([
     // v6.6.76: Use actual element/PC numbers from data instead of array indices
     const renderTopicItem = (topic, topicIndex) => {
         const cleanTitle = stripNumberPrefix(topic.title);
-        const isUniversity = selectedMode === 'university' || selectedMode === 'pd' || selectedMode === 'topicstext';
+        const isUniversity = selectedMode === 'university' || selectedMode === 'general' || selectedMode === 'pd' || selectedMode === 'topicstext'; // flat topic numbering; name retained for compatibility
         let elementNumber;
         if (isUniversity) {
             elementNumber = topic.number || (topicIndex + 1);
@@ -7580,7 +7669,7 @@ define([
                         <span class="cc-topic-number">${escapeHtml(String(elementNumber))}</span>
                         <div class="cc-topic-info">
                             <h4 class="cc-topic-title" id="cc-topic-title-${topicIndex}">${escapeHtml(cleanTitle || topic.title)}</h4>
-                            <span class="cc-topic-sections">${topic.subtopics?.length || 0} ${selectedMode === 'pd' ? (topic.subtopics?.length === 1 ? 'topic' : 'topics') : isUniversity ? (topic.subtopics?.length === 1 ? 'outcome' : 'outcomes') : 'sections'}</span>
+                            <span class="cc-topic-sections">${topic.subtopics?.length || 0} ${(selectedMode === 'general' || selectedMode === 'pd' || selectedMode === 'topicstext') ? (topic.subtopics?.length === 1 ? 'topic' : 'topics') : isUniversity ? (topic.subtopics?.length === 1 ? 'outcome' : 'outcomes') : 'sections'}</span>
                         </div>
                     </button>
                 </header>
@@ -7619,7 +7708,7 @@ define([
                     resetRouteState();
                     clearDraft();
                 }
-                selectedMode = card.dataset.mode;
+                selectedMode = ccNormaliseTeacherRoute(card.dataset.mode);
                 const nextBtn = document.getElementById('cc-next-step');
                 if (nextBtn) nextBtn.disabled = false;
                 saveDraft();
@@ -7712,7 +7801,7 @@ define([
         // meant Route 5 users downloaded the PD prompt file, and the topicstext template
         // added in 13.94.1 was unreachable. Resolve the route at click time instead.
         container.querySelector('#cc-download-pd-prompt')?.addEventListener('click', () => {
-            downloadDynamicPrompt(selectedMode === 'topicstext' ? 'topicstext' : 'pd');
+            downloadDynamicPrompt(selectedMode === 'general' ? 'general' : (selectedMode === 'topicstext' ? 'topicstext' : 'pd'));
         });
 
         container.querySelector('#cc-pd-suggest-topics')?.addEventListener('click', suggestPDTopics);
@@ -8465,7 +8554,7 @@ define([
                 return { valid: false, error: 'Please select at least one Major Learning Topic.' };
             }
             // v13.33: Workplace reference content is optional — no paste gate
-        } else if (selectedMode === 'pd' || selectedMode === 'topicstext') {
+        } else if (selectedMode === 'general' || selectedMode === 'pd' || selectedMode === 'topicstext') {
             // v9.83 PD-GATE FIX: ChatGPT content is optional for PD mode.
             // Previously, pdPastedContent was a hard validation gate AND the Generate button
             // was hidden until content was pasted  -  teachers saw a dead-end with no path
@@ -8496,7 +8585,7 @@ define([
     };
 
     const gatherOutcomes = () => {
-        if ((selectedMode === 'university' || selectedMode === 'workplace' || selectedMode === 'pd' || selectedMode === 'topicstext') && storedOutcomes.length > 0) {
+        if ((selectedMode === 'university' || selectedMode === 'workplace' || selectedMode === 'general' || selectedMode === 'pd' || selectedMode === 'topicstext') && storedOutcomes.length > 0) {
             return [...storedOutcomes];
         }
         const outcomes = [];
@@ -8538,7 +8627,7 @@ define([
     };
 
     const getMajorTopicTitle = () => {
-        if (selectedMode === 'pd' || selectedMode === 'topicstext') {
+        if (selectedMode === 'general' || selectedMode === 'pd' || selectedMode === 'topicstext') {
             return document.getElementById('cc-pd-course-title')?.value?.trim() || '';
         } else if (selectedMode === 'university') {
             return document.getElementById('cc-course-name')?.value?.trim() || '';
@@ -10087,6 +10176,8 @@ define([
                 selectedElement: selectedElement, // v8.4.34: Single selected element
                 pastedContent: vetPastedContent || '',
                 priorityContent: vetPastedContent || null,
+                learnerChallenges: (document.getElementById('cc-vet-struggles')?.value || '').trim(),
+                realExample: (document.getElementById('cc-vet-example')?.value || '').trim(),
                 // v6.9.0: Full AI context for prompts (all items, not just selected)
                 autoJobRoles: autoJobRoles,
                 autoTaskCategories: autoTaskCategories,
@@ -10182,10 +10273,45 @@ define([
                 location: state ? `${state}, ${countryCode}` : countryCode,
                 pastedContent: workplacePastedContent || '',
                 priorityContent: workplacePastedContent || null,
+                whatUsuallyGoesWrong: (document.getElementById('cc-wp-struggles')?.value || '').trim(),
+                realExample: (document.getElementById('cc-wp-example')?.value || '').trim(),
                 aiSelectedJobTitles: finalJobRoles,
                 aiSelectedTasks: finalJobTasks,
                 aiSelectedEquipment: finalEquipment,
                 wpAiContext: wpAiCtx
+            };
+        } else if (selectedMode === 'general') {
+            const countryCode = document.getElementById('cc-pd-country')?.value || 'AU';
+            const courseTitle = document.getElementById('cc-pd-course-title')?.value || '';
+            const audience = document.getElementById('cc-pd-audience')?.value || 'all-staff';
+            const subjectArea = document.getElementById('cc-pd-industry')?.value || '';
+            const learnerLevel = document.getElementById('cc-general-level')?.value || 'mixed';
+            const desiredOutcome = (document.getElementById('cc-general-outcome')?.value || '').trim();
+            const learnerStruggles = (document.getElementById('cc-general-struggles')?.value || '').trim();
+            const realExample = (document.getElementById('cc-general-example')?.value || '').trim();
+            return {
+                mode: 'general',
+                additionalInstructions: ccAuthorInstructions(),
+                country: countryCode,
+                language: getCountryLang(countryCode),
+                state: '',
+                courseName: courseTitle,
+                courseTitle: courseTitle,
+                subjectArea: subjectArea,
+                industry: subjectArea,
+                industryContext: subjectArea || 'General learning',
+                targetAudience: audience.replace(/-/g, ' '),
+                learnerRole: audience.replace(/-/g, ' '),
+                learnerLevel: learnerLevel,
+                experienceLevel: learnerLevel,
+                desiredOutcome: desiredOutcome,
+                learnerStruggles: learnerStruggles,
+                commonStruggles: learnerStruggles,
+                realExample: realExample,
+                location: countryCode,
+                learningOutcomes: gatherOutcomes() || [],
+                pastedContent: pdPastedContent || '',
+                priorityContent: pdPastedContent || null
             };
         } else if (selectedMode === 'topicstext') {
             // v13.91: Topics and Text. Reads PD's step-2 fields because it reuses that
@@ -10262,7 +10388,11 @@ define([
                 location: state ? `${state}, ${countryCode}` : countryCode,
                 learningOutcomes: gatherOutcomes() || [],
                 pastedContent: uniPastedContent || '',
-                priorityContent: uniPastedContent || null
+                priorityContent: uniPastedContent || null,
+                keyTheoryResearcher: (document.getElementById('cc-uni-theory')?.value || '').trim(),
+                commonMisconception: (document.getElementById('cc-uni-struggles')?.value || '').trim(),
+                learnerChallenges: (document.getElementById('cc-uni-struggles')?.value || '').trim(),
+                realExample: (document.getElementById('cc-uni-example')?.value || '').trim()
             };
         }
     };
@@ -10474,10 +10604,15 @@ define([
             // Gather appearance settings (v6.4.4)
             const headerColor = document.getElementById('cc-header-color')?.value || getMoodlePrimaryColor();
             
-            // v6.5.48: Use storedContext (captured in Step 2) - DOM elements no longer exist
+            // v15: Use the Step-2 snapshot once, then normalise only its route ID. Avoid
+            // re-reading wizard DOM after Step 2 has been replaced by the review screen.
+            const generationContextBase = storedContext || gatherContext() || {};
+            const generationContext = Object.assign({}, generationContextBase, {
+                mode: ccNormaliseTeacherRoute(generationContextBase.mode || selectedMode) || 'general'
+            });
             const inputs = {
-                mode: selectedMode,
-                context: storedContext || gatherContext(),
+                mode: generationContext.mode,
+                context: generationContext,
                 duration: parseInt(document.querySelector('input[name="duration"]:checked')?.value) || 10,
                 criteria: selectedMode === 'vet' ? tgaData : selectedMode === 'workplace' ? { workplaceDocument: workplaceData || null, topics: suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id)) } : { outcomes: storedOutcomes.length > 0 ? storedOutcomes : gatherOutcomes() },
                 topicPlan: topicPlan, // Pass the AI-generated topic plan!
@@ -11321,7 +11456,7 @@ define([
             sum + (topic.sections?.filter(s => s.activity
                 || (s.cards || []).some(c => c && c.cardType === 'decision-point'))?.length || 0), 0) || 0;
         
-        const modeLabel = selectedMode === 'vet' ? 'Vocational (RTO)' : selectedMode === 'workplace' ? 'Workplace Training' : selectedMode === 'university' ? 'University' : selectedMode === 'topicstext' ? 'Topics and Text' : 'Professional Development';
+        const modeLabel = selectedMode === 'vet' ? 'Vocational (RTO)' : selectedMode === 'workplace' ? 'Workplace Training' : selectedMode === 'university' ? 'University' : 'General Learning';
 
         // v11.73: Extract validity gate results per topic from manifest cards (replaces dual scoring)
         let qaResultsHtml = '';

@@ -698,16 +698,24 @@ define([], function () {
     const buildPromptInjection = (countryCode, stateCode, contentType = 'content') => {
         const pack = getMergedPack(countryCode, stateCode);
 
-        let injection = `\nMANDATORY COMPLIANCE FRAMEWORK (${pack.meta.country}):
+        let injection = `
+VERIFIED COMPLIANCE CANDIDATE CONTEXT (${pack.meta.country}):
+The following rules come from the plugin's verified country/state pack. They are CANDIDATE CONTEXT,
+not proof that every group applies to this topic. Use only the groups genuinely relevant to the
+subject, source material, industry and learner task. If a group is unrelated, omit it from the
+learning content rather than forcing it in.
+
 ${pack.prompt_injection_block.system_instruction}
 
-Compliance Rules:${buildRulesBlock(pack, contentType)}
+Candidate rules:${buildRulesBlock(pack, contentType)}
 
-IMPORTANT: Legislation supports the content - it does not dominate it.
-- Write for learners, not lawyers
-- Use principle-based language, never cite section numbers
-- Avoid threatening or penalty language
-- Safety, inclusivity, and fairness are non-negotiable`;
+TRUTH RULES:
+- Never present a candidate group as relevant merely because it was supplied here.
+- Never invent an Act, Regulation, Code, Standard, clause, threshold or statutory timeframe.
+- Distinguish legal/regulatory duties from organisational policy, competency requirements and good practice.
+- Prefer an accurate general obligation over unsupported legal specificity.
+- Legislation supports the subject; it never becomes the subject unless the topic is actually regulatory.
+- Write for learners, not lawyers; avoid penalty/threat language unless the source specifically requires it.`;
 
         return injection;
     };

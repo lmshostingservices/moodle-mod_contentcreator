@@ -2068,9 +2068,13 @@ body.dark .cc5-player,
         gap: var(--cc5-space-3);
     }
     
+    /* v13.98.3: !important because the base .cc5-accent-card rule sits ~8000 lines
+       LATER in this file at equal specificity, so it won the cascade and mobile was
+       silently getting the desktop 24px gap. */
     .cc5-accent-card {
         padding: var(--cc5-space-4);
         margin-top: var(--cc5-space-4);
+        margin-bottom: var(--cc5-space-4) !important;
         gap: var(--cc5-space-3);
     }
     
@@ -2123,9 +2127,11 @@ body.dark .cc5-player,
         margin-bottom: var(--cc5-space-5);
     }
     
+    /* v13.98.3: see the note on the mobile rule above. */
     .cc5-accent-card {
         padding: var(--cc5-space-5);
         margin-top: var(--cc5-space-5);
+        margin-bottom: var(--cc5-space-5) !important;
     }
     
     .cc5-activity-intro {
@@ -10106,6 +10112,14 @@ body.dark .cc5-edit-modal-cancel:hover,
     padding: var(--cc5-space-5);
     border-radius: var(--cc5-radius-lg);
     margin-top: var(--cc5-space-6);
+    /* v13.97.2: accent cards had no bottom margin, so the Key Takeaway panel sat
+       flush against the first card block below it. */
+    margin-bottom: var(--cc5-space-6);
+}
+
+/* Stacked accent cards keep a single gap between them, not two. */
+.cc5-accent-card + .cc5-accent-card {
+    margin-top: 0;
 }
 
 .cc5-accent-card-icon {

@@ -32,7 +32,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (Prompts, CcState) {
+define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_contentcreator/card-quality'], function (Prompts, CcState, CardQuality) {
     'use strict';
 
     // v8.3.7: Debug logging with version prefix
@@ -50,6 +50,37 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     // v9.77 PERF: ccDiag also gated on CC_VERBOSE_LOG  -  was always-on and fired 20+
     // times per section including expensive JSON.stringify(context, null, 2) calls.
     const ccDiag = (...args) => ccLog('[CC DIAG]', ...args);
+
+    // v15: New authoring routes are vet | workplace | university | general.
+    // Legacy pd/topicstext remain readable but resolve through General for generation.
+    const ccNormaliseGenerationRoute = function(mode) {
+        return (mode === 'pd' || mode === 'topicstext') ? 'general' : (mode || 'general');
+    };
+
+
+    // v15: legislation packs are verified candidate context, not blanket course content.
+    // Inject them only when the actual topic/source signals a compliance dimension. This
+    // prevents generic WHS/privacy/EEO boilerplate from leaking into unrelated VET or
+    // Workplace topics while keeping named legal references source-grounded.
+    const ccLegislationRelevant = function(mode, context, topic) {
+        if (mode !== 'vet' && mode !== 'workplace') return false;
+        if (context?.forceLegislation === true) return true;
+        const parts = [
+            topic?.title, topic?.name, topic?.description, topic?.elementText, topic?.criterionText,
+            topic?.knowledgeEvidence, topic?.performanceEvidence, topic?.assessmentConditions,
+            context?.priorityContent, context?.pastedContent, context?.trainingType,
+            context?.industryContext, context?.additionalInstructions
+        ];
+        const text = parts.map(function(v) {
+            if (Array.isArray(v)) return v.join(' ');
+            if (v && typeof v === 'object') {
+                try { return JSON.stringify(v); } catch (e) { return ''; }
+            }
+            return v || '';
+        }).join(' ').toLowerCase();
+        if (!text.trim()) return false;
+        return /\b(act|regulation|regulations|code of practice|standard|legislation|legal|law|statutory|compliance|licen[cs]e|duty|obligation|whs|ohs|safety|hazard|risk|incident|privacy|personal information|discrimination|harassment|equal opportunity|electrical|food safety|manual handling|hazardous|child safety|safeguarding)\b/.test(text);
+    };
 
     // ===========================================================================
     // v7.9.65: DEBUG LOG CAPTURE SYSTEM (ChatGPT Approved)
@@ -97,6 +128,24 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     // v7.9.65: BANNED PHRASE REPLACER (ChatGPT Approved)
     // REWRITE logic - triggers full sentence rewrite, not just word swap
     // Removes "it is important to", "to ensure", "highlights the importance of"
+    //
+    // v13.98.2: FIFTEEN RULES REMOVED.
+    //
+    // This table is a blind find-and-replace run over every generated string, and it
+    // was the plugin's own contribution to the artefact class v13.98 set out to stop.
+    // "ensuring" -> "making sure" produced the "makes sure" family; "critical" ->
+    // "important" deleted a word that means something; "holistic" -> "complete" gave
+    // "this complete approach"; "landscape" -> "environment" turned landscape painting
+    // into environment painting on the Topics-and-Text route (recorded in the v13.95.8
+    // audit and never fixed here).
+    //
+    // v13.98 rewrote BANNED_WORDS in prompts.js - the list the MODEL is shown - but
+    // left this table, which is what actually rewrites the text. Fixing one without the
+    // other fixes nothing. What remains below is the set that is both a genuine LLM
+    // tell and grammatical in every position it can match.
+    //
+    // NOTE: "in total" does NOT come from here, and never did. It appears nowhere in
+    // this plugin. See the v13.98.2 finding on the vendor's rewrite passes.
     // ===========================================================================
     const BANNED_PHRASE_RULES = [
         { pattern: /\bthis section covers\b/gi, replace: "This section shows you" },
@@ -137,26 +186,13 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         { pattern: /\bdelve\b/gi, replace: "look at" },
         { pattern: /\bdive into\b/gi, replace: "look at" },
         { pattern: /\bunpack\b/gi, replace: "explain" },
-        { pattern: /\bexplore\b/gi, replace: "examine", academicSafe: true },
-        { pattern: /\bjourney\b/gi, replace: "process" , academicSafe: true},
-        { pattern: /\blandscape\b/gi, replace: "environment" , academicSafe: true},
         { pattern: /\bleverage\b/gi, replace: "use" },
         { pattern: /\butilize\b/gi, replace: "use" },
         { pattern: /\butilise\b/gi, replace: "use" },
-        { pattern: /\bfoster\b/gi, replace: "support" , academicSafe: true},
-        { pattern: /\bholistic\b/gi, replace: "complete", academicSafe: true },
-        { pattern: /\brobust\b/gi, replace: "strong" , academicSafe: true},
         { pattern: /\bsynergy\b/gi, replace: "cooperation" },
-        { pattern: /\bparadigm\b/gi, replace: "approach", academicSafe: true },
-        { pattern: /\bnavigate\b/gi, replace: "manage" , academicSafe: true},
-        { pattern: /\brealm\b/gi, replace: "area" , academicSafe: true},
         { pattern: /\btapestry\b/gi, replace: "mix" , academicSafe: true},
-        { pattern: /\bmultifaceted\b/gi, replace: "complex", academicSafe: true },
-        { pattern: /\bnuanced\b/gi, replace: "detailed", academicSafe: true },
-        { pattern: /\bpivotal\b/gi, replace: "important" , academicSafe: true},
         { pattern: /\bcutting-edge\b/gi, replace: "modern" },
         { pattern: /\bgame-changer\b/gi, replace: "improvement" },
-        { pattern: /\bempower\b/gi, replace: "enable" , academicSafe: true},
         { pattern: /\bstreamline\b/gi, replace: "simplify" },
         { pattern: /\bstakeholder engagement\b/gi, replace: "working with people involved" },
         { pattern: /\bbest practice\b/gi, replace: "proven method" },
@@ -165,8 +201,6 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         { pattern: /\bin today's\b/gi, replace: "in current" },
         { pattern: /\bin the modern workplace\b/gi, replace: "at work" },
         { pattern: /\bkey considerations\b/gi, replace: "main points" },
-        { pattern: /\bensuring\b/gi, replace: "making sure" },
-        { pattern: /\bcritical\b/gi, replace: "important", academicSafe: true },
         { pattern: /\bcomply with standards\b/gi, replace: "follow site rules" },
         { pattern: /\bfollow procedures appropriately\b/gi, replace: "follow the correct steps" },
         { pattern: /\bensure safety at all times\b/gi, replace: "keep the area safe" },
@@ -747,7 +781,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // painting" and "critical theory" into "important theory". University was already
         // exempted from the same rules for the same reason; this route needs it more, because
         // its whole selling point is that the subject is unconstrained.
-        const isAcademicMode = (mode === 'university' || mode === 'topicstext');
+        const isAcademicMode = (ccNormaliseGenerationRoute(mode) === 'university');
         let fixed = [...cards];
         fixed = deepCleanBannedPhrases(fixed, isAcademicMode);
         for (const card of fixed) {
@@ -955,7 +989,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         'analytical-lens',
         'ethics-considerations',
         'case-study-1',
-        'case-study-2'
+        'case-study-2',
+        // v13.98.1: the academic sequence now ends on a decision the learner commits to.
+        // See the note on UNIVERSITY_CARD_SCHEMA in prompts.js.
+        'decision-point'
     ];
 
     // v13.92: Route 5 - "Topics and Text". Four short prose cards with FIXED universal
@@ -981,7 +1018,30 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'
     ];
 
+    // v16: General is no longer the unified 7-card flow. It reuses 6 of the 7 unified
+    // card-shape renderers (drops applied-scenario), reassigned to the six-card adaptive
+    // Learning Arc - Orient, Understand, Explore, Apply, Challenge, Consolidate. See
+    // GENERAL_CARD_SCHEMA / CC_CARD_ORDER.general / GENERAL_SYSTEM_PROMPT in prompts.js.
+    // VET, Workplace and PD still use UNIFIED_CARD_ORDER below - untouched.
+    const GENERAL_CARD_ORDER = [
+        'hook-scenario',       // ORIENT
+        'concept-explainer',   // UNDERSTAND
+        'mistakes',            // EXPLORE
+        'mental-model',        // APPLY (Instructional Model Router)
+        'decision-point',      // CHALLENGE
+        'competency-summary'   // CONSOLIDATE
+    ];
+
     const getExpectedCardOrder = (mode, activitiesEnabled) => {
+        // v16: General's own 6-card order. Must come before the generic fallback below,
+        // which would otherwise return the WRONG (7-card) UNIFIED_CARD_ORDER for general.
+        if (mode === 'general') {
+            var genOrder = GENERAL_CARD_ORDER.slice();
+            if (activitiesEnabled === false) {
+                genOrder = genOrder.filter(function (t) { return t !== 'decision-point'; });
+            }
+            return genOrder;
+        }
         // v13.92: topics-and-text now carries a decision-point like the unified routes,
         // so the activities toggle applies to it in exactly the same way.
         if (mode === 'topicstext') {
@@ -991,9 +1051,15 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
             }
             return ttOrder;
         }
-        // v13.65: university has its own 6-card academic sequence and no decision-point.
+        // v13.98.1: university has a decision-point since v13.98.1, so the activities
+        // toggle now applies to it exactly as it does to every other route. Before this
+        // it was the one route with no retrieval practice and no activity block.
         if (mode === 'university') {
-            return UNIVERSITY_CARD_ORDER.slice();
+            var uniOrder = UNIVERSITY_CARD_ORDER.slice();
+            if (activitiesEnabled === false) {
+                uniOrder = uniOrder.filter(function (t) { return t !== 'decision-point'; });
+            }
+            return uniOrder;
         }
         // v10.27: unified 7-card flow for vet / workplace / pd
         var order = UNIFIED_CARD_ORDER.slice();
@@ -1355,7 +1421,30 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                     card.conceptInsights = card.keyPoints;
                 }
                 // v13.89: reverted for the same reason as sceneParts above.
-                if (!card.legalLink && card.keyInfo) {
+                // v13.98: do not build the panel when there is no real governing document.
+                //
+                // The v13.97.1 Sports Nutrition pack rendered a "Legislation" panel on all
+                // five slides of a topic that has no legislation, filled with invented
+                // obligations that were not obligations: "Obligation: Each energy system
+                // contributes to ATP production based on exercise intensity and duration."
+                // That is a fact with a compliance label stapled to it, and a subject-matter
+                // expert reads it as the system not knowing what it is talking about.
+                //
+                // The tell is the heading: when the model has no document to name it either
+                // leaves it empty or echoes the topic title back. Either way there is no
+                // document, so there is no panel. legislationName must be a NAME.
+                var _llHeading = String(card.heading || '').trim();
+                var _llTopic = String(card.topicTitle || '').trim();
+                var _llNorm = function (s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+                var _llIsRealDocument = !!_llHeading &&
+                    _llNorm(_llHeading) !== _llNorm(_llTopic) &&
+                    _llHeading.split(/\s+/).length <= 14;
+                if (!card.legalLink && card.keyInfo && !_llIsRealDocument) {
+                    ccWarn('[LEGAL LINK] no governing document named for "' + (_llTopic || 'this topic') +
+                        '" (heading: "' + _llHeading + '") - panel suppressed rather than shown ' +
+                        'with an invented obligation');
+                }
+                if (!card.legalLink && card.keyInfo && _llIsRealDocument) {
                     card.legalLink = {
                         legislationName: card.heading || '',
                         legalObligation: card.keyInfo,
@@ -1930,6 +2019,18 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 state: context?.state || '',
                 // v10.27: hook-scenario narrative context so the image depicts the actual job story
                 scenarioContext: section.scenarioContext || '',
+                // v13.98.2: the BULK image route sent no aspect ratio at all, while the
+                // single-slide route in player5.js has always sent '16:9'. Almost every
+                // image in a pack comes through THIS path, so almost every image was
+                // being generated at the model's default (square) and then displayed in
+                // a 16:9-ish box by .cc5-slide-image (width:100%, max-height:480px,
+                // object-fit:cover). A square source in that box is cropped to about 40%
+                // of its own height and scaled UP to the container width - which is a
+                // large part of what "the images look low res" actually is.
+                //
+                // The vendor decides the pixel dimensions; this at least stops it
+                // composing for a shape the player never displays.
+                aspectRatio: '16:9',
             };
 
             ccDiag('generateTopicImage() Request data:', JSON.stringify(requestData).substring(0, 300));
@@ -2166,6 +2267,52 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     };
 
     /**
+     * v14.1.1: same traversal as harvestCardText(), but inserts a sentence-terminating
+     * period between two joined fields when the first does not already end in
+     * [.!?]. harvestCardText() joins every field with a single space and no
+     * punctuation, which is correct for the checks that only look for keywords or
+     * substrings (sourceAnchorIssues, subjectDriftIssues, and so on) - but it means a
+     * short "title" field glued straight onto the next field's first word reads, to
+     * splitSentences(), as one run-on sentence. That produced false "longest sentence
+     * exceeds limit" flags on well-formed content, on every title-bearing card type
+     * (hook-scenario, applied-scenario, concept-explainer, mental-model), because the
+     * title and the sentence after it were never a single sentence to begin with.
+     *
+     * Scoped to the two checks that actually split text into sentences
+     * (readabilityIssues, duplicateSentenceIssues) rather than changing
+     * harvestCardText() itself, so the many other checks that rely on its plain
+     * space-joined output are untouched.
+     *
+     * @param {Object|Array|String} node Card, or any node within it.
+     * @param {Number} depth Recursion guard.
+     * @return {String} Space-joined prose with sentence boundaries preserved between fields.
+     */
+    const harvestCardTextForSentences = function (node, depth, skipKey) {
+        depth = depth || 0;
+        if (depth > 6 || node === null || node === undefined) { return ''; }
+        if (typeof node === 'string') { return node; }
+        if (depth === 0) { skipKey = ccDedupeKeysFor(node); }
+        if (!skipKey) { skipKey = function (k) { return CC_NON_PROSE_KEYS.test(k); }; }
+        var join = function (parts) {
+            return parts.filter(Boolean).reduce(function (acc, part) {
+                if (!acc) { return part; }
+                var needsStop = !/[.!?]['")\]]?$/.test(acc.trim());
+                return acc + (needsStop ? '.' : '') + ' ' + part;
+            }, '');
+        };
+        if (Array.isArray(node)) {
+            return join(node.map(function (item) {
+                return harvestCardTextForSentences(item, depth + 1, skipKey);
+            }));
+        }
+        if (typeof node !== 'object') { return ''; }
+        return join(Object.keys(node).map(function (key) {
+            if (skipKey(key)) { return ''; }
+            return harvestCardTextForSentences(node[key], depth + 1, skipKey);
+        }));
+    };
+
+    /**
      * Approximate syllable count for an English word.
      *
      * Vowel-group heuristic with the usual silent-e and -le corrections. It is not
@@ -2199,11 +2346,29 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
     };
 
     /** Reading-grade ceiling and sentence-length ceiling per route. */
+    // v13.98.2: sentence caps raised to MATCH the caps the prompts state.
+    //
+    // They did not match, and the mismatch was the single largest cause of thin
+    // content in this pipeline. The prompt asked for "EXACTLY 2 sentences, 42-58
+    // words" while telling the model to keep sentences under 20 words, and this
+    // validator then enforced 18. Two sentences of at most 18 words is 36 words -
+    // so the 42-58 word range was ARITHMETICALLY IMPOSSIBLE, on every scenario card,
+    // on all three unified routes, since the ranges were introduced in v13.94.3.
+    //
+    // Measured output sat at 28.1 and 27.1 words on the two scenario cards and 20.8
+    // on the mistakes consequence: exactly two short sentences, every time. The model
+    // was not ignoring the word ranges - it was obeying the constraint that made them
+    // unreachable, which is the one it could actually satisfy.
+    //
+    // The prompts now ask for three short sentences, and these caps match what the
+    // prompts say, so the ranges are reachable: 3 x 20 = 60 against a 42-58 ask.
     const CC_READABILITY_TARGET = {
-        vet: { grade: 9, sentence: 18 },
-        workplace: { grade: 9, sentence: 18 },
-        pd: { grade: 11, sentence: 20 },
-        university: { grade: 14, sentence: 22 },
+        vet: { grade: 9, sentence: 20 },
+        workplace: { grade: 9, sentence: 20 },
+        pd: { grade: 11, sentence: 22 },
+        // v13.98.3: 25 to match "Sentences under 25 words" in the prompt. This was the
+        // only route whose validator was STRICTER than its own instruction.
+        university: { grade: 14, sentence: 25 },
         // v13.92: general-audience explanatory prose, sentences capped at 22 by prompt.
         topicstext: { grade: 10, sentence: 22 }
     };
@@ -2219,7 +2384,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         var target = CC_READABILITY_TARGET[mode] || CC_READABILITY_TARGET.pd;
         var issues = [];
         cards.forEach(function (card, i) {
-            var text = harvestCardText(card, 0);
+            var text = harvestCardTextForSentences(card, 0);
             var sentences = splitSentences(text);
             if (!sentences.length) { return; }
             var words = sentences.join(' ').split(/\s+/).filter(Boolean);
@@ -2269,6 +2434,18 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // pack written to the per-field minima passes and only genuinely short content
         // trips. The binding card is mental-model: 4 steps x (3-6 + 35-45 words) counts
         // about 152, which is why 165 was wrong. Re-derive these if the field ranges move.
+        // v13.98: these are now only a FALLBACK, used for card types that have no entry
+        // in Prompts.CC_FIELD_SPECS (the legacy types below, and anything a future route
+        // adds before its specs are written). Every current card type gets a floor
+        // derived from its own field ranges in depthIssues() instead - see the note
+        // there, and getCardWordRange() in prompts.js.
+        //
+        // A single route-wide floor was never able to be correct. The old value of 145
+        // was set below the thinnest compliant card and the v13.97.1 pack sailed through
+        // it at ~143 words a card; raising it to the middle of the stated band would
+        // have failed a fully compliant concept-explainer (154-220 on VET) and
+        // mental-model (152-204) on every single generation. The band the prompts state
+        // and the ranges their own fields sum to have never agreed.
         vet: { floor: 145, band: '180-300' },
         workplace: { floor: 145, band: '180-300' },
         pd: { floor: 145, band: '180-300' },
@@ -2317,8 +2494,34 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
             const words = harvestCardText(card, 0).split(/\s+/).filter(Boolean).length;
             packWords += words;
             scored++;
-            if (words < target.floor) {
-                thin.push({ n: i + 1, type: card.cardType || 'unknown', words: words });
+
+            // v13.98: the floor for THIS card type, derived from its own field specs,
+            // rather than one number for the whole route.
+            //
+            // A single route-wide floor cannot be right: on VET a fully compliant
+            // concept-explainer is 154-220 words and a fully compliant mental-model is
+            // 152-204, so any floor high enough to catch a genuinely thin hook-scenario
+            // (180-252) fails those two forever. Deriving it from the specs means a card
+            // written to spec always passes and a thin one never does, on every route,
+            // without anyone maintaining a second set of numbers.
+            let floor = target.floor;
+            let band = target.band;
+            if (Prompts && typeof Prompts.getCardWordRange === 'function') {
+                // v13.98.3: pass the card so a spec with a variable item count
+                // (mental-model is 4-5 steps, frameworks 2-3, keyTerms 3-4) is costed on
+                // what this card ACTUALLY returned. Costing a 5-step card at 4 told the
+                // repair pass a compliant card was ~56 words over and should be cut.
+                const range = Prompts.getCardWordRange(mode, card.cardType, card);
+                if (range && range.min) {
+                    // Just under the summed minima: fields not covered by a spec (a
+                    // heading, a card title, the key takeaway) add words on top, so the
+                    // sum is a true lower bound and needs a little tolerance.
+                    floor = Math.round(range.min * 0.95);
+                    band = range.min + '-' + range.max;
+                }
+            }
+            if (words < floor) {
+                thin.push({ n: i + 1, type: card.cardType || 'unknown', words: words, floor: floor, band: band });
             }
         });
 
@@ -2336,29 +2539,1023 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // exactly what "it used to be better" looks like once measured. Report the
         // section verdict FIRST so it survives the top-five slice.
         const mean = Math.round(packWords / scored);
-        const bandFloor = parseInt(target.band.split('-')[0], 10);
-        if (mean < bandFloor) {
+        // v13.98: the section verdict is measured against what THIS section's card types
+        // add up to when written to spec, not against a route-wide band the field specs
+        // cannot actually produce. See getCardWordRange() in prompts.js.
+        let expectedTotal = 0;
+        let expectedScored = 0;
+        cards.forEach(function (card) {
+            if (card.cardType === 'decision-point') { return; }
+            let min = null;
+            if (Prompts && typeof Prompts.getCardWordRange === 'function') {
+                const r = Prompts.getCardWordRange(mode, card.cardType, card);
+                if (r && r.min) { min = r.min; }
+            }
+            if (min === null) { min = parseInt(target.band.split('-')[0], 10); }
+            expectedTotal += min;
+            expectedScored++;
+        });
+        const expectedMean = expectedScored ? Math.round(expectedTotal / expectedScored) : 0;
+        if (expectedMean && mean < Math.round(expectedMean * 0.95)) {
             issues.push('THE WHOLE SECTION IS TOO THIN: it averages ' + mean + ' words of visible ' +
-                'content per card, against a working band of ' + target.band + '. Deepen every card ' +
-                'below the band, shortest first.' + how);
+                'content per card. Written to the specification these cards average at least ' +
+                expectedMean + '. Deepen every card below its own range, shortest first.' + how);
         }
 
         if (thin.length > 2) {
             // Collapse to one instruction naming every offender, so the repair pass
-            // sees all of them rather than the first five.
-            issues.push(thin.length + ' cards are below the ' + target.floor + '-word floor and MUST ' +
-                'be expanded: ' + thin.map(function (t) {
-                    return 'card ' + t.n + ' (' + t.type + ', ' + t.words + ' words)';
-                }).join(', ') + '. Target ' + target.band + ' words each.' + how);
+            // sees all of them rather than the first five. v13.98: each card now
+            // carries its own derived band, so it is named per card.
+            issues.push(thin.length + ' cards are below the word count their own fields require ' +
+                'and MUST be expanded: ' + thin.map(function (t) {
+                    return 'card ' + t.n + ' (' + t.type + ', ' + t.words + ' words, needs ' + t.band + ')';
+                }).join(', ') + '.' + how);
         } else {
             thin.forEach(function (t) {
                 issues.push('Card ' + t.n + ' (' + t.type + '): only ' + t.words + ' words of visible ' +
-                    'content, the floor is ' + target.floor + ' and the working band is ' +
-                    target.band + '.' + how);
+                    'content. Written to spec this card is ' + t.band + ' words.' + how);
             });
         }
 
         return issues;
+    };
+
+    // =========================================================================
+    // v13.98: PER-FIELD MEASUREMENT
+    //
+    // depthIssues() above measures whole cards against a floor. That cannot see
+    // uniform per-field shortfall, which is the failure mode that actually ships:
+    // in the v13.97.1 Sports Nutrition pack 16 of 172 learner-facing fields (9%)
+    // met the word ranges the prompt states, and the mistakes card was 0 of 50 -
+    // yet the cards summed close enough to the floor to pass.
+    //
+    // The ranges now live in ONE place, Prompts.getFieldSpecs(mode), and both the
+    // prompt prose and these checks read from it.
+    // =========================================================================
+
+    /** Words in a string, whitespace-delimited. */
+    const ccWordCount = function (str) {
+        return String(str || '').trim().split(/\s+/).filter(Boolean).length;
+    };
+
+    /**
+     * Read every value a field spec path points at.
+     *
+     * Path grammar: dot-separated segments; a segment ending "[]" iterates an array.
+     *   'keyInfo'                     -> the string
+     *   'legalLink.legalObligation'   -> nested string
+     *   'sceneParts[].text'           -> one entry per array element
+     *   'paragraphs[]'                -> the array elements themselves
+     *
+     * @param {Object} card The card.
+     * @param {String} path The path.
+     * @return {Array} [{index, text}] for each value found (missing values omitted).
+     */
+    const ccReadFieldPath = function (card, path) {
+        var segs = String(path || '').split('.');
+        var nodes = [{ index: null, value: card }];
+        for (var s = 0; s < segs.length; s++) {
+            var seg = segs[s];
+            var isArr = seg.slice(-2) === '[]';
+            var key = isArr ? seg.slice(0, -2) : seg;
+            var next = [];
+            nodes.forEach(function (n) {
+                if (n.value === null || n.value === undefined) { return; }
+                var v = key ? n.value[key] : n.value;
+                if (v === null || v === undefined) { return; }
+                if (isArr) {
+                    if (!Array.isArray(v)) { return; }
+                    v.forEach(function (item, i) {
+                        next.push({ index: (n.index === null ? i : n.index), value: item });
+                    });
+                } else {
+                    next.push({ index: n.index, value: v });
+                }
+            });
+            nodes = next;
+        }
+        return nodes
+            .map(function (n) {
+                return { index: n.index, text: (typeof n.value === 'string') ? n.value : '' };
+            })
+            .filter(function (n) { return n.text.trim().length > 0; });
+    };
+
+    /**
+     * v13.98.3: the same walk, WITHOUT dropping empty values.
+     *
+     * ccReadFieldPath compacts empties out, which is right when you are looking for
+     * content and wrong when you are checking whether content is there. Two defects
+     * came from the compacted version: a field that was absent, empty or a non-string
+     * could never be reported as short (so a mistakes card with five blank
+     * consequences measured as perfect), and paired reads went out of alignment.
+     *
+     * @param {Object} card The card.
+     * @param {String} path The path.
+     * @return {Array} [{index, text}] for every position the path reaches, empties kept.
+     */
+    const ccReadFieldPathRaw = function (card, path) {
+        var segs = String(path || '').split('.');
+        var nodes = [{ index: null, value: card }];
+        for (var s = 0; s < segs.length; s++) {
+            var seg = segs[s];
+            var isArr = seg.slice(-2) === '[]';
+            var key = isArr ? seg.slice(0, -2) : seg;
+            var next = [];
+            nodes.forEach(function (n) {
+                if (n.value === null || n.value === undefined) { return; }
+                var v = key ? n.value[key] : n.value;
+                if (isArr) {
+                    if (!Array.isArray(v)) { return; }
+                    v.forEach(function (item, i) {
+                        next.push({ index: (n.index === null ? i : n.index), value: item });
+                    });
+                } else {
+                    next.push({ index: n.index, value: (v === undefined ? null : v) });
+                }
+            });
+            nodes = next;
+        }
+        return nodes.map(function (n) {
+            return { index: n.index, text: (typeof n.value === 'string') ? n.value : '' };
+        });
+    };
+
+    /**
+     * Resolve a spec's values, trying the canonical path first and then the vendor
+     * aliases normalizeCardSchema() retains alongside it.
+     *
+     * @param {Object} card The card.
+     * @param {Object} spec One field spec entry.
+     * @return {Array} [{index, text}]
+     */
+    const ccReadSpecValues = function (card, spec) {
+        var vals = ccReadFieldPath(card, spec.path);
+        if (vals.length) { return vals; }
+        var aliases = spec.alias || [];
+        for (var a = 0; a < aliases.length; a++) {
+            vals = ccReadFieldPath(card, aliases[a]);
+            if (vals.length) { return vals; }
+        }
+        return [];
+    };
+
+    /**
+     * v13.98: measure every learner-facing field against its stated range.
+     *
+     * Only SHORT fields are reported as issues. An over-long field is left alone:
+     * readabilityIssues() already caps sentence length and the card at 320 words, and
+     * a repair instruction to cut is how content gets deleted.
+     *
+     * @param {Array} cards Normalised cards.
+     * @param {String} mode Route mode.
+     * @return {Array} Issue strings naming the field, its count and its target.
+     */
+    const fieldIssues = function (cards, mode) {
+        if (!Prompts || typeof Prompts.getFieldSpecs !== 'function') { return []; }
+        var specs = Prompts.getFieldSpecs(mode);
+        if (!specs) { return []; }
+        var issues = [];
+        var shortCount = 0;
+        var measured = 0;
+
+        cards.forEach(function (card, ci) {
+            var cardSpecs = specs[card.cardType];
+            if (!cardSpecs) { return; }
+            cardSpecs.forEach(function (spec) {
+                var min = spec.min;
+                var max = spec.max;
+                // University frameworks: the stated range depends on how many were returned.
+                if (spec.byCount && Array.isArray(card.frameworks)) {
+                    var byN = spec.byCount[card.frameworks.length];
+                    if (byN) { min = byN[0]; max = byN[1]; }
+                }
+                // v13.98.3: raw read, so an absent or empty field measures 0 and is
+                // reported, instead of vanishing before it can be counted.
+                var values = ccReadFieldPathRaw(card, spec.path);
+                if (!values.length && spec.alias) {
+                    for (var ai = 0; ai < spec.alias.length && !values.length; ai++) {
+                        values = ccReadFieldPathRaw(card, spec.alias[ai]);
+                    }
+                }
+                values.forEach(function (v) {
+                    var n = ccWordCount(v.text);
+                    measured++;
+                    if (n >= min) { return; }
+                    shortCount++;
+                    var where = 'Card ' + (ci + 1) + ' (' + (card.cardType || 'unknown') + ') ' +
+                        spec.label + (v.index === null ? '' : ' ' + (v.index + 1));
+                    issues.push(where + ': ' + n + ' words, needs ' + min + '-' + max + '. ' +
+                        (spec.hint || 'Add a specific that carries information: a figure, a threshold, a named example or a named consequence.') +
+                        ' Keep every sentence that is already there.');
+                });
+            });
+        });
+
+        // The per-field list can be long. Lead with the verdict so it survives the
+        // repair prompt's five-issue slice, then keep the worst offenders.
+        // The verdict is for a section written short THROUGHOUT, not one with a few
+        // fields a word or two under. A handful of misses is ordinary drafting and the
+        // per-field lines below already name them; the verdict is what tells a repair
+        // pass that length is the whole problem, so it should only fire when it is.
+        if (shortCount >= 6 && measured > 0 && (shortCount / measured) >= 0.2) {
+            issues.unshift('THE PACK IS WRITTEN SHORT: ' + shortCount + ' of ' + measured +
+                ' learner-facing fields are under their specified word range. This is the whole ' +
+                'problem with the section - every field below needs MORE CONTENT, not longer ' +
+                'sentences. Add specifics; never pad, never restate, never delete.');
+        }
+        return issues;
+    };
+
+    /**
+     * v13.98: decision-point answer-length parity.
+     *
+     * The parity rule is stated in prose on every route in prompts.js and was enforced
+     * nowhere. v13.97.1 shipped a correct answer of 27 words against distractors of 5,
+     * 4 and 7 words, with the only justification clause attached to the correct one -
+     * answerable by shape, without reading a word of the subject matter. Three further
+     * questions failed the opposite way, every option a 3-9 word stub.
+     *
+     * @param {Array} cards Normalised cards.
+     * @return {Array} Issue strings.
+     */
+    const optionParityIssues = function (cards) {
+        var spec = (Prompts && Prompts.CC_OPTION_SPEC) || { min: 10, max: 16, maxRatio: 1.4 };
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            if (card.cardType !== 'decision-point') { return; }
+            var options = Array.isArray(card.options) ? card.options : null;
+            if (!options || options.length < 2) { return; }
+            var lens = options.map(function (o) { return ccWordCount(o && (o.text || o.option || '')); });
+            var lo = Math.min.apply(null, lens);
+            var hi = Math.max.apply(null, lens);
+            var prefix = 'Card ' + (ci + 1) + ' (decision-point)';
+
+            var stubs = [];
+            lens.forEach(function (n, i) {
+                if (n < spec.min) { stubs.push((i + 1) + ' (' + n + ' words)'); }
+            });
+            if (stubs.length) {
+                issues.push(prefix + ': option ' + stubs.join(', option ') + ' below the ' +
+                    spec.min + '-' + spec.max + ' word range. Rewrite EVERY option as a complete, ' +
+                    'specific action of ' + spec.min + '-' + spec.max + ' words. A stub like ' +
+                    '"Overlook client feedback" is not an answer anyone would choose.');
+            }
+            if (lo > 0 && hi / lo > spec.maxRatio) {
+                var longest = lens.indexOf(hi) + 1;
+                var correctIdx = -1;
+                options.forEach(function (o, i) { if (o && o.correct) { correctIdx = i + 1; } });
+                issues.push(prefix + ': option ' + longest + ' is ' + hi + ' words and the shortest ' +
+                    'is ' + lo + '. Every option must be the same length and the same level of ' +
+                    'detail (' + spec.min + '-' + spec.max + ' words each)' +
+                    (longest === correctIdx
+                        ? ', and option ' + longest + ' is the CORRECT one - the learner can pick it ' +
+                          'without knowing anything. Move its reasoning into its feedback.'
+                        : '.'));
+            }
+        });
+        return issues;
+    };
+
+    /**
+     * v13.98: distractors that announce their own wrongness.
+     *
+     * Every wrong option in the v13.97.1 pack was a self-evidently bad idea: "Use only
+     * technical terms", "Assume all clients need the same advice", "Update knowledge
+     * sporadically". A question whose distractors are all obviously silly measures
+     * nothing, teaches nothing, and tells the learner the pack is not serious.
+     *
+     * This pattern catches nearly all of them: a wrong option built out of a negation
+     * or an absolute rather than out of a real competing choice.
+     */
+    // v13.98.3: bare "only", "never" and "always" removed - they are ordinary words in a
+    // legitimate distractor ("Refuel only at the four-hour mark", "Always recheck the drip
+    // rate at 30 minutes"), and two such options on one card fired a paid repair. What
+    // remains is the self-announcing pattern: an option that tells the learner it is wrong.
+    const CC_TELL_PATTERNS = [
+        /\b(focus|rely|concentrate)\s+(solely|only)\b/i, /\bsolely\s+on\b/i,
+        /\bignor(e|ing)\b/i, /\boverlook(ing)?\b/i, /\bneglect(ing)?\b/i,
+        /\bsporadic(ally)?\b/i, /\bassume (that )?(all|every|everyone)\b/i,
+        /\bdo nothing\b/i, /\bdon'?t bother\b/i, /\bnever\s+(check|ask|record|report|review|update)\b/i,
+        /\ball (clients|learners|athletes|staff|customers) (are|need) the same\b/i,
+        /\buse only technical\b/i, /\bwithout (checking|asking|recording|reviewing)\b/i
+    ];
+
+    const distractorQualityIssues = function (cards) {
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            if (card.cardType !== 'decision-point') { return; }
+            var options = Array.isArray(card.options) ? card.options : [];
+            var flagged = [];
+            options.forEach(function (o, i) {
+                if (!o || o.correct) { return; }
+                var text = String(o.text || o.option || '');
+                var hit = CC_TELL_PATTERNS.some(function (re) { return re.test(text); });
+                if (hit) { flagged.push((i + 1) + ' ("' + text.slice(0, 48) + '")'); }
+            });
+            // One giveaway is a wording slip; two or more is the whole question.
+            if (flagged.length >= 2) {
+                issues.push('Card ' + (ci + 1) + ' (decision-point): wrong option ' +
+                    flagged.join(' and option ') + ' announce their own wrongness, so the question ' +
+                    'tests nothing. Replace them with choices a COMPETENT person might actually ' +
+                    'make - a real misconception, or a rule applied at the wrong threshold. Draw ' +
+                    'them from the beliefs the reference material corrects.');
+            }
+        });
+        return issues;
+    };
+
+    /**
+     * v13.98: the concreteness gate.
+     *
+     * The scenario cards are asked for "the place, the time of day, the equipment, what
+     * the learner can see or hear". What v13.97.1 returned was "During a team meeting,
+     * the nutritionist explains how the body produces energy for exercise" - the
+     * DESCRIPTION of a scenario rather than a scenario. A field with no proper noun, no
+     * number and no time marker cannot be pictured, and a learner remembers a moment,
+     * not a principle.
+     *
+     * Cheap to check, and it is the single largest memorability win available.
+     */
+    const CC_CONCRETE_TIME = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|morning|afternoon|evening|night|midday|noon|shift|handover|o'clock|am\b|pm\b|yesterday|today|tomorrow|last week|next week|week before|day before)\b/i;
+    const CC_CONCRETE_NUM = /\b\d/;
+    // A capitalised word that is not the first word of a sentence: a name, a brand, a
+    // system, a place. Deliberately loose - it is a floor, not a style rule.
+    const CC_CONCRETE_PROPER = /(?:[a-z,;]\s+)([A-Z][a-zA-Z''-]{2,})/;
+
+    // Applied to every route, so no route is left without the gate: the two scenario
+    // cards on VET/Workplace/PD, both case studies and the analytical lens on
+    // University ("each one carrying a concrete example"), and the worked-examples
+    // card on Topics-and-Text ("Name real particulars - a place, a role, a situation").
+    // Each of those specs already asks for something picturable; this is what checks it.
+    const CC_CONCRETE_TARGETS = {
+        'hook-scenario': [{ path: 'sceneParts[].text', alias: ['keyPoints[].text'], label: 'scene panel' }],
+        'applied-scenario': [{ path: 'sceneParts[].text', alias: ['keyPoints[].text'], label: 'scene panel' }],
+        'case-study-1': [{ path: 'context', alias: [], label: 'case context' }],
+        'case-study-2': [{ path: 'context', alias: [], label: 'case context' }],
+        'analytical-lens': [{ path: 'cognitiveConsiderations[]', alias: [], label: 'consideration' }],
+        'examples-application': [{ path: 'paragraphs[]', alias: [], label: 'example paragraph' }]
+    };
+
+    const concretenessIssues = function (cards) {
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            var targets = CC_CONCRETE_TARGETS[card.cardType];
+            if (!targets) { return; }
+            var abstractCount = 0;
+            var total = 0;
+            var firstExample = '';
+            targets.forEach(function (t) {
+                ccReadSpecValues(card, t).forEach(function (v) {
+                    total++;
+                    var text = v.text;
+                    var concrete = CC_CONCRETE_TIME.test(text) || CC_CONCRETE_NUM.test(text) ||
+                        CC_CONCRETE_PROPER.test(text);
+                    if (!concrete) {
+                        abstractCount++;
+                        if (!firstExample) { firstExample = text.slice(0, 80); }
+                    }
+                });
+            });
+            // Half or more of the panels carrying nothing picturable is a card-level
+            // failure, not a wording slip on one panel.
+            if (total >= 2 && abstractCount >= Math.ceil(total / 2)) {
+                issues.push('Card ' + (ci + 1) + ' (' + card.cardType + '): ' + abstractCount +
+                    ' of ' + total + ' panels contain nothing a learner could picture - no name, ' +
+                    'no number, no time of day. Rewrite them around a specific moment: who is ' +
+                    'there, when, what they can see, what is at stake. Example of the problem: "' +
+                    firstExample + '"');
+            }
+        });
+        return issues;
+    };
+
+    /**
+     * v13.98: the key takeaway, which until now was specified nowhere and validated
+     * never. Four of the five slides in the v13.97.1 pack carried a 16-19 word
+     * abstraction; the fifth carried none at all, and nothing noticed.
+     *
+     * @param {Array} cards Normalised cards.
+     * @return {Array} Issue strings.
+     */
+    const keyTakeawayIssues = function (cards) {
+        var spec = (Prompts && Prompts.CC_KEY_TAKEAWAY_SPEC) || { min: 28, max: 40 };
+        var banned = (Prompts && Prompts.CC_TAKEAWAY_BANNED_OPENINGS) || [];
+        var issues = [];
+        if (!cards.length) { return issues; }
+        // The field is read off card 1 by buildSectionFromCards().
+        var card = cards[0] || {};
+        var text = String(card.keyTakeaway || '').trim();
+        if (!text) {
+            issues.push('Card 1 (' + (card.cardType || 'unknown') + '): no keyTakeaway. Every slide ' +
+                'must carry one - ' + spec.min + '-' + spec.max + ' words, two sentences. Sentence ' +
+                'one is the single load-bearing FACT of this slide with its number or name in it; ' +
+                'sentence two says what that changes about what the learner does.');
+            return issues;
+        }
+        var n = ccWordCount(text);
+        if (n < spec.min) {
+            issues.push('Card 1: keyTakeaway is ' + n + ' words, needs ' + spec.min + '-' + spec.max +
+                '. Add the second sentence saying what the fact changes about what the learner does.');
+        }
+        var lower = text.toLowerCase();
+        var opener = banned.filter(function (b) { return lower.indexOf(b) === 0; })[0];
+        if (opener) {
+            issues.push('Card 1: keyTakeaway opens "' + text.slice(0, 40) + '" - it asserts that the ' +
+                'topic matters instead of saying the thing that matters. Rewrite it to open on the ' +
+                'fact itself, with its number, threshold or name.');
+        }
+        return issues;
+    };
+
+    // =========================================================================
+    // v13.99: CHECKS DERIVED FROM THE CONTENT QUALITY STANDARD.
+    //
+    // Everything above this point measures whether a card is the right SIZE. These
+    // measure whether it is worth reading. They are named after the standard's own
+    // criteria so a finding can be traced back to the rule it came from.
+    // =========================================================================
+
+    /**
+     * v13.99: does this text carry a quantity? Digits OR words.
+     *
+     * The first version tested for a digit, which failed prose that spells its figures -
+     * and good instructional writing spells them constantly ("ten grams per kilo",
+     * "five or six feeds"). It marked a genuinely procedural card as meta-procedure.
+     */
+    const CC_SPELLED_NUMBER = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand)\b/i;
+
+    const ccHasQuantity = function (text) {
+        var t = String(text || '');
+        if (/\b\d/.test(t)) { return true; }
+        return CC_SPELLED_NUMBER.test(t);
+    };
+
+    /**
+     * T1-4 / "made of things, not categories": does this card carry a teachable
+     * specific - a number, a threshold, a named thing - or is it built from category
+     * labels? Every card in the reviewed pack was built from category labels.
+     */
+    const CC_CATEGORY_LABELS = /\b(tailored|balanced|appropriate|optimal|effective|individual needs|best practice|in-depth|comprehensive understanding|staying informed|clear communication|relevant advice)\b/i;
+
+    const specificDensityIssues = function (cards, mode) {
+        var issues = [];
+        var specs = (Prompts && typeof Prompts.getFieldSpecs === 'function') ? Prompts.getFieldSpecs(mode) : null;
+        if (!specs) { return issues; }
+        cards.forEach(function (card, ci) {
+            if (!specs[card.cardType]) { return; }
+            var text = harvestCardText(card, 0);
+            if (!text || text.split(/\s+/).length < 40) { return; }
+            // A number, or a capitalised word mid-sentence (a name, a system, a method).
+            var hasNumber = ccHasQuantity(text);
+            var hasNamedThing = /(?:[a-z,;]\s+)([A-Z][a-zA-Z''-]{2,})/.test(text);
+            if (!hasNumber && !hasNamedThing) {
+                issues.push('Card ' + (ci + 1) + ' (' + card.cardType + '): carries no teachable ' +
+                    'specific - no number, no threshold, no named thing anywhere on it. A card ' +
+                    'built out of category labels is a card with the content taken out. Put in ' +
+                    'the figure, the dose, the duration, the named method or the named study from ' +
+                    'the reference material.');
+            }
+        });
+        return issues;
+    };
+
+    /**
+     * T2-6: the mistakes card is diagnostic, not moral.
+     *
+     * 24 of the 25 mistakes in the reviewed pack opened on this construction, which
+     * turns an error a knowledgeable person makes into a character flaw anyone could
+     * be accused of - and which can be written without reading the source at all.
+     */
+    const CC_MORAL_MISTAKE = /^\s*(?:not\s+)?(ignoring|neglecting|overlooking|failing to|rushing|assuming (?:all|every|one)|not caring|forgetting to|disregarding|underestimating)\b/i;
+
+    const moralMistakeIssues = function (cards) {
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            if (card.cardType !== 'mistakes') { return; }
+            var labels = ccReadSpecValues(card, {
+                path: 'items[].mistake', alias: ['errorItems[].error']
+            });
+            if (labels.length < 4) { return; }
+            var moral = labels.filter(function (v) { return CC_MORAL_MISTAKE.test(v.text); });
+            if (moral.length >= 3) {
+                issues.push('Card ' + (ci + 1) + ' (mistakes): ' + moral.length + ' of ' +
+                    labels.length + ' are attitudes rather than actions  -  ' +
+                    moral.slice(0, 3).map(function (v) { return '"' + v.text.slice(0, 34) + '"'; }).join(', ') +
+                    '. "Neglecting to update your knowledge" is true of every job on earth and ' +
+                    'can be written without reading the source. Name the SPECIFIC WRONG ACTION ' +
+                    'with its number, and the specific technical result: "Loaded 900 kg on a ' +
+                    'sling rated to 750 because the plate had worn smooth." These must be errors ' +
+                    'a knowledgeable person makes at the edge of their competence.');
+            }
+        });
+        return issues;
+    };
+
+    /**
+     * T2-7: the mental model is the procedure of the WORK, not the procedure of talking
+     * about the work. All five mental-model cards in the reviewed pack were the same
+     * meta-procedure - assess, explain, tailor, monitor, keep learning - which teaches
+     * nobody anything and would be identical for an unrelated subject.
+     */
+    const CC_META_PROCEDURE = /^\s*(assess|identify|determine|discuss|explain|describe|consider|review|monitor|observe|understand|clarify|communicate|educate|evaluate|tailor|adapt|encourage|recognise|recognize)\b/i;
+
+    const metaProcedureIssues = function (cards) {
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            if (card.cardType !== 'mental-model') { return; }
+            var steps = Array.isArray(card.steps) ? card.steps : [];
+            if (steps.length < 3) { return; }
+            var meta = 0;
+            var withSpecific = 0;
+            steps.forEach(function (st) {
+                var label = String((st && (st.step || st.action)) || '');
+                var detail = String((st && st.detail) || '');
+                if (CC_META_PROCEDURE.test(label)) { meta++; }
+                if (ccHasQuantity(label + ' ' + detail) ||
+                    /(?:[a-z,;]\s+)([A-Z][a-zA-Z''-]{2,})/.test(detail)) {
+                    withSpecific++;
+                }
+            });
+            if (meta >= Math.ceil(steps.length * 0.75)) {
+                issues.push('Card ' + (ci + 1) + ' (mental-model): ' + meta + ' of ' + steps.length +
+                    ' steps open on assess / explain / discuss / monitor. That is the procedure of ' +
+                    'TALKING ABOUT the work, not the procedure of doing it, and it would read ' +
+                    'identically for an unrelated subject. Rewrite the steps so they operate on ' +
+                    'something: "multiply their body weight by ten", not "assess their needs".');
+            } else if (withSpecific < 3) {
+                issues.push('Card ' + (ci + 1) + ' (mental-model): only ' + withSpecific + ' of ' +
+                    steps.length + ' steps contain a number or a named thing. At least three must. ' +
+                    'A step a learner cannot fail at is not a step.');
+            }
+        });
+        return issues;
+    };
+
+    /**
+     * T2-1: the commitment point. The hook card must hand the learner a decision, not
+     * watch the characters resolve it. Across 35 cards of the reviewed pack the learner
+     * was asked to commit to something exactly five times, always last, always guessable.
+     */
+    const commitmentPointIssues = function (cards) {
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            if (card.cardType !== 'hook-scenario') { return; }
+            var panels = ccReadSpecValues(card, { path: 'sceneParts[].text', alias: ['keyPoints[].text'] });
+            if (panels.length < 3) { return; }
+            var last = panels[panels.length - 1].text || '';
+            if (last.indexOf('?') === -1) {
+                issues.push('Card ' + (ci + 1) + ' (hook-scenario): the final panel does not hand ' +
+                    'the learner a decision. It ends "' + last.slice(-60).trim() + '". Panel 4 is ' +
+                    'the commitment point: it must end on a question addressed to the learner, ' +
+                    'about what THEY would do, before the next card answers it. If the people in ' +
+                    'the scene work it out themselves, the learner has watched somebody else ' +
+                    'learn and has committed to nothing.');
+            }
+        });
+        return issues;
+    };
+
+    /**
+     * T0-1: SOURCE ANCHOR RECALL - the standard calls this the most important validator
+     * to build, and it is the one that would have caught the whole failure.
+     *
+     * The reviewed pack was generated from a 5,000-word source containing roughly forty
+     * teachable specifics - 10-12 g/kg/day, 30 g/hour, a 2-3% gain, a named study,
+     * beta-alanine, the carbohydrate mouth rinse, lactate threshold - and carried NONE
+     * of them. Nothing measured that, so nothing said so.
+     *
+     * Extracts candidate anchors from the source (figures with units, and multi-word
+     * capitalised terms) and asks how many reached the cards.
+     */
+    const ccExtractAnchors = function (text) {
+        var out = {};
+        // v13.99: drop ALL-CAPS heading lines before extracting. Source documents are full
+        // of them ("TOPIC 1: HOW THE BODY PRODUCES ENERGY FOR EXERCISE"), and the acronym
+        // rule below was reading every word in them as an acronym - so "THE", "HOW", "BODY"
+        // and "FOR" became anchors, and the pack that contains none of the source's actual
+        // figures scored 24 hits and passed.
+        var src = String(text || '').split('\n').filter(function (line) {
+            var letters = line.replace(/[^A-Za-z]/g, '');
+            if (letters.length < 8) { return true; }
+            var upper = line.replace(/[^A-Z]/g, '').length;
+            return (upper / letters.length) < 0.7;
+        }).join('\n');
+        var add = function (k) {
+            k = String(k).toLowerCase().replace(/\s+/g, ' ').trim();
+            if (k.length > 2) { out[k] = true; }
+        };
+        // 1. A figure WITH a unit. A bare number is noise; "30 grams" is a specific.
+        //    Ranges written with a dash or the word "to" are one anchor, not two.
+        var unit = '(?:%|per cent|percent|g\\/kg|grams?|kg|kilograms?|mg|ml|litres?|minutes?|mins?|' +
+            'seconds?|secs?|hours?|hrs?|days?|weeks?|months?|years?|metres?|kilometres?|km|degrees?|' +
+            'calories?|kilojoules?|reps?|sets?|times|fold)';
+        var reNum = new RegExp('\\b\\d+(?:[.,]\\d+)?(?:\\s*(?:-|\\u2013|to)\\s*\\d+(?:[.,]\\d+)?)?\\s*' + unit + '\\b', 'gi');
+        (src.match(reNum) || []).forEach(add);
+        // 2. Named things: two or more capitalised words in a row, mid-sentence.
+        (src.match(/(?:[a-z,;]\s+)((?:[A-Z][a-zA-Z'\u2019-]+\s+){1,3}[A-Z][a-zA-Z'\u2019-]+)/g) || [])
+            .forEach(function (m) { add(m.replace(/^[a-z,;]\s+/, '')); });
+        // 3. Hyphenated technical compounds: beta-alanine, ATP-PC, low-carbohydrate.
+        (src.match(/\b[A-Za-z]{3,}-[A-Za-z]{2,}(?:-[A-Za-z]{2,})?\b/g) || []).forEach(function (m) {
+            if (m.length >= 8) { add(m); }
+        });
+        // 4. Acronyms and unit-bearing symbols the source leans on.
+        (src.match(/\b[A-Z]{2,6}\b/g) || []).forEach(add);
+        // v13.99: the "long words repeated three times" heuristic that used to be here is
+        // GONE. It extracted "understanding", "performance", "different" and "important"
+        // as though they were teachable specifics, so the reviewed pack - which contains
+        // not one figure from its source - scored 20 anchors out of 34 and passed. An
+        // anchor has to be a thing, not a long word.
+        return Object.keys(out).filter(function (k) {
+            return !/^(the|and|this|that|with|from|they|their|there|these|those|which|about|would|could|should)$/.test(k);
+        });
+    };
+
+    const sourceAnchorIssues = function (cards, context) {
+        var source = (context && (context.priorityContent || context.referenceMaterial)) || '';
+        if (!source || String(source).length < 400) { return []; }
+        var anchors = ccExtractAnchors(String(source).substring(0, 12000));
+        if (anchors.length < 8) { return []; }
+        var text = cards.map(function (c) {
+            try { return harvestCardText(c, 0); } catch (e) { return ''; }
+        }).join(' ').toLowerCase();
+        var hit = anchors.filter(function (a) { return text.indexOf(a) !== -1; });
+        // The standard asks for six anchors a slide. Below that the slide was not written
+        // from the source, whatever else is true of it.
+        if (hit.length >= 6) { return []; }
+        var missed = anchors.filter(function (a) { return text.indexOf(a) === -1; })
+            .filter(function (a) { return /\d/.test(a); }).slice(0, 6);
+        return ['THIS SLIDE WAS NOT WRITTEN FROM THE SOURCE: only ' + hit.length + ' of ' +
+            anchors.length + ' specifics in the reference material appear anywhere on it, and the ' +
+            'standard is at least six. The source contains figures and named things this slide ' +
+            'has thrown away' + (missed.length ? ', including: ' + missed.join(', ') : '') +
+            '. Rewrite the cards around what the material actually says. A number in the source ' +
+            'that is not in your output has been deleted, and it was the part worth teaching.'];
+    };
+
+    /**
+     * v14.0 CARD-QUALITY: the executable half of card-quality.js.
+     *
+     * card-quality.js is the single source of truth for 33 card x route quality
+     * standards (192 criteria). Its `prompt` text is what tells the model the
+     * standard - prompts.js appends that via getCardQualityBlock(). This function is
+     * the other half: it re-reads the SAME 192 criteria and, for the ones marked
+     * `check: 'regex'`, tests them against what the model actually produced. A rule
+     * that lives only in the prompt (never checked) or only in a check (never told to
+     * the model) is exactly the drift the two-consumer design exists to prevent -
+     * both sides read card-quality.js and nothing else.
+     *
+     * The remaining criteria are marked `check: 'judgement'` deliberately - the
+     * standard's own distinction between what a regex can verify (a pattern, a
+     * banned opening, a count) and what requires human or LLM judgement (is this
+     * actually memorable, does this actually teach). Those are not silently
+     * skipped; they are the ones intentionally left to the audits this product has
+     * already been through, and to reviewers reading generated packs.
+     */
+    /**
+     * v14.1: capitalised-word heuristic, same family as ccExtractAnchors's named-entity
+     * pass, extended to also catch a name that OPENS a sentence - which is how these hook
+     * scenes are written by design ("Open on a named worker... inside the first fifteen
+     * words"). Used only for the 'continuity' check below - it does not need to be
+     * exhaustive, only good enough to catch the SAME name recurring or not recurring.
+     */
+    // v14.1: deliberately wide - this stops far more false "names" than it risks missing a
+    // real one, because the cost of a false positive (continuity silently never checked,
+    // as happened with "What" before this list was expanded) is worse than the cost of a
+    // false negative (an occasional real name not recognised, which just skips the check
+    // for that one card rather than reporting it wrongly).
+    const CC_NAME_STOPWORDS = /^(The|This|That|These|Those|They|Their|There|Which|What|Who|Whom|Whose|Where|When|Why|How|About|Would|Could|Should|Will|Shall|Must|May|Might|Can|Cannot|Is|Are|Was|Were|Am|Be|Been|Being|Do|Does|Did|Done|Has|Have|Had|After|Before|During|While|While|Once|Then|Later|Meanwhile|First|Second|Third|Next|Finally|Instead|Suddenly|Together|Inside|Outside|Above|Below|Across|Around|Panel|Card|Not|Never|No|Yes|You|Your|Yours|Check|Working|Wearing|Standing|Holding|Looking|Reading|Watching|Waiting|Trying|Getting|Making|Taking|She|He|Her|Him|His|Hers|It|Its|We|Our|Ours|Someone|Something|Somewhere|Anyone|Anything|Everyone|Everything|Nobody|Nothing|If|As|Because|So|But|And|Or|Yet|Still|Also|Even|Just|Only|One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)$/;
+    const ccExtractNames = function (text) {
+        var names = {};
+        var str = String(text || '');
+        (str.match(/(?:^|[.!?]\s+|[a-z,;]\s+)([A-Z][a-zA-Z-]{2,})\b/g) || []).forEach(function (m) {
+            var w = m.replace(/^(?:[.!?]\s+|[a-z,;]\s+)/, '');
+            if (!CC_NAME_STOPWORDS.test(w)) { names[w] = true; }
+        });
+        return Object.keys(names);
+    };
+
+    const cardQualityIssues = function (cards, mode) {
+        var issues = [];
+        if (!CardQuality || typeof CardQuality.getCardQuality !== 'function') { return issues; }
+        var anchorType = (mode === 'topicstext') ? 'overview' : 'hook-scenario';
+        cards.forEach(function (card, ci) {
+            var standard;
+            try {
+                standard = CardQuality.getCardQuality(mode, card.cardType);
+            } catch (e) {
+                standard = null;
+            }
+            if (!standard || !standard.criteria || !standard.criteria.length) { return; }
+            var text;
+            try { text = harvestCardText(card, 0); } catch (e) { text = ''; }
+            standard.criteria.forEach(function (c) {
+                if (c.check === 'continuity') {
+                    // The named person/thread from an earlier card must recur later in
+                    // the sequence, instead of every later card being a stand-alone item
+                    // disconnected from the story. A criterion may name its own anchor
+                    // card type (c.anchor) - e.g. case-study-2 anchoring to case-study-1,
+                    // not the pack's opening card - falling back to the per-route opening
+                    // card (hook-scenario, or overview for Topics-and-Text) when unset.
+                    // Never penalised when there is no anchor card in this batch, or no
+                    // extractable name on it - this only fires with real evidence.
+                    var wantAnchorType = c.anchor || anchorType;
+                    var anchor = cards.filter(function (a) { return a.cardType === wantAnchorType; })[0];
+                    if (!anchor || anchor === card) { return; }
+                    var anchorText;
+                    try { anchorText = harvestCardText(anchor, 0); } catch (e) { anchorText = ''; }
+                    var names = ccExtractNames(anchorText);
+                    if (!names.length) { return; }
+                    var found = names.some(function (n) { return text.indexOf(n) !== -1; });
+                    if (!found) {
+                        issues.push('QUALITY STANDARD [' + c.id + '] Card ' + (ci + 1) + ' (' + card.cardType +
+                            '): ' + c.rule);
+                    }
+                    return;
+                }
+                if (c.check !== 'regex' || !c.re) { return; }
+                var matched;
+                try { matched = c.re.test(text); } catch (e) { return; }
+                var ok = c.polarity === 'forbid' ? !matched : matched;
+                if (ok) { return; }
+                issues.push('QUALITY STANDARD [' + c.id + '] Card ' + (ci + 1) + ' (' + card.cardType +
+                    '): ' + c.rule);
+            });
+        });
+        return issues;
+    };
+
+    /**
+     * v13.98.3: which measured faults are worth spending an AI call on.
+     *
+     * Matched on the issue TYPE. An earlier version tested for the substring "option ",
+     * which also matched "option feedback 3: 28 words, needs 30-44" - a pure length
+     * issue - and so fired the paid repair on essentially every section of four routes.
+     *
+     * Length shortfall is deliberately absent: it is capped by the vendor's own
+     * secondary passes today, so repairing it spends credits and wall-clock on content
+     * the server flattens again. It is still measured and still recorded on the card.
+     */
+    const CC_REPAIRABLE = [
+        /NOT WRITTEN FROM THE SOURCE/,       // T0-1 source anchor recall
+        /no teachable specific/,             // T1-4 made of categories, not things
+        /procedure of/,                      // T2-7 meta-procedure mental model
+        /attitudes rather than actions/,     // T2-6 moral mistakes
+        /steps contain a number/,            // T2-7 too few specifics in the steps
+        /commitment point/,                  // T2-1 hook resolves itself
+        /keyTakeaway/,                       // missing or vague takeaway
+        /below the \d+-\d+ word range/,      // option stubs (parity)
+        /is \d+ words and the shortest/,     // answerable by shape
+        /announce their own wrongness/,      // giveaway distractors
+        /specific to this subject/,          // subject drift
+        /same small set of abstractions/,    // every consequence lands alike
+        /distinct outcomes between/,         // ditto
+        /awkward substitutions/,             // banned-word artefacts
+        /could picture/,                     // concreteness
+        /opens inside a meeting/,            // the meeting-room opening
+        /^QUALITY STANDARD \[/               // v14.0: per-card, per-route regex criteria
+    ];
+
+    /**
+     * v13.98.2: the meeting-room opening.
+     *
+     * All five hook cards of the reviewed pack opened the same way - "During a team
+     * meeting, the nutritionist explains how the body produces energy for exercise" -
+     * and four of the five put the learner in the audience watching a colleague explain
+     * the subject rather than in the job doing it. That is the least memorable opening
+     * available, and it is where a scenario card goes when the writer has not chosen a
+     * situation. The prompts now ban it outright; this is what notices when it survives.
+     *
+     * Only the OPENING panel is judged. A meeting later in a scene is a legitimate part
+     * of working life; a meeting as the frame of the whole card is not.
+     */
+    const CC_MEETING_OPENER = /^(?:during|in|at)\s+(?:a|an|the|your|this|today's)?\s*(?:morning|afternoon|weekly|daily|monthly|team|staff|group|regular|routine)?\s*(?:team\s+)?(?:meeting|briefing|huddle|catch-?up|stand-?up|workshop|training session|toolbox talk|discussion)\b/i;
+
+    const scenarioOpeningIssues = function (cards) {
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            if (card.cardType !== 'hook-scenario' && card.cardType !== 'applied-scenario') { return; }
+            var panels = ccReadSpecValues(card, {
+                path: 'sceneParts[].text', alias: ['keyPoints[].text']
+            });
+            if (!panels.length) { return; }
+            var first = panels[0].text || '';
+            if (CC_MEETING_OPENER.test(first.trim())) {
+                issues.push('Card ' + (ci + 1) + ' (' + card.cardType + '): opens inside a meeting ' +
+                    '("' + first.slice(0, 52) + '..."). This puts the learner in the audience ' +
+                    'watching someone explain the subject instead of in the job doing it, and it ' +
+                    'is the most common and least memorable opening there is. Re-set the scene ' +
+                    'where the work actually happens: a customer or client in front of them, a ' +
+                    'job away from base, someone who has already been given the wrong answer. ' +
+                    'Name the person, the place and what is at stake.');
+            }
+        });
+        return issues;
+    };
+
+    /**
+     * v13.98.1: SUBJECT DRIFT.
+     *
+     * The largest quality failure in the v13.97.1 review, and the one no length check
+     * could ever have caught. Asked to teach sports nutrition to people who advise
+     * customers about it, the pack taught the ADVISING: ask open-ended questions, listen
+     * to client feedback, avoid technical jargon, tailor your advice, follow up, keep
+     * your knowledge current. Roughly 70% of the mistakes and competency items would
+     * have been identical in a pack for mortgage brokers. Every one of those statements
+     * is true; none of them is the topic; together they teach a learner nothing they did
+     * not already know.
+     *
+     * This is scoped to VET and Workplace deliberately. On the PD route these ARE the
+     * subject - a PD pack about giving feedback is supposed to be full of listening and
+     * questioning - so running it there would fight the route's own purpose.
+     *
+     * The threshold is three. One communication item on a mistakes card is reasonable
+     * and both prompts now allow exactly one; three or more means the card has stopped
+     * being about the subject.
+     */
+    const CC_GENERIC_ADVICE = [
+        /\bopen[- ]ended question/i, /\bactive listening\b/i, /\blisten(ing)? to (the )?(client|customer)/i,
+        /\b(technical )?jargon\b/i, /\bone[- ]size[- ]fits[- ]all\b/i,
+        /\b(client|customer|athlete|learner) feedback\b/i, /\btailor(ed|ing)? (your )?advice\b/i,
+        /\bbuild(ing)? (trust|rapport)\b/i, /\bcommunicat(e|ing|ion) clearly\b/i,
+        /\bupdat(e|ing) (your |their )?knowledge\b/i, /\bfollow(ing)?[- ]up (with|afterwards)\b/i,
+        /\boverload(ing)? .{0,20}information\b/i, /\brush(ing)? (the |through )?(consultation|appointment)/i,
+        /\bpersonalis(e|ed|ing) (the )?advice\b/i, /\bcontinuous (learning|improvement)\b/i,
+        /\bstay(ing)? informed\b/i, /\bassum(e|ing) (that )?(all|every|everyone)\b/i
+    ];
+
+    /** Which item lists carry the substance of a card, per card type. */
+    const CC_SUBSTANCE_TARGETS = {
+        'mistakes': [{
+            path: 'items[].mistake', alias: ['errorItems[].error'], label: 'mistakes',
+            body: { path: 'items[].consequence', alias: ['errorItems[].consequence'] }
+        }],
+        'competency-summary': [{
+            path: 'goodItems[].text', alias: ['standardItems[].text'], label: 'standards',
+            body: { path: 'goodItems[].benefit', alias: ['standardItems[].benefit'] }
+        }]
+    };
+
+    /**
+     * Does this item carry anything that belongs only to its own subject?
+     *
+     * A number, a unit, a technical term (a long word, or a hyphenated/capitalised one
+     * mid-sentence) all count. Generic advice has none of these: "Neglecting Client
+     * Feedback - misses cues for adjusting advice, leaving clients feeling unheard"
+     * contains no fact that could be checked against anything.
+     *
+     * @param {String} text Label plus consequence.
+     * @return {Boolean} True when the item is anchored in its subject.
+     */
+    const ccHasSubjectAnchor = function (text) {
+        if (/\d/.test(text)) { return true; }
+        // A capitalised word that is not sentence-initial: a name, a system, a method.
+        if (/(?:[a-z,;]\s+)([A-Z][a-zA-Z'’-]{2,})/.test(text)) { return true; }
+        return false;
+    };
+
+    const subjectDriftIssues = function (cards, mode) {
+        if (mode !== 'vet' && mode !== 'workplace') { return []; }
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            var targets = CC_SUBSTANCE_TARGETS[card.cardType];
+            if (!targets) { return; }
+            targets.forEach(function (t) {
+                var labels = ccReadSpecValues(card, t);
+                if (labels.length < 4) { return; }
+                // v13.98.3: read the bodies POSITIONALLY, not compacted.
+                //
+                // ccReadSpecValues drops empty values, so a card with two blank
+                // consequences returned a bodies[] that was index-shifted against
+                // labels[] - every item after the first blank was judged against a
+                // different item's explanation, and the repair instruction then named
+                // the wrong items to rewrite.
+                var bodies = ccReadFieldPathRaw(card, t.body.path);
+                if (!bodies.length && t.body.alias) {
+                    for (var ai = 0; ai < t.body.alias.length && !bodies.length; ai++) {
+                        bodies = ccReadFieldPathRaw(card, t.body.alias[ai]);
+                    }
+                }
+                var empty = [];
+                var generic = 0;
+                labels.forEach(function (v, i) {
+                    var text = v.text + ' ' + ((bodies[i] && bodies[i].text) || '');
+                    var isGeneric = CC_GENERIC_ADVICE.some(function (re) { return re.test(text); });
+                    var anchored = ccHasSubjectAnchor(text);
+                    if (isGeneric) { generic++; }
+                    // An item is empty when it is generic advice OR carries nothing
+                    // specific to the subject at all.
+                    if (isGeneric || !anchored) { empty.push('"' + v.text.slice(0, 42) + '"'); }
+                });
+                if (empty.length >= 3) {
+                    issues.push('Card ' + (ci + 1) + ' (' + card.cardType + '): ' + empty.length +
+                        ' of ' + labels.length + ' ' + t.label + ' carry nothing specific to this ' +
+                        'subject  -  ' + empty.slice(0, 3).join(', ') + '. Written this way they ' +
+                        'would read identically in a pack about an unrelated subject in an ' +
+                        'unrelated industry, which means the content has been taken out. Keep at ' +
+                        'most ONE communication or process habit; rewrite the rest as errors of ' +
+                        'SUBSTANCE from the reference material - the wrong figure, the wrong ' +
+                        'threshold, the missed step, the rule applied to the wrong case. Each one ' +
+                        'must name something only this subject contains.');
+                }
+            });
+        });
+        return issues;
+    };
+
+    /**
+     * v13.98.1: five consequences that all finish on the same outcome.
+     *
+     * Across the whole v13.97.1 pack, fifty mistake consequences shared roughly six
+     * endings between them - "leading to dissatisfaction and a loss of trust", "which
+     * can result in confusion and a reluctance to return", "leading to client
+     * dissatisfaction and a lack of trust". The right-hand column carries no
+     * information after the second item and the learner correctly stops reading it.
+     *
+     * Measured on the closing content words, so it catches the pattern regardless of
+     * how the sentence opens. Route-neutral: this is bad writing everywhere.
+     */
+    const CC_OUTCOME_STOPWORDS = /^(the|a|an|and|or|to|of|in|on|for|with|their|its|his|her|your|our|that|this|which|can|may|might|will|be|is|are|was|were|it|them|they|as|at|by|from|not|no|has|have|had|do|does|did|lead|leads|leading|result|results|resulting|cause|causes|causing)$/;
+
+    /**
+     * The handful of abstractions every weak consequence falls back on.
+     *
+     * The v13.97.1 pack's fifty consequences shared about six endings between them, but
+     * lexically they all differed - "a loss of trust", "a lack of trust", "reducing
+     * their trust", "client dissatisfaction", "dissatisfaction and poor results". Tail
+     * matching cannot see that; naming the concepts can. Applied to the CLOSE of the
+     * sentence, which is where a consequence either lands somewhere real or dissolves.
+     */
+    const CC_GENERIC_OUTCOME = /(trust|dissatisf|satisfaction|confus|credibilit|reputation|disengag|engagement|unheard|undervalued|morale|rapport|loyalty|relationships?\b|less likely to follow|seek advice elsewhere)/i;
+
+    const repeatedOutcomeIssues = function (cards) {
+        var issues = [];
+        cards.forEach(function (card, ci) {
+            var targets = CC_SUBSTANCE_TARGETS[card.cardType];
+            if (!targets) { return; }
+            targets.forEach(function (t) {
+                var bodies = ccReadSpecValues(card, t.body);
+                if (bodies.length < 4) { return; }
+                var seen = {};
+                bodies.forEach(function (v) {
+                    var words = String(v.text).toLowerCase().replace(/[^a-z\s]/g, ' ')
+                        .split(/\s+/).filter(function (x) { return x && !CC_OUTCOME_STOPWORDS.test(x); });
+                    // The closing idea: the last three content words, order-independent.
+                    var tail = words.slice(-3).sort().join(' ');
+                    if (!tail) { return; }
+                    seen[tail] = (seen[tail] || 0) + 1;
+                });
+                var repeated = Object.keys(seen).filter(function (k) { return seen[k] > 1; });
+                var distinct = Object.keys(seen).length;
+
+                // How many of them dissolve into the same handful of abstractions at
+                // the end of the sentence - trust, dissatisfaction, confusion.
+                var vague = 0;
+                bodies.forEach(function (v) {
+                    var words = String(v.text).split(/\s+/);
+                    var close = words.slice(-12).join(' ');
+                    if (CC_GENERIC_OUTCOME.test(close)) { vague++; }
+                });
+
+                if (distinct && distinct <= Math.ceil(bodies.length / 2) && repeated.length) {
+                    issues.push('Card ' + (ci + 1) + ' (' + card.cardType + '): the ' + bodies.length +
+                        ' ' + t.label + ' finish on only ' + distinct + ' distinct outcomes between ' +
+                        'them. Written this way the second column carries no information after the ' +
+                        'first item or two and the learner stops reading it. Give each one a ' +
+                        'different consequence, and make it land somewhere specific: who is standing ' +
+                        'there, what they do next, what it costs.');
+                } else if (vague >= 3) {
+                    issues.push('Card ' + (ci + 1) + ' (' + card.cardType + '): ' + vague + ' of ' +
+                        bodies.length + ' ' + t.label + ' end on the same small set of abstractions ' +
+                        '(lost trust, dissatisfaction, confusion, credibility). Differently worded, ' +
+                        'they are one consequence written ' + vague + ' times, and the learner stops ' +
+                        'reading the column at the second item. End each one somewhere DIFFERENT and ' +
+                        'concrete: the thing that has to be redone, the person who carries it, the ' +
+                        'number that moves, what happens next shift.');
+                }
+            });
+        });
+        return issues;
+    };
+
+    /**
+     * v13.98: banned-word substitution artefacts.
+     *
+     * The old BANNED_WORDS list included ordinary English (overall, ensure, appropriate),
+     * and the model answered by substituting a synonym rather than rewriting: 19
+     * instances of "in total" and 22 of "makes sure" in one pack, producing "for in total
+     * health" and "the most right nutritional support". The list is fixed in prompts.js;
+     * this check makes sure the damage cannot come back unnoticed.
+     */
+    const artefactIssues = function (cards) {
+        if (!Prompts || typeof Prompts.validateSubstitutionArtefacts !== 'function') { return []; }
+        var found = [];
+        try { found = Prompts.validateSubstitutionArtefacts(cards) || []; } catch (e) { return []; }
+        if (!found.length) { return []; }
+        return ['This section contains awkward substitutions that read as broken English: "' +
+            found.slice(0, 4).join('", "') + '". These come from swapping a synonym into a sentence ' +
+            'instead of rewriting it. Rewrite each sentence around the specific it was standing in ' +
+            'for; "in total" is never a replacement for "overall".'];
     };
 
     /**
@@ -2371,7 +3568,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         var seen = {};
         var issues = [];
         cards.forEach(function (card, i) {
-            splitSentences(harvestCardText(card, 0)).forEach(function (sentence) {
+            splitSentences(harvestCardTextForSentences(card, 0)).forEach(function (sentence) {
                 var norm = sentence.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
                 // Short lines are headings and boilerplate, not duplicated prose.
                 if (norm.split(' ').length < 8) { return; }
@@ -2483,10 +3680,13 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // prompts.js already exports getCardCountForMode() (university => 6, else => 7),
         // which is the single source of truth the prompt builders themselves use. Deferring
         // to it means the validator can never drift out of step with the prompt again.
-        var genMode = (context && context.mode) || 'vet';
+        var genMode = ccNormaliseGenerationRoute((context && context.mode) || 'general');
         var expectedCount = (Prompts && typeof Prompts.getCardCountForMode === 'function')
             ? Prompts.getCardCountForMode(genMode)
-            : ((genMode === 'university') ? 6 : 7);
+            // v13.98.3: university is 7 since it gained a decision-point. This branch is
+            // unreachable while Prompts loads, but if it ever fired it would reproduce the
+            // v13.65 100%-failure mode where every section rendered placeholders.
+            : 7;
         // v13.90.1 FIX-ACTIVITIES-OFF: this used to hard-require expectedCount - 1 when
         // activities were disabled, which made the whole feature unusable.
         //
@@ -2503,8 +3703,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // v13.92: topicstext DOES have a decision-point now (it drives the 3-activity
         // block), so the toggle applies to it as it does to vet/workplace/pd. Only
         // university is exempt.
-        var activitiesOff = (genMode !== 'university'
-            && context && context.activitiesEnabled === false);
+        // v13.98.1: university is no longer exempt - it has a decision-point now.
+        var activitiesOff = (context && context.activitiesEnabled === false);
         if (cards.length !== expectedCount && !(activitiesOff && cards.length === expectedCount - 1)) {
             issues.push('Expected ' + expectedCount + ' cards, got ' + cards.length);
         }
@@ -2529,7 +3729,23 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // prompt never asked for. The requirement is now scoped to exactly the card types
         // the prompt requests a title for, and `heading` is accepted as an equivalent since
         // several card builders populate that instead.
-        var TITLED_CARD_TYPES = ['competency-summary', 'case-study-1', 'case-study-2'];
+        //
+        // v16: General is now mode-scoped here too. Its GENERAL_SYSTEM_PROMPT asks EVERY
+        // one of its 6 cards for a top-level `title` (the AI-generated learner-facing
+        // heading - see CC_FIELD_SPECS.general in prompts.js), but VET/Workplace/PD/
+        // Topics-and-Text share 5 of those 6 cardTypes and must NOT require title on them -
+        // requiring it there would reproduce FIX-CC-TITLE-GATE's exact 100%-failure mode
+        // for those routes.
+        //
+        // IMPORTANT: this checks the RAW context.mode, NOT the normalised genMode above.
+        // ccNormaliseGenerationRoute() folds 'pd' onto 'general' for card-count/prompt
+        // lookup purposes, but 'pd' has its own PD_SYSTEM_PROMPT (prompts.js) which still
+        // asks for title only on competency-summary - it was never switched to the new
+        // GENERAL_SYSTEM_PROMPT. Using genMode here would demand a title PD's model was
+        // never asked for, on 5 of its 6 cards, on every PD-route generation.
+        var TITLED_CARD_TYPES = (context && context.mode === 'general')
+            ? ['hook-scenario', 'concept-explainer', 'mistakes', 'mental-model', 'decision-point', 'competency-summary']
+            : ['competency-summary', 'case-study-1', 'case-study-2'];
 
         // Per-card structure
         cards.forEach(function (card, i) {
@@ -2600,8 +3816,30 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // repair pass on the first attempt and recorded on the card on the last.
         var softissues = [];
         try {
-            var mode = (context && context.mode) || 'vet';
-            softissues = depthIssues(cards, mode)
+            var mode = ccNormaliseGenerationRoute((context && context.mode) || 'general');
+            // v13.98: ordered by what a repair pass should fix FIRST, because the repair
+            // prompt takes the top slice. The key takeaway and the decision options are
+            // both cheap to fix and are the two things a learner notices immediately;
+            // the per-field verdict then leads the length work.
+            softissues = sourceAnchorIssues(cards, context)
+                .concat(cardQualityIssues(cards, mode))
+                .concat(specificDensityIssues(cards, mode))
+                .concat(metaProcedureIssues(cards))
+                .concat(moralMistakeIssues(cards))
+                .concat(commitmentPointIssues(cards))
+                .concat(keyTakeawayIssues(cards))
+                .concat(optionParityIssues(cards))
+                // v13.98.1: subject drift sits high because it is the one issue where
+                // the content is not thin or malformed - it is about the wrong thing.
+                // No amount of length repair fixes a card that is off-subject.
+                .concat(subjectDriftIssues(cards, mode))
+                .concat(scenarioOpeningIssues(cards))
+                .concat(repeatedOutcomeIssues(cards))
+                .concat(fieldIssues(cards, mode))
+                .concat(concretenessIssues(cards))
+                .concat(distractorQualityIssues(cards))
+                .concat(artefactIssues(cards))
+                .concat(depthIssues(cards, mode))
                 .concat(readabilityIssues(cards, mode))
                 .concat(duplicateSentenceIssues(cards));
         } catch (e) {
@@ -2630,10 +3868,13 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         ccLog('%c[CC v' + CC_VERSION + '] CMID:', 'color: #8b5cf6;', cmid);
         
         // v11.73: Simplified  -  scoring constants removed. Only structural validity matters.
-        const MAX_ATTEMPTS = 2; // Attempt 1: generate. Attempt 2: structural repair only if broken.
+        const MAX_ATTEMPTS = 2; // Attempt 1: generate. Attempt 2: repair - structural, or quality.
         let attemptCount = 0;
         let lastScore = null; // holds { cards } for repair prompt
         let lastIssues = []; // structural issues fed to repair prompt
+        // v13.98: the best structurally-valid version seen across attempts, so a quality
+        // repair that comes back worse or shorter can be thrown away rather than shipped.
+        let bestCandidate = null;
         const topicTitle = topic?.title || topic?.name || '';
         
         // v11.68: Attempt labels for debugging (2-attempt system)
@@ -2656,7 +3897,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 // v9.12 FIX: currentMode must be accessible on ALL attempts (not just attempt 1)
                 // Previously scoped inside if(attemptCount===1) causing ReferenceError on attempts 2/3
                 // when quality gate passed and Enterprise QA tried to access it
-                const currentMode = context?.mode || 'vet';
+                const currentMode = ccNormaliseGenerationRoute(context?.mode || 'general');
+                const promptContext = (context?.mode === currentMode) ? context : Object.assign({}, context || {}, {mode: currentMode});
                 
                 const hasScoreData = lastScore && lastScore.cards && lastScore.cards.length > 0;
 
@@ -2697,8 +3939,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                         // v13.91: and off Topics-and-Text, which is a general explanatory
                         // article about any subject on earth - a WHS legislation block would
                         // be actively wrong on an article about Renaissance painting.
-                        if (currentMode !== 'university' && currentMode !== 'topicstext') {
-                            const stateCode = context?.state || '';
+                        if (ccLegislationRelevant(currentMode, promptContext, topic)) {
+                            const stateCode = promptContext?.state || '';
                             const legislationBlock = Prompts.Legislation.buildPromptInjection(countryCode, stateCode, 'content');
                             if (legislationBlock) {
                                 systemPrompt += '\n' + legislationBlock;
@@ -2733,19 +3975,19 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                     // rather than duplicating it here.
                     prompt = {
                         system: systemPrompt,
-                        user: Prompts.buildFiveCardUserPrompt(context, topic)
+                        user: Prompts.buildFiveCardUserPrompt(promptContext, topic)
                     };
                     contentType = attemptCount === 1 ? 'five-card-sequence' : 'five-card-retry';
                 } else {
                     // ATTEMPT 2: v11.68 - Single targeted repair path (ChatGPT: no branching between audit/hard-reset/micro-fix)
                     // Always use content repair with top 5 issues  -  focused repair beats noisy repair.
-                    const repairMode = context?.mode || 'vet';
+                    const repairMode = currentMode;
                     const topIssues = lastIssues.slice(0, 5);
                     ccLog('%c[REPAIR] TARGETED REPAIR with top ' + topIssues.length + '/' + lastIssues.length + ' issues (mode: ' + repairMode + '):', 'color: #ef4444; font-weight: bold;');
                     ccLog('%c[REPAIR] Top issues:', 'color: #ef4444;', topIssues);
                     prompt = {
-                        system: Prompts.getContentRepairPromptForMode(repairMode, context),
-                        user: Prompts.buildContentRepairPromptForMode(lastScore?.cards || [], topIssues, topicTitle, context)
+                        system: Prompts.getContentRepairPromptForMode(repairMode, promptContext),
+                        user: Prompts.buildContentRepairPromptForMode(lastScore?.cards || [], topIssues, topicTitle, promptContext)
                     };
                     contentType = 'five-card-targeted-repair';
                 }
@@ -2755,7 +3997,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 
                 ccLog('%c[API] Calling AI...', 'color: #10b981; font-weight: bold;');
                 const startTime = Date.now();
-                const rawResponse = await callAI(prompt, cmid, contentType, 0, context?.mode || 'vet', context?.language || 'en-AU', topic?.billingKey || ''); // v11.42: pass route | v12.99 FIX-CC-LANG-EXPLICIT: pass language
+                const rawResponse = await callAI(prompt, cmid, contentType, 0, currentMode, promptContext?.language || 'en-AU', topic?.billingKey || ''); // v11.42: pass route | v12.99 FIX-CC-LANG-EXPLICIT: pass language
                 const elapsed = Date.now() - startTime;
                 ccLog('%c[API] Response received in ' + elapsed + 'ms', 'color: #10b981;');
                 ccLog('%c[API] Raw response length:', 'color: #10b981;', rawResponse?.length || 0, 'chars');
@@ -2777,8 +4019,17 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                         issues: lastIssues
                     });
                     if (attemptCount >= MAX_ATTEMPTS) {
-                        ccLog('%c[PARSE] All attempts exhausted - returning failed sequence', 'color: #ef4444;');
-                        return getFailedCardSequence(topic, currentMode, 'Invalid JSON response after ' + MAX_ATTEMPTS + ' attempts');
+                        // v13.98.3: fall through to the salvage block rather than returning
+                        // placeholders from here.
+                        //
+                        // Before v13.98 this early return was safe, because attempt 2 only
+                        // ever ran when attempt 1 was structurally broken. v13.98 also runs
+                        // attempt 2 when attempt 1 PASSED and merely had a quality issue, so
+                        // this path could throw away a perfectly good section because the
+                        // REPAIR reply came back as prose or truncated JSON - and bill for
+                        // two calls to do it. bestCandidate holds the good version; use it.
+                        ccLog('%c[PARSE] All attempts exhausted - checking for a valid earlier attempt', 'color: #ef4444;');
+                        break;
                     }
                     continue;
                 }
@@ -2797,8 +4048,8 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 // Score the FIXED version, not raw AI output!
                 // ===============================================================
                 ccLog('%c[LOCAL FIX] Applying local fixes BEFORE scoring...', 'color: #a855f7; font-weight: bold;');
-                const localFixed = localFixFiveCards(normalized, context, topicTitle);
-                let fixedCards = Prompts.normalizeCards(localFixed, context);
+                const localFixed = localFixFiveCards(normalized, promptContext, topicTitle);
+                let fixedCards = Prompts.normalizeCards(localFixed, promptContext);
 
                 // v13.88: on a REPAIR attempt, never accept a card that came back with
                 // less content than it went in with. See mergePreservingContent().
@@ -2849,10 +4100,133 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 // did in 13.83 - see the validation.valid check below.
 
                 if (validation.valid) {
-                    // Structure valid  -  return immediately, no scoring pass needed.
-                    // The prompt already enforces quality; we only block broken content.
+                    // ===========================================================
+                    // v13.98: QUALITY REPAIR, RE-ENABLED AND GUARDED.
+                    //
+                    // v13.89 made the measured checks report-only because the v13.87
+                    // repair pass returned cards with their content arrays missing and
+                    // took a VET pack from 10,166 learner-facing words to 6,162. That
+                    // was the right call AT THE TIME. It is no longer necessary, and
+                    // leaving it means the ranges in the prompt are enforced by nothing
+                    // at all - which is exactly what the v13.97.1 review measured: 9%
+                    // of fields inside their stated range, and not one repair pass run.
+                    //
+                    // Two guards now make a quality repair safe, and both are load-bearing:
+                    //   1. mergePreservingContent() (v13.88, above) takes a repair as a
+                    //      set of proposed EDITS, so a repair can improve a card and can
+                    //      never empty one.
+                    //   2. The candidate comparison below: a repair that comes back
+                    //      shorter than what it was given is DISCARDED, whatever it says
+                    //      about its own quality. The v13.87 failure could not happen
+                    //      twice without tripping this.
+                    //
+                    // The worst case is now one extra AI call on a section that was
+                    // already acceptable, and the original content is kept.
+                    // ===========================================================
+                    const _candidateWords = fixedCards.reduce(function (sum, c) {
+                        try { return sum + harvestCardText(c, 0).split(/\s+/).filter(Boolean).length; }
+                        catch (e) { return sum; }
+                    }, 0);
+                    const candidate = {
+                        cards: fixedCards,
+                        soft: softIssues,
+                        words: _candidateWords,
+                        attempt: attemptCount
+                    };
+                    // v13.98.3: the word-count guard must also arm on the STRUCTURAL repair
+                    // path. bestCandidate is only ever set inside this valid branch, so when
+                    // attempt 1 failed structurally there was nothing to compare attempt 2
+                    // against and it was accepted unconditionally - the one path where the
+                    // v13.87 content loss could still happen. lastScore holds what attempt 1
+                    // produced, so compare against that when there is no bestCandidate yet.
+                    if (!bestCandidate && attemptCount > 1 && lastScore && Array.isArray(lastScore.cards)) {
+                        const _priorWords = lastScore.cards.reduce(function (sum, c) {
+                            try { return sum + harvestCardText(c, 0).split(/\s+/).filter(Boolean).length; }
+                            catch (e) { return sum; }
+                        }, 0);
+                        if (_priorWords > 0 && candidate.words < _priorWords * 0.95) {
+                            ccWarn('[REPAIR GUARD] the structural repair returned ' + candidate.words +
+                                ' words against ' + _priorWords + ' - keeping the repaired cards ' +
+                                'because the earlier ones were structurally invalid, but this is ' +
+                                'content loss and is being recorded on the section.');
+                            candidate.soft = candidate.soft.concat(['This section lost content during ' +
+                                'a structural repair (' + _priorWords + ' words in, ' + candidate.words +
+                                ' words out). Review it.']);
+                        }
+                    }
+                    if (!bestCandidate) {
+                        bestCandidate = candidate;
+                    } else {
+                        // Never accept a repair that lost content. 5% of slack absorbs
+                        // ordinary rewording; anything beyond it is loss.
+                        const lostContent = candidate.words < bestCandidate.words * 0.95;
+                        const fewerIssues = candidate.soft.length < bestCandidate.soft.length;
+                        const sameIssuesMoreContent = candidate.soft.length === bestCandidate.soft.length &&
+                            candidate.words > bestCandidate.words;
+                        if (!lostContent && (fewerIssues || sameIssuesMoreContent)) {
+                            ccLog('%c[QUALITY REPAIR] accepted: ' + bestCandidate.soft.length + ' issues / ' +
+                                bestCandidate.words + ' words  ->  ' + candidate.soft.length + ' issues / ' +
+                                candidate.words + ' words', 'color: #22c55e; font-weight: bold;');
+                            bestCandidate = candidate;
+                        } else {
+                            ccLog('%c[QUALITY REPAIR] DISCARDED (' +
+                                (lostContent ? 'lost content: ' + bestCandidate.words + '  ->  ' + candidate.words + ' words'
+                                             : 'no improvement: ' + bestCandidate.soft.length + '  ->  ' + candidate.soft.length + ' issues') +
+                                '), keeping the earlier version', 'color: #f59e0b; font-weight: bold;');
+                        }
+                    }
+
+                    // v13.98.2: ONE quality repair, and only for issues a repair can
+                    // actually fix.
+                    //
+                    // v13.98.0 fired a repair whenever ANY measured issue was present.
+                    // Measuring a pack generated on that build showed why that was wrong:
+                    // every field asking for more than about 30 words comes back at 28-31
+                    // whatever range is requested, because the vendor runs its own
+                    // expansion and rewrite passes over the output after ours. Length
+                    // issues are therefore present on essentially every section, so the
+                    // repair fired on essentially every section - a second full
+                    // generation call, its own credits, and roughly a third added to the
+                    // wall-clock time of a run, to produce content the server flattens
+                    // again on the way back.
+                    //
+                    // A repair is worth an AI call when the fault is one the MODEL owns
+                    // and can fix in one pass: a missing or vague key takeaway, options a
+                    // learner can answer by shape, distractors that announce their own
+                    // wrongness, a card that has drifted off its subject, five
+                    // consequences that all land on the same abstraction. Pure length
+                    // shortfall is recorded on the card and reported, and does not spend
+                    // a second call until the server-side ceiling is lifted.
+                    // v13.98.3: match on the ISSUE TYPE, not on loose words.
+                    //
+                    // The first version tested for the substring "option ", which also
+                    // matched "Card 7 (decision-point) option feedback 3: 28 words, needs
+                    // 30-44" - a pure length issue. Because a field asking for more than
+                    // about 30 words comes back at 28-31 until the server-side floors are
+                    // raised, that made four repairable issues on essentially every section
+                    // of four routes, and the paid repair fired on all of them: exactly the
+                    // behaviour this filter was added to stop.
+                    var repairable = softIssues.filter(function (issue) {
+                        return CC_REPAIRABLE.some(function (re) { return re.test(issue); });
+                    });
+                    if (repairable.length && attemptCount < MAX_ATTEMPTS) {
+                        ccLog('%c[QUALITY REPAIR] ' + repairable.length + ' repairable issue(s) of ' +
+                            softIssues.length + ' measured  -  running one targeted quality repair',
+                            'color: #f59e0b; font-weight: bold;');
+                        // Send the repairable ones FIRST so the repair prompt's slice cannot
+                        // be filled with length issues the server will overwrite anyway.
+                        lastIssues = repairable.slice(0, 8);
+                        lastScore = { cards: fixedCards };
+                        continue;
+                    }
+
+                    // Structure valid and nothing left to fix (or attempts exhausted):
+                    // emit whichever version measured best.
+                    const _final = bestCandidate || candidate;
+                    const fixedCardsOut = _final.cards;
+                    const softIssuesOut = _final.soft;
                     const language = context?.language || 'en-AU';
-                    const cards = fixedCards.map((card, index) => ({
+                    const cards = fixedCardsOut.map((card, index) => ({
                         ...normalizeContent(card, language),
                         id: `${topic.id || 'topic'}_card_${index + 1}`,
                         topicId: topic.id,
@@ -2860,8 +4234,25 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                         cardIndex: index,
                         generated: true,
                         generatedAt: Date.now(),
-                        attemptCount: attemptCount,
-                        qualityAction: softIssues.length ? 'QUALITY_FLAGGED' : 'VALIDITY_GATE_PASS',
+                        attemptCount: _final.attempt,
+                        qualityAction: softIssuesOut.length ? 'QUALITY_FLAGGED' : 'VALIDITY_GATE_PASS',
+                        // v13.98.3: when a REPAIRABLE fault survives its repair pass, say so
+                        // on the card. needsReview is counted by triggerFailedRegeneration()
+                        // in builder.js alongside failed cards, so the section appears in
+                        // "N sections need attention" and the author can retry it deliberately.
+                        //
+                        // This is the deliberate answer to "force a retry": one repair is
+                        // automatic, and a fault that survives it surfaces to a human rather
+                        // than spending more credits on its own. A pure length shortfall does
+                        // not raise it, because that is currently capped server-side and would
+                        // flag every section forever.
+                        needsReview: (function () {
+                            try {
+                                return softIssuesOut.some(function (issue) {
+                                    return CC_REPAIRABLE.some(function (re) { return re.test(issue); });
+                                }) || undefined;
+                            } catch (e) { return undefined; }
+                        })(),
                         // v13.88: measured visible-word count, stamped on every card.
                         // The v13.87 proof run could not tell whether thin output came
                         // from generation or from the repair pass, because nothing
@@ -2874,7 +4265,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                         // v13.85: carried on the card so a QA panel, an export or the next
                         // proof-run harvest can read what was measured, instead of the
                         // finding existing only in a console log nobody sees in production.
-                        qualityIssues: softIssues.length ? softIssues.slice(0, 10) : undefined
+                        qualityIssues: softIssuesOut.length ? softIssuesOut.slice(0, 10) : undefined
                     }));
                     if (language === 'en-AU') {
                         ccLog('[AU SPELLING] Applied Australian spelling normalization to', cards.length, 'cards');
@@ -2924,6 +4315,35 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         // The last generated cards (lastScore.cards) are structurally broken.
         // Return a failed sequence so the "Regenerate Failed" auto-redo loop retries.
         const failReason = 'Structural validation failed after ' + MAX_ATTEMPTS + ' attempt(s): ' + lastIssues.join('; ');
+
+        // v13.98: a QUALITY repair can come back structurally broken, and when it does the
+        // loop falls through to here carrying the broken attempt in lastScore. But attempt
+        // 1 passed the structural gate - that is the only reason a quality repair ran at
+        // all - so there is a known-good version in hand. Ship it rather than salvaging
+        // the broken one or, worse, returning placeholders for a section that generated
+        // perfectly well the first time.
+        if (bestCandidate && Array.isArray(bestCandidate.cards) && bestCandidate.cards.length) {
+            ccWarn('[QUALITY REPAIR] the repair attempt failed structural validation; ' +
+                'returning the structurally valid version from attempt ' + bestCandidate.attempt);
+            const _language = context?.language || 'en-AU';
+            return bestCandidate.cards.map(function (card, index) {
+                return Object.assign({}, normalizeContent(card, _language), {
+                    id: (topic.id || 'topic') + '_card_' + (index + 1),
+                    topicId: topic.id,
+                    topicTitle: topicTitle,
+                    cardIndex: index,
+                    generated: true,
+                    generatedAt: Date.now(),
+                    attemptCount: bestCandidate.attempt,
+                    qualityAction: bestCandidate.soft.length ? 'QUALITY_FLAGGED' : 'VALIDITY_GATE_PASS',
+                    contentWords: (function () {
+                        try { return harvestCardText(card, 0).split(/\s+/).filter(Boolean).length; }
+                        catch (e) { return null; }
+                    })(),
+                    qualityIssues: bestCandidate.soft.length ? bestCandidate.soft.slice(0, 10) : undefined
+                });
+            });
+        }
 
         // v13.90.1 FIX-DISCARD-ON-EXHAUST: the loop above breaks out saying "checking for
         // best available content", and then there was no such check - lastScore.cards was
@@ -3362,6 +4782,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         
         // v11.11: Activities setting  -  when false, decision-point cards are excluded
         const activitiesEnabled = plannedManifest.activitySettings?.enabled !== false;
+        // v13.98.1: university packs saved before this build carry six cards and no
+        // decision-point. getExpectedCardOrder() now returns seven for that route, so
+        // "Regenerate Failed" will treat those older sections as incomplete and rebuild
+        // them. That is the intended behaviour - the seventh card is the retrieval
+        // practice the route was missing - but it is worth knowing why an old academic
+        // pack suddenly offers to regenerate.
         // FIX-CC-ACTIVITIES-CONTEXT (v13.65): validateCards() only ever receives `context`,
         // never the manifest, so it had no way to know activities were disabled and always
         // demanded the full card count. Surface the flag on context so the card-count check
@@ -3595,7 +5021,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
                 // matter", does not assume a person is present, and explicitly excludes PPE
                 // and industrial equipment unless the subject calls for it. The workaround is
                 // therefore removed so the correct branch is actually reached.
-                const _imageRoute = plannedManifest.context?.mode || section.route || 'vet';
+                const _imageRoute = ccNormaliseGenerationRoute(plannedManifest.context?.mode || section.route || 'general');
 
                 // v13.94.4: pass the PARENT TOPIC as topicTitle.
                 //
@@ -3703,6 +5129,25 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         const allJobs = [];
         for (const topic of topics) {
             const sections = getSections(topic);
+            // v13.98 CROSS-SLIDE DEDUPE: stamp every section with the full list of its
+            // sibling titles and its own position, BEFORE any worker starts.
+            //
+            // Sections generate in parallel, so there is no "what has been written so
+            // far" to hand a prompt. What is knowable up front is the shape of the whole
+            // pack, and that is enough for the failure actually observed: a five-slide
+            // Sports Nutrition pack in which all five slides re-taught the same three
+            // energy systems, because no slide was told the other four existed. Their
+            // TITLES were correct and distinct the whole time; only the prompts were blind.
+            //
+            // ccSiblingBlock() in prompts.js renders these into the user message.
+            const _siblingTitles = sections.map(function (s) {
+                return (s && (s.title || s.name)) || '';
+            });
+            sections.forEach(function (s, i) {
+                if (!s) { return; }
+                s._siblingTitles = _siblingTitles;
+                s._sectionIndex = i;
+            });
             for (const section of sections) {
                 allJobs.push({ section, topic });
             }
@@ -3995,6 +5440,33 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state'], function (
         translateTopicsForLanguage: translateTopicsForLanguage,
         // v13.75: exposed so the vendor-schema aliasing can be verified directly
         // against real API payloads. Not used by the plugin at runtime.
-        normalizeCardSchema: normalizeCardSchema
+        normalizeCardSchema: normalizeCardSchema,
+        // v13.98: the measurement functions, exposed so a pack can be measured
+        // outside a generation run - against a saved manifest, an exported pack, or a
+        // fixture in a test. Not used by the plugin at runtime. The v13.97.1 review
+        // had to re-implement all of this by hand against a text export; it should
+        // never have to be done twice.
+        validateCards: validateCards,
+        fieldIssues: fieldIssues,
+        optionParityIssues: optionParityIssues,
+        distractorQualityIssues: distractorQualityIssues,
+        concretenessIssues: concretenessIssues,
+        keyTakeawayIssues: keyTakeawayIssues,
+        subjectDriftIssues: subjectDriftIssues,
+        sourceAnchorIssues: sourceAnchorIssues,
+        cardQualityIssues: cardQualityIssues,
+        harvestCardText: harvestCardText,
+        ccExtractNames: ccExtractNames,
+        specificDensityIssues: specificDensityIssues,
+        metaProcedureIssues: metaProcedureIssues,
+        moralMistakeIssues: moralMistakeIssues,
+        commitmentPointIssues: commitmentPointIssues,
+        scenarioOpeningIssues: scenarioOpeningIssues,
+        repeatedOutcomeIssues: repeatedOutcomeIssues,
+        artefactIssues: artefactIssues,
+        depthIssues: depthIssues,
+        readabilityIssues: readabilityIssues,
+        duplicateSentenceIssues: duplicateSentenceIssues,
+        ccLegislationRelevant: ccLegislationRelevant
     };
 });

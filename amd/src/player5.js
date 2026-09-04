@@ -5960,11 +5960,26 @@ define([
                             });
                         }
                         if (card.legalLink && card.legalLink.legislationName) {
-                            lines.push('  Legislation: ' + fixGrammar(card.legalLink.legislationName));
-                            if (card.legalLink.legalObligation) lines.push('    Obligation: ' + fixGrammar(card.legalLink.legalObligation));
+                            // v13.98: the on-screen panel has been route-aware since v13.96
+                            // (What the law says / What the policy requires / What the
+                            // principle requires) but this text export hard-coded
+                            // "Legislation:" and "Obligation:", so a Workplace or PD pack
+                            // exported as though every topic sat under an Act. Use the same
+                            // label the learner actually saw.
+                            var _llLabel = getLabel(card.legalLink.labelKey || 'whatTheLawSays') || 'What the law says';
+                            lines.push('  ' + _llLabel + ': ' + fixGrammar(card.legalLink.legislationName));
+                            if (card.legalLink.legalObligation) lines.push('    Requirement: ' + fixGrammar(card.legalLink.legalObligation));
                             if (card.legalLink.scenarioConnection) lines.push('    Connection: ' + fixGrammar(card.legalLink.scenarioConnection));
                         }
-                        if (card.items && card.items.length) {
+                        // v13.98.3: on competency-summary, normalizeCardSchema copies
+                        // standardItems into items as well as into goodItems, so printing
+                        // items here put the five standards out a second time - and the
+                        // v13.98 alias guard could not catch it, because items IS the
+                        // duplicate it was testing for. items is the canonical array on
+                        // the mistakes card and a copy everywhere else.
+                        var _itemsIsCopy = (card.goodItems && card.goodItems.length) ||
+                            (card.badItems && card.badItems.length);
+                        if (!_itemsIsCopy && card.items && card.items.length) {
                             card.items.forEach(function (item) {
                                 var mistake = typeof item === 'string' ? item : (item.mistake || item.error || item.pitfall || '');
                                 var consequence = typeof item === 'string' ? '' : (item.consequence || '');
@@ -6027,7 +6042,18 @@ define([
                                 if (a.bullets && a.bullets.length) a.bullets.forEach(function (b) { lines.push('    - ' + fixGrammar(b)); });
                             });
                         }
-                        if (card.standardItems && card.standardItems.length) {
+                        // v13.98 EXPORT-DUPES: standardItems/errorItems are VENDOR aliases that
+                        // normalizeCardSchema() deliberately RETAINS alongside the canonical
+                        // goodItems/badItems/items (see the v13.89 note in generator.js). This
+                        // export walked both, so every competency-summary printed its five
+                        // standards three times - as bullets, again under "What Good Looks Like",
+                        // and again as bullets - and every mistakes card printed its five items
+                        // twice. Guarded exactly the way keyPoints is guarded above: print the
+                        // alias only when the canonical array is absent.
+                        var _stdDupeTxt = (card.goodItems && card.goodItems.length)
+                            || (card.items && card.items.length)
+                            || (card.options && card.options.length);
+                        if (!_stdDupeTxt && card.standardItems && card.standardItems.length) {
                             card.standardItems.forEach(function (s) { lines.push('  - ' + fixGrammar(typeof s === 'string' ? s : (s.text || ''))); });
                         }
                         if (card.context) lines.push('  Context: ' + fixGrammar(card.context));
@@ -6036,7 +6062,11 @@ define([
                             lines.push('  Tips:');
                             card.optimisationTips.forEach(function (tip) { lines.push('    - ' + fixGrammar(tip)); });
                         }
-                        if (card.errorItems && card.errorItems.length) {
+                        // v13.98 EXPORT-DUPES: see the note on standardItems above.
+                        var _errDupeTxt = (card.badItems && card.badItems.length)
+                            || (card.items && card.items.length)
+                            || (card.options && card.options.length);
+                        if (!_errDupeTxt && card.errorItems && card.errorItems.length) {
                             card.errorItems.forEach(function (e) {
                                 lines.push('  Error: ' + fixGrammar(e.error || ''));
                                 if (e.consequence) lines.push('    Consequence: ' + fixGrammar(e.consequence));
@@ -6593,13 +6623,21 @@ define([
                         }
                         if (card.legalLink && card.legalLink.legislationName) {
                             printHtml += '<div class="accent-card accent-blue">';
-                            printHtml += '<h4>' + getLabel('whatTheLawSaysHeading') + '</h4>';
+                            // v13.98.3: the text export was made route-aware in v13.98 and this one was
+                            // not, so every Workplace and PD pack printed "What the Law Says" over an
+                            // internal SOP or a coaching principle in its PDF.
+                            printHtml += '<h4>' + escapeHtml(getLabel((card.legalLink && card.legalLink.labelKey) || 'whatTheLawSays')) + '</h4>';
                             printHtml += '<p><strong>' + escapeHtml(fixGrammar(card.legalLink.legislationName)) + '</strong></p>';
                             if (card.legalLink.legalObligation) printHtml += '<p>' + escapeHtml(fixGrammar(card.legalLink.legalObligation)) + '</p>';
                             if (card.legalLink.scenarioConnection) printHtml += '<p><em>' + escapeHtml(fixGrammar(card.legalLink.scenarioConnection)) + '</em></p>';
                             printHtml += '</div>';
                         }
-                        if (card.items && card.items.length) {
+                        // v13.98.3: see the note on the text export. On competency-summary, items is a
+                        // copy of standardItems, so this printed the five STANDARDS a second time - and
+                        // in the mistakes styling, as red error boxes above the green list.
+                        var _pdfItemsIsCopy = (card.goodItems && card.goodItems.length) ||
+                            (card.badItems && card.badItems.length);
+                        if (!_pdfItemsIsCopy && card.items && card.items.length) {
                             card.items.forEach(function (item) {
                                 var mistake = typeof item === 'string' ? item : (item.mistake || item.error || item.pitfall || '');
                                 var consequence = typeof item === 'string' ? '' : (item.consequence || '');
@@ -6683,14 +6721,25 @@ define([
                                 }
                             });
                         }
-                        if (card.standardItems && card.standardItems.length) {
+                        // v13.98 EXPORT-DUPES: same defect as the text export - see the note
+                        // there. standardItems/errorItems are retained vendor aliases of
+                        // goodItems/badItems/items/options, so printing both duplicated every
+                        // competency-summary and mistakes card in the PDF too.
+                        var _stdDupe = (card.goodItems && card.goodItems.length)
+                            || (card.items && card.items.length)
+                            || (card.options && card.options.length);
+                        if (!_stdDupe && card.standardItems && card.standardItems.length) {
                             printHtml += '<ul>';
                             card.standardItems.forEach(function (s) { printHtml += '<li>' + escapeHtml(fixGrammar(typeof s === 'string' ? s : (s.text || ''))) + '</li>'; });
                             printHtml += '</ul>';
                         }
                         if (card.context) printHtml += '<p>' + escapeHtml(fixGrammar(card.context)) + '</p>';
                         if (card.consequence) printHtml += '<p><strong>' + getLabel('printConsequence') + '</strong> ' + escapeHtml(fixGrammar(card.consequence)) + '</p>';
-                        if (card.errorItems && card.errorItems.length) {
+                        // v13.98 EXPORT-DUPES: see the note on standardItems above.
+                        var _errDupe = (card.badItems && card.badItems.length)
+                            || (card.items && card.items.length)
+                            || (card.options && card.options.length);
+                        if (!_errDupe && card.errorItems && card.errorItems.length) {
                             card.errorItems.forEach(function (e) {
                                 printHtml += '<p><strong>' + getLabel('printError') + '</strong> ' + escapeHtml(fixGrammar(e.error || '')) + '</p>';
                                 if (e.consequence) printHtml += '<p><em>' + escapeHtml(fixGrammar(e.consequence)) + '</em></p>';

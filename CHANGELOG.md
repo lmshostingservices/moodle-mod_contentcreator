@@ -1,5 +1,796 @@
 # Changelog
 
+## 15.1.0 - 2026-09-04
+
+**General route: six adaptive cards replacing the unified seven.** General no longer generates
+Hook Scenario -> Concept Explainer -> Mental Model -> Applied Scenario -> Mistakes ->
+Competency Summary -> Decision Point. It now generates six cards built around a fixed
+instructional job per card, with the AI choosing the technique, heading and content for that
+job on every generation: Orient (create interest, connect to something familiar), Understand
+(build the core idea via whichever explanatory structure fits), Explore (go deeper - a second
+concept, a misconception, a trade-off, a relationship the first two cards didn't cover - so
+packs stop reading as intro+bullets+example+summary), Apply (put the Instructional Model Router
+to work - GROW, PDCA, 5 Whys, Diagnose-Test-Correct-Verify and the other 11 models, chosen by
+the actual learning job), Challenge (cognitive friction that depends on Cards 1-4, not trivia
+recall), and Consolidate (a practical playbook, checklist or action plan - not a plain "Key
+Takeaways" recap). VET, Workplace and University are unchanged.
+
+Implementation reuses six of the seven existing unified card-shape renderers (`hook-scenario`,
+`concept-explainer`, `mistakes`, `mental-model`, `decision-point`, `competency-summary`),
+reassigned to the new jobs, and drops `applied-scenario` - so no renderer, CSS or SCORM-export
+changes were needed. Every General card now also returns a top-level `title` field (the
+AI-generated, topic-specific learner-facing heading - explicitly barred from generic labels like
+"Orient" or "Key Takeaways"), which the renderers in `cc-card-slots.js` already supported but no
+prompt had asked for on these card types before. `generator.js`'s card-title validation
+(`TITLED_CARD_TYPES`) is scoped to the raw route string, not the pd/topicstext-normalised one, so
+PD - which keeps its own unchanged `PD_SYSTEM_PROMPT` and never asks for `title` on 5 of these 6
+card types - cannot be caught by the new requirement. `getExpectedCardOrder()` gained an explicit
+`general` branch for the same reason: falling through to the old 7-card `UNIFIED_CARD_ORDER`
+would have silently mis-ordered every General generation.
+
+**Fixed: `CC_VERSION` frozen at '13.94.8' since that release, through roughly 20 subsequent
+releases up to 15.0.0.** This single JS constant (`cc-state.js`) stamps every console log line
+and every saved manifest's `builtWithVersion`, and `builder.js`'s `compareVersions()` uses it to
+decide whether a manifest was built by an older release and needs a non-destructive re-apply.
+Frozen, that staleness-detection feature silently stopped firing for every release since
+13.94.8, and every diagnostic log looked 20-odd releases out of date. This is the same bug
+fixed once before at v13.94.3 (then frozen at a different old value); it has now been bumped to
+match `$plugin->release` and the release runbook has a new checklist step so it isn't missed a
+third time.
+
+Also fixed in passing: the General entry on the route-picker screen (`builder.js`) had an
+unterminated `class` attribute swallowing its own `data-mode="general"` into the class string,
+and its card-list preview still named the old 7 cards including the removed Applied Scenario -
+both fixed alongside the route-picker's new 6-card list (Orient/Understand/Explore/Apply/
+Challenge/Consolidate).
+
+Verified via the full `tests/js/*.js` suite (`test-routes.js`, `test-card-quality.js`,
+`test-checks.js`, `test-standard.js`) - all four pass; `test-card-quality.js`'s active-route
+drift guard was deliberately moved from 28 cards/164 criteria to 27 cards/167 criteria to match
+the intentional shape change (minus Applied Scenario, plus a title criterion on all 6 remaining
+General cards). AMD rebuilt (`grunt amd`, 23 modules).
+
+## 15.0.0 - 2026-09-03
+
+Route architecture rewrite: the five teacher-facing routes (VET, Workplace, University, PD,
+Topics-and-Text) are now four (VET, Workplace, University, General). PD and Topics-and-Text are
+folded into General as use cases rather than separate routes - General now carries an internal
+instructional-model router (`CC_INSTRUCTIONAL_MODEL_ROUTER_BLOCK`) that selects from 15 named
+models (GROW, PDCA, 5 Whys, Diagnose-Test-Correct-Verify, and 11 others) by what the learning
+content actually needs, rather than PD's old hard-locked "the model is GROW" and Topics-and-Text's
+separate short-form template. `pd`/`topicstext` mode strings are kept internally, normalised to
+`general` at generation time via `ccNormaliseGenerationRoute()`, so existing saved courses on those
+two modes keep working unchanged - the UI simply no longer offers them as a choice for a new
+course. `legislation.js` was rewritten from unconditionally injecting a "MANDATORY COMPLIANCE
+FRAMEWORK" to offering verified country/state packs as "VERIFIED COMPLIANCE CANDIDATE CONTEXT"
+only, with explicit truth rules against inventing specific Acts, Regulations or thresholds.
+
+**Golden-pack evaluation** (new, manual QA exercise, not automated): hand-authored full 7-card
+packs for one topic per route - VET (isolating a switchboard to AS/NZS 3000), Workplace (a
+Northline returns-policy refund), University (Festinger & Carlsmith's cognitive dissonance study)
+and General (diagnosing a dropping Wi-Fi connection) - written the way a real generation would be,
+then run through the actual `generator.js` check functions (not a structural stand-in). This
+surfaced one real, previously-unknown tooling defect, fixed below, and confirmed the check
+machinery is not a rubber stamp: each pack needed one to two rounds of revision to converge, the
+same shape a production generate-then-repair loop goes through.
+
+**Fixed: false "longest sentence" readability flags from a title/field concatenation artifact.**
+`harvestCardText()` joins every learner-facing field on a card with a plain space and no
+punctuation, which is correct for checks that only look for keywords or substrings
+(`sourceAnchorIssues`, `subjectDriftIssues`, and similar) but meant a short `title` field glued
+straight onto the next field's first word read, to `readabilityIssues()`'s sentence splitter, as
+one run-on sentence - producing spurious "sentence exceeds limit" flags on well-formed content, on
+every title-bearing card type (`hook-scenario`, `applied-scenario`, `concept-explainer`,
+`mental-model`), independent of route. This most likely affected real production generations too,
+not just hand-written test content. Fixed with a new `harvestCardTextForSentences()` used only by
+`readabilityIssues()` and `duplicateSentenceIssues()` - the two checks that actually split text
+into sentences - which inserts a sentence-terminating period between two joined fields when the
+first does not already end in `[.!?]`. `harvestCardText()` itself, and the many other checks built
+on its plain space-joined output, are untouched. Verified via the full `tests/js/*.js` suite
+(`test-checks.js`, `test-routes.js`, `test-card-quality.js`, `test-standard.js`) before and after:
+identical results in every case, confirming no behaviour change to any existing check.
+
+**Known, pre-existing, not fixed:** the golden-pack exercise confirmed a tension the code's own
+`CC_DEPTH_TARGET`/`readabilityIssues()` comments already flag - a fully spec-compliant
+`mental-model` card (and, on General, the `mistakes` card too) can legitimately need more than the
+320-word "one screen" ceiling `readabilityIssues()` enforces for every card on every route, because
+each step/field's own minimum word count sums past 320 before the ceiling is even reached. This is
+a pre-existing design tension between two validators, not something introduced by the route
+rewrite, and is left as a follow-up rather than papered over by weakening either check.
+
+## 14.1.0 - 2026-09-03
+
+Five independent route-specialist reviews (one each for VET, Workplace, PD, University and
+Topics-and-Text, each briefed specifically on narrative engagement, memorability and emotional
+pull rather than general pedagogy) converged on the same category of gap across all five routes:
+cards had a real person and a real stake in the hook-scenario/overview card, then lost them by
+card 2 - later cards reverted to a generic, unnamed "a worker"/"a technician"/"the reader," so the
+pack read as disconnected quiz questions rather than one continuous story. This release adds 34
+new criteria to `card-quality.js` (192 -> 226) to close that gap, biased heavily toward
+mechanically-enforceable `regex`/`continuity` checks rather than judgement-only rules, per an
+explicit instruction partway through this round of work.
+
+**18 "round 1" criteria** (192 -> 210): a new `check: 'continuity'` type verifies a named
+person/entity introduced in a route's anchor card (`hook-scenario` for VET/Workplace/PD/University,
+`overview` for Topics-and-Text) recurs by name in a later card - `VET-APPLIED-7`, `VET-MISTAKES-7`,
+`VET-SUMMARY-7`, `VET-DECISION-7` and their Workplace (`WP-*-7`) and PD (`PD-*-7` on
+applied/mistakes/summary/decision) equivalents. Hook cards themselves got sharper require-regex
+criteria for a concrete physical stake (`VET-HOOK-7`/`WP-HOOK-7`: a named body part or piece of
+equipment at risk) and a real social pressure toward the shortcut (`VET-HOOK-8`/`WP-HOOK-8`: a
+supervisor, deadline or "already signed off" pressure). University's `UNI-FRAMEWORK-1` and
+`UNI-ANCHOR-2` regexes were tightened from matching any capitalised word on the card to requiring
+an actual surname-shaped token near a real year. Topics-and-Text got `TT-OVERVIEW-7` (a
+contrast/surprise marker next to a figure) and `TT-CONCEPTS-7` (a human-stakes consequence marker).
+
+**16 "round 2" criteria** (210 -> 226): consequence-contrast and causal-mechanism markers on the
+`concept-explainer`/`mental-model` pair across VET/Workplace/PD (`*-CONCEPT-7`, `*-MODEL-7`), a
+named-person continuity check for PD's decision-point (`PD-DECISION-7`), University criteria
+requiring a lens's own limitation, a genuine ethical trade-off, and an unexpected outcome to be
+named explicitly (`UNI-LENS-6`, `UNI-ETHICS-6`, `UNI-CASE1-6`, `UNI-ANCHOR-7`), a
+`continuity`-anchored check on University's second case study naming the first case's named
+subject again (`UNI-CASE2-6`, anchored to `case-study-1` rather than the route default via a new
+optional `anchor` field on any `continuity` criterion), and Topics-and-Text criteria requiring a
+named consequence in an example and a genuine corrected-misconception takeaway
+(`TT-EXAMPLES-6`, `TT-TAKEAWAYS-7`, `TT-DECISION-7`).
+
+The ChatGPT downloadable-prompt-file feature (`buildChatGptPromptFile`) needed no separate change -
+it calls the same `getSystemPromptForMode()` that renders the card-quality block, so it inherited
+all 34 new criteria automatically; confirmed directly by generating the `.txt` file for all five
+routes and finding the new rule text present in each.
+
+**Two self-inflicted bugs found and fixed before shipping, both while implementing the above:**
+- The new `continuity` name-matching heuristic initially missed names that open a sentence (e.g.
+  "Josh checks the gauge...") because its regex required a preceding lowercase letter; fixed by
+  adding sentence-start and `.`/`!`/`?`-boundary as valid preceding contexts.
+- That fix then let common capitalised sentence-openers ("What", "Is", "The"...) get extracted as
+  false "names," which could make a continuity check pass by accident when the real name was
+  missing but a generic word happened to recur in both cards. Fixed with a much larger stopword
+  list (interrogatives, modals, pronouns, narrative connectors, spelled-out numbers, days/months)
+  and by dropping the apostrophe from the name-matching character class so "Josh's" reduces to
+  "Josh" and "It's" no longer qualifies as a name at all.
+- Separately: two of the new criteria's chosen IDs (`UNI-ANCHOR-6`, `TT-TAKEAWAYS-6`) collided with
+  genuine pre-existing criteria and were silently overwritten by the codegen script's
+  idempotent-by-ID `push()`. Caught by the total criterion count coming out 2 short of expected,
+  confirmed against a pre-change JSON snapshot, and fixed by restoring both original criteria and
+  renumbering the new ones (`UNI-ANCHOR-7`, `TT-TAKEAWAYS-7`). All 36 new-criterion IDs were then
+  cross-checked against the full pre-existing 192-ID set to rule out any other collisions.
+
+Verified clean end to end: `test-card-quality.js` reports 226/226 rule strings exposed in the
+rendered prompt, 84/84 regex criteria individually confirmed reachable and correctly IDed, and
+10/10 `continuity` criteria (including the two with a custom `anchor`) confirmed correct with a
+real anchor+target card pair - the test's continuity section was extended this release to honour a
+criterion's `anchor` override instead of always assuming the route default. `test-routes.js` and
+`test-checks.js` unaffected. AMD bundles rebuilt and the minified build spot-checked against source
+via a from-scratch VM loader - identical 226/226 and 84/84 results. The Card Quality Checklist
+artifact and `card-quality-data.json` were regenerated from the corrected file and republished.
+
+## 14.0.1 - 2026-09-03
+
+Triple independent expert review of the 192-criterion card-quality.js standard (a pedagogy
+audit, a QA/regex audit, and an editorial/consistency audit, each with no prior exposure to the
+product) converged - unprompted, working from separate copies of the same file - on the same
+finding: **25 of the 60 machine-checked criteria had `polarity` set backwards.**
+
+Each of these criteria's `rule` text correctly described content to avoid (e.g. "never trust,
+credibility, satisfaction or morale," "not a character flaw," "never 'How do you ensure...'"),
+and the regex correctly matched that banned language - but `polarity: 'require'` meant the check
+only passed when the banned language WAS present, and failed genuinely compliant content. Because
+`CC_REPAIRABLE` treats every `QUALITY STANDARD [...]` failure as worth a paid AI repair call, this
+meant correct content on 25 criteria (concentrated in PD, University and Topics-and-Text, with a
+few on VET/Workplace) would burn a repair call on every single generation, permanently, since the
+repair model - correctly following `c.rule` - would keep producing content that failed the
+inverted check.
+
+Fixed: all 25 flipped from `require` to `forbid` (same regex, same rule text - only the polarity
+field changed). Verified with concrete before/after cases pulled directly from the audit (e.g.
+`VET-SUMMARY-4` now correctly passes the rule's own worked example, "Thinking the tag is the
+isolation," and correctly fails the banned "Ignoring the isolation procedure" opener; `PD-HOOK-6`
+now correctly passes a clean PD scene and fails one stuffed with compliance vocabulary). Full
+192-criterion structural test (`test-card-quality.js`) still passes at 192/192 prompt-exposure and
+60/60 reachability; `test-routes.js` and `test-checks.js` unaffected.
+
+**Known limitation, not yet fixed:** the same three audits also identified two deeper classes of
+bug in the regex layer that a polarity flip cannot fix, because they're architectural -
+`harvestCardText()` flattens every field of a card into one string before any regex runs, so (a)
+a `^`-anchored "check every item" criterion (e.g. "no mistake opens with a character-flaw verb,"
+meant to cover all 5 mistakes) actually only ever tests whichever field happens to serialize
+first, silently never checking items 2-5, and (b) a criterion that names a specific field
+("`sceneParts[3]` ends on a question") can match or miss based on unrelated text elsewhere on the
+card once field boundaries are gone. Fixing this properly means teaching `cardQualityIssues()` to
+check named fields and individual array items directly, instead of one flattened blob - a real
+design change, not a patch, and it has not been rushed into this release. Full detail in the
+project's card-quality audit docs.
+
+## 14.0.0 - 2026-09-03
+
+Per-card, per-route quality standard. The 7-card journey and its fields are unchanged - this
+release changes what the model is told about the content of each card, and adds a machine check
+that the same thing was actually produced.
+
+### The architecture: one table, two consumers, structurally provable
+
+`amd/src/card-quality.js` is a new module holding 33 card x route quality standards (7 cards on
+VET/Workplace/PD/University, 5 on Topics-and-Text) - 192 criteria in total, each with an id, a
+rule stated in the card's own terms (a VET hook-scenario is judged differently from a Workplace
+hook-scenario), and, where the rule can be tested mechanically, a regex with a polarity
+(`require`/`forbid`). 60 of the 192 are executable; the rest are marked `check: 'judgement'`
+because the standard's own honest position is that memorability and teaching quality are not
+regexable, and pretending otherwise would just move the drift somewhere less visible.
+
+Both consumers read this ONE table and nothing else:
+
+- **prompts.js** (`getCardQualityBlock`) renders every card's intent, instruction text, and the
+  full list of its criteria - verbatim - into that route's system prompt, appended by
+  `getSystemPromptForMode`. This is what the model is told.
+- **generator.js** (`cardQualityIssues`) re-reads the same 192 criteria and, for every `regex`
+  one, tests it against the generated card's harvested text, respecting polarity. This is what
+  is checked, and it feeds the existing repair pipeline exactly like the other quality
+  validators - `CC_REPAIRABLE` now recognises `QUALITY STANDARD [...]` issues as worth a paid
+  repair call.
+
+Because both sides are one read of `card-quality.js`, a rule that lives only in the prompt or
+only in the check is now structurally impossible, not just avoided by discipline. This is proven,
+not asserted: `tests/js/test-card-quality.js` confirms all 192 rule strings appear verbatim in
+their route's rendered prompt, and independently exercises all 60 regex criteria against a
+synthetic blank card to confirm each one is reachable and reports under its own ID (not a
+neighbour's). Both checks currently pass at 100%.
+
+## 13.99.0 - 2026-09-03
+
+A content quality STANDARD was commissioned from a learning scientist, written from the evidence
+base rather than from what this system happens to do, and scored against the real failing pack.
+It scored the pack at **7% of achievable quality**. This release rebuilds the card
+specifications from that standard and adds the validators it calls for.
+
+The seven-card journey is unchanged. Every change below is to the content INSIDE the existing
+cards and their existing fields.
+
+### THE BIGGEST DEFECT IN THE PRODUCT - each slide was shown the wrong part of the source
+
+Every route interpolated `context.priorityContent.substring(0, 12000)` - the FIRST twelve
+thousand characters of the author's reference material, identically, for every section in the
+pack.
+
+The Sports Nutrition source that produced the reviewed pack is 36,802 characters. Topics 3, 4
+and 5 begin at characters 14,609, 21,290 and 28,302. **The slides titled "Matching Nutrition and
+Supplements to Exercise", "Endurance Nutrition and Advanced Fuelling Strategies" and "Nutrition
+During Exercise and Recovery" were generated having been shown none of their own material.**
+
+The model could not cite 10-12 g/kg/day, the 2-3% performance gain, the Louise Burke study,
+beta-alanine, carnosine, the carbohydrate mouth rinse, train-low/compete-high or 30 g/hour,
+because it was never given them. It was handed the first two topics and asked to write about the
+last three.
+
+This is not a prompt failure or a model failure, and it is not the vendor. It is the single
+largest cause of generic content in this product, and three separate audits missed it because
+from inside the prompt the material looks present.
+
+Two changes: the budget is now 60,000 characters (roughly 15,000 tokens, against a 128,000-token
+context - the old figure was chosen when windows were small), and where a source exceeds even
+that, `ccRelevantSource()` selects the sections that are actually about THIS slide, scored with
+inverse-document-frequency weighting so that a rare title word like "supplements" outweighs a
+common one like "nutrition", with headings grouped to the text they head.
+
+Measured on the real source: key specifics reaching their own slide went from **8 of 20 to 19 of
+20**, and from **0 of the 12 that live past character 12,000** to all of them. `tests/js/test-routes.js`
+now builds a 40-section manual and asserts that section 40's material reaches section 40.
+
+### Rebuilt from the standard - what goes INSIDE each of the seven cards
+
+Every route now carries the standard's definition of a TEACHABLE SPECIFIC - a number, threshold
+or dose; a named thing; a rule with its boundary; a mechanism with its middle step named; a named
+failure state and how you would recognise it - together with the list of category labels that are
+not one (tailored, balanced, appropriate, optimal, individual needs). Every card must carry two,
+one of which is a number or a named thing.
+
+Per card, all within fields that already exist:
+
+- **Card 1** - panel 1 opens on a named person, a moment and a stake inside fifteen words. Panel
+  4 is the COMMITMENT POINT: it ends on a question addressed to the learner about what THEY would
+  do, before card 2 answers it. If the people in the scene resolve it themselves, the learner has
+  watched somebody else learn.
+- **Card 2** - panel 1 answers card 1's question and opens on the thing that contradicts the
+  obvious guess. Every panel states a mechanism with its parts named, not a benefit with
+  adjectives on it.
+- **Card 3** - the procedure of the WORK, not of talking about the work. The meta-procedure
+  (assess, explain, tailor, monitor, keep learning) is banned by name. At least three of the four
+  or five steps operate on a number or a named thing; one is a branch the learner must choose;
+  one says why its threshold sits where it does.
+- **Card 4** - panel 3 is a second commitment point: a complication the taught rule does not
+  cleanly cover. Panel 4 resolves it by naming the thing, not by "recommending a supplement".
+- **Card 5** - a mistake is a thing done wrongly, not an attitude held wrongly. Ignoring /
+  Neglecting / Overlooking / Failing to / Assuming all are banned as openings; 24 of the 25
+  mistakes in the reviewed pack used that construction. Errors must be ones a knowledgeable
+  person makes at the edge of competence.
+- **Card 6** - ten facts in imperative form, not ten virtues. The avoid column names the specific
+  wrong belief, not the vice.
+- **Card 7** - at least two options a competent practitioner might actually choose; the best
+  distractor is the right answer to a neighbouring case. Feedback says why someone would believe
+  it, then what is wrong, and contains a fact.
+
+### Added - five validators named after the standard's own criteria
+
+- `sourceAnchorIssues` (T0-1) - extracts figures-with-units, named things, technical compounds
+  and acronyms from the author's material and reports a slide that carries fewer than six of
+  them. The standard calls this the most important validator to build.
+- `specificDensityIssues` (T1-4) - a card with no number, threshold or named thing anywhere on it.
+- `metaProcedureIssues` (T2-7) - a mental model that is five ways of saying "have a conversation".
+- `moralMistakeIssues` (T2-6) - mistakes that are character flaws rather than errors.
+- `commitmentPointIssues` (T2-1) - a hook card that resolves itself instead of handing the
+  learner a decision.
+
+All five are repairable, so they earn a repair pass. All five were verified against the real
+failing pack: the moral-mistake check flags all five of its mistakes cards, the meta-procedure
+check flags its mental models, the commitment-point check flags its hooks - and all five stay
+silent on a compliant rewrite.
+
+## 13.98.3 - 2026-09-03
+
+Three independent audits of the v13.98.2 work - an adversarial code review, an expert
+prompt-engineering review, and a five-route parity review. All three led with the same finding,
+and it was mine.
+
+### Fixed - the impossible word range was only fixed in half the prompts
+
+v13.98.2 changed the five GENERATION prompts to ask for three short sentences, because two
+sentences under a 20-word cap cannot carry a 42-58 word field. The four REPAIR system prompts
+still said "EXACTLY 2 sentences, 42-58 words" - so the repair pass, which v13.98 had just made
+fire far more often, handed the model the exact impossibility the release claimed to have
+removed. The University repair prompt was staler still: eight of eight field ranges predated
+v13.98.1, and it described six card types while demanding seven.
+
+The guard could not see it because it only parsed the five generation prompts.
+
+All four repair system prompts are now DERIVED from their route's own generation prompt, the way
+Topics-and-Text has always done it and the only one that had never drifted. The card contract now
+exists in exactly one place per route and a repair cannot be told something the generator was
+not. `tests/js/test-routes.js` parses generation AND repair prompts, and reads "under 20 words"
+as 19 rather than 20 - which caught two further ranges that were unreachable by exactly one word
+(scene text 42-58 against 3x19=57, key takeaway 28-40 against 2x19=38). Those are now 42-56 and
+28-38.
+
+### Fixed - four defects in the v13.98 checks themselves
+
+- **A parse failure on the repair discarded a good section.** The early return for unparseable
+  JSON sat above the salvage block. Before v13.98 that was safe, because attempt 2 only ran when
+  attempt 1 was broken; now it also runs after a PASS, so a section that generated correctly
+  could be replaced with placeholders because the repair reply came back malformed. It now falls
+  through to the salvage path and ships the good version.
+- **The repair filter fired on pure length after all.** It tested for the substring `option `,
+  which also matches "option feedback 3: 28 words, needs 30-44". Because fields over ~30 words
+  are capped server-side, that made four repairable issues on essentially every section of four
+  routes - the exact behaviour v13.98.2 said it had stopped. It now matches on issue type.
+- **Subject drift named the wrong items.** Labels were read compacted and explanations
+  positionally, so any blank explanation shifted the pairing and the repair instruction told the
+  model to rewrite the items that were fine and leave the empty ones alone.
+- **A missing or empty field was invisible.** The field reader dropped empties before measuring,
+  so a mistakes card with five blank consequences measured as perfect while a two-word shortfall
+  was reported. A raw reader now measures absent and empty fields as zero.
+
+### Added - a worked example on every route
+
+There was no complete example of a correct card anywhere in the file. The prompts specified
+structure entirely by prose enumeration, which asks the model to hold roughly fourteen numeric
+constraints per card with nothing to pattern-match against; measured first-pass compliance was
+9%. Every route now opens its CARDS section with one complete, annotated, valid card - card 1
+for each route, in that route's register and subject matter.
+
+Each exemplar was verified against its own route's specification before insertion: title and
+field word counts inside their ranges, exact sentence counts, no sentence over the route's cap,
+four distinct icons, a compliant key takeaway. Two drafts were rejected by that check and
+rewritten, which is the point of having it.
+
+### Fixed - route parity gaps
+
+- **VET was measured for subject drift but never told the rule.** THE SUBJECT IS THE SUBJECT and
+  THE SWAP TEST existed only on Workplace, while `subjectDriftIssues()` runs on VET too. Shared,
+  in VET's register.
+- **University had no variety machinery at all.** `ccVarietyBlock` is appended by VET, Workplace
+  and PD; University was never wired up - on the route whose two case studies must differ in
+  setting, differ in question and disagree with each other, with no source of variation and a
+  byte-identical cached prompt across every section of a course. It now gets an academic-register
+  pool pinned to the section index.
+- **PD was measured for repeated outcomes but never told the rule.** Added, with a PD-appropriate
+  ceiling of two attention-failures out of five.
+- **Topics-and-Text told the model to "never exceed 150 words on a card"** while three of its
+  five cards cannot satisfy their own field ranges under 150 - key-concepts tops out at 256. The
+  cap now explicitly governs the paragraphs only, with terms, takeaway and sort items outside it.
+- **University's validator was stricter than its own prompt** (sentence cap 24 against "under
+  25") - the only route where that was true. Now 25.
+- **mental-model is specified 4-5 steps and was costed at 4**, so a compliant 5-step card was
+  told it was 56 words over. The derived range now uses the card's actual item count.
+
+### Fixed - render and export defects
+
+- Competency-summary printed its five standards TWICE in both exports, because
+  `normalizeCardSchema` copies `standardItems` into `items` as well as `goodItems` and the
+  v13.98 alias guard tested for the very array that was the duplicate. In the PDF they were
+  rendered in the mistakes styling - the standards appeared as red error boxes above the green
+  list.
+- The PDF export still hard-coded "What the Law Says". The text export was made route-aware in
+  v13.98 and this one was missed, so every Workplace and PD pack printed a legislation heading
+  over an internal SOP or a coaching principle.
+- The two responsive `margin-bottom` rules added in v13.98 were dead - the base rule sits 8,000
+  lines later at equal specificity and won the cascade, so mobile silently got the desktop gap.
+- `distractorQualityIssues` flagged legitimate options containing "only", "never" or "always"
+  ("Always recheck the drip rate at 30 minutes"), costing a paid repair. It now matches the
+  self-announcing pattern rather than the bare words.
+- The structural-repair path had no content-loss guard: the word-count comparison only armed once
+  a valid candidate existed, which is never true when attempt 1 failed structurally. Loss is now
+  detected and recorded on the section.
+- `msgdifferuniversity` still told teachers University was "six academic cards"; a dead constant
+  and a comment describing a function that does not exist were removed.
+
+### Added - a repairable fault that survives its repair now surfaces to the author
+
+One repair is automatic. A fault that survives it stamps `needsReview` on the section, which
+`builder.js` already counts in "sections need attention", so the author can retry it deliberately
+rather than the plugin spending more credits on its own. Pure length shortfall does not raise it,
+because that is capped server-side today and would flag every section forever.
+
+## 13.98.2 - 2026-09-03
+
+Diagnostic release. A second pack was generated on 13.98.x and measured against the first: the
+plugin-side fixes all landed, and the content quality did not move. This release fixes the two
+plugin-side causes found while establishing why, and documents the one that is not ours.
+
+### Measured: what moved and what did not
+
+Same source, same route, regenerated on the new build.
+
+| Signal | 13.97.1 | 13.98.x |
+|---|---|---|
+| "Legislation:" headings on a topic with no legislation | 5 | 0 |
+| Export file size (duplicate item blocks) | 58 KB | 45 KB |
+| Key takeaway length | 16-19 words | 23-35 words |
+| Fields inside their specified word range | 9% | 13% |
+| Mean scene-text length (spec 42-58) | 31.8 | 28.1 |
+| Mean mistakes consequence (spec 34-46) | 21.1 | 20.8 |
+| Instances of "in total" | 19 | 19 |
+
+Everything the plugin controls outright moved. Everything that depends on the model writing a
+longer field did not, and the shape of the failure is diagnostic: EVERY field asking for more
+than about 30 words comes back at 28-31 regardless of what was asked, and the only fields that
+land in range are the ones whose spec was already short. That is a ceiling, not non-compliance.
+
+The key takeaway is the exception that proves it. It is a NEW field name, and it moved from
+16-19 words to 23-35 - so the system prompt does reach the model. Fields the server's own
+secondary passes already know about do not move.
+
+### Fixed - the word ranges were arithmetically impossible
+
+Found while auditing the prompts as prompt engineering rather than as content. Every scenario
+field on all three unified routes said:
+
+    text(EXACTLY 2 sentences, 42-58 words in total ...)
+
+while the same prompt said "Sentences stay under 20 words" and `readabilityIssues()` enforced 18.
+Two sentences of at most 18 words is 36. **The 42-58 word range could not be satisfied**, and had
+not been satisfiable since the ranges were introduced in v13.94.3. The same arithmetic applied to
+the mistakes consequence: 2 sentences, 34-46 words, cap 18, maximum 36.
+
+The measured output is the proof. Across two packs the scenario cards came back at 28.1 and 27.1
+words and the mistakes consequence at 20.8 - which is exactly two short sentences, every time. The
+model was not ignoring the word range. It was obeying the constraint that made the range
+unreachable, because that was the one it could actually satisfy.
+
+Fixed on both sides so they can never disagree again:
+
+- the scenario and mistakes fields now ask for THREE short sentences, and the third has a job:
+  on a scenario it names the detail that makes the moment real (the number, the time, the reading,
+  the person); on a mistake it names what has to happen now to put it right.
+- `CC_READABILITY_TARGET` sentence caps now match the caps the prompts state (vet/workplace 18 to
+  20, pd 20 to 22, university 22 to 24). Three sentences at 20 words is 60 against a 42-58 ask.
+- `tests/js/test-routes.js` now parses every sentence-counted field out of every route prompt and
+  fails if `sentences x cap` cannot reach the top of the stated range.
+
+This is the single largest cause of thin content in the pipeline, it was ours, and no amount of
+prompt emphasis could ever have fixed it.
+
+### Fixed - every scenario opened in a meeting
+
+All five hook cards of the reviewed pack opened the same way: "During a team meeting, the
+nutritionist explains how the body produces energy for exercise." Four of the five put the learner
+in the audience watching a colleague explain the subject rather than in the job doing it. That is
+the least memorable opening available, and it is where a scenario card goes when the writer has
+not chosen a situation.
+
+The old variety pool only varied the EVENT - a handover, an interruption, a step about to be
+skipped. Varying the plot while leaving the setting alone still produces five meetings.
+
+Three changes:
+
+- A new pool varies the SITUATION: who the learner is dealing with and where. A customer in front
+  of you. A job away from base, for someone who is not your colleague. A person who has already
+  been given the wrong answer. Someone confident and wrong. PD gets its own register, where the
+  other party is a colleague rather than a customer.
+- The choice is pinned to the section INDEX rather than a title hash, so two slides in one pack
+  can no longer draw the same situation - five slides now get five different ones by construction.
+- The prompts adapt to how specific the brief is. When the author has given a real setting
+  (retail supplement sales, store staff, sales assistant), the scenario must be set inside that
+  commercial reality - a customer at the counter asking a question someone has to answer on the
+  spot, and a different customer with a different pressure on every slide. When the brief is thin,
+  the model is told that a general brief is permission to CHOOSE, not a reason to write about
+  nobody: invent one specific plausible situation and commit to it. "You are doing some consulting
+  work for a local women's hockey side and they want to know how energy systems apply to a
+  Saturday double-header" teaches; "in a meeting the team discusses energy systems" does not.
+
+The meeting opening is now banned outright in all three unified prompts, and
+`scenarioOpeningIssues()` flags a scenario card whose FIRST panel opens inside a meeting,
+briefing, huddle, workshop or catch-up. A meeting later in a scene is ordinary working life and
+passes; a meeting as the frame of the whole card does not. It is a repairable issue, so it earns
+a repair pass. Verified against seven openings, real and rewritten: 7 of 7 classified correctly,
+including the actual v13.97.1 opening.
+
+### Fixed - the quality repair fired on every section and bought nothing
+
+v13.98.0 ran a repair whenever any measured issue was present. Because of the defect above, length
+issues were present on essentially every section, so the repair ran on essentially every section:
+a second full generation call, its own credits, and roughly a third added to the wall-clock of a
+run, to fix something the prompt made impossible.
+
+A repair is now only worth a call when the fault is one the model owns and can fix in one pass -
+a missing or vague key takeaway, options answerable by shape, distractors that announce their own
+wrongness, subject drift, five consequences landing on the same abstraction, substitution
+artefacts. Pure length shortfall is recorded on the card and reported, and spends nothing.
+
+### Fixed - fifteen rules removed from the plugin's own find-and-replace table
+
+`BANNED_PHRASE_RULES` in `generator.js` is a blind find-and-replace run over every generated
+string, and it was the plugin's own contribution to the artefact class 13.98 set out to stop.
+`ensuring` to `making sure` produced the "makes sure" family. `critical` to `important` deleted a
+word that means something. `holistic` to `complete` gave "this complete approach". `landscape` to
+`environment` turned landscape painting into environment painting on the Topics-and-Text route -
+recorded in the v13.95.8 audit and never fixed here.
+
+13.98 rewrote `BANNED_WORDS` in `prompts.js`, which is the list the MODEL is shown, and left this
+table, which is what actually rewrites the text. Fixing one without the other fixes nothing.
+Fifteen rules that swap ordinary English for a synonym are gone; the genuine LLM tells that are
+grammatical in every position they can match remain.
+
+"in total" does NOT come from here and never did - it appears nowhere in this plugin.
+
+### Fixed - the bulk image route never sent an aspect ratio
+
+`player5.js` has always sent `aspectRatio: '16:9'` on the single-slide route. The BULK route in
+`generator.js`, which produces almost every image in a pack, sent no aspect ratio at all - so
+almost every image was composed at the model's default (square) and then displayed by
+`.cc5-slide-image` in a 16:9-ish box (`width:100%`, `max-height:480px`, `object-fit:cover`).
+A square source in that box is cropped to roughly 40% of its own height and scaled UP to the
+container width. On a 1200px player that is a 1.16x upscale before the display's pixel ratio is
+counted, and about 2.3x on a Retina screen - which is a large part of what "the images look low
+res" actually is. The bulk route now sends the same 16:9 the player does, and `ajax.php`
+forwards it against a short allowlist.
+
+The pixel dimensions themselves are chosen by the vendor. The plugin still sends no size or
+quality parameter and does no re-encoding, so resolution remains a server-side question.
+
+### Not ours - the server's secondary passes
+
+`generator.js` records that the vendor runs "Pass 2 expansion, Pass 3 rewrite and
+micro-expansion" server-side after the first generation. Those passes are invisible from this
+repository, they rewrite the fields the plugin's prompt specified, and they are the only
+remaining explanation that fits all the evidence: the ~30-word ceiling across unrelated field
+types, the identical count of "in total" across two different generations, and a new field name
+being the only thing that moved. Raised with the vendor.
+
+## 13.98.1 - 2026-09-03
+
+Follow-on from the 13.98.0 review: the Workplace route rebuilt around the defect that made
+the Sports Nutrition pack disappointing, and the same treatment applied to the other four.
+
+### Fixed - Workplace taught the advising instead of the subject
+
+The single biggest quality failure in the reviewed pack, and the one no length check could
+catch. Asked to teach sports nutrition to people who advise customers about it, the route
+produced a pack about ADVISING: ask open questions, listen to client feedback, avoid jargon,
+tailor your advice, follow up. Roughly 70% of the mistakes and competency items would have been
+identical in a pack for mortgage brokers. Every statement was true, none was the topic.
+
+Workplace's identity block now carries THE SUBJECT IS THE SUBJECT and THE SWAP TEST: could this
+card be dropped word for word into a pack about an unrelated subject in an unrelated industry
+and still make sense? If yes, the content has been taken out. At most ONE of the five mistakes
+and one of the five standards may be a communication habit; the rest must be errors of substance
+- the wrong figure, the wrong threshold, the missed step, the rule applied to the wrong case.
+
+Two new checks enforce it. `subjectDriftIssues()` flags a mistakes or competency card where
+three or more items carry nothing specific to the subject, scoped to VET and Workplace because
+on PD these ARE the subject. `repeatedOutcomeIssues()` flags a card whose consequences all
+dissolve into the same handful of abstractions - the reviewed pack's fifty consequences shared
+about six endings between them, all variations on lost trust and dissatisfaction. Together they
+catch four of the five real mistakes cards from the shipped pack, and stay silent on both a
+compliant rewrite and a legitimate workplace card that mentions trust once.
+
+### Fixed - the policy panel invited invention
+
+Card 2 asked for "the document a colleague would actually be sent to, by its real name", and
+when there was no such document the model invented one. It now names a document ONLY if the
+reference material or trainer instructions name one, and returns an empty heading otherwise -
+an invented policy name is worse than none, because the panel it fills reads as authoritative.
+
+### Changed - every route now states a card size its own fields can reach
+
+13.98.0 found that the stated 180-300 band was unreachable on several card types. Rather than
+only teaching the validator to derive the truth, the specs themselves are now raised so the
+stated band is honest. On all three unified routes cards 2, 3 and 7 gained words - on VET and
+Workplace these were the two thinnest cards on the route and also the ones carrying the subject
+matter, which is precisely where a pack drifts into generic advice. Card 2 is now 183-251, card
+3 180-224, card 7 182-286. University's four thin card types were raised the same way and its
+open-ended "5+" item counts fixed at exactly five, because an open count produces five thin
+items where a fixed one produces five that carry their weight.
+
+### Added - a falsifiable TEST line on every card, on every route
+
+Ported from Topics-and-Text, which was the only route that had them and, not coincidentally,
+the best-written specification of the five. "Each of the three panels must contain something a
+learner could be WRONG about." "No two of the five consequences may end on the same outcome."
+"A colleague could follow this without asking where anything lives, and could tell you at which
+step they would stop and do something different." Each is checkable by a human in two seconds,
+which is what makes them work.
+
+### Added - University has a decision-point
+
+It was the only route with no card asking the learner to commit to an answer and find out
+whether they were right: six cards of reading, with case-study analysis prompts that have no
+answer and no feedback. Retrieval practice with feedback is the best-evidenced intervention
+there is and it was the one thing this route did not do. Card 7 tests the analysis the previous
+six cards built, with distractors drawn from framework misapplication, unsupported inference and
+correlation mistaken for mechanism - and its feedback names the reasoning error, which is where
+the teaching happens.
+
+University is therefore a 7-card route now, and no longer exempt from the activities toggle.
+Academic packs saved before this build carry six cards, so "Regenerate Failed" will offer to
+rebuild them; that is intended.
+
+### Changed - mental-model steps must carry a decision rule
+
+On all three unified routes. A step whose only verb is discuss, explain, consider, review or
+observe is not a step - it is a description of paying attention, and it was most of card 3 in
+the reviewed pack. Every step now needs a threshold, quantity, reading, time or named condition
+that tells the learner which way to go. On PD, where procedure is the wrong register, the
+equivalent is the sentence you would actually say and the signal you are watching for in the
+reply.
+
+## 13.98.0 - 2026-09-03
+
+Everything in this release comes from one review: the v13.97.1 Sports Nutrition pack measured
+field by field against the ranges the prompts themselves state, and against the source lecture
+it was generated from.
+
+### Fixed - the word ranges in the prompt are now enforced by something
+
+16 of 172 learner-facing fields in that pack (9%) met the range `prompts.js` states for them.
+The mistakes card was 0 of 50, averaging 21 words against a 34-46 spec. Nothing caught it,
+because the only length check measured whole CARDS against a floor set deliberately below the
+bottom of the band - four scene texts at 32 words plus four titles sums to ~143 and cleared a
+145 floor while every field in the card was a quarter short.
+
+The ranges now live in one machine-readable place, `Prompts.getFieldSpecs(mode)`, covering all
+five routes. `fieldIssues()` measures every field against it and reports each miss by name,
+count and target ("Card 5, mistakes consequence 3: 19 words, needs 34-46, add the second
+sentence naming who carries it"), instead of one aggregate number per card. Prompt prose and
+validator now read from the same table and cannot drift.
+
+### Fixed - the stated card band and the field ranges had never agreed
+
+Deriving a whole-card floor from the field specs found an incoherence present since v13.94.3.
+Every unified route tells the model a card must land between 180 and 300 words, and three of
+its seven card types cannot reach 180 even with every field written to the TOP of its range:
+concept-explainer is 154-220 on VET, mental-model 152-204, decision-point 158-244. University
+is worse - four of its six card types top out under its stated 170 floor. The model was being
+given a per-card target its own field specs made impossible.
+
+The whole-card floor is now derived per card type from that type's field ranges
+(`Prompts.getCardWordRange()`), so a card written to spec always passes and a thin one never
+does, and prompt and validator cannot contradict each other again whichever one is edited. The
+route-wide numbers in `CC_DEPTH_TARGET` remain only as a fallback for legacy card types. The
+section-level verdict is measured the same way, against what this section's own card types sum
+to rather than a route-wide band.
+
+### Fixed - the quality checks now actually repair something
+
+v13.89 made the measured checks report-only after the v13.87 repair pass returned emptied cards
+and cost a VET pack 4,000 words. That was right at the time, and it left the ranges enforced by
+nothing at all: the 13.97.1 pack ran zero repair passes.
+
+A quality repair runs again, behind two guards that did not exist in v13.87.
+`mergePreservingContent()` (v13.88) takes a repair as proposed edits so it can never empty a
+card, and a repair that comes back shorter than what it was given is now DISCARDED and the
+earlier version shipped. A quality repair that fails structural validation also falls back to
+the known-good attempt rather than to placeholders.
+
+### Fixed - decision-point answers gave themselves away
+
+The ANSWER-LENGTH PARITY rule is stated on every route and was enforced nowhere. v13.97.1
+shipped a correct answer of 27 words against distractors of 5, 4 and 7, carrying the only
+justification clause - answerable by shape without reading the subject. Three further questions
+failed the other way, every option a 3-9 word stub. Only 2 of 20 options were in range.
+
+`optionParityIssues()` now checks every option against 10-16 words and fails a card whose
+longest option is more than 1.4x its shortest, naming the correct answer when it is the long
+one. `distractorQualityIssues()` flags wrong answers built from negations and absolutes ("Use
+only technical terms", "Ignore client feedback", "Update knowledge sporadically") - a question
+whose distractors are all obviously silly measures nothing.
+
+### Added - keyTakeaway is a specified field
+
+It was specified in no prompt at all. `generator.js` read whatever the model happened to emit
+off card 1, which is why four slides carried a vague 16-19 word abstraction and the fifth had
+none. Now 28-40 words on every route, two sentences, the fact first; openings that only assert
+the topic matters ("A deep understanding of...") are rejected.
+
+### Added - source fidelity and cross-slide dedupe
+
+The largest defect in the pack. A 5,000-word source lecture containing ~40 teachable specifics
+produced content with zero of them: no glycogen, no lactate threshold, no beta-alanine, no
+carbohydrate mouth rinse, no named study, and not one number. All five slides re-taught the same
+three energy systems while their titles - taken correctly from the source - promised five
+different subjects.
+
+Every route now carries a USE THE SOURCE block requiring the source's numbers, thresholds,
+doses, named studies and worked examples, and requiring one unguessable specific per card.
+Sections generate in parallel, so each is now stamped with its sibling titles and position
+before the workers start and told, in the prompt, what the other slides cover and not to
+re-teach it.
+
+### Added - a concreteness gate
+
+The scenario cards ask for "the place, the time of day, what the learner can see". They returned
+"During a team meeting, the nutritionist explains how the body produces energy" - the
+description of a scenario rather than a scenario. A scenario panel with no proper noun, no
+number and no time marker now fails when half a card's panels are like that.
+
+### Fixed - the banned-word list was damaging the prose
+
+It banned ordinary English (overall, appropriate, ensure, generally, various, significant,
+critical, effectively). The model substituted synonyms rather than rewriting, producing 19
+instances of "in total" and 22 of "makes sure" in one pack: "for in total health", "enhances in
+total performance", "the most right nutritional support", "makes sure diverse insights".
+
+Those words are off the list; the genuine LLM tells (delve, tapestry, leverage, holistic,
+paradigm) stay. The instruction now says a vague word means the SENTENCE has no content and must
+be replaced with the specific it stood in for. `validateSubstitutionArtefacts()` catches the
+artefact pattern so this cannot come back unnoticed.
+
+### Fixed - "Legislation" panel on topics with no legislation
+
+Every concept-explainer rendered a compliance panel headed with an obligation that was not one:
+"Obligation: Each energy system contributes to ATP production based on exercise intensity and
+duration." The panel is now suppressed entirely when the model names no real governing document
+(empty heading, or the topic title echoed back), and the prompts say to leave it empty rather
+than invent one. The text export also stopped hard-coding "Legislation:" - it uses the same
+route-aware label the learner saw (What the law says / What the policy requires / What the
+principle requires), which the on-screen panel has used since v13.96.
+
+### Fixed - exports printed every item two or three times
+
+`standardItems` / `errorItems` are vendor aliases that `normalizeCardSchema()` deliberately
+retains alongside the canonical `goodItems` / `badItems` / `items` / `options`. Both the text
+and PDF exports walked both, so every competency-summary printed its five standards three times
+and every mistakes card printed its five items twice. Guarded the way `keyPoints` already was.
+The player itself was correct and is unchanged.
+
+### Fixed - no padding under the Key Takeaway panel
+
+`.cc5-accent-card` had a top margin and no bottom margin, so the green Key Takeaway panel sat
+flush against the first card block below it. Added at all three breakpoints, with stacked accent
+cards kept to a single gap between them.
+
+### Added - node harnesses under tests/js
+
+`test-routes.js` builds a minimally-compliant card of every type on every route straight from
+the spec table and asserts nothing flags - the guard against specs and floors drifting apart
+again. `test-checks.js` keeps slide 1.1 of the v13.97.1 pack as a regression fixture beside a
+compliant rewrite: the first must keep flagging (33 issues), the second must keep passing.
+
+### Added - the measurement functions are exported
+
+`validateCards`, `fieldIssues`, `optionParityIssues`, `distractorQualityIssues`,
+`concretenessIssues`, `keyTakeawayIssues`, `artefactIssues`, `depthIssues` and
+`readabilityIssues` are on the generator's public surface so a saved manifest or an exported
+pack can be measured without a generation run. The 13.97.1 review had to re-implement all of it
+by hand against a text export.
+
 ## 13.97.1 - 2026-09-02
 
 ### Changed - the quote is now 50 credits per subtopic

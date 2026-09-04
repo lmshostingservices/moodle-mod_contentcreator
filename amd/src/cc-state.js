@@ -40,7 +40,14 @@ define([], function () {
     // v13.94.3: this had been left at '13.65' while the plugin shipped 13.94.x, so every
     // diagnostic line in a support log claimed to come from a version 29 releases old.
     // Keep it in step with $plugin->release in version.php.
-    var CC_VERSION = '13.94.8';
+    // v15.0.0: same bug recurred - this was left at '13.94.8' through every release from
+    // 13.95.0 up to 15.0.0 (roughly 20 releases), so every console log and every staleness
+    // check in builder.js's compareVersions() (which compares this constant against the
+    // version stamped on a saved manifest) silently thought the plugin was still on 13.94.8.
+    // That breaks the "stale voiceover, re-apply?" prompt for every one of those releases,
+    // since compareVersions(currentVersion, manifestVersion) never sees an increase.
+    // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
+    var CC_VERSION = '15.0.0';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was

@@ -1,0 +1,127 @@
+[
+ {
+  "cardType": "mistakes",
+  "items": [
+   {
+    "mistake": "Overlooking Exercise Type",
+    "consequence": "Misaligns supplement recommendations with client needs, potentially preventing the client from achieving their desired performance outcomes, which can lead to dissatisfaction and a loss of trust."
+   },
+   {
+    "mistake": "Ignoring Nutritional Timing",
+    "consequence": "Fails to optimise energy availability during exercise sessions, which may cause clients to experience fatigue during important moments, affecting their performance and in total experience negatively."
+   },
+   {
+    "mistake": "Assuming One System Dominates",
+    "consequence": "Oversimplifies energy needs, leading to ineffective advice and causing clients to feel confused about their nutrition strategy, which can result in poor performance and dissatisfaction."
+   },
+   {
+    "mistake": "Neglecting Client Feedback",
+    "consequence": "Misses cues for adjusting advice, leaving clients feeling unheard and less likely to follow recommended strategies, which can lead to ineffective outcomes and a lack of trust."
+   },
+   {
+    "mistake": "Using Technical Jargon",
+    "consequence": "Alienates clients with complex explanations, leading to them possibly leaving without understanding key information, which can result in confusion and a reluctance to return."
+   }
+  ]
+ },
+ {
+  "cardType": "mistakes",
+  "items": [
+   {
+    "mistake": "Assuming all exercise is the same",
+    "consequence": "This leads to generic advice that doesn't fit specific needs. Clients may feel misunderstood and question your expertise."
+   },
+   {
+    "mistake": "Overemphasising one macronutrient",
+    "consequence": "Focusing solely on protein ignores the need for carbs and fats. Clients might experience energy dips or inadequate recovery."
+   },
+   {
+    "mistake": "Ignoring client feedback",
+    "consequence": "Not adjusting plans based on feedback can result in ineffective strategies. Clients may lose trust and seek advice elsewhere."
+   },
+   {
+    "mistake": "Using technical jargon",
+    "consequence": "Complex terms can confuse clients, making them feel alienated and disconnected. Clear communication is essential for effective guidance."
+   },
+   {
+    "mistake": "Neglecting to follow up",
+    "consequence": "Without follow-up, you miss important opportunities to refine advice. Clients may feel unsupported and disengage from the process entirely."
+   }
+  ]
+ },
+ {
+  "cardType": "mistakes",
+  "items": [
+   {
+    "mistake": "Ignoring Exercise Type",
+    "consequence": "Leads to ineffective supplement recommendations. The athlete may experience suboptimal performance, possibly causing them to question your expertise and commitment."
+   },
+   {
+    "mistake": "Assuming One-System Dominance",
+    "consequence": "Overlooks the role of multiple systems. This oversight can result in incomplete nutrition plans, leading to athlete dissatisfaction and potential loss of trust."
+   },
+   {
+    "mistake": "Neglecting Team Input",
+    "consequence": "Creates a one-sided strategy. Team members may feel undervalued, which can greatly reduce collaboration, innovation, and in total team morale."
+   },
+   {
+    "mistake": "Overcomplicating Explanations",
+    "consequence": "Confuses clients and colleagues. Misunderstandings can lead to incorrect supplement use and lost trust, damaging professional relationships. This can further result in decreased client satisfaction and potential loss of business."
+   },
+   {
+    "mistake": "Failing to Update Knowledge",
+    "consequence": "Stagnates practice with outdated information. Clients may seek advice elsewhere, impacting your credibility and professional reputation. This could lead to a decline in client retention and in total business growth."
+   }
+  ]
+ },
+ {
+  "cardType": "mistakes",
+  "items": [
+   {
+    "mistake": "Assuming one-size-fits-all",
+    "consequence": "This can lead to ineffective advice. Clients may feel misunderstood or undervalued, impacting trust and future interactions."
+   },
+   {
+    "mistake": "Neglecting to ask questions",
+    "consequence": "You might miss important details about their needs. This oversight can result in mismatched recommendations that don't support their goals."
+   },
+   {
+    "mistake": "Overloading with information",
+    "consequence": "Clients can feel overwhelmed and confused. They might struggle to implement advice, reducing its effectiveness."
+   },
+   {
+    "mistake": "Ignoring client feedback",
+    "consequence": "This can damage your relationship. Clients may feel their input is unimportant, discouraging future communication."
+   },
+   {
+    "mistake": "Rushing the consultation",
+    "consequence": "Important details might be overlooked. This can lead to incomplete advice, diminishing the client's confidence in your expertise."
+   }
+  ]
+ },
+ {
+  "cardType": "mistakes",
+  "items": [
+   {
+    "mistake": "Focusing only on aerobic training",
+    "consequence": "Neglects the importance of explosive power and strength. Clients miss out on the benefits of a well-rounded fitness programme."
+   },
+   {
+    "mistake": "Ignoring individual client needs",
+    "consequence": "When the nutrition and exercise plan is not tailored, clients may feel their personal goals and preferences are overlooked, leading to dissatisfaction."
+   },
+   {
+    "mistake": "Assuming all exercises use the same system",
+    "consequence": "Aligning nutrition strategies incorrectly with exercise demands can lead to suboptimal performance and significant recovery issues for clients."
+   },
+   {
+    "mistake": "Overlooking feedback from clients",
+    "consequence": "Misses opportunities to adjust plans for better outcomes. Clients may become disengaged if they feel unheard and their feedback is not considered."
+   },
+   {
+    "mistake": "Neglecting the role of nutrition",
+    "consequence": "Fails to support energy system demands well. This can result in fatigue and poor performance during training sessions."
+   }
+  ]
+ }
+]
