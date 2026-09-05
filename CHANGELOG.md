@@ -1,5 +1,70 @@
 # Changelog
 
+## 15.4.10 - 2026-09-05
+
+**Topics and Text narrated a glossary that was not on the screen, and never read the body
+text that was.**
+
+Reported as "it reads the heading, then reads text that is not even on the card". Measured
+on a rendered slide, that is exactly what happened.
+
+Screen showed:
+
+> **What sleep pressure is**
+> Adenosine builds up in the brain across the waking day and is cleared during sleep.
+> The longer you are awake the stronger that pressure becomes, which is why a late nap
+> blunts it.
+
+Narration said:
+
+> "What sleep pressure is. Adenosine means a molecule that accumulates while you are awake."
+
+The heading, then the `keyTerms` glossary - which this card type does not render - and
+**neither visible paragraph read at all**.
+
+### Root cause
+
+`PROSE_CARD_TYPES` in `cc-state.js` is the list that decides whether a card is narrated from
+its prose body. Topics and Text builds `subtopic` cards. `subtopic` was never added to that
+list, so `isProseSection()` returned false, `_voEmitCard()` fell through to the generic tail
+that emits title plus terminology, and `proseParagraphs()` - the function that reads what is
+actually on the card - was never called on this route.
+
+This is the ninth recorded instance in this codebase of the same defect shape: two halves of
+one contract, and one half moved. `renderRouteCard()` gained a card type; the hand-maintained
+list of prose card types did not.
+
+### Fix
+
+`subtopic` added to `PROSE_CARD_TYPES`, along with the five v13.91 slot names
+(`orientation`, `foundations`, `mechanism`, `in-practice`, `boundaries`) that are still
+present in saved modules and had the same gap.
+
+`proseCardSegments()` also had to change how it names the section. Every other prose card
+type has a FIXED heading looked up from its type; a `subtopic` card's heading is
+content-driven and lives on the card itself. It now reads `card.title` for `subtopic` and
+falls back to the fixed lookup for everything else - so the narration says the heading the
+learner can see, not a generic label.
+
+### Guard
+
+`tests/js/test-narration-matches-screen.js` (19 checks) renders each route's slide, walks
+the DOM for the words SEEN and the narration queue for the words HEARD, and compares them.
+It also carries the structural assertion that would have caught this on the day it was
+introduced: **every card type `renderRouteCard()` dispatches to `renderProseSection` must
+appear in `PROSE_CARD_TYPES`**. That check asserts the two halves AGREE, rather than
+asserting either one in isolation - which is the only remedy that has worked for this defect
+shape.
+
+Words heard that are on screen, after the fix: vet 87%, workplace 87%, general 87%, policy
+87%, university 96%, topics-and-text 100%. The sub-100% figures are short filler tokens in
+the fixtures, not off-card narration.
+
+One false positive was found and fixed while writing the test: jQuery's `.text()`
+concatenates adjacent nodes with no separator, which fused the last word of one element to
+the first word of the next and made three routes look like they were narrating off-card
+words (43% match). Replaced with a tree walk that joins on spaces.
+
 ## 15.4.9 - 2026-09-05
 
 **The last two pipeline findings, and the local checks tightened to match what the pipeline

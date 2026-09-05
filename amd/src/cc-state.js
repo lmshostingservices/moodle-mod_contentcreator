@@ -53,7 +53,7 @@ define([], function() {
     // test-version-mirror.js asserts this equals $plugin->release and runs with the suite,
     // so a fourth recurrence fails a test instead of reaching production.
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.4.9';
+    var CC_VERSION = '15.4.10';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was
@@ -268,7 +268,27 @@ define([], function() {
     // paragraph lift. Both come from _proseCardSegments() so the audio and the animation
     // can never drift apart: change the narration here and the timing map follows.
     // =======================================================================
-    var PROSE_CARD_TYPES = ['overview', 'key-concepts', 'examples-application', 'key-takeaways',
+    // FIX-CC-TOPICSTEXT-NARRATION (v15.4.10): 'subtopic' IS a prose card, and its absence
+    // here is why Topics and Text narrated the wrong thing entirely.
+    //
+    // Reported: "the voiceover is all wrong - it reads the heading, then reads text that is
+    // not even on the card." Measured, that is exactly what happened. A subtopic card shows
+    // a heading and two or three paragraphs. The narration read the heading and then the
+    // card's keyTerms glossary - which the renderer does not put on the card at all - and
+    // never read a single paragraph.
+    //
+    // The cause is this list. Without 'subtopic' in it:
+    //   - isProseSection() returns false, so the prose narration path never engages;
+    //   - _voEmitCard() matches neither the prose branch nor the seven-card branch and
+    //     falls through to the generic tail, which emits title + terminology;
+    //   - proseParagraphs() - the function that reads the visible body - is never called.
+    //
+    // 'subtopic' was added as a card type in v15.3.11 and became reachable in v15.4.7 when
+    // the route stopped being folded onto General. cc-card-slots.js was updated for it and
+    // the flip harvester was updated for it in v15.4.2; this list was not. Same defect
+    // class as every other stale card-type list in this codebase.
+    var PROSE_CARD_TYPES = ['subtopic',
+        'overview', 'key-concepts', 'examples-application', 'key-takeaways',
         // v13.91 slot names, still present in saved modules.
         'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'];
 
@@ -674,7 +694,15 @@ define([], function() {
         // revealProseCard() reveals every card up to the one being narrated, so the
         // empty card still appears, and its own Next Card button still works.
         if (!paras.length) { return segs; }
-        var heading = proseHeadingFor(card.cardType);
+        // v15.4.10: a 'subtopic' card is CONTENT-DRIVEN - it carries its own heading, which
+        // the model wrote, rather than filling one of the four fixed slots. Reading it out
+        // of PROSE_HEADINGS would speak an empty string; reading the card's own title is
+        // what the renderer displays, and narration must match the screen. Mirrors the
+        // `isSubtopic ? section.title : <slot label>` branch in cc-card-slots.js
+        // renderProseSection().
+        var heading = (card.cardType === 'subtopic')
+            ? String((card.title || card.heading || '')).trim()
+            : proseHeadingFor(card.cardType);
         if (heading) {
             segs.push({ cardIndex: cardIndex, cardType: card.cardType, kind: 'heading', paraIndex: -1, text: heading });
         }

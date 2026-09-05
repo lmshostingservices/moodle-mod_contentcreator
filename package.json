@@ -1,6 +1,6 @@
 {
   "name": "moodle-mod_contentcreator",
-  "version": "15.4.9",
+  "version": "15.4.10",
   "description": "Build tooling for the mod_contentcreator AMD modules.",
   "private": true,
   "license": "GPL-3.0-or-later",
