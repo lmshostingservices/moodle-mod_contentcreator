@@ -54,8 +54,8 @@ body.dark .cc-wizard,
     --cc-text-subtle: hsl(217 8% 45%);
     --cc-text-inverse: hsl(0 0% 9%);
 
-    --cc-primary-muted: hsl(217 50% 20%);
-    --cc-primary-light: hsl(217 50% 15%);
+    --cc-primary-muted: hsl(210deg 50% 20%);
+    --cc-primary-light: hsl(210deg 50% 15%);
 
     --cc-success-muted: hsl(142 40% 15%);
     --cc-warning-muted: hsl(38 40% 15%);
@@ -64,7 +64,7 @@ body.dark .cc-wizard,
     --cc-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --cc-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
     --cc-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
-    --cc-shadow-glow: 0 0 20px -5px hsl(217 91% 50% / 0.3);
+    --cc-shadow-glow: 0 0 20px -5px hsl(210deg 91% 50% / 0.3);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -103,16 +103,16 @@ label.cc-radio-card:hover,
 .cc-radio-card:hover {
     background: hsl(217 40% 90%) !important;
     background-color: hsl(217 40% 90%) !important;
-    border-color: hsl(217 50% 50%) !important;
+    border-color: hsl(210deg 50% 50%) !important;
     color: hsl(217 19% 27%) !important;
 }
 
 button.cc-radio-card.selected,
 label.cc-radio-card.selected,
 .cc-radio-card.selected {
-    background: hsl(217 91% 96%) !important;
-    background-color: hsl(217 91% 96%) !important;
-    border-color: hsl(217 91% 60%) !important;
+    background: hsl(210deg 91% 96%) !important;
+    background-color: hsl(210deg 91% 96%) !important;
+    border-color: hsl(210deg 91% 60%) !important;
     color: hsl(217 19% 27%) !important;
 }
 
@@ -123,10 +123,10 @@ label.cc-radio-card.selected,
    border only has to clear 3:1, and 60% does. */
 button.cc-btn-primary,
 .cc-btn.cc-btn-primary {
-    background: hsl(217 91% 45%) !important;
-    background-color: hsl(217 91% 45%) !important;
+    background: hsl(210deg 91% 45%) !important;
+    background-color: hsl(210deg 91% 45%) !important;
     color: hsl(0 0% 100%) !important;
-    border-color: hsl(217 91% 45%) !important;
+    border-color: hsl(210deg 91% 45%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -155,17 +155,17 @@ button.cc-level-pill,
 }
 button.cc-level-pill:hover,
 .cc-level-pill:hover {
-    border-color: hsl(217 91% 60%) !important;
-    color: hsl(217 91% 45%) !important;
-    background: hsl(217 91% 96%) !important;
-    background-color: hsl(217 91% 96%) !important;
+    border-color: hsl(210deg 91% 60%) !important;
+    color: hsl(210deg 91% 45%) !important;
+    background: hsl(210deg 91% 96%) !important;
+    background-color: hsl(210deg 91% 96%) !important;
 }
 button.cc-level-pill.cc-level-active,
 .cc-level-pill.cc-level-active {
-    border-color: hsl(217 91% 60%) !important;
-    background: hsl(217 91% 96%) !important;
-    background-color: hsl(217 91% 96%) !important;
-    color: hsl(217 91% 40%) !important;
+    border-color: hsl(210deg 91% 60%) !important;
+    background: hsl(210deg 91% 96%) !important;
+    background-color: hsl(210deg 91% 96%) !important;
+    color: hsl(210deg 91% 40%) !important;
     font-weight: 600 !important;
 }
 button.cc-level-pill.cc-level-active::before,
@@ -180,10 +180,10 @@ button.cc-btn-primary:active:not(:disabled),
 .cc-btn.cc-btn-primary:hover:not(:disabled),
 .cc-btn.cc-btn-primary:focus:not(:disabled),
 .cc-btn.cc-btn-primary:active:not(:disabled) {
-    background: hsl(217 91% 38%) !important;
-    background-color: hsl(217 91% 38%) !important;
+    background: hsl(210deg 91% 38%) !important;
+    background-color: hsl(210deg 91% 38%) !important;
     color: hsl(0 0% 100%) !important;
-    border-color: hsl(217 91% 38%) !important;
+    border-color: hsl(210deg 91% 38%) !important;
 }
 
 /* Ghost buttons */
@@ -217,7 +217,7 @@ button.cc-btn-secondary:hover:not(:disabled),
     background: hsl(217 25% 90%) !important;
     background-color: hsl(217 25% 90%) !important;
     color: hsl(217 19% 27%) !important;
-    border-color: hsl(217 50% 50%) !important;
+    border-color: hsl(210deg 50% 50%) !important;
 }
 
 /* Icon-only buttons */
@@ -304,9 +304,9 @@ body.dark .cc-radio-card.selected,
 [data-bs-theme="dark"] button.cc-radio-card.selected,
 [data-bs-theme="dark"] label.cc-radio-card.selected,
 [data-bs-theme="dark"] .cc-radio-card.selected {
-    background: hsl(217 50% 20%) !important;
-    background-color: hsl(217 50% 20%) !important;
-    border-color: hsl(217 91% 60%) !important;
+    background: hsl(210deg 50% 20%) !important;
+    background-color: hsl(210deg 50% 20%) !important;
+    border-color: hsl(210deg 91% 60%) !important;
     color: hsl(0 0% 95%) !important;
 }
 
@@ -354,11 +354,33 @@ body.dark .cc-subtopic-item:hover,
    WIZARD LAYOUT
    ═══════════════════════════════════════════════════════════════════════════════ */
 
+/* v15.4.3: the wizard was 900px wide on every screen.
+   Reported looking at the route chooser on a 1900px display: six dense comparison cards
+   squeezed into a 770px column with roughly 560px of empty page either side of it. 900px
+   is a good measure for a paragraph of prose or a stack of form fields, and it was applied
+   to the whole wizard including the steps that are not either of those - the route grid,
+   the topic tree, the generation table. Those are comparisons and lists, and they read
+   better wide.
+   So the SHELL is wide and the things that need a reading measure keep one of their own
+   (see .cc-form-section below). Capped rather than fluid: past about 1400px a two-column
+   card grid starts to look like two unrelated columns rather than a comparison. */
 .cc-wizard {
-    max-width: 900px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: var(--cc-space-8);
 }
+/* Forms are read line by line, so they keep the old measure and stay centred inside the
+   wider shell. Without this, widening the wizard would stretch every text input and every
+   hint line to 1400px, which is worse than the problem being fixed. */
+.cc-wizard .cc-form-section {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+/* The route grid and the topic tree are NOT inside a form section - both are direct
+   children of .cc-step-content - so they are unaffected by the cap above and take the full
+   width of the wider shell. Checked in the markup rather than assumed; an earlier draft of
+   this rule carried a :has() exemption for them that would never have matched anything. */
 
 .cc-wizard-header {
     text-align: center;
@@ -504,9 +526,19 @@ body.dark .cc-subtopic-item:hover,
    This prevents global button{} styles from bleeding into card hover states.
    ═══════════════════════════════════════════════════════════════════════════════ */
 
+/* v15.4.3: three across on a wide screen, two on a laptop, one on a phone.
+   `repeat(2, 1fr)` was fixed at two columns at every width, so on a 1900px display six
+   route cards became three tall rows in a narrow column - the reader scrolls to compare
+   things that would fit side by side. auto-fit with a 360px floor lets the row count follow
+   the space.
+   The 400px floor is chosen from the arithmetic rather than by eye: the shell is 1400px
+   with 2rem of padding each side, so the row has 1336px, and three columns need
+   3 x 400 + 2 x 24 of gap = 1248 - they fit, at about 429px each. A 1280px laptop has
+   roughly 1136px in the row, which is under 1248, so it drops to two columns instead of
+   squeezing three to 362px and wrapping every card-name pill. */
 .cc-mode-cards {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     gap: var(--cc-space-6);
     margin-bottom: var(--cc-space-8);
 }
@@ -554,15 +586,15 @@ body.dark .cc-subtopic-item:hover,
 
 /* SELECTED STATE */
 .cc-mode-card.selected {
-    border-color: hsl(217 91% 60%);
-    background-color: hsl(217 91% 96%);
+    border-color: hsl(210deg 91% 60%);
+    background-color: hsl(210deg 91% 96%);
     box-shadow: var(--cc-shadow-glow);
 }
 
 /* SELECTED + HOVER */
 .cc-mode-card.selected:hover {
-    background-color: hsl(217 91% 93%);
-    border-color: hsl(217 91% 55%);
+    background-color: hsl(210deg 91% 93%);
+    border-color: hsl(210deg 91% 55%);
 }
 
 .cc-mode-icon {
@@ -649,7 +681,7 @@ body.dark .cc-mode-card:hover,
 [data-theme="dark"] .cc-mode-card:hover,
 [data-bs-theme="dark"] .cc-mode-card:hover {
     background-color: hsl(217 30% 18%);
-    border-color: hsl(217 70% 55%);
+    border-color: hsl(210deg 70% 55%);
     box-shadow: var(--cc-shadow-md);
 }
 
@@ -658,8 +690,8 @@ body.dark .cc-mode-card:hover,
 body.dark .cc-mode-card.selected,
 [data-theme="dark"] .cc-mode-card.selected,
 [data-bs-theme="dark"] .cc-mode-card.selected {
-    background-color: hsl(217 50% 15%);
-    border-color: hsl(217 91% 60%);
+    background-color: hsl(210deg 50% 15%);
+    border-color: hsl(210deg 91% 60%);
 }
 
 .dark .cc-mode-title,
@@ -731,7 +763,7 @@ body.dark .cc-mode-cardlist-items li::before,
 body.dark .cc-mode-icon,
 [data-theme="dark"] .cc-mode-icon,
 [data-bs-theme="dark"] .cc-mode-icon {
-    background: hsl(217 50% 20%);
+    background: hsl(210deg 50% 20%);
 }
 
 .dark .cc-mode-icon svg,
@@ -739,7 +771,7 @@ body.dark .cc-mode-icon,
 body.dark .cc-mode-icon svg,
 [data-theme="dark"] .cc-mode-icon svg,
 [data-bs-theme="dark"] .cc-mode-icon svg {
-    color: hsl(217 91% 70%);
+    color: hsl(210deg 91% 70%);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -785,7 +817,7 @@ body.dark .cc-mode-icon svg,
     margin: 24px 0;
     background: hsl(210 40% 97%);
     border: 1px solid hsl(214 32% 85%);
-    border-left: 4px solid hsl(217 91% 60%);
+    border-left: 4px solid hsl(210deg 91% 60%);
     border-radius: var(--cc-radius-lg);
     box-shadow: var(--cc-shadow-sm);
 }
@@ -798,9 +830,9 @@ body.dark .cc-mode-icon svg,
     width: 40px;
     height: 40px;
     min-width: 40px;
-    background: hsl(217 91% 92%);
+    background: hsl(210deg 91% 92%);
     border-radius: 50%;
-    color: hsl(217 91% 50%);
+    color: hsl(210deg 91% 50%);
     margin-top: 2px;
 }
 
@@ -827,8 +859,8 @@ body.dark .cc-mode-icon svg,
 body.dark .cc-instruction-card,
 [data-theme="dark"] .cc-instruction-card,
 [data-bs-theme="dark"] .cc-instruction-card {
-    background: hsl(217 50% 14%);
-    border-color: hsl(217 50% 22%);
+    background: hsl(210deg 50% 14%);
+    border-color: hsl(210deg 50% 22%);
     box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2);
 }
 
@@ -837,8 +869,8 @@ body.dark .cc-instruction-card,
 body.dark .cc-instruction-card-icon,
 [data-theme="dark"] .cc-instruction-card-icon,
 [data-bs-theme="dark"] .cc-instruction-card-icon {
-    background: hsl(217 50% 20%);
-    color: #60a5fa;
+    background: hsl(210deg 50% 20%);
+    color: #53a7fa;
 }
 
 .dark .cc-instruction-card-text,
@@ -854,7 +886,7 @@ body.dark .cc-instruction-card-text,
 body.dark .cc-instruction-card-text strong,
 [data-theme="dark"] .cc-instruction-card-text strong,
 [data-bs-theme="dark"] .cc-instruction-card-text strong {
-    color: #bfdbfe;
+    color: #badcfe;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -879,12 +911,12 @@ body.dark .cc-instruction-card-text strong,
     align-items: center !important;
     gap: 4px !important;
     padding: 3px 8px 3px 12px !important;
-    background: hsl(217 91% 96%) !important;
-    background-color: hsl(217 91% 96%) !important;
-    border: 1px solid hsl(217 91% 60%) !important;
+    background: hsl(210deg 91% 96%) !important;
+    background-color: hsl(210deg 91% 96%) !important;
+    border: 1px solid hsl(210deg 91% 60%) !important;
     border-radius: 999px !important;
     font-size: 13px !important;
-    color: hsl(217 91% 45%) !important;
+    color: hsl(210deg 91% 45%) !important;
     font-weight: 500 !important;
 }
 
@@ -2159,7 +2191,7 @@ body.dark .cc-instruction-card-text strong,
 
 .cc-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--cc-primary), hsl(230 91% 55%));
+    background: linear-gradient(90deg, var(--cc-primary), hsl(210deg 91% 55%));
     border-radius: var(--cc-radius-full);
     transition: width 0.3s var(--cc-ease);
 }
@@ -2474,7 +2506,7 @@ body.dark .cc-alert-icon,
 .cc-link-btn:focus,
 .cc-link-btn:active {
     background: transparent !important;
-    color: var(--cc-primary-dark, hsl(217 91% 32%)) !important;
+    color: var(--cc-primary-dark, hsl(210deg 91% 32%)) !important;
     text-decoration: underline;
 }
 
@@ -3247,8 +3279,8 @@ body.dark .cc-major-topic-card:hover,
 body.dark .cc-major-topic-card.selected,
 [data-theme="dark"] .cc-major-topic-card.selected,
 [data-bs-theme="dark"] .cc-major-topic-card.selected {
-    border-color: hsl(217 91% 50%);
-    background: hsl(217 50% 15%);
+    border-color: hsl(210deg 91% 50%);
+    background: hsl(210deg 50% 15%);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -3355,8 +3387,8 @@ body.dark .cc-progression-card:hover,
 body.dark .cc-progression-card.selected,
 [data-theme="dark"] .cc-progression-card.selected,
 [data-bs-theme="dark"] .cc-progression-card.selected {
-    border-color: hsl(217 91% 50%);
-    background: hsl(217 50% 15%);
+    border-color: hsl(210deg 91% 50%);
+    background: hsl(210deg 50% 15%);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -3463,8 +3495,8 @@ body.dark .cc-gender-card:hover,
 body.dark .cc-gender-card.selected,
 [data-theme="dark"] .cc-gender-card.selected,
 [data-bs-theme="dark"] .cc-gender-card.selected {
-    border-color: hsl(217 91% 50%);
-    background: hsl(217 50% 15%);
+    border-color: hsl(210deg 91% 50%);
+    background: hsl(210deg 50% 15%);
 }
 
 /* ── 8-Voice Selector (v13.1) ── */
@@ -3554,8 +3586,8 @@ body.dark .cc-voice-card:hover,
 body.dark .cc-voice-card.selected,
 [data-theme="dark"] .cc-voice-card.selected,
 [data-bs-theme="dark"] .cc-voice-card.selected {
-    border-color: hsl(217 91% 50%);
-    background: hsl(217 50% 15%);
+    border-color: hsl(210deg 91% 50%);
+    background: hsl(210deg 50% 15%);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -4651,7 +4683,7 @@ body.dark .cc-bulk-paste-panel,
     gap: var(--cc-space-2);
     margin-bottom: var(--cc-space-3);
     padding: var(--cc-space-2) var(--cc-space-3);
-    background: linear-gradient(135deg, hsl(217 91% 97%), hsl(217 91% 95%));
+    background: linear-gradient(135deg, hsl(210deg 91% 97%), hsl(210deg 91% 95%));
     border-radius: var(--cc-radius-md);
     border-left: 4px solid var(--cc-primary);
 }
@@ -4842,8 +4874,8 @@ body.dark .cc-bulk-paste-panel,
     align-items: center;
     gap: var(--cc-space-3);
     padding: var(--cc-space-3) var(--cc-space-4);
-    background: linear-gradient(135deg, hsl(217 91% 97%), hsl(217 91% 94%));
-    border: 1px solid hsl(217 91% 85%);
+    background: linear-gradient(135deg, hsl(210deg 91% 97%), hsl(210deg 91% 94%));
+    border: 1px solid hsl(210deg 91% 85%);
     border-radius: var(--cc-radius-lg);
     margin-bottom: var(--cc-space-4);
 }
@@ -5199,7 +5231,7 @@ body.dark .cc-auto-fallback,
     font-size: 13px;
     font-weight: 600;
     color: var(--cc-primary);
-    background: hsl(217 91% 95%);
+    background: hsl(210deg 91% 95%);
     padding: 4px 10px;
     border-radius: 12px;
 }
@@ -5232,12 +5264,12 @@ body.dark .cc-auto-fallback,
 
 .cc-ai-card:hover {
     border-color: var(--cc-primary);
-    background: hsl(217 91% 98%);
+    background: hsl(210deg 91% 98%);
 }
 
 .cc-ai-card--selected {
     border-color: var(--cc-primary);
-    background: hsl(217 91% 96%);
+    background: hsl(210deg 91% 96%);
     box-shadow: 0 0 0 1px var(--cc-primary);
 }
 
@@ -5298,8 +5330,8 @@ body.dark .cc-auto-fallback,
 }
 
 .cc-level-worker {
-    background: hsl(217 80% 92%);
-    color: hsl(217 80% 45%);
+    background: hsl(210deg 80% 92%);
+    color: hsl(210deg 80% 45%);
 }
 
 .cc-level-supervisor {
@@ -5381,7 +5413,7 @@ body.dark .cc-ai-card--selected,
 [data-theme="dark"] .cc-level-worker,
 [data-bs-theme="dark"] .cc-level-worker {
     background: hsl(217 40% 25%);
-    color: hsl(217 70% 70%);
+    color: hsl(210deg 70% 70%);
 }
 
 .dark .cc-level-supervisor,
@@ -5400,9 +5432,9 @@ body.dark .cc-ai-card--selected,
 
 /* v8.5.0: ChatGPT Integration Section */
 .cc-chatgpt-section {
-    background: hsl(160 30% 97%) !important;
-    border: 1px solid hsl(160 20% 85%) !important;
-    border-left: 4px solid #10a37f !important;
+    background: hsl(142deg 30% 97%) !important;
+    border: 1px solid hsl(142deg 20% 85%) !important;
+    border-left: 4px solid #10a647 !important;
     border-radius: var(--cc-radius-lg);
     padding: 24px 28px;
     margin-bottom: 20px;
@@ -5416,7 +5448,7 @@ body.dark .cc-ai-card--selected,
 }
 
 .cc-chatgpt-header svg {
-    color: #10a37f !important;
+    color: #10a647 !important;
     flex-shrink: 0;
     width: 24px;
     height: 24px;
@@ -5425,7 +5457,7 @@ body.dark .cc-ai-card--selected,
 .cc-chatgpt-title {
     font-size: var(--cc-text-xl);
     font-weight: 700;
-    color: hsl(160 70% 25%) !important;
+    color: hsl(142deg 70% 25%) !important;
     margin: 0;
 }
 
@@ -5442,7 +5474,7 @@ body.dark .cc-ai-card--selected,
     gap: 14px;
     margin-bottom: 20px;
     background: hsl(0 0% 100%);
-    border: 1px solid hsl(160 15% 88%);
+    border: 1px solid hsl(142deg 15% 88%);
     border-radius: var(--cc-radius);
     padding: 20px;
 }
@@ -5461,7 +5493,7 @@ body.dark .cc-ai-card--selected,
     height: 28px;
     min-width: 28px;
     border-radius: 50%;
-    background: #10a37f !important;
+    background: #10a647 !important;
     color: white !important;
     font-size: var(--cc-text-xs);
     font-weight: 700;
@@ -5475,7 +5507,7 @@ body.dark .cc-ai-card--selected,
 }
 
 .cc-btn-chatgpt {
-    background: #10a37f !important;
+    background: #10a647 !important;
     color: white !important;
     border: none;
     padding: 12px 24px;
@@ -5491,7 +5523,7 @@ body.dark .cc-ai-card--selected,
 }
 
 .cc-btn-chatgpt:hover {
-    background: #0d8c6d !important;
+    background: #0d8f3d !important;
     transform: translateY(-1px);
 }
 
@@ -5530,7 +5562,7 @@ body.dark .cc-ai-card--selected,
 
 .cc-chatgpt-paste-text:focus,
 .cc-paste-textarea:focus {
-    border-color: #10a37f !important;
+    border-color: #10a647 !important;
     box-shadow: 0 0 0 3px rgba(16, 163, 127, 0.12) !important;
     outline: none;
 }
@@ -5551,12 +5583,12 @@ body.dark .cc-ai-card--selected,
     align-items: center;
     gap: 10px;
     padding: 14px 18px;
-    background: hsl(160 40% 95%);
-    border: 1px solid hsl(160 30% 85%);
+    background: hsl(142deg 40% 95%);
+    border: 1px solid hsl(142deg 30% 85%);
     border-radius: var(--cc-radius);
     margin-top: 16px;
     font-size: var(--cc-text-base);
-    color: hsl(160 70% 28%) !important;
+    color: hsl(142deg 70% 28%) !important;
     font-weight: 600;
 }
 
@@ -5616,9 +5648,9 @@ body.dark .cc-ai-card--selected,
 body.dark .cc-chatgpt-section,
 [data-theme="dark"] .cc-chatgpt-section,
 [data-bs-theme="dark"] .cc-chatgpt-section {
-    background: hsl(160 20% 10%) !important;
-    border-color: hsl(160 20% 22%) !important;
-    border-left-color: #10a37f !important;
+    background: hsl(142deg 20% 10%) !important;
+    border-color: hsl(142deg 20% 22%) !important;
+    border-left-color: #10a647 !important;
 }
 
 .dark .cc-chatgpt-steps,
@@ -5626,8 +5658,8 @@ body.dark .cc-chatgpt-section,
 body.dark .cc-chatgpt-steps,
 [data-theme="dark"] .cc-chatgpt-steps,
 [data-bs-theme="dark"] .cc-chatgpt-steps {
-    background: hsl(160 15% 13%);
-    border-color: hsl(160 15% 20%);
+    background: hsl(142deg 15% 13%);
+    border-color: hsl(142deg 15% 20%);
 }
 
 .dark .cc-chatgpt-title,
@@ -5635,7 +5667,7 @@ body.dark .cc-chatgpt-steps,
 body.dark .cc-chatgpt-title,
 [data-theme="dark"] .cc-chatgpt-title,
 [data-bs-theme="dark"] .cc-chatgpt-title {
-    color: #34d399 !important;
+    color: #3bd573 !important;
 }
 
 .dark .cc-chatgpt-result,
@@ -5643,9 +5675,9 @@ body.dark .cc-chatgpt-title,
 body.dark .cc-chatgpt-result,
 [data-theme="dark"] .cc-chatgpt-result,
 [data-bs-theme="dark"] .cc-chatgpt-result {
-    background: hsl(160 25% 14%);
-    border-color: hsl(160 20% 22%);
-    color: #34d399 !important;
+    background: hsl(142deg 25% 14%);
+    border-color: hsl(142deg 20% 22%);
+    color: #3bd573 !important;
 }
 
 .dark .cc-chatgpt-subtitle,
@@ -5719,7 +5751,7 @@ body.dark .cc-chatgpt-result,
 [data-theme="dark"] .cc-chatgpt-result,
 [data-bs-theme="dark"] .cc-chatgpt-result {
     background: rgba(16, 163, 127, 0.15);
-    color: #34d399 !important;
+    color: #3bd573 !important;
 }
 
 .dark .cc-input-method-selector,
@@ -5915,7 +5947,7 @@ body.dark .cc-input-method-btn:hover:not(.active),
 }
 .cc-multilang-option:hover {
     border-color: var(--cc-primary, #6366f1);
-    background: var(--cc-primary-light, #eef2ff);
+    background: var(--cc-primary-light, #e8f4ff);
 }
 .cc-multilang-option input[type="checkbox"] {
     width: 15px;
@@ -5926,7 +5958,7 @@ body.dark .cc-input-method-btn:hover:not(.active),
 }
 .cc-multilang-option:has(input:checked) {
     border-color: var(--cc-primary, #6366f1);
-    background: var(--cc-primary-light, #eef2ff);
+    background: var(--cc-primary-light, #e8f4ff);
     font-weight: 500;
 }
 
@@ -6126,7 +6158,7 @@ body.dark .cc-input-method-btn:hover:not(.active),
 .cc-topic-action:focus-visible {
     outline: 2px solid transparent;
     outline-offset: 2px;
-    box-shadow: 0 0 0 2px hsl(0 0% 100%), 0 0 0 4px hsl(217 91% 50%) !important;
+    box-shadow: 0 0 0 2px hsl(0 0% 100%), 0 0 0 4px hsl(210deg 91% 50%) !important;
 }
 
 @media (forced-colors: active) {
@@ -6148,7 +6180,7 @@ body.dark .cc-input-method-btn:hover:not(.active),
 [data-bs-theme="dark"] .cc-builder button:focus-visible,
 [data-bs-theme="dark"] .cc-wizard button:focus-visible,
 [data-bs-theme="dark"] .cc-locked button:focus-visible {
-    box-shadow: 0 0 0 2px hsl(217 30% 12%), 0 0 0 4px hsl(217 91% 62%) !important;
+    box-shadow: 0 0 0 2px hsl(217 30% 12%), 0 0 0 4px hsl(210deg 91% 62%) !important;
 }
 
 
@@ -6163,8 +6195,8 @@ body.dark .cc-input-method-btn:hover:not(.active),
    pass on white is close in luminance to that, so the requirement inverts and the
    same value fails. Measured on the dark ground before this block:
 
-       .cc-link-button   --cc-primary-text  hsl(217 91% 40%)   2.52:1 idle
-                         --cc-primary-solid-hover hsl(217 91% 38%)  2.34:1 h/f/a
+       .cc-link-button   --cc-primary-text  hsl(210deg 91% 40%)   2.52:1 idle
+                         --cc-primary-solid-hover hsl(210deg 91% 38%)  2.34:1 h/f/a
        .cc-level-pill    hsl(217 19% 35%)                      2.38:1 idle/focus/active
        .cc-btn-danger    --cc-error-text    hsl(0 72% 42%)     2.77:1
        .cc-error-close   --cc-error-text                       2.77:1
@@ -6200,7 +6232,7 @@ body.dark .cc-input-method-btn:hover:not(.active),
 body.dark .cc-link-button,
 [data-theme="dark"] .cc-link-button,
 [data-bs-theme="dark"] .cc-link-button {
-    color: hsl(217 91% 72%) !important;
+    color: hsl(210deg 91% 72%) !important;
     background: none !important;
     background-color: transparent !important;
 }
@@ -6223,7 +6255,7 @@ body.dark .cc-link-button:active,
 [data-bs-theme="dark"] .cc-link-button:hover,
 [data-bs-theme="dark"] .cc-link-button:focus,
 [data-bs-theme="dark"] .cc-link-button:active {
-    color: hsl(217 91% 82%) !important;
+    color: hsl(210deg 91% 82%) !important;
     background: none !important;
     background-color: transparent !important;
 }
@@ -6278,10 +6310,10 @@ body.dark button.cc-level-pill:active,
 body.dark .cc-level-pill:hover,
 [data-theme="dark"] .cc-level-pill:hover,
 [data-bs-theme="dark"] .cc-level-pill:hover {
-    color: hsl(217 91% 86%) !important;
+    color: hsl(210deg 91% 86%) !important;
     background: hsl(217 40% 20%) !important;
     background-color: hsl(217 40% 20%) !important;
-    border-color: hsl(217 91% 60%) !important;
+    border-color: hsl(210deg 91% 60%) !important;
 }
 
 /* The chosen pill. Kept a step brighter and a step lighter than plain hover so
@@ -6298,10 +6330,10 @@ body.dark button.cc-level-pill.cc-level-active,
 body.dark .cc-level-pill.cc-level-active,
 [data-theme="dark"] .cc-level-pill.cc-level-active,
 [data-bs-theme="dark"] .cc-level-pill.cc-level-active {
-    color: hsl(217 91% 88%) !important;
-    background: hsl(217 45% 26%) !important;
-    background-color: hsl(217 45% 26%) !important;
-    border-color: hsl(217 91% 65%) !important;
+    color: hsl(210deg 91% 88%) !important;
+    background: hsl(210deg 45% 26%) !important;
+    background-color: hsl(210deg 45% 26%) !important;
+    border-color: hsl(210deg 91% 65%) !important;
 }
 
 /* -- Destructive text button ("Delete module", "Remove") ------------------- */
@@ -6445,7 +6477,7 @@ body.dark button.cc-btn-icon-only:active,
 
 .cc-ptable-head span:not(:first-child) { text-align: center; }
 
-.cc-ptable-row-active { background: hsl(217 91% 97%); }
+.cc-ptable-row-active { background: hsl(210deg 91% 97%); }
 
 .cc-pt-topic {
     min-width: 0;
@@ -6471,8 +6503,8 @@ body.dark button.cc-btn-icon-only:active,
 
 .cc-ptable-row-active .cc-pt-num {
     background: #fff;
-    border-color: hsl(217 91% 60%);
-    color: hsl(217 91% 40%);
+    border-color: hsl(210deg 91% 60%);
+    color: hsl(210deg 91% 40%);
 }
 
 .cc-pt-name {
@@ -6505,7 +6537,7 @@ body.dark button.cc-btn-icon-only:active,
 .cc-pt-tick svg,
 .cc-pt-fail svg { width: 13px; height: 13px; }
 
-.cc-pt-spin { width: 22px; height: 22px; display: grid; place-items: center; color: hsl(217 91% 45%); }
+.cc-pt-spin { width: 22px; height: 22px; display: grid; place-items: center; color: hsl(210deg 91% 45%); }
 .cc-pt-spin svg { width: 16px; height: 16px; animation: cc-pt-spin 0.9s linear infinite; }
 
 @keyframes cc-pt-spin { to { transform: rotate(360deg); } }
@@ -6533,7 +6565,7 @@ body.dark button.cc-btn-icon-only:active,
 .cc-pt-pill svg { width: 13px; height: 13px; }
 .cc-pt-pill .cc-pt-tick { background: none; width: auto; height: auto; }
 
-.cc-pt-pill-working { background: hsl(217 91% 95%); color: hsl(217 91% 40%); padding-left: 10px; }
+.cc-pt-pill-working { background: hsl(210deg 91% 95%); color: hsl(210deg 91% 40%); padding-left: 10px; }
 .cc-pt-pill-failed  { background: hsl(0 84% 96%);  color: hsl(0 74% 42%);  padding-left: 10px; }
 
 .cc-pt-pill-queued {
@@ -6597,7 +6629,7 @@ body.dark .cc-ptable-row,
 body.dark .cc-ptable-row-active,
 [data-theme="dark"] .cc-ptable-row-active,
 [data-bs-theme="dark"] .cc-ptable-row-active {
-    background: hsl(217 45% 18%);
+    background: hsl(210deg 45% 18%);
 }
 
 /* v13.97 FIX-CC-BALANCE-AFTER: previous / this generation / balance after. */
@@ -6689,4 +6721,46 @@ body.dark .cc-bal-value-after,
 [data-theme="dark"] .cc-bal-value-after,
 [data-bs-theme="dark"] .cc-bal-value-after {
     color: hsl(142 60% 62%);
+}
+
+/* v15.3.11: the route chooser's two clarity lines.
+   "Choose this if" answers who the route is for; "You will need" answers what the author
+   must have to hand. The second is the one that saves wasted work - it stops someone
+   picking Policy & Compliance and discovering two screens later that it will not run
+   without a document. Deliberately plain type, not another tinted panel: the card
+   already carries a "How it differs" box and a card list, and a third box would bury
+   the sentence that matters most. */
+.cc-mode-choose,
+.cc-mode-need {
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: hsl(217 12% 38%);
+}
+.cc-mode-choose { margin-top: 10px; }
+.cc-mode-need { margin-bottom: 14px; }
+.cc-mode-choose-label,
+.cc-mode-need-label {
+    font-weight: 700;
+    color: hsl(217 30% 26%);
+}
+.cc-mode-need-label { color: hsl(25 60% 34%); }
+
+.dark .cc-mode-choose, .theme-dark .cc-mode-choose,
+body.dark .cc-mode-choose, [data-theme="dark"] .cc-mode-choose,
+[data-bs-theme="dark"] .cc-mode-choose,
+.dark .cc-mode-need, .theme-dark .cc-mode-need,
+body.dark .cc-mode-need, [data-theme="dark"] .cc-mode-need,
+[data-bs-theme="dark"] .cc-mode-need {
+    color: hsl(217 8% 68%);
+}
+.dark .cc-mode-choose-label, .theme-dark .cc-mode-choose-label,
+body.dark .cc-mode-choose-label, [data-theme="dark"] .cc-mode-choose-label,
+[data-bs-theme="dark"] .cc-mode-choose-label {
+    color: hsl(217 20% 84%);
+}
+.dark .cc-mode-need-label, .theme-dark .cc-mode-need-label,
+body.dark .cc-mode-need-label, [data-theme="dark"] .cc-mode-need-label,
+[data-bs-theme="dark"] .cc-mode-need-label {
+    color: hsl(30 70% 68%);
 }

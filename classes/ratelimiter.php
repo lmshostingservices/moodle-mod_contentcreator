@@ -146,10 +146,24 @@ class ratelimiter {
 
         if (count($timestamps) >= $max) {
             $cache->set($key, $timestamps);
-            throw new \moodle_exception('errorratelimiteddetail', 'mod_contentcreator', '', (object)[
+            // The window is a sliding one, so the wait is a fact rather than an  (v15.4.3)
+            // estimate - the oldest recorded call falls out at exactly this moment. Telling
+            // the caller "wait and try again" without saying how long is what made every
+            // client retry immediately, which is the one thing that cannot work.
+            $oldest = !empty($timestamps) ? (int)min($timestamps) : $now;
+            $retryafter = max(0, ($oldest + $window) - $now);
+            $a = (object)[
                 'max' => $max,
                 'minutes' => (int)ceil($window / MINSECS),
-            ]);
+            ];
+            throw new ratelimit_exception(
+                'errorratelimiteddetail',
+                $bucket,
+                'user',
+                $retryafter,
+                $max,
+                $a
+            );
         }
 
         $timestamps[] = $now;
@@ -202,7 +216,16 @@ class ratelimiter {
 
         if (count($timestamps) >= $max) {
             $cache->set($key, $timestamps);
-            throw new \moodle_exception('errorsiteratelimited', 'mod_contentcreator');
+            // Same treatment as the per-user breach - a caller that cannot tell a  (v15.4.3)
+            // rate limit from a network fault will retry it.
+            $oldest = !empty($timestamps) ? (int)min($timestamps) : $now;
+            throw new ratelimit_exception(
+                'errorsiteratelimited',
+                $bucket,
+                'site',
+                max(0, ($oldest + $window) - $now),
+                $max
+            );
         }
 
         $timestamps[] = $now;

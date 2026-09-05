@@ -22,32 +22,32 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define(['jquery'], function ($) {
+define(['jquery'], function($) {
     'use strict';
 
     /**
      * Spot Issue Activity
      * Select all issues from a list of statements about a scenario
      */
-    var SpotIssue = function (container, config) {
+    var SpotIssue = function(container, config) {
         this.container = $(container);
         this.config = config;
         this.scenario = config.scenario || {};
         this.items = config.items || [];
         this.selectedItems = [];
         this.submitted = false;
-        this.onComplete = config.onComplete || function () {};
+        this.onComplete = config.onComplete || function() {};
         
         this.init();
     };
 
     SpotIssue.prototype = {
-        init: function () {
+        init: function() {
             this.render();
             this.bindEvents();
         },
 
-        render: function () {
+        render: function() {
             var self = this;
             var html = '<div class="cc5-activity cc5-spot-issue">';
             
@@ -65,7 +65,7 @@ define(['jquery'], function ($) {
             
             // Items grid
             html += '<div class="cc5-spot-items">';
-            this.items.forEach(function (item, index) {
+            this.items.forEach(function(item, index) {
                 html += '<button class="cc5-spot-item" data-index="' + index + '">';
                 html += '<div class="cc5-spot-checkbox">';
                 html += '<svg class="cc5-check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -94,11 +94,11 @@ define(['jquery'], function ($) {
             this.container.html(html);
         },
 
-        bindEvents: function () {
+        bindEvents: function() {
             var self = this;
             
             // Item selection
-            this.container.on('click', '.cc5-spot-item', function (e) {
+            this.container.on('click', '.cc5-spot-item', function(e) {
                 if (self.submitted) return;
                 
                 var $item = $(this);
@@ -106,7 +106,7 @@ define(['jquery'], function ($) {
                 
                 if ($item.hasClass('selected')) {
                     $item.removeClass('selected');
-                    self.selectedItems = self.selectedItems.filter(function (i) { return i !== index; });
+                    self.selectedItems = self.selectedItems.filter(function(i) { return i !== index; });
                 } else {
                     $item.addClass('selected');
                     self.selectedItems.push(index);
@@ -116,13 +116,13 @@ define(['jquery'], function ($) {
             });
             
             // Submit
-            this.container.on('click', '.cc5-submit-btn', function (e) {
+            this.container.on('click', '.cc5-submit-btn', function(e) {
                 if (self.submitted) return;
                 self.submit();
             });
         },
 
-        submit: function () {
+        submit: function() {
             var self = this;
             this.submitted = true;
             
@@ -130,7 +130,7 @@ define(['jquery'], function ($) {
             var incorrectSelections = [];
             var missedIssues = [];
             
-            this.items.forEach(function (item, index) {
+            this.items.forEach(function(item, index) {
                 var isSelected = self.selectedItems.indexOf(index) !== -1;
                 var isIssue = item.isIssue === true;
                 
@@ -147,7 +147,7 @@ define(['jquery'], function ($) {
             });
             
             // Mark items
-            this.container.find('.cc5-spot-item').each(function (index) {
+            this.container.find('.cc5-spot-item').each(function(index) {
                 var $item = $(this);
                 var isSelected = self.selectedItems.indexOf(index) !== -1;
                 var isIssue = self.items[index].isIssue === true;
@@ -214,12 +214,12 @@ define(['jquery'], function ($) {
             feedbackHtml += '</div>';
             
             this.container.find('.cc5-feedback-area').html(feedbackHtml).slideDown(200);
-            this.container.find('.cc5-submit-btn').text('Continue').off('click').on('click', function () {
+            this.container.find('.cc5-submit-btn').text('Continue').off('click').on('click', function() {
                 self.onComplete(isPassing);
             });
         },
 
-        escapeHtml: function (str) {
+        escapeHtml: function(str) {
             if (!str) return '';
             var div = document.createElement('div');
             div.textContent = str;
@@ -228,7 +228,7 @@ define(['jquery'], function ($) {
     };
 
     return {
-        init: function (container, config) {
+        init: function(container, config) {
             return new SpotIssue(container, config);
         }
     };

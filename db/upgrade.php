@@ -81,7 +81,7 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // and the second silently overwrote the first, so only one user's duplicates were
         // deleted - then add_index() below hit "Duplicate entry" and threw a
         // dml_exception out of the upgrade, leaving the site stuck in maintenance mode.
-        // keepid is MAX(id) and therefore unique, so it goes first.
+        // The keepid column is MAX(id) and therefore unique, so it goes first.
         $dupes = $DB->get_records_sql(
             "SELECT MAX(id) AS keepid, contentcreatorid, userid, COUNT(*) AS cnt
                FROM {contentcreator_attempts}
@@ -195,7 +195,7 @@ function xmldb_contentcreator_upgrade($oldversion) {
             // counted as "already decided" and suppressed the SYSTEM-level grant - so a
             // trainer role that was set to Prevent in one course lost authoring rights in
             // every course, which is the exact population this step exists to protect.
-            // record_exists() also avoids get_record()'s "found more than one record"
+            // Using record_exists() also avoids get_record()'s "found more than one record"
             // error when a role carries :manage overrides in several courses.
             $existing = $DB->record_exists(
                 'role_capabilities',
@@ -223,6 +223,55 @@ function xmldb_contentcreator_upgrade($oldversion) {
         }
 
         upgrade_mod_savepoint(true, 2026082402, 'contentcreator');
+    }
+
+    if ($oldversion < 2026090511) {
+        // The rate-limit ceilings were sized for one audio clip per section.  (v15.4.3)
+        //
+        // Per-card narration (v15.4.0) and three-question decision points changed the
+        // arithmetic underneath them and nothing re-sized the buckets. One section now
+        // costs about six card clips plus twelve quiz-feedback clips - eighteen calls where
+        // it used to cost two - so an eight-subtopic pack needs around 144, against a
+        // `voice` ceiling of 100 per hour. A single ordinary build could not finish, and
+        // reported it as sixty "too many requests" errors rather than as one clear message.
+        //
+        // Only a value that is still exactly the old default is moved. A site that chose
+        // its own number chose it deliberately and is left alone.
+        $rebaselined = [
+            'ratelimitgenerate' => [60, 600],
+            'ratelimitvendor' => [200, 1500],
+            'ratelimitvendorread' => [600, 3000],
+            'ratelimitvoice' => [100, 2500],
+            'sitelimitvoice' => [2000, 40000],
+            'sitelimitgenerate' => [1000, 10000],
+        ];
+        $moved = [];
+        foreach ($rebaselined as $name => $values) {
+            [$olddefault, $newdefault] = $values;
+            $current = get_config('mod_contentcreator', $name);
+            // Unset is left unset: the call site's own default already carries the new
+            // number, so writing one here would only turn an inherited value into a
+            // pinned one.
+            if ($current === false || $current === '' || !is_numeric($current)) {
+                continue;
+            }
+            if ((int)$current !== $olddefault) {
+                continue;
+            }
+            set_config($name, $newdefault, 'mod_contentcreator');
+            $moved[] = $name . ' ' . $olddefault . ' -> ' . $newdefault;
+        }
+        if (!empty($moved)) {
+            upgrade_log(
+                UPGRADE_LOG_NORMAL,
+                'mod_contentcreator',
+                'Raised rate-limit ceilings left at their pre-15.4.3 defaults, which were '
+                    . 'below the cost of a single build once narration moved to one clip per '
+                    . 'card: ' . implode('; ', $moved) . '.'
+            );
+        }
+
+        upgrade_mod_savepoint(true, 2026090511, 'contentcreator');
     }
 
     return true;

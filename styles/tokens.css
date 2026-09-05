@@ -35,8 +35,8 @@
     --cc-text-inverse: hsl(0 0% 98%);
 
     /* Primary - matches lms-labs.com (217 91% 60%) */
-    --cc-primary: hsl(217 91% 60%);
-    --cc-primary-hover: hsl(217 91% 55%);
+    --cc-primary: hsl(210deg 91% 60%);
+    --cc-primary-hover: hsl(210deg 91% 55%);
 
     /* v13.95 FIX-CC-PRIMARY-CONTRAST: the brand blue at 60% lightness carries white text
        at 3.64:1 - fine for a border or an icon (WCAG 1.4.11 asks 3:1 of non-text UI) but
@@ -49,10 +49,10 @@
        borders, rings and accent bars, and the brand is 60% - add solid variants for the
        two jobs that put text on or in the colour. Same hue and saturation, so the
        button still reads as the same blue. */
-    --cc-primary-solid: hsl(217 91% 45%);        /* white on this: 4.87:1 */
-    --cc-primary-solid-hover: hsl(217 91% 38%);  /* white on this: 6.55:1 */
-    --cc-primary-text: hsl(217 91% 40%);         /* this on white:  6.16:1 */
-    --cc-primary-muted: hsl(217 91% 95%);
+    --cc-primary-solid: hsl(210deg 91% 45%);        /* white on this: 4.87:1 */
+    --cc-primary-solid-hover: hsl(210deg 91% 38%);  /* white on this: 6.55:1 */
+    --cc-primary-text: hsl(210deg 91% 40%);         /* this on white:  6.16:1 */
+    --cc-primary-muted: hsl(210deg 91% 95%);
     --cc-primary-foreground: hsl(0 0% 98%);
 
     /* Status Colors - HSL format */
@@ -86,7 +86,7 @@
     --cc-shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.05);
     --cc-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07);
     --cc-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08);
-    --cc-shadow-glow: 0 0 0 3px hsl(217 91% 60% / 0.15);
+    --cc-shadow-glow: 0 0 0 3px hsl(210deg 91% 60% / 0.15);
 
     /* Motion */
     --cc-ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -145,7 +145,7 @@
     --cc-transition: var(--cc-duration) var(--cc-ease);
 
     /* Color aliases */
-    --cc-primary-light: hsl(217 91% 97%);
+    --cc-primary-light: hsl(210deg 91% 97%);
     --cc-text-secondary: var(--cc-text-muted);
 
     /* Shadow alias */
@@ -206,8 +206,8 @@ body.dark .contentcreator-container,
     --cc-text-inverse: hsl(0 0% 9%);
 
     /* Primary colors adjusted for dark mode */
-    --cc-primary-muted: hsl(217 50% 20%);
-    --cc-primary-light: hsl(217 50% 15%);
+    --cc-primary-muted: hsl(210deg 50% 20%);
+    --cc-primary-light: hsl(210deg 50% 15%);
 
     /* Status colors adjusted for dark mode */
     --cc-success-muted: hsl(142 40% 15%);
@@ -218,7 +218,7 @@ body.dark .contentcreator-container,
     --cc-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --cc-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
     --cc-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
-    --cc-shadow-glow: 0 0 20px -5px hsl(217 91% 50% / 0.3);
+    --cc-shadow-glow: 0 0 20px -5px hsl(210deg 91% 50% / 0.3);
 }
 
 /* Base Container */
@@ -507,7 +507,7 @@ button.cc-btn-ghost:active:not(:disabled) {
 .theme-dark .cc-link-btn,
 [data-theme="dark"] .cc-link-btn,
 [data-bs-theme="dark"] .cc-link-btn {
-    color: hsl(217 91% 72%) !important;
+    color: hsl(210deg 91% 72%) !important;
 }
 .cc-dark .cc-link-btn:hover,
 .cc-dark .cc-link-btn:focus,
@@ -525,7 +525,7 @@ button.cc-btn-ghost:active:not(:disabled) {
 [data-bs-theme="dark"] .cc-link-btn:focus,
 [data-bs-theme="dark"] .cc-link-btn:active {
     background: transparent !important;
-    color: hsl(217 91% 82%) !important;
+    color: hsl(210deg 91% 82%) !important;
 }
 
 /* v13.95: was `opacity: 0.5`, which fades the label along with the button. On the

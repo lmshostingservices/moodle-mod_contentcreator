@@ -39,7 +39,7 @@ define([
     // rather than a hand-maintained copy. prompts.js depends only on legislation and
     // cc-state, so this adds no cycle.
     'mod_contentcreator/prompts'
-], function (Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator, Translations, Prompts) {
+], function(Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator, Translations, Prompts) {
     'use strict';
 
     // =======================================================================
@@ -79,11 +79,13 @@ define([
     const useNarrationLanguage = (lang) => {
         if (!CcState || typeof CcState.setLabelResolver !== 'function') { return; }
         var code = String(lang || 'en');
+        // v15.1.8: the pronunciation list is written for the site's voice language only.
+        if (typeof CcState.setNarrationLanguage === 'function') { CcState.setNarrationLanguage(code); }
         var table = _narrationLabels[code]
             || _narrationLabels[code.split('-')[0]]
             || _narrationLabels.en
             || {};
-        CcState.setLabelResolver(function (key) {
+        CcState.setLabelResolver(function(key) {
             return table[key];
         });
     };
@@ -124,6 +126,19 @@ define([
         'msgstepaddcontext', 'msgstepgenerate', 'msgmodevetdesc', 'msguploadrefdocs',
         'msguploadcompanydocs', 'msgrealworkplacescenarios', 'msgmodeunidesc',
         'msgoutcomedriven', 'msgcriticalthinking', 'msgacademictone', 'msgnojurisdictionlegislation',
+        'msgmodepolicytitle', 'msgmodepolicydesc', 'msgdifferpolicy', 'msgpolicyquotessource', 'msgpolicynoinvention', 'msgpolicydocrequired', 'msgpolicyplainregister', 'msgcardnamepolicyscope', 'msgcardnamepolicysays', 'msgcardnamepolicydo', 'msgcardnamepolicymisreadings', 'msgcardnamepolicyglance', 'msgcardnamepolicycheck', 'msgpolicysourcenote',
+        // FIX-CC-POLICY-DETAILS-KEYS (v15.4.5): the Policy details block on the Policy
+        // & Compliance context step declared its strings in lang/en but was never added
+        // to this prefetch list and had no fallback, so every label, hint and
+        // placeholder in that block rendered as its own raw key ("msgpolicydetails").
+        // tests/js/test-builder-strings.js now asserts every s() key is prefetched.
+        'msgpolicydetails', 'msgpolicydetailshint', 'msgpolicytitle', 'msgphpolicytitle',
+        'msgpolicytitlehint', 'msgpolicyowner', 'msgphpolicyowner', 'msgpolicyreviewed',
+        'msgpolicycontact', 'msgphpolicycontact', 'msgpolicycontacthint',
+        'msgsubjectarea', 'msgwrittenfor',
+        // v15.4.6: Policy's own context-screen identity, and the review-screen wording.
+        'msgcontextpolicytitle', 'msgcontextpolicysubtitle', 'msginstructionpolicy',
+        'msgpolicydocument',
         'msgentercoursetitleai', 'msgorpasteowntopics', 'msgmodetopicstitle',
         'msgmodetopicsdesc', 'msgworksanysubject', 'msgcardsreveal', 'msgtopicscardnote',
         'msgcontextvettitle', 'msgcontextvetsubtitle', 'msgunitofcompetency', 'msgfetchingtga',
@@ -260,6 +275,16 @@ define([
         'msguntitledtopic', 'msgvalid', 'msgunitdefault', 'msgbasedondefault', 'msgbasedon',
         'msgbasedonworkplacedoc', 'msgnsubtopic', 'msgnsubtopics',
         // v15 four-route architecture
+        // v15.3.11: Topics and Text mode-card strings.
+        'msgmodetopicstexttitle', 'msgmodetopicstextdesc', 'msgdiffertopicstext',
+        'msgttsubtopiccards', 'msgttownheadings', 'msgtttwocolumn', 'msgttsameactivities',
+        'msgttgeneratescards',
+        // v15.3.11: route-chooser clarity lines.
+        'msgchoosethisif', 'msgyouwillneed',
+        'msgchoosevet', 'msgneedvet', 'msgchooseworkplace', 'msgneedworkplace',
+        'msgchooseuniversity', 'msgneeduniversity', 'msgchoosepolicy', 'msgneedpolicy',
+        'msgchoosegeneral', 'msgneedgeneral', 'msgchoosetopicstext', 'msgneedtopicstext',
+        'msgcardnamegeneralapplycontext',
         'msgmodegeneraltitle', 'msgmodegeneraldesc', 'msgdiffergeneral',
         'msggeneraladaptive', 'msggeneralmodelrouter', 'msggeneralstorytelling', 'msggeneralanysubject',
         'msgcontextgeneraltitle', 'msggeneralsubtitle', 'msginstructiongeneral',
@@ -354,6 +379,35 @@ define([
         msgcriticalthinking: 'Critical thinking emphasis',
         msgacademictone: 'Academic tone and terminology',
         msgnojurisdictionlegislation: 'No jurisdiction legislation on this route.',
+        msgmodepolicytitle: 'Policy & Compliance',
+        msgmodepolicydesc: 'Turn a policy, code of conduct or procedure into training staff will be held to.',
+        msgdifferpolicy: 'Teaches what your document actually says, quoting it rather than inventing scenarios, figures or penalties it does not contain.',
+        msgpolicyquotessource: "Quotes the policy's own wording",
+        msgpolicynoinvention: 'Never invents obligations or penalties',
+        msgpolicydocrequired: 'Generates from the uploaded document',
+        msgpolicyplainregister: 'Plain and exact, no manufactured drama',
+        msgcontextpolicytitle: 'Learning Context - Policy & Compliance',
+        msgcontextpolicysubtitle: 'Upload the policy, code of conduct or procedure. The course teaches what that document actually says, quoting it rather than inventing scenarios around it.',
+        msginstructionpolicy: '<strong>One document per content pack.</strong> This route builds the course from the document you upload and will not invent an obligation, a timeframe or a penalty it does not contain. Each subtopic you select becomes a learning slide. Enter the policy title exactly as it appears on the document - learners are told this is what they are held to.',
+        msgpolicydocument: 'Policy Document',
+        msgpolicydetails: 'Policy details',
+        msgpolicydetailshint: 'Shown to learners on every slide, so they always know which document this course teaches and how current it is.',
+        msgpolicytitle: 'Policy title (exactly as it appears on the document)',
+        msgphpolicytitle: 'e.g. Code of Conduct',
+        msgpolicytitlehint: 'Required. This is the document learners are told they are held to, so it must match the real title.',
+        msgpolicyowner: 'Policy owner (department or role)',
+        msgphpolicyowner: 'e.g. People & Culture',
+        msgpolicyreviewed: 'Last reviewed',
+        msgpolicycontact: 'Who to ask about this policy',
+        msgphpolicycontact: 'e.g. hr@example.com',
+        msgpolicycontacthint: 'A learner who does not understand a rule needs somewhere to go. Leave blank to omit.',
+        msgcardnamepolicyscope: 'Scope & Purpose',
+        msgcardnamepolicysays: 'What the Policy Says',
+        msgcardnamepolicydo: 'What You Must Do',
+        msgcardnamepolicymisreadings: 'Common Misreadings',
+        msgcardnamepolicyglance: 'Compliance at a Glance',
+        msgcardnamepolicycheck: 'Check Your Understanding',
+        msgpolicysourcenote: 'Upload the policy document - this route generates from the source, not from the topic title.',
         msgentercoursetitleai: 'Enter course title, AI suggests topics',
         msgorpasteowntopics: 'Or paste your own topics',
         msgmodetopicstitle: 'Topics and Text',
@@ -593,18 +647,46 @@ define([
         msgcardnamekeyconcepts: 'Key Concepts',
         msgcardnameexamplesapplication: 'Examples & Application',
         msgcardnamekeytakeaways: 'Key Takeaways',
-        msgcardnamegeneralorient: 'Orient',
-        msgcardnamegeneralunderstand: 'Understand',
-        msgcardnamegeneralexplore: 'Explore',
-        msgcardnamegeneralapply: 'Apply',
-        msgcardnamegeneralchallenge: 'Challenge',
-        msgcardnamegeneralconsolidate: 'Consolidate',
+        // v15.3.11: these named the pedagogy STAGE, not the card, and two of them
+        // misled. "Explore" is the MISTAKES card - nothing on this screen told an author
+        // that card 3 is "what commonly goes wrong" - and once applied-scenario was
+        // restored, "Apply" (the step-by-step model) sat beside "Apply in Context" (the
+        // second scenario) reading as two versions of one thing. Every other route names
+        // the card it will build; General now does too.
+        // v15.3.11: the route chooser's two new lines. Plain language, no jargon: an
+        // author should be able to pick the right route from these alone.
+        msgchoosethisif: 'Choose this if:',
+        msgyouwillneed: 'You will need:',
+
+        msgchoosevet: 'you are an RTO delivering nationally recognised training and the content has to stand up to audit.',
+        msgneedvet: 'the unit code (imported from training.gov.au). Reference documents optional.',
+
+        msgchooseworkplace: 'you are training your own staff on how things are done here - your policies, systems and standards.',
+        msgneedworkplace: 'nothing, but a company document gives far better results than a topic title alone.',
+
+        msgchooseuniversity: 'you are teaching an academic subject and want frameworks, ethics and competing case studies rather than workplace scenarios.',
+        msgneeduniversity: 'your learning outcomes. No documents required.',
+
+        msgchoosepolicy: 'you have one document - a policy, code of conduct or procedure - and staff will be held to exactly what it says.',
+        msgneedpolicy: 'the policy document itself, and its title. This route will not run without it.',
+
+        msgchoosegeneral: 'your subject is none of the above - professional development, soft skills, induction, or anything taught to adults.',
+        msgneedgeneral: 'a topic. Everything else is optional.',
+
+        msgchoosetopicstext: 'you want a clean read - headings and prose - rather than scenarios, and the seven-card shape does not suit your subject.',
+        msgneedtopicstext: 'a topic. Optionally paste or upload source material to teach from.',
+        msgcardnamegeneralorient: 'Opening Scenario',
+        msgcardnamegeneralunderstand: 'Core Concept',
+        msgcardnamegeneralexplore: 'Common Mistakes',
+        msgcardnamegeneralapply: 'Mental Model',
+        msgcardnamegeneralapplycontext: 'Second Scenario',
+        msgcardnamegeneralchallenge: 'Check Your Understanding',
+        msgcardnamegeneralconsolidate: 'Summary Checklist',
         msghowitdiffers: 'How it differs',
         msgdiffervet: 'Written to be assessable. Names the tool, the form, the reading and the sign-off, and cites the Act or code of practice behind it. The only route that imports a unit of competency and maps performance criteria.',
         msgdifferworkplace: 'Built around what the business measures &ndash; the customer, the cost, the turnaround. Points at your own policies, SOPs and systems by name, with no RTO or assessment language anywhere.',
         msgdifferuniversity: 'Seven academic cards. Frameworks with their originators and limits, ethics dimensions, two full case studies that disagree with each other, and a decision question that tests the analysis. Bloom\'s level drives the verbs. No workplace scenarios.',
         msgdifferpd: 'About judgement, not procedure. Lives in conversations and decisions &ndash; what you notice, what you say next, how you repair it. Cites a principle or professional standard rather than a law.',
-        msgdiffertopicstext: 'Plain explanatory prose on any subject, written in the third person. No workplace framing, no compliance, no scenarios or characters &ndash; just the subject, explained well.',
         msggenerates6cardspersection: '6 cards per section',
         msggenerates4cardspersectionplus3activities: '4 cards + 3 activities per section',
         msgsuggestedbasedon: 'Suggested based on:',
@@ -642,7 +724,7 @@ define([
         msguniversalheadings: 'Universal headings &ndash; no compliance or scenario framing',
         msgshortbydesign: 'Short by design: two paragraphs a card, easy to digest',
         msgunitcodelabel: 'Unit Code *',
-        msgtgaapiunavailable: 'TGA API unavailable',
+        msgtgaapiunavailable: 'The TGA API is unavailable',
         msgdownloadunitpdf: 'Download the unit PDF from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> and upload it here.',
         msgopenuniton: 'Open the unit on <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a>, select all text (Ctrl+A / Cmd+A) and paste here.',
         msgchooseoneelement: 'Choose <strong>one element</strong> to generate learning content for. Generate each element separately so you can place <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> between them for revision and deeper learning.',
@@ -800,7 +882,20 @@ define([
         msgselectall: 'Select All',
         msgdeselectall: 'Deselect All',
         msgskipvoiceover: 'Skip voiceover generation and continue',
-        msgvoiceoverslater: 'Voiceovers will be generated when the activity is first opened.',
+        // v15.3.18: the old wording - "Voiceovers will be generated when the activity
+        // is first opened" - was half true, which is worse than plainly wrong.
+        //
+        // Card narration really is generated on demand: the player calls generate_voice,
+        // which needs only mod/contentcreator:view, so a learner opening a section
+        // triggers it. But quiz feedback narration is another matter - feedbackAudioUrl
+        // is only ever WRITTEN by pregenQuizFeedback in this file, the player only ever
+        // reads it, and Skip gates that pass. Nothing regenerates it later: the player
+        // logs "no pre-generated feedback clip - silent by design" and stays silent for
+        // the life of the module.
+        //
+        // So an author read "generated later", concluded nothing was lost, and silently
+        // gave up their quiz narration permanently. Say which half is which.
+        msgvoiceoverslater: 'Card narration is generated when a learner first opens the activity, so their first view is slower. Quiz feedback narration is only made here - skipping leaves it silent until you regenerate.',
         msgexportexcel: 'Export Excel Mapping',
         msgresetstartover: 'Reset & Start Over',
         msgpastesubtopicsintro: 'Paste the subtopics for your major topic below (one per line). Each subtopic will become a separate learning slide:',
@@ -859,6 +954,15 @@ define([
         msgbasedonworkplacedoc: 'Based on your workplace document',
         msgnsubtopic: '{$a} subtopic',
         msgnsubtopics: '{$a} subtopics',
+        // v15.3.11: Topics and Text, reinstated as a selectable route.
+        msgmodetopicstexttitle: 'Topics &amp; Text',
+        msgmodetopicstextdesc: 'A topic broken into its own subtopics - a heading and clear prose for each, with no fixed card shape.',
+        msgdiffertopicstext: 'The subject sets the shape: as many subtopic cards as the topic actually has, each with the heading the AI wrote for it.',
+        msgttsubtopiccards: 'Up to 10 subtopic cards per topic',
+        msgttownheadings: 'Each card carries its own heading',
+        msgtttwocolumn: 'Two-column layout, revealed one at a time',
+        msgttsameactivities: 'Same end-of-topic activities as every route',
+        msgttgeneratescards: 'Generates 3-10 numbered subtopic cards per section, plus the activities',
         msgmodegeneraltitle: 'General Learning',
         msgmodegeneraldesc: 'Adaptive learning for short courses, professional development and general subjects.',
         msgdiffergeneral: 'The AI identifies the learning job and chooses the teaching model that fits it.',
@@ -964,9 +1068,9 @@ define([
      * @param {Number} ms Deadline, default 210000.
      * @return {Promise<Response>} The response.
      */
-    const ccPost = async (body, label, ms) => {
+    const ccPost = async(body, label, ms) => {
         const ctrl = new AbortController();
-        const timer = setTimeout(function () {
+        const timer = setTimeout(function() {
             ctrl.abort();
             ccWarn('[CC NET] ' + label + ' aborted after ' + Math.round((ms || 210000) / 1000)
                 + 's with no response from the server');
@@ -980,6 +1084,59 @@ define([
     };
 
 
+    /**
+     * v15.4.3: is this response a rate-limit refusal, and how long until it lifts?
+     *
+     * Reads the machine-readable fields ajax.php has sent since v15.4.3 rather than matching
+     * the message, which is translated into 53 languages and would therefore only ever have
+     * worked on English sites. The `error` sniff is a fallback for a server that has not been
+     * upgraded yet - a plugin whose PHP and JS are both in the same ZIP should never be in
+     * that state, but a cached AMD bundle against new PHP, or the reverse, is a real thing
+     * during an upgrade window.
+     *
+     * @param {Object} data Parsed JSON response body.
+     * @return {Object|null} {retryafter, bucket, scope, message} when refused, else null.
+     */
+    const ccRateLimitInfo = (data) => {
+        if (!data || data.success) { return null; }
+        const coded = (data.errorcode === 'ratelimited');
+        const sniffed = !coded && typeof data.error === 'string'
+            && /too many requests|too many AI requests/i.test(data.error);
+        if (!coded && !sniffed) { return null; }
+        return {
+            retryafter: Math.max(0, parseInt(data.retryafter, 10) || 0),
+            bucket: data.bucket || 'unknown',
+            scope: data.scope || 'user',
+            ceiling: parseInt(data.ceiling, 10) || 0,
+            message: data.error || ''
+        };
+    };
+
+    /**
+     * Turn a rate-limit refusal into an Error the retry loops will not retry.
+     *
+     * @param {Object} info From ccRateLimitInfo.
+     * @return {Error} Tagged error.
+     */
+    const ccRateLimitError = (info) => {
+        const err = new Error(info.message || 'Rate limited');
+        err.ccRateLimited = info;
+        return err;
+    };
+
+    /**
+     * How long to tell the author to wait, in words.
+     *
+     * @param {Number} seconds Seconds until a slot frees.
+     * @return {String} e.g. "about 12 minutes".
+     */
+    const ccWaitPhrase = (seconds) => {
+        const mins = Math.ceil((seconds || 0) / 60);
+        if (mins <= 1) { return 'about a minute'; }
+        if (mins < 60) { return 'about ' + mins + ' minutes'; }
+        return 'about an hour';
+    };
+
     let cmid = 0;
     let container = null;
     let manifest = null;
@@ -989,7 +1146,12 @@ define([
     // v15: Four teacher-facing routes. Legacy PD / Topics & Text values remain readable
     // for saved content, but new authoring normalises them to General.
     const ccNormaliseTeacherRoute = function(mode) {
-        return (mode === 'pd' || mode === 'topicstext') ? 'general' : (mode || null);
+        // v15.3.11: 'topicstext' is a teacher-selectable route again and must NOT be
+        // folded onto General. It was folded when the route was withdrawn from the mode
+        // screen; leaving the fold in place while restoring the card would let an author
+        // pick Topics and Text and silently generate a seven-card General pack - the
+        // same class of defect as the Policy route running as University.
+        return (mode === 'pd') ? 'general' : (mode || null);
     };
     let tgaData = null;
     let topicPlan = null;
@@ -997,6 +1159,10 @@ define([
     let selectedMajorTopicIds = []; // User-selected Major Topic IDs for generation
     let selectedElementIds = []; // v6.9.11: User-selected element IDs (e.g., just Element 1)
     let workplaceData = null; // Workplace mode: extracted document content
+    // v15.3.0: Policy & Compliance metadata - the document this course teaches, who owns
+    // it, when it was last reviewed and who to ask. Carried into the manifest and shown
+    // in the player chrome on every slide.
+    let policyMeta = null;
     let vetPastedContent = ''; // v7.9.0: Pasted text for VET reference content
     let uniPastedContent = ''; // v7.9.0: Pasted text for University course content
     let pdPastedContent = ''; // v9.21: Pasted text for PD course content
@@ -1064,6 +1230,7 @@ define([
         tgaData = null;
         topicPlan = null;
         workplaceData = null;
+        policyMeta = null;
         suggestedMajorTopics = [];
         selectedMajorTopicIds = [];
         selectedElementIds = [];
@@ -1148,7 +1315,7 @@ define([
         s = s.replace(/\bso you\s+safety\b/gi, 'so you maintain safety');
         s = s.replace(/\bso you\s+the\s+safety\b/gi, 'so you ensure the safety');
         s = s.replace(/\bso you\s+the\s+/gi, 'so you understand the ');
-        s = s.replace(/\bso you\s+(?:optimal|proper|adequate|sufficient|full|complete|clear|immediate|minimal|consistent|accurate|appropriate|correct|comfortable|effective|efficient|maximum|minimum|good|better|best|safe|total|reliable|thorough|reasonable|necessary|successful|secure|healthy|stable|strong|smooth|timely|rapid|quick|clean|standard|suitable|regular|balanced|controlled|steady|uniform)\b/gi, function (match) {
+        s = s.replace(/\bso you\s+(?:optimal|proper|adequate|sufficient|full|complete|clear|immediate|minimal|consistent|accurate|appropriate|correct|comfortable|effective|efficient|maximum|minimum|good|better|best|safe|total|reliable|thorough|reasonable|necessary|successful|secure|healthy|stable|strong|smooth|timely|rapid|quick|clean|standard|suitable|regular|balanced|controlled|steady|uniform)\b/gi, function(match) {
             return 'so you ensure ' + match.replace(/^so you\s+/i, '');
         });
         s = s.replace(/\b(is|are|was|were)\s+because\s+because\b/gi, '$1 because');
@@ -1698,7 +1865,7 @@ define([
         
         // v6.8.2: Helper function to update task/equipment categories based on Unit of Competency.
         // v13.66: Published on the module-scoped binding so fetchTGAUnit and handlePdfUpload can call it.
-        _updateCategoriesForUnit = function () {
+        _updateCategoriesForUnit = function() {
             const taskCardsContainer = document.getElementById('cc-task-category-cards');
             const equipmentCardsContainer = document.getElementById('cc-equipment-category-cards');
             const industry = document.getElementById('cc-industry')?.value || '';
@@ -1744,7 +1911,7 @@ define([
         // DYNAMIC MATCHING: Extracts words from unit/PDF and matches against category card text
         // Uses stemming-like matching for word roots (5+ chars for precision)
         // v13.66: Module-scoped binding so updateCategoriesForUnit() can reach it.
-        autoSuggestFromContent = function (combinedText) {
+        autoSuggestFromContent = function(combinedText) {
             if (!combinedText) return;
             
             const taskCards = document.querySelectorAll('#cc-task-category-cards .cc-category-card');
@@ -2003,7 +2170,7 @@ define([
         // v6.8.7: Published on the shared ccBuilder object so the wizard steps
         // outside this closure can call it.
         // ===========================================================================
-        ccBuilder.renderCategoryCards = function (container, categories, type) {
+        ccBuilder.renderCategoryCards = function(container, categories, type) {
             if (!container || !categories || categories.length === 0) {
                 container.innerHTML = '<div class="cc-category-placeholder">' + s('msgnocategories') + '</div>';
                 return;
@@ -2222,7 +2389,7 @@ define([
         
         // Update legacy job tasks array from selected categories (for prompt compatibility)
         // v6.9.1: Only runs if AI context is NOT available to avoid overwriting AI selections
-        ccBuilder.updateLegacyJobTasksFromCategories = function () {
+        ccBuilder.updateLegacyJobTasksFromCategories = function() {
             // v6.9.1: Skip if AI context is active - don't overwrite AI-selected data
             if (CC_AI_CONTEXT && 
                 (CC_SELECTED_JOB_TITLES?.length > 0 || 
@@ -2259,7 +2426,7 @@ define([
         };
         
         // v6.6.40: Update Workplace mode selection counts
-        const updateWpSelectionCounts = function () {
+        const updateWpSelectionCounts = function() {
             const taskCount = (CC_WP_SELECTED_TASK_CATEGORIES || []).length;
             const equipmentCount = (CC_WP_SELECTED_EQUIPMENT_CATEGORIES || []).length;
             
@@ -2302,7 +2469,7 @@ define([
         // NOTE: VET mode AI suggestions were removed in v6.9.14 - AI now auto-generates
         // ===========================================================================
         
-        ccBuilder.renderWorkplaceAISuggestions = async function (documentData) {
+        ccBuilder.renderWorkplaceAISuggestions = async function(documentData) {
             const container = document.getElementById('cc-wp-ai-suggestions-container');
             if (!container) {
                 return;
@@ -4322,10 +4489,55 @@ define([
         return country?.lang || 'en-AU';
     };
 
+    /**
+     * v15.3.11: put AI-written TOPIC TITLES through the same regional spelling pass the
+     * card content already gets.
+     *
+     * The country selector was wired to the generation prompt (getSpellingInstructions)
+     * and to the card normaliser (normalizeContent, applied in generator.js), but not to
+     * anything in this file - and this file is where the suggested topic and subtopic
+     * titles arrive from the vendor. So an author who chose Australia could get a
+     * contents list reading "Behavior Programs" and "Organizational Culture" above cards
+     * whose prose said "behaviour" and "organisational". The mismatch is more visible
+     * than either alone, because the two sit on the same screen.
+     *
+     * Reads the country from whichever selector this route renders, so it is correct on
+     * every route rather than assuming one field id.
+     *
+     * @param {String} text A title or description from the vendor.
+     * @returns {String} The same text in the selected country's spelling.
+     */
+    const ccRegionalise = (text) => {
+        if (!text || typeof text !== 'string') { return text; }
+        try {
+            const code = document.getElementById('cc-country')?.value
+                || document.getElementById('cc-wp-country')?.value
+                || document.getElementById('cc-pd-country')?.value
+                || document.getElementById('cc-uni-country')?.value
+                || 'AU';
+            const lang = getCountryLang(code);
+            return (Generator && typeof Generator.normalizeContent === 'function')
+                ? Generator.normalizeContent(text, lang)
+                : text;
+        } catch (e) {
+            // Spelling is a polish pass - never let it lose the title.
+            return text;
+        }
+    };
+
     const init = (config) => {
         cmid = config.cmid;
         container = document.getElementById('contentcreator-app');
         if (!container) return;
+
+        // v15.1.5: the site pronunciation list, applied to narration only. Set before any
+        // voiceover is pre-generated, so the audio and the hash stored beside it are both
+        // built from the substituted script.
+        try {
+            CcState.setPronunciations(config.pronunciations || '', config.voiceLanguage || '');
+        } catch (e) {
+            // Non-fatal: without the list the voice reads words as it always did.
+        }
 
         // v13.86: one batched request for every wizard message. showError() reads
         // them synchronously afterwards; the English fallbacks cover the interval.
@@ -4347,7 +4559,7 @@ define([
     
     // Fetch current AI credits balance from the server
     // v6.5.18: Fixed endpoint URL and credential format
-    const fetchCreditsBalance = async () => {
+    const fetchCreditsBalance = async() => {
         try {
             // v13.66: The site id and API key are held server side; the proxy injects them.
             const data = await CcState.vendorFetch(cmid, 'credits');
@@ -4550,6 +4762,7 @@ define([
                 selectedMode: selectedMode,
                 tgaData: tgaData,
                 workplaceData: workplaceData,
+                policyMeta: policyMeta,
                 suggestedMajorTopics: suggestedMajorTopics,
                 selectedMajorTopicIds: selectedMajorTopicIds,
                 selectedElementIds: selectedElementIds,
@@ -4621,6 +4834,7 @@ define([
         selectedMode = ccNormaliseTeacherRoute(d.selectedMode);
         tgaData = d.tgaData || null;
         workplaceData = d.workplaceData || null;
+        policyMeta = d.policyMeta || null;
         suggestedMajorTopics = d.suggestedMajorTopics || [];
         selectedMajorTopicIds = d.selectedMajorTopicIds || [];
         selectedElementIds = d.selectedElementIds || [];
@@ -4715,7 +4929,7 @@ define([
         return obj;
     };
 
-    const saveManifest = async (manifestData, callback) => {
+    const saveManifest = async(manifestData, callback) => {
         // v13.86: once the work is on the server the local draft is redundant, and
         // keeping it would let a stale copy resurrect after a completed build.
         if (manifestData && manifestData.locked) { clearDraft(); }
@@ -4767,7 +4981,7 @@ define([
         }
 
         // -- Chunked save (>= 2MB)  -  retry entire sequence with fresh uploadId --
-        const attemptChunkedSave = async (attempt) => {
+        const attemptChunkedSave = async(attempt) => {
             const totalChunks = Math.ceil(serialized.length / CHUNK_SIZE);
             const uploadId = Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
             ccLog('[CC SAVE] Chunked save attempt ' + attempt + '/' + MAX_SAVE_RETRIES +
@@ -4811,7 +5025,7 @@ define([
 
     // v6.6.15: Trigger regeneration of only failed slides
     // Preserves successfully generated content, only regenerates slides with generated:false
-    const triggerFailedRegeneration = async (existingManifest) => {
+    const triggerFailedRegeneration = async(existingManifest) => {
         // Count failed slides
         let failedCount = 0;
         existingManifest.topics?.forEach(topic => {
@@ -4865,7 +5079,15 @@ define([
                 voiceSettings: existingManifest.voiceSettings,
                 appearanceSettings: existingManifest.appearanceSettings,
                 imageSettings: existingManifest.imageSettings || { enabled: false },
-                activitySettings: existingManifest.activitySettings || { enabled: true }
+                activitySettings: existingManifest.activitySettings || { enabled: true },
+                // v15.3.6c: carry the policy metadata through a regeneration.
+                //
+                // manifest.builder.js writes `inputs.policyMeta || null`, so omitting it
+                // here does not leave the existing value alone - it actively NULLS it.
+                // Regenerating one failed slide on a Policy pack would have deleted the
+                // identity strip (which document, who owns it, when it was reviewed) from
+                // the whole module, permanently, and nothing would have said so.
+                policyMeta: existingManifest.policyMeta || null
             };
             
             const result = await ManifestBuilder.build(inputs, cmid, {
@@ -5012,6 +5234,13 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodevettitle')}</h3>
                         <p class="cc-mode-description">${s('msgmodevetdesc')}</p>
+                        <!-- v15.3.11: the two questions a chooser page must answer and
+                             this one did not - WHO the route is for, and WHAT the author
+                             needs to hand before starting. Without the second, an author
+                             picks a route, fills in two screens, and only then finds it
+                             wants a unit code or a policy document they do not have. -->
+                        <p class="cc-mode-choose"><span class="cc-mode-choose-label">${s('msgchoosethisif')}</span> ${s('msgchoosevet')}</p>
+                        <p class="cc-mode-need"><span class="cc-mode-need-label">${s('msgyouwillneed')}</span> ${s('msgneedvet')}</p>
                         <div class="cc-mode-differs">
                             <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
                             <p>${s('msgdiffervet')}</p>
@@ -5047,6 +5276,13 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodewptitle')}</h3>
                         <p class="cc-mode-description">${s('msgmodewpdesc')}</p>
+                        <!-- v15.3.11: the two questions a chooser page must answer and
+                             this one did not - WHO the route is for, and WHAT the author
+                             needs to hand before starting. Without the second, an author
+                             picks a route, fills in two screens, and only then finds it
+                             wants a unit code or a policy document they do not have. -->
+                        <p class="cc-mode-choose"><span class="cc-mode-choose-label">${s('msgchoosethisif')}</span> ${s('msgchooseworkplace')}</p>
+                        <p class="cc-mode-need"><span class="cc-mode-need-label">${s('msgyouwillneed')}</span> ${s('msgneedworkplace')}</p>
                         <div class="cc-mode-differs">
                             <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
                             <p>${s('msgdifferworkplace')}</p>
@@ -5081,6 +5317,13 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodeunititle')}</h3>
                         <p class="cc-mode-description">${s('msgmodeunidesc')}</p>
+                        <!-- v15.3.11: the two questions a chooser page must answer and
+                             this one did not - WHO the route is for, and WHAT the author
+                             needs to hand before starting. Without the second, an author
+                             picks a route, fills in two screens, and only then finds it
+                             wants a unit code or a policy document they do not have. -->
+                        <p class="cc-mode-choose"><span class="cc-mode-choose-label">${s('msgchoosethisif')}</span> ${s('msgchooseuniversity')}</p>
+                        <p class="cc-mode-need"><span class="cc-mode-need-label">${s('msgyouwillneed')}</span> ${s('msgneeduniversity')}</p>
                         <div class="cc-mode-differs">
                             <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
                             <p>${s('msgdifferuniversity')}</p>
@@ -5106,6 +5349,47 @@ define([
                         </div>
                     </div>
 
+                    <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'policy' ? 'selected' : ''}"
+                            data-mode="policy" data-testid="button-mode-policy">
+                        <div class="cc-mode-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h4"/>
+                            </svg>
+                        </div>
+                        <h3 class="cc-mode-title">${s('msgmodepolicytitle')}</h3>
+                        <p class="cc-mode-description">${s('msgmodepolicydesc')}</p>
+                        <!-- v15.3.11: the two questions a chooser page must answer and
+                             this one did not - WHO the route is for, and WHAT the author
+                             needs to hand before starting. Without the second, an author
+                             picks a route, fills in two screens, and only then finds it
+                             wants a unit code or a policy document they do not have. -->
+                        <p class="cc-mode-choose"><span class="cc-mode-choose-label">${s('msgchoosethisif')}</span> ${s('msgchoosepolicy')}</p>
+                        <p class="cc-mode-need"><span class="cc-mode-need-label">${s('msgyouwillneed')}</span> ${s('msgneedpolicy')}</p>
+                        <div class="cc-mode-differs">
+                            <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
+                            <p>${s('msgdifferpolicy')}</p>
+                        </div>
+                        <ul class="cc-mode-features">
+                            <li>${s('msgpolicyquotessource')}</li>
+                            <li>${s('msgpolicynoinvention')}</li>
+                            <li>${s('msgpolicydocrequired')}</li>
+                            <li>${s('msgpolicyplainregister')}</li>
+                        </ul>
+                        <div class="cc-mode-cardlist">
+                            <span class="cc-mode-cardlist-label">${s('msggenerates6cardspersection')}</span>
+                            <ol class="cc-mode-cardlist-items">
+                                <li>${s('msgcardnamepolicyscope')}</li>
+                                <li>${s('msgcardnamepolicysays')}</li>
+                                <li>${s('msgcardnamepolicydo')}</li>
+                                <li>${s('msgcardnamepolicymisreadings')}</li>
+                                <li>${s('msgcardnamepolicyglance')}</li>
+                                <li>${s('msgcardnamepolicycheck')}</li>
+                            </ol>
+                            <span class="cc-mode-cardlist-note">${s('msgpolicysourcenote')}</span>
+                        </div>
+                    </div>
+
                     <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'general' ? 'selected' : ''}"
                             data-mode="general" data-testid="button-mode-general">
                         <div class="cc-mode-icon">
@@ -5115,6 +5399,13 @@ define([
                         </div>
                         <h3 class="cc-mode-title">${s('msgmodegeneraltitle')}</h3>
                         <p class="cc-mode-description">${s('msgmodegeneraldesc')}</p>
+                        <!-- v15.3.11: the two questions a chooser page must answer and
+                             this one did not - WHO the route is for, and WHAT the author
+                             needs to hand before starting. Without the second, an author
+                             picks a route, fills in two screens, and only then finds it
+                             wants a unit code or a policy document they do not have. -->
+                        <p class="cc-mode-choose"><span class="cc-mode-choose-label">${s('msgchoosethisif')}</span> ${s('msgchoosegeneral')}</p>
+                        <p class="cc-mode-need"><span class="cc-mode-need-label">${s('msgyouwillneed')}</span> ${s('msgneedgeneral')}</p>
                         <div class="cc-mode-differs">
                             <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
                             <p>${s('msgdiffergeneral')}</p>
@@ -5126,15 +5417,62 @@ define([
                             <li>${s('msggeneralanysubject')}</li>
                         </ul>
                         <div class="cc-mode-cardlist">
-                            <span class="cc-mode-cardlist-label">${s('msggenerates6cardspersection')}</span>
+                            <span class="cc-mode-cardlist-label">${s('msggenerates7cardspersection')}</span>
                             <ol class="cc-mode-cardlist-items">
+                                <!-- v15.3.12: the Second Scenario chip is removed with the
+                                     card. The vendor ccExpectedCardCount for general is 6,
+                                     so promising seven here would advertise a card the
+                                     route cannot deliver.
+                                     v15.3.13: reordered to match the vendor's published
+                                     card contract. This is a NUMBERED list and it is how an
+                                     author decides which route to pick - it promised
+                                     Mistakes third and Mental Model fourth when the pack
+                                     builds them the other way round, and put Check Your
+                                     Understanding fifth when it is last. -->
                                 <li>${s('msgcardnamegeneralorient')}</li>
                                 <li>${s('msgcardnamegeneralunderstand')}</li>
-                                <li>${s('msgcardnamegeneralexplore')}</li>
                                 <li>${s('msgcardnamegeneralapply')}</li>
-                                <li>${s('msgcardnamegeneralchallenge')}</li>
+                                <li>${s('msgcardnamegeneralapplycontext')}</li>
+                                <li>${s('msgcardnamegeneralexplore')}</li>
                                 <li>${s('msgcardnamegeneralconsolidate')}</li>
+                                <li>${s('msgcardnamegeneralchallenge')}</li>
                             </ol>
+                        </div>
+                    </div>
+
+                    <!-- v15.3.11: Topics and Text, reinstated.
+                         The route was withdrawn from this screen and ccNormaliseTeacherRoute
+                         folded it onto General, so authors who wanted a plain
+                         heading-and-prose layout had no way to ask for one. Clients did:
+                         not every subject suits the seven-card narrative shape. -->
+                    <div role="button" tabindex="0" class="cc-mode-card ${selectedMode === 'topicstext' ? 'selected' : ''}"
+                            data-mode="topicstext" data-testid="button-mode-topicstext">
+                        <div class="cc-mode-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 6h16"/><path d="M4 10h10"/><path d="M4 14h16"/><path d="M4 18h10"/>
+                            </svg>
+                        </div>
+                        <h3 class="cc-mode-title">${s('msgmodetopicstexttitle')}</h3>
+                        <p class="cc-mode-description">${s('msgmodetopicstextdesc')}</p>
+                        <!-- v15.3.11: the two questions a chooser page must answer and
+                             this one did not - WHO the route is for, and WHAT the author
+                             needs to hand before starting. Without the second, an author
+                             picks a route, fills in two screens, and only then finds it
+                             wants a unit code or a policy document they do not have. -->
+                        <p class="cc-mode-choose"><span class="cc-mode-choose-label">${s('msgchoosethisif')}</span> ${s('msgchoosetopicstext')}</p>
+                        <p class="cc-mode-need"><span class="cc-mode-need-label">${s('msgyouwillneed')}</span> ${s('msgneedtopicstext')}</p>
+                        <div class="cc-mode-differs">
+                            <span class="cc-mode-differs-label">${s('msghowitdiffers')}</span>
+                            <p>${s('msgdiffertopicstext')}</p>
+                        </div>
+                        <ul class="cc-mode-features">
+                            <li>${s('msgttsubtopiccards')}</li>
+                            <li>${s('msgttownheadings')}</li>
+                            <li>${s('msgtttwocolumn')}</li>
+                            <li>${s('msgttsameactivities')}</li>
+                        </ul>
+                        <div class="cc-mode-cardlist">
+                            <span class="cc-mode-cardlist-label">${s('msgttgeneratescards')}</span>
                         </div>
                     </div>
                 </div>
@@ -5156,7 +5494,20 @@ define([
     const renderStep2 = () => {
         if (selectedMode === 'vet') {
             return renderStep2VET();
-        } else if (selectedMode === 'workplace') {
+        } else if (selectedMode === 'workplace' || selectedMode === 'policy') {
+            // v15.3.0: Policy & Compliance reuses Workplace's input screen.
+            //
+            // It was falling through to renderStep2University(), because the dispatch
+            // named four modes and policy was none of them - so a teacher who picked
+            // "Policy & Compliance" on step 1 was asked for learning outcomes and
+            // academic level on step 2, with no way to upload the policy the entire
+            // route is built to quote from. The route could not be used as designed.
+            //
+            // Workplace's screen is the right one to share: document upload, extraction
+            // and topic suggestion already work there, and the spec called for extending
+            // those branches rather than building a fifth form. What differs for policy -
+            // the document being mandatory, and the policy metadata - is added inside that
+            // screen and gated on the mode, not forked into a copy of it.
             return renderStep2Workplace();
         } else if (selectedMode === 'general' || selectedMode === 'pd' || selectedMode === 'topicstext') {
             // v15: General reuses the mature PD form plumbing while presenting a neutral, adaptive learning brief.
@@ -5558,7 +5909,19 @@ define([
     // v8.4.24: Separate logic for VET (TGA-dependent) and Workplace (document-dependent) modes
     const updateGenerateTopicsButton = () => {
         const nextBtn = document.getElementById('cc-next-step');
-        if (!nextBtn || (selectedMode !== 'vet' && selectedMode !== 'workplace')) return;
+        // v15.3.7 FIX-CC-POLICY-STEP2-BLOCKER: 'policy' was missing from this guard.
+        //
+        // v15.3.0 added a full policy branch to the body of this function - document
+        // required, policy title required - and then never reached it, because this line
+        // returns first for any mode that is not vet or workplace. The forward button on
+        // this step is rendered hidden (`cc-hidden`), and this function is the only thing
+        // on the Workplace/Policy screen that removes that class. So the entire route was
+        // unusable through the UI: the author picks Policy & Compliance, uploads the
+        // document, fills in the metadata, gets subtopics suggested and selected - and
+        // Step 2 shows only a Back button. Everything else fixed in 15.3.6 and 15.3.7 sits
+        // behind this one missing string.
+        if (!nextBtn || (selectedMode !== 'vet' && selectedMode !== 'workplace'
+            && selectedMode !== 'policy')) { return; }
         
         const hasTopics = suggestedMajorTopics.length > 0;
         const hasSelection = selectedMajorTopicIds.length > 0;
@@ -5570,17 +5933,30 @@ define([
             const hasIndustry = !!document.getElementById('cc-industry')?.value;
             const hasJobLevel = CC_SELECTED_JOB_LEVELS.length > 0;
             allInputsValid = hasTgaData && hasIndustry && hasJobLevel;
-        } else if (selectedMode === 'workplace') {
+        } else if (selectedMode === 'workplace' || selectedMode === 'policy') {
             // v13.84: a document is no longer required. It was the only accepted
             // source of subtopics, so an author with a training topic but no policy
             // file could not use this route at all. Either a document OR a typed
             // training topic is now enough; a document still takes priority as the
             // source when one is present.
-            const hasSource = !!workplaceData
-                || !!document.getElementById('cc-wp-training-topic')?.value?.trim();
+            //
+            // v15.3.0: that relaxation is WORKPLACE-only and must not extend to policy.
+            // Policy & Compliance exists to teach what a document actually says - every
+            // fidelity rule in its prompt is "quote the source", "never invent a
+            // threshold", "state only the consequence the source states". With no source
+            // there is nothing to be faithful to, and the route would quietly become a
+            // worse Workplace that invents policy text. So the document is required here,
+            // and so is the policy's own title, which the learner is shown as the thing
+            // they are being held to.
+            const isPolicy = selectedMode === 'policy';
+            const hasSource = isPolicy
+                ? !!workplaceData
+                : (!!workplaceData || !!document.getElementById('cc-wp-training-topic')?.value?.trim());
             const hasIndustry = !!document.getElementById('cc-wp-industry')?.value;
-            const hasTrainingType = !!document.getElementById('cc-training-type')?.value;
-            allInputsValid = hasSource && hasIndustry && hasTrainingType;
+            const hasTrainingType = isPolicy || !!document.getElementById('cc-training-type')?.value;
+            const hasPolicyTitle = !isPolicy
+                || !!document.getElementById('cc-policy-title')?.value?.trim();
+            allInputsValid = hasSource && hasIndustry && hasTrainingType && hasPolicyTitle;
         }
         
         const suggestSection = document.getElementById('cc-suggest-topics-section') || document.getElementById('cc-wp-suggest-section');
@@ -5621,6 +5997,59 @@ define([
         { value: 'custom', key: 'msgttcustom' }
     ];
     
+    /**
+     * v15.3.7: a select's LABEL, for anything that goes into a prompt.
+     *
+     * gatherContext read `.value` from the audience and job-level selects and put the
+     * raw slug straight on the context, so the model was told
+     * "- Target Audience: new-starters" and "- Job Level: senior-tech". The PD and
+     * General branches had already noticed and patched it locally with
+     * `.replace(/-/g, ' ')`, which turns "new-starters" into "new starters" but cannot
+     * recover "Senior Technician" from "senior-tech" - and the ChatGPT prompt-file path
+     * had solved it properly, ten lines away, by reading `selectedOptions[0].text`.
+     * Three treatments of one problem in one file.
+     *
+     * This reads what the author actually chose, in the language the UI is running in,
+     * and falls back to the slug when the element is absent (a route that does not
+     * render that select) so no caller has to guard.
+     *
+     * The raw value is still what drives logic - `targetAudience === 'supervisors'` and
+     * the like - so callers that branch on it keep reading `.value` themselves.
+     *
+     * @param {String} id The select's element id.
+     * @param {String} fallback Returned when the element or its selection is missing.
+     * @return {String} The chosen option's visible text.
+     */
+    const ccSelectLabel = (id, fallback) => {
+        const el = document.getElementById(id);
+        const text = el?.selectedOptions?.[0]?.text;
+        if (text && text.trim()) { return text.trim(); }
+        const val = el?.value;
+        // No option matched (or no options rendered yet): de-slug the value rather than
+        // sending a hyphenated token to the model.
+        if (val && val.trim()) { return val.trim().replace(/[-_]+/g, ' '); }
+        return fallback || '';
+    };
+
+    /**
+     * v15.3.7: the VET route's selected job levels, as labels.
+     *
+     * CC_SELECTED_JOB_LEVELS holds raw option values ('entry', 'worker'), which reached
+     * the prompt as "Job Level(s): entry, worker". downloadDynamicPrompt already mapped
+     * these to their labels for the ChatGPT file; the generation path did not, so the
+     * two disagreed about what the author had chosen.
+     *
+     * @param {Array} values Selected JOB_LEVELS values.
+     * @return {String} Comma-joined labels, or '' when nothing is selected.
+     */
+    const ccJobLevelLabels = (values) => {
+        if (!Array.isArray(values) || !values.length) { return ''; }
+        return values.map(function(v) {
+            const found = JOB_LEVELS.find(function(j) { return j.value === v; });
+            return found ? s(found.key) : String(v).replace(/[-_]+/g, ' ');
+        }).join(', ');
+    };
+
     const TARGET_AUDIENCES = [
         { value: 'new-starters', key: 'msgtanewstarters' },
         { value: 'all-staff', key: 'msgtaallstaff' },
@@ -5630,18 +6059,105 @@ define([
         { value: 'specific-dept', key: 'msgtaspecificdept' }
     ];
 
+    /**
+     * v15.3.0: the four facts a compliance course has to carry and the other routes do not.
+     *
+     * These are not decoration. A learner looking at a policy course needs to know WHICH
+     * document it teaches, who owns it, when it was last reviewed - a course generated
+     * from a superseded policy is worse than no course - and who to ask. They are rendered
+     * into the player chrome on every slide (see the strip in player5.js), not into a
+     * card, because they are true of the whole module rather than of any one card.
+     *
+     * @return {String} HTML.
+     */
+    const renderPolicyMetaFields = () => {
+        const m = policyMeta || {};
+        return `
+            <div class="cc-form-section" data-testid="policy-meta">
+                <h3 class="cc-form-section-title">${s('msgpolicydetails')}</h3>
+                <p class="cc-form-hint">${s('msgpolicydetailshint')}</p>
+                <div class="cc-form-group">
+                    <label class="cc-form-label" for="cc-policy-title">${s('msgpolicytitle')}</label>
+                    <input type="text" class="cc-input" id="cc-policy-title"
+                           value="${escapeHtml(m.title || '')}"
+                           placeholder="${s('msgphpolicytitle')}" data-testid="input-policy-title">
+                    <small class="cc-form-hint">${s('msgpolicytitlehint')}</small>
+                </div>
+                <div class="cc-form-grid cc-form-grid-2">
+                    <div class="cc-form-group">
+                        <label class="cc-form-label" for="cc-policy-owner">${s('msgpolicyowner')}</label>
+                        <input type="text" class="cc-input" id="cc-policy-owner"
+                               value="${escapeHtml(m.owner || '')}"
+                               placeholder="${s('msgphpolicyowner')}" data-testid="input-policy-owner">
+                    </div>
+                    <div class="cc-form-group">
+                        <label class="cc-form-label" for="cc-policy-reviewed">${s('msgpolicyreviewed')}</label>
+                        <input type="date" class="cc-input" id="cc-policy-reviewed"
+                               value="${escapeHtml(m.reviewed || '')}" data-testid="input-policy-reviewed">
+                    </div>
+                </div>
+                <div class="cc-form-group">
+                    <label class="cc-form-label" for="cc-policy-contact">${s('msgpolicycontact')}</label>
+                    <input type="text" class="cc-input" id="cc-policy-contact"
+                           value="${escapeHtml(m.contact || '')}"
+                           placeholder="${s('msgphpolicycontact')}" data-testid="input-policy-contact">
+                    <small class="cc-form-hint">${s('msgpolicycontacthint')}</small>
+                </div>
+            </div>
+        `;
+    };
+
+    /**
+     * Read the policy metadata fields, trimmed, into the shape the manifest carries.
+     *
+     * Reads the DOM rather than relying on a change handler, for the same reason
+     * gatherContext() does: the wizard re-renders steps, and a value typed and never
+     * blurred is still in the input when Generate is pressed.
+     *
+     * @return {Object|null} The metadata, or null when nothing was entered.
+     */
+    const gatherPolicyMeta = () => {
+        const val = (id) => (document.getElementById(id)?.value || '').trim();
+        const meta = {
+            title: val('cc-policy-title'),
+            owner: val('cc-policy-owner'),
+            reviewed: val('cc-policy-reviewed'),
+            contact: val('cc-policy-contact'),
+            // The filename is the honest fallback for "which document is this?" when the
+            // author did not type a title. It is recorded either way, because a title can
+            // be edited later and the file it came from cannot.
+            sourceFilename: workplaceData?.filename || ''
+        };
+        policyMeta = meta;
+        return (meta.title || meta.owner || meta.reviewed || meta.contact || meta.sourceFilename)
+            ? meta : null;
+    };
+
     const renderStep2Workplace = () => {
+        // v15.4.6: Policy shares this SCREEN, not this screen's identity.
+        //
+        // The route has had its own mode card since v15.3.0 - the author deliberately
+        // picks "Policy & Compliance" - and then landed on a page headed "Learning
+        // Context - Workplace Training" telling them to upload their company documents,
+        // on the very screen carrying the route's mandatory policy-title field. Every
+        // other shared screen already switches its wording per route (the PD/General/
+        // Topics-and-Text screen does it in three places); this one never did, because
+        // Policy was bolted onto it and only the plumbing was reviewed.
+        const _isPolicy = selectedMode === 'policy';
+        const _ctxTitle = _isPolicy ? s('msgcontextpolicytitle') : s('msgcontextwptitle');
+        const _ctxSub = _isPolicy ? s('msgcontextpolicysubtitle') : s('msgcontextwpsubtitle');
+        const _ctxInstruction = _isPolicy ? s('msginstructionpolicy') : s('msginstructionwp');
         return `
             <div class="cc-step-content" data-testid="step-2-workplace">
-                <h2 class="cc-section-title">${s('msgcontextwptitle')}</h2>
-                <p class="cc-section-subtitle">${s('msgcontextwpsubtitle')}</p>
+                <h2 class="cc-section-title">${_ctxTitle}</h2>
+                <p class="cc-section-subtitle">${_ctxSub}</p>
 
                 <div class="cc-instruction-card" data-testid="instruction-card-workplace">
                     <div class="cc-instruction-card-icon">
                         <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
                     </div>
                     <div class="cc-instruction-card-text">
-                        ${s('msginstructionwp')}
+                        ${_ctxInstruction}
                     </div>
                 </div>
 
@@ -5652,7 +6168,7 @@ define([
                             <polyline points="14 2 14 8 20 8"/>
                             <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
                         </svg>
-                        ${s('msgtrainingdocument')}
+                        ${_isPolicy ? s('msgpolicydocument') : s('msgtrainingdocument')}
                     </h3>
                     <p class="cc-form-hint">${s('msguploadpolicyhint')}</p>
 
@@ -5692,6 +6208,8 @@ define([
                         <span>${s('msgextractingdoc')}</span>
                     </div>
                 </div>
+
+                ${selectedMode === 'policy' ? renderPolicyMetaFields() : ''}
 
                 <!-- v13.85: also renders when there is no document but topics have been
                      suggested from the training topic, so returning to this step via Back
@@ -6642,7 +7160,7 @@ define([
         `;
     };
 
-    const suggestMajorTopics = async () => {
+    const suggestMajorTopics = async() => {
         ccLog("suggestMajorTopics: Starting subtopic suggestion...");
         if (!tgaData) return;
 
@@ -6747,19 +7265,21 @@ define([
                         return Object.assign({}, sub, {
                             pcNumber: fixedPc,
                             id: fixedPc,
-                            title: subTitle
+                            // v15.3.11: the author's chosen country decides the spelling
+                            // of the titles too, not just the card prose.
+                            title: ccRegionalise(subTitle)
                         });
                     });
                     // Fix coverageSummary.performanceCriteria codes
                     const fixedCoverage = t.coverageSummary
                         ? Object.assign({}, t.coverageSummary, {
-                            performanceCriteria: fixedSubtopics.map(function (s) { return s.pcNumber; })
+                            performanceCriteria: fixedSubtopics.map(function(s) { return s.pcNumber; })
                           })
                         : t.coverageSummary;
                     return Object.assign({}, t, {
                         id: 'Element ' + actualElNum,
                         elementNumber: actualElNum,
-                        title: title,
+                        title: ccRegionalise(title),
                         subtopics: fixedSubtopics,
                         coverageSummary: fixedCoverage
                     });
@@ -6767,9 +7287,9 @@ define([
                 // AUTO-SPLIT-SECTION: Post-process AI-returned topics — if the corresponding
                 // TGA element has >MAX_PCS_PER_SECTION PCs, split into Part 1 + Part 2.
                 // This mirrors createDefaultMajorTopics() split logic for the AI path.
-                suggestedMajorTopics = suggestedMajorTopics.flatMap(function (t) {
+                suggestedMajorTopics = suggestedMajorTopics.flatMap(function(t) {
                     var elNum = t.elementNumber || 0;
-                    var el = tgaData && tgaData.elements && tgaData.elements.find(function (_, idx) { return idx + 1 === elNum; });
+                    var el = tgaData && tgaData.elements && tgaData.elements.find(function(_, idx) { return idx + 1 === elNum; });
                     var pcCount = (el && el.performanceCriteria && el.performanceCriteria.length) || 0;
                     var subs = t.subtopics || [];
                     if (pcCount > MAX_PCS_PER_SECTION && subs.length > 1) {
@@ -7055,6 +7575,24 @@ define([
                 .split('{$a}').join(storedOutcomes.length);
             parts.push(_uniSubPhrase);
             subtitleText = s('msgbasedon').split('{$a}').join(parts.join(' * '));
+        // v15.4.6: Policy was the only route with no branch here, so the review screen
+        // said "Based on your inputs" - on the one route where the inputs are a named
+        // document the learner will be held to. It names the policy, its owner and how
+        // many sections are about to be built, which is what the author is confirming.
+        } else if (selectedMode === 'policy' && storedContext) {
+            const _pm = storedContext.policyMeta || {};
+            const parts = [];
+            if (_pm.title) { parts.push(_pm.title); }
+            if (_pm.owner) { parts.push(_pm.owner); }
+            const _n = (topicPlan && topicPlan.topics)
+                ? topicPlan.topics.reduce(function(a, t) { return a + ((t.subtopics || []).length); }, 0)
+                : 0;
+            if (_n) {
+                parts.push(s(_n === 1 ? 'msgnsubtopic' : 'msgnsubtopics').split('{$a}').join(_n));
+            }
+            subtitleText = parts.length
+                ? s('msgbasedon').split('{$a}').join(parts.join(' * '))
+                : s('msgbasedonworkplacedoc');
         }
 
         return `
@@ -7678,9 +8216,25 @@ define([
                     ${(topic.subtopics || []).map((sub, si) => {
                         const cleanSubTitle = stripNumberPrefix(sub.title);
                         const subSubtopics = renderSubSubtopics(sub, tgaData?.elements);
-                        const displayNumber = isUniversity
-                            ? (sub.number || `${elementNumber}.${si + 1}`)
-                            : (sub.pcNumber || `${elementNumber}.${si + 1}`);
+                        // v15.4.3: DOTTED ON VET, FLAT EVERYWHERE ELSE.
+                        //
+                        // On VET the dotted number is not a display convenience - it is the
+                        // performance criterion's real code from training.gov.au. "1.2" means
+                        // element 1, criterion 2, an assessor will look it up under exactly
+                        // that number, and it must be shown verbatim whatever position the
+                        // subtopic happens to occupy on screen. That is why `sub.pcNumber`
+                        // wins here and is never replaced by an index.
+                        //
+                        // No other route has anything of the sort. They build one topic and a
+                        // list of subtopics beneath it, and the dotted form was a positional
+                        // index dressed up as a code - "1.1, 1.2, 1.3" down a single group,
+                        // where the "1." never varies and carries no information. Those
+                        // routes now count 1, 2, 3. The counter restarts inside each topic
+                        // group, which is what the grouping is for: the topic's own number is
+                        // already on the badge to the left of its heading.
+                        const displayNumber = (selectedMode === 'vet')
+                            ? (sub.pcNumber || sub.number || `${elementNumber}.${si + 1}`)
+                            : (si + 1);
                         return `
                             <div class="cc-subtopic-item" data-subtopic-index="${si}" role="listitem">
                                 <span class="cc-subtopic-number">${escapeHtml(String(displayNumber))}</span>
@@ -7795,7 +8349,15 @@ define([
         }
 
         container.querySelector('#cc-download-uni-prompt')?.addEventListener('click', () => downloadDynamicPrompt('university'));
-        container.querySelector('#cc-download-wp-prompt')?.addEventListener('click', () => downloadDynamicPrompt('workplace'));
+        // v15.3.7: #cc-download-wp-prompt is rendered by renderStep2Workplace, which the
+        // POLICY route shares. Hard-coding 'workplace' handed a policy author the
+        // Workplace 7-card contract - WORKPLACE_SYSTEM_PROMPT, "exactly 7 cards", the
+        // business-impact and scenario framing this route exists to exclude - to paste
+        // into ChatGPT. Resolve the route at click time, the same fix and for the same
+        // reason as #cc-download-pd-prompt below.
+        container.querySelector('#cc-download-wp-prompt')?.addEventListener('click', () => {
+            downloadDynamicPrompt(selectedMode === 'policy' ? 'policy' : 'workplace');
+        });
         container.querySelector('#cc-download-vet-prompt')?.addEventListener('click', () => downloadDynamicPrompt('vet'));
         // v13.94.3: the #cc-download-pd-prompt button is rendered by the shared step that
         // serves BOTH the PD route and Route 5 (Topics and Text). Hard-coding 'pd' here
@@ -7983,7 +8545,7 @@ define([
         const voiceLangSel = container.querySelector('#cc-voice-language');
         function syncAdditionalLangFilter() {
             var primaryLang = voiceLangSel ? voiceLangSel.value : 'en-AU';
-            container.querySelectorAll('#cc-additional-langs input[type="checkbox"]').forEach(function (cb) {
+            container.querySelectorAll('#cc-additional-langs input[type="checkbox"]').forEach(function(cb) {
                 var row = cb.closest('label.cc-multilang-option');
                 if (!row) return;
                 // Find the text node (last child text node of the label, after the input)
@@ -8261,7 +8823,27 @@ define([
         }
         
         // v8.4.24: Bind workplace mode events - suggest button always, topic events when data exists
-        if (selectedMode === 'workplace') {
+        //
+        // FIX-CC-POLICY-UNBOUND-SCREEN (v15.4.6): `|| selectedMode === 'policy'`.
+        //
+        // Policy renders renderStep2Workplace() - the SAME screen, the same DOM ids - but
+        // this was the last guard in the v15.3.7 family still testing for Workplace alone.
+        // Its two siblings (updateGenerateTopicsButton at ~5944 and validateStep2 at ~9069)
+        // were both patched to name Policy, with comments saying that keeping them in step
+        // is the point of touching them together. This one was missed, so on Policy:
+        //
+        //   - the primary "Suggest Subtopics" button had NO click handler. The author
+        //     clicked it and nothing happened - no error, no spinner, nothing.
+        //   - after a Back to step 2 the subtopic checkboxes were inert, because
+        //     bindWorkplaceTopicSelectorEvents() was never re-run - the exact symptom the
+        //     v13.85 comment below describes and fixed for Workplace only.
+        //   - the industry and training-type change listeners were never bound, so the
+        //     Continue gate did not re-evaluate when the author changed industry.
+        //
+        // It looked like it worked because uploading a document binds the selector
+        // separately (see the extract handler), so only the no-document path was dead -
+        // and on Policy a document is mandatory, which is exactly why nobody hit it.
+        if (selectedMode === 'workplace' || selectedMode === 'policy') {
             const wpSuggestBtn = container.querySelector('#cc-suggest-workplace-topics-btn');
             if (wpSuggestBtn) {
                 wpSuggestBtn.addEventListener('click', suggestWorkplaceTopics);
@@ -8272,7 +8854,7 @@ define([
                 wpIndustrySelect._ccWpBound = true;
                 wpIndustrySelect.addEventListener('change', updateGenerateTopicsButton);
                 // v13.86: fill the Job Title field's suggestion list for the chosen industry.
-                wpIndustrySelect.addEventListener('change', function (e) {
+                wpIndustrySelect.addEventListener('change', function(e) {
                     const list = document.getElementById('cc-wp-job-title-options');
                     if (!list) { return; }
                     list.innerHTML = getJobTitlesForIndustry(e.target.value)
@@ -8283,6 +8865,19 @@ define([
             if (trainingTypeSelect && !trainingTypeSelect._ccWpBound) {
                 trainingTypeSelect._ccWpBound = true;
                 trainingTypeSelect.addEventListener('change', updateGenerateTopicsButton);
+            }
+            // v15.4.6: the policy title is a Continue-gate input, and was the only one
+            // with nothing listening to it. updateGenerateTopicsButton() reads it
+            // (`hasPolicyTitle`) and validateStep2() rejects without it, but nothing
+            // re-ran the gate when it was typed - so an author who ticked their subtopics
+            // BEFORE typing the title watched the Continue button stay hidden with
+            // nothing on screen saying why. It only appeared if they happened to touch a
+            // checkbox afterwards. `input` rather than `change`, so the button appears as
+            // they type rather than when the field loses focus.
+            const policyTitleInput = document.getElementById('cc-policy-title');
+            if (policyTitleInput && !policyTitleInput._ccWpBound) {
+                policyTitleInput._ccWpBound = true;
+                policyTitleInput.addEventListener('input', updateGenerateTopicsButton);
             }
             // v13.85: also bind when topics came from a training topic rather than a
             // document, otherwise the topic checkboxes are inert after a Back.
@@ -8423,7 +9018,7 @@ define([
         }
     };
 
-    const handleNextStep = async () => {
+    const handleNextStep = async() => {
         if (currentStep === 1) {
             if (!selectedMode) {
                 showError(s('errselectmode'));
@@ -8468,7 +9063,10 @@ define([
             // topics were still selected in state. Re-evaluating the gate after every
             // re-render is what makes Back safe on VET and Workplace.
             if (currentStep === 2) {
-                if (selectedMode === 'vet' || selectedMode === 'workplace') {
+                // v15.3.7: policy shares Workplace's Step 2, so it shares Workplace's
+                // gate. Same omission as the guard inside the function itself.
+                if (selectedMode === 'vet' || selectedMode === 'workplace'
+                    || selectedMode === 'policy') {
                     updateGenerateTopicsButton();
                 } else if (selectedMode === 'university') {
                     // University has no other gate; confirmed subtopics are enough.
@@ -8532,16 +9130,30 @@ define([
                 return { valid: false, error: 'Please select at least one Job Level for appropriate scenario complexity.' };
             }
             // v13.33: VET reference content is optional — no paste gate
-        } else if (selectedMode === 'workplace') {
+        } else if (selectedMode === 'workplace' || selectedMode === 'policy') {
             // v13.85: a document is one of two valid sources, not a requirement.
             // v13.84 relaxed updateGenerateTopicsButton() but not this validator, so
             // the no-document path reached a Continue button that always errored.
+            //
+            // v15.3.0: both gates now agree about policy too. Keeping them in step is the
+            // point of touching them together - the v13.84/v13.85 pair is a worked example
+            // of what happens when only one of the two is changed.
+            if (selectedMode === 'policy') {
+                if (!workplaceData) {
+                    return { valid: false, error: 'Upload the policy document. Policy & Compliance '
+                        + 'teaches what a document actually says, so it cannot generate without one.' };
+                }
+                if (!document.getElementById('cc-policy-title')?.value?.trim()) {
+                    return { valid: false, error: 'Enter the policy title exactly as it appears on the '
+                        + 'document. Learners are shown this as the document they are held to.' };
+                }
+            }
             const wpTopic = document.getElementById('cc-wp-training-topic')?.value?.trim();
             if (!workplaceData && !wpTopic) {
                 return { valid: false, error: 'Enter a training topic, or upload a training document.' };
             }
             const trainingType = document.getElementById('cc-training-type')?.value;
-            if (!trainingType) {
+            if (!trainingType && selectedMode !== 'policy') {
                 return { valid: false, error: 'Please select a training type.' };
             }
             const wpIndustry = document.getElementById('cc-wp-industry')?.value;
@@ -8634,6 +9246,12 @@ define([
             return document.getElementById('cc-course-name')?.value?.trim() || '';
         } else if (selectedMode === 'workplace') {
             return document.getElementById('cc-wp-training-topic')?.value?.trim() || '';
+        } else if (selectedMode === 'policy') {
+            // v15.4.5: Policy was missing from this chain, so the review screen showed an
+            // empty major topic on the one route where the course's name is mandatory.
+            // The document titles the course; the training-topic field is the fallback.
+            return document.getElementById('cc-policy-title')?.value?.trim()
+                || document.getElementById('cc-wp-training-topic')?.value?.trim() || '';
         }
         return '';
     };
@@ -8758,7 +9376,7 @@ define([
         }
     };
 
-    const suggestPDTopics = async () => {
+    const suggestPDTopics = async() => {
         const courseTitle = document.getElementById('cc-pd-course-title')?.value?.trim();
         if (!courseTitle) {
             showError(s('errneedcoursetitle'));
@@ -8796,7 +9414,14 @@ define([
             }
 
             const topicsText = typeof topicsRaw === 'string' ? topicsRaw : '';
-            const items = parseBulkOutcomes(topicsText);
+            // v15.3.11: PD / General / Topics-and-Text share this path, and its topic
+            // titles reached the author untouched by the country selector - the last of
+            // the three suggestion routes to be missing the regional spelling pass.
+            const items = parseBulkOutcomes(topicsText).map(function(it) {
+                return (typeof it === 'string')
+                    ? ccRegionalise(it)
+                    : Object.assign({}, it, {title: ccRegionalise(it && it.title)});
+            });
             storedOutcomes = items;
             storedTopicHierarchy = buildSingleTopicHierarchy(majorTopic, items);
 
@@ -8834,13 +9459,21 @@ define([
         counter.textContent = items.length === 1 ? s('msgoneitem') : items.length + s('msgitemssuffix');
     };
 
-    const downloadDynamicPrompt = async (mode) => {
+    const downloadDynamicPrompt = async(mode) => {
         const filenames = {
             vet: 'ChatGPT-Prompt-VET.txt',
             topicstext: 'ChatGPT-Prompt-Topics-and-Text.txt',
             workplace: 'ChatGPT-Prompt-Workplace.txt',
             university: 'ChatGPT-Prompt-University.txt',
-            pd: 'ChatGPT-Prompt-PD.txt'
+            pd: 'ChatGPT-Prompt-PD.txt',
+            // v15.3.7: policy had no filename, so its download fell to the
+            // 'ChatGPT-Prompt.txt' fallback below.
+            policy: 'ChatGPT-Prompt-Policy.txt',
+            // v15.4.6: and General had the same gap, found while auditing Policy. Every
+            // other route names its file; General's downloaded as the generic
+            // 'ChatGPT-Prompt.txt', so an author working across two routes ended up with
+            // two files and no way to tell which was which.
+            general: 'ChatGPT-Prompt-General.txt'
         };
 
         let contextBlock = '';
@@ -8911,7 +9544,11 @@ define([
                     });
                 }
             }
-        } else if (mode === 'workplace') {
+        } else if (mode === 'workplace' || mode === 'policy') {
+            // v15.3.7: policy shares renderStep2Workplace and therefore the same
+            // cc-wp-* field ids, so it shares this context block. Without this the
+            // route fell through with no context and no topics in its prompt file.
+            // The card CONTRACT is still resolved per-route by buildChatGptPromptFile.
             const country = document.getElementById('cc-wp-country')?.selectedOptions?.[0]?.text || 'Australia';
             const state = document.getElementById('cc-wp-state')?.value || '';
             const industry = document.getElementById('cc-wp-industry')?.value || '';
@@ -9248,7 +9885,7 @@ define([
     };
 
     // v10.25: Force-refresh the current unit from TGA, bypassing cache
-    const handleRefreshElements = async () => {
+    const handleRefreshElements = async() => {
         const unitCode = document.getElementById('cc-unit-code')?.value?.trim().toUpperCase();
         if (!unitCode) { showError(s('errneedunitcodefirst')); return; }
         const btn = document.getElementById('cc-refresh-elements');
@@ -9283,7 +9920,7 @@ define([
         }
     };
 
-    const fetchTGAUnit = async () => {
+    const fetchTGAUnit = async() => {
         const unitCode = document.getElementById('cc-unit-code')?.value?.trim().toUpperCase();
         if (!unitCode) {
             showError(s('errneedunitcode'));
@@ -9393,7 +10030,7 @@ define([
         }
     };
 
-    const handlePdfUpload = async () => {
+    const handlePdfUpload = async() => {
         const unitCode = document.getElementById('cc-unit-code')?.value?.trim().toUpperCase();
         const fileInput = document.getElementById('cc-pdf-file');
         const file = fileInput?.files?.[0];
@@ -9490,7 +10127,7 @@ define([
     };
 
     /** Process pasted unit text as a fallback when PDF upload is unavailable */
-    const handlePasteTextExtract = async () => {
+    const handlePasteTextExtract = async() => {
         const unitCode = document.getElementById('cc-unit-code')?.value?.trim().toUpperCase();
         const textarea = document.getElementById('cc-paste-unit-text');
         const pastedText = textarea?.value?.trim();
@@ -9557,7 +10194,7 @@ define([
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
 
-    const handleWorkplaceFileUpload = async (file) => {
+    const handleWorkplaceFileUpload = async(file) => {
         if (!file) return;
 
         const maxSize = 10 * 1024 * 1024; // 10MB
@@ -9687,7 +10324,7 @@ define([
         return brief;
     };
 
-    const suggestWorkplaceTopics = async () => {
+    const suggestWorkplaceTopics = async() => {
         // v13.84: the training topic is the required input; the document is optional.
         const majorTopic = document.getElementById('cc-wp-training-topic')?.value?.trim();
         if (!majorTopic) {
@@ -9743,9 +10380,17 @@ define([
                     }
                     return {
                     id: `topic-${i}`,
-                    title: title,
-                    description: t.description || '',
-                    subtopics: t.subtopics || []
+                    // v15.3.11: regional spelling on the titles the author will read.
+                    title: ccRegionalise(title),
+                    description: ccRegionalise(t.description || ''),
+                    subtopics: (t.subtopics || []).map(function(sub) {
+                        if (typeof sub === 'string') { return ccRegionalise(sub); }
+                        if (!sub) { return sub; }
+                        return Object.assign({}, sub, {
+                            title: ccRegionalise(sub.title || ''),
+                            description: ccRegionalise(sub.description || '')
+                        });
+                    })
                     };
                 });
                 // Auto-select all by default
@@ -9818,7 +10463,7 @@ define([
         });
     };
 
-    const generateTopicPlan = async () => {
+    const generateTopicPlan = async() => {
         const duration = parseInt(document.querySelector('input[name="duration"]:checked')?.value) || 10;
 
         const inputs = {
@@ -9832,12 +10477,18 @@ define([
             const selectedTopics = suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id));
             inputs.selectedMajorTopics = selectedTopics;
             inputs.tgaData = tgaData;
-        } else if (selectedMode === 'workplace') {
+        } else if (selectedMode === 'workplace' || selectedMode === 'policy') {
             // v13.85: was gated on workplaceData. Workplace keeps its subtopics in
             // suggestedMajorTopics, never in storedOutcomes, so a no-document build
             // fell into the else branch below with empty outcomes and no topics.
             // Planner.planTopics only needs selectedMajorTopics here; workplaceData
             // is passed through when present and is legitimately null when not.
+            //
+            // v15.3.6b: policy too. It fell into the else below, which reads
+            // storedOutcomes and gatherOutcomes() - neither of which this route's screen
+            // populates - so it planned from an empty list. planTopics prefers the
+            // document's own structure for policy and uses these topics only as the
+            // fallback when the document has no usable headings.
             const selectedTopics = suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id));
             inputs.selectedMajorTopics = selectedTopics;
             inputs.workplaceData = workplaceData || null;
@@ -9966,7 +10617,7 @@ define([
             return;
         }
         CC_PT.painted = CC_PT.painted || [];
-        CC_PT.order.forEach(function (id, i) {
+        CC_PT.order.forEach(function(id, i) {
             const html = ccPtRenderRow(id);
             if (CC_PT.painted[i] === html) { return; }
             CC_PT.painted[i] = html;
@@ -10085,9 +10736,11 @@ define([
             // v6.9.14: Get context from dropdowns - AI auto-generates scenarios based on these
             const industry = document.getElementById('cc-industry')?.value || '';
             const industrySector = document.getElementById('cc-industry-sector')?.value || '';
+            // v15.3.7: labels, not raw option values - the model was being told
+            // "Job Level(s): entry, worker".
             const jobLevel = CC_SELECTED_JOB_LEVELS.length > 0
-                ? CC_SELECTED_JOB_LEVELS.join(', ')
-                : 'worker';
+                ? ccJobLevelLabels(CC_SELECTED_JOB_LEVELS)
+                : s('msgjlworker');
             
             // v13.84: the Workplace Context step collects these again (all optional).
             // Blank fields fall through to the v6.9.14 behaviour of letting the AI
@@ -10192,10 +10845,28 @@ define([
             
             
             return contextObj;
-        } else if (selectedMode === 'workplace') {
+        } else if (selectedMode === 'workplace' || selectedMode === 'policy') {
+            // v15.3.6b: POLICY shares this branch.
+            //
+            // gatherContext()'s chain was vet / workplace / general / topicstext / pd /
+            // else, and the final else returns the UNIVERSITY context. So a Policy pack
+            // was generated with mode:'university' - the academic prompt, the academic
+            // 6-card schema, uniPastedContent (a textarea this route never renders) as its
+            // source - and every policy-specific thing silently switched itself off:
+            // POLICY_SYSTEM_PROMPT was never used, policyFidelityIssues() bailed on its
+            // own mode check, planPolicyTopics() got an empty document, and
+            // renderPolicyStrip() suppressed itself because manifest.mode said university.
+            //
+            // The route already shares Workplace's INPUT SCREEN (v15.3.0), so it has the
+            // same DOM and the same fields. Sharing the context builder is the same
+            // decision, applied one layer down; the mode and the source are overridden
+            // below and everything else is genuinely identical.
             const countryCode = document.getElementById('cc-wp-country')?.value || 'AU';
             const state = document.getElementById('cc-wp-state')?.value || '';
+            // v15.3.7: the raw slug still drives the learnerRole branch below; the
+            // LABEL is what the model is shown. Both, deliberately, not one or the other.
             const targetAudience = document.getElementById('cc-wp-audience')?.value || 'new-starters';
+            const targetAudienceLabel = ccSelectLabel('cc-wp-audience', 'New starters');
             const companyName = document.getElementById('cc-company-name')?.value || '';
             const department = document.getElementById('cc-wp-department')?.value || '';
             const industry = document.getElementById('cc-wp-industry')?.value || '';
@@ -10203,7 +10874,9 @@ define([
             const industryContext = industrySector 
                 ? `${industry} - ${industrySector}` 
                 : (industry || 'Workplace training');
-            const jobLevel = document.getElementById('cc-wp-job-level')?.value || 'worker';
+            // v15.3.7: only the label is used now - nothing on this route branches on
+            // the raw job-level slug, unlike targetAudience below, which still does.
+            const jobLevelLabelWp = ccSelectLabel('cc-wp-job-level', 'Worker');
             
             const wpAiCtx = CC_WP_AI_CONTEXT || {};
             const selectedJobIds = CC_WP_SELECTED_JOB_TITLES || [];
@@ -10241,30 +10914,43 @@ define([
             const finalEquipment = equipmentList.length ? equipmentList : typedEquipment;
 
             const jobTitle = finalJobRoles.length > 0 ? finalJobRoles[0] : '';
-            const learnerRole = jobTitle ? `${jobTitle} (${jobLevel})` : (targetAudience === 'supervisors' ? 'supervisor' : (targetAudience === 'contractors' ? 'contractor' : 'employee'));
+            // v15.3.7: the parenthetical is shown to the model, so it takes the
+            // label; the branch below still tests the raw slug.
+            const learnerRole = jobTitle ? `${jobTitle} (${jobLevelLabelWp})` : (targetAudience === 'supervisors' ? 'supervisor' : (targetAudience === 'contractors' ? 'contractor' : 'employee'));
             
+            // FIX-CC-WP-MAJOR-TOPIC-MISSING (v15.4.5): the one thing the author is
+            // required to type on this screen - "This is your major topic" - was the one
+            // thing the context never carried. Every planner titles its single topic from
+            // context.courseTitle || context.courseName and falls back to the literal
+            // string 'Major Topic', so that is what Workplace and Policy packs were named.
+            const wpMajorTopic = (document.getElementById('cc-wp-training-topic')?.value || '').trim();
+
             return {
                 mode: 'workplace',
                 country: countryCode,
                 language: getCountryLang(countryCode),
                 state: state,
+                courseTitle: wpMajorTopic,
+                courseName: wpMajorTopic,
+                majorTopic: wpMajorTopic,
+                topic: wpMajorTopic,
                 companyName: companyName,
                 department: department,
                 trainingType: document.getElementById('cc-training-type')?.value || 'induction',
                 industry: industry,
                 industrySector: industrySector,
                 industryContext: industryContext,
-                targetAudience: targetAudience,
-                jobLevel: jobLevel,
+                targetAudience: targetAudienceLabel,
+                jobLevel: jobLevelLabelWp,
                 jobTitle: jobTitle,
                 jobRoles: finalJobRoles,
                 jobTasks: finalJobTasks,
-                taskEquipment: (function () {
+                taskEquipment: (function() {
                     // v13.86: the prompt binds tasks to equipment; this was always {}.
                     const map = {};
                     if (finalEquipment.length) {
                         const equipStr = finalEquipment.join('; ');
-                        finalJobTasks.forEach(function (t) { map[t] = equipStr; });
+                        finalJobTasks.forEach(function(t) { map[t] = equipStr; });
                     }
                     return map;
                 })(),
@@ -10279,7 +10965,41 @@ define([
                 aiSelectedJobTitles: finalJobRoles,
                 aiSelectedTasks: finalJobTasks,
                 aiSelectedEquipment: finalEquipment,
-                wpAiContext: wpAiCtx
+                wpAiContext: wpAiCtx,
+                // v15.3.6b: the two things that differ for Policy & Compliance.
+                //
+                // `mode` decides which system prompt, which card schema, whether the
+                // fidelity check runs at all and whether the player shows the identity
+                // strip - so it has to be the real route, not the branch it borrowed.
+                //
+                // `priorityContent` is the uploaded document itself. On Workplace the
+                // source is whatever the author pasted; on Policy the whole route exists
+                // to quote the file, and without this the document reached generation
+                // only as `criteria.workplaceDocument`, which never enters the manifest.
+                // planPolicyTopics() would have received an empty string and fallen back
+                // to a duration-shaped plan on every single pack.
+                ...(selectedMode === 'policy' ? (function() {
+                    const _pm = (typeof gatherPolicyMeta === 'function') ? gatherPolicyMeta() : null;
+                    // On Policy the course IS the document, so the document's title names
+                    // it - the training-topic field is a steer, not the subject. Falls back
+                    // to that field, then to the filename, before the planner's 'Training'.
+                    const _pTitle = (_pm && _pm.title) || wpMajorTopic
+                        || (workplaceData && workplaceData.filename) || '';
+                    return {
+                    mode: 'policy',
+                    policyMeta: _pm,
+                    courseTitle: _pTitle,
+                    courseName: _pTitle,
+                    majorTopic: _pTitle,
+                    topic: _pTitle,
+                    // The uploaded policy is the PRIORITY content - the thing the route
+                    // exists to quote. Anything the author additionally typed stays in
+                    // pastedContent as their own notes; overwriting both with the document
+                    // silently discarded those notes.
+                    pastedContent: workplacePastedContent || '',
+                    priorityContent: (workplaceData?.content || workplacePastedContent || null)
+                    };
+                }()) : {})
             };
         } else if (selectedMode === 'general') {
             const countryCode = document.getElementById('cc-pd-country')?.value || 'AU';
@@ -10301,7 +11021,7 @@ define([
                 subjectArea: subjectArea,
                 industry: subjectArea,
                 industryContext: subjectArea || 'General learning',
-                targetAudience: audience.replace(/-/g, ' '),
+                targetAudience: ccSelectLabel('cc-pd-audience', 'All staff'),   // v15.3.7
                 learnerRole: audience.replace(/-/g, ' '),
                 learnerLevel: learnerLevel,
                 experienceLevel: learnerLevel,
@@ -10333,7 +11053,7 @@ define([
                 courseName: ttTitle,
                 courseTitle: ttTitle,
                 subjectArea: ttSubject,
-                targetAudience: ttAudience ? ttAudience.replace(/-/g, ' ') : '',
+                targetAudience: ttAudience ? ccSelectLabel('cc-pd-audience', '') : '',   // v15.3.7
                 // industryContext is read by shared plumbing (image prompts, planner) and
                 // must be non-empty, but it stays neutral rather than industry-flavoured.
                 industryContext: ttSubject || 'General',
@@ -10358,7 +11078,7 @@ define([
                 state: '',
                 courseName: courseTitle,
                 courseTitle: courseTitle,
-                targetAudience: audience,
+                targetAudience: ccSelectLabel('cc-pd-audience', 'All staff'),   // v15.3.7
                 industry: industry,
                 industryContext: industryContext,
                 learnerRole: audience.replace(/-/g, ' '),
@@ -10402,7 +11122,7 @@ define([
     // EXCEL MAPPING EXPORT (VET mode only)
     // Generates comprehensive Excel document with unit component  ->  topic mapping
     // =========================================================================
-    const exportExcelMapping = async () => {
+    const exportExcelMapping = async() => {
         
         if (selectedMode !== 'vet') {
             showError(s('errexcelvetonly'));
@@ -10525,7 +11245,7 @@ define([
         }
     };
 
-    const generateContent = async () => {
+    const generateContent = async() => {
         if (!topicPlan) {
             ccError('[CC] generateContent() ABORTED: topicPlan is null/undefined');
             showError(s('errnotopicplan'));
@@ -10551,7 +11271,7 @@ define([
         // within 30 seconds the generation has not started. Rather than leave a dead
         // screen, hand the controls back and say so. Cleared by the first onStatus.
         let _genStarted = false;
-        const _genWatchdog = setTimeout(function () {
+        const _genWatchdog = setTimeout(function() {
             if (_genStarted) { return; }
             ccError('[CC] generateContent() WATCHDOG: no status after 30s  -  generation never started');
             showError(s('errgennotstarted'), true);
@@ -10559,7 +11279,7 @@ define([
             if (generateBtn) generateBtn.disabled = false;
             if (prevBtn) prevBtn.disabled = false;
         }, 30000);
-        const _clearGenWatchdog = function () {
+        const _clearGenWatchdog = function() {
             _genStarted = true;
             clearTimeout(_genWatchdog);
         };
@@ -10580,15 +11300,15 @@ define([
             // v12.55: Gather additional student language selections
             const additionalLangs = Array.from(
                 document.querySelectorAll('#cc-additional-langs input[type="checkbox"]:checked')
-            ).map(function (cb) {
+            ).map(function(cb) {
                 return { code: cb.value, label: cb.parentElement.textContent.trim() };
-            }).filter(function (l) { return l.code !== voiceLanguage; });
+            }).filter(function(l) { return l.code !== voiceLanguage; });
             // CC-ML-DEBUG v13.3
             ccLog('%c[CC-ML BUILDER]',
                 'background:#7c3aed;color:#fff;padding:2px 6px;border-radius:3px;',
                 'voiceName=' + voiceName, '| voiceLanguage=' + voiceLanguage,
                 '| voiceoverEnabled=' + voiceoverEnabled,
-                '| additionalLangs (' + additionalLangs.length + '):', additionalLangs.map(function (l) { return l.code; }).join(', ') || '(none)');
+                '| additionalLangs (' + additionalLangs.length + '):', additionalLangs.map(function(l) { return l.code; }).join(', ') || '(none)');
 
             // v6.6.68: Gather images settings
             const imagesCheckbox = document.getElementById('cc-images-enabled');
@@ -10615,7 +11335,11 @@ define([
                 mode: generationContext.mode,
                 context: generationContext,
                 duration: parseInt(document.querySelector('input[name="duration"]:checked')?.value) || 10,
-                criteria: selectedMode === 'vet' ? tgaData : selectedMode === 'workplace' ? { workplaceDocument: workplaceData || null, topics: suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id)) } : { outcomes: storedOutcomes.length > 0 ? storedOutcomes : gatherOutcomes() },
+                criteria: selectedMode === 'vet' ? tgaData : (selectedMode === 'workplace' || selectedMode === 'policy') ? { workplaceDocument: workplaceData || null, topics: suggestedMajorTopics.filter(t => selectedMajorTopicIds.includes(t.id)) } : { outcomes: storedOutcomes.length > 0 ? storedOutcomes : gatherOutcomes() },
+                // v15.3.0: the policy's own identity travels with the pack, so the player
+                // can tell a learner which document they are being held to and whether it
+                // has been reviewed recently. Null on every other route.
+                policyMeta: selectedMode === 'policy' ? gatherPolicyMeta() : null,
                 topicPlan: topicPlan, // Pass the AI-generated topic plan!
                 settings: {
                     progressionMode: progressionMode,
@@ -10697,7 +11421,7 @@ define([
                     // built. (The Structure Validation Results on the FINAL screen stays.)
                     ccPtStage(progress);
                 },
-                onComplete: async (generatedManifest) => {
+                onComplete: async(generatedManifest) => {
                     if (generatedManifest && generatedManifest.topics) {
                         ccLog('[BUILDER v8.4.12] Applying grammar fixes to generated content...');
                         generatedManifest = fixManifestGrammar(generatedManifest);
@@ -10717,11 +11441,27 @@ define([
                         // during the voiceover phase only. The button sets _voSkipRequested which
                         // pregenOne checks  -  when true it resolves early without making a TTS call.
                         var _voSkipRequested = false;
+                        // v15.4.3: a rate-limit refusal stops the run, exactly as Skip does.
+                        //
+                        // Reported live: an eight-subtopic build produced sixty
+                        // "too many requests" errors. Every one of them was the plugin's own
+                        // per-user `voice` bucket refusing a call, and every one was RETRIED -
+                        // three attempts per card, then three more for the whole-section
+                        // fallback - because nothing on this side could tell a rate limit from
+                        // a network fault. Retrying a refusal cannot succeed and is not free:
+                        // each attempt takes another slot in the sliding window and pushes the
+                        // reset further away, so the build dug its own hole deeper the harder
+                        // it tried.
+                        //
+                        // The server now answers with `errorcode: 'ratelimited'` and an exact
+                        // `retryafter`, so this is a fact the client can act on rather than a
+                        // sentence it would have to parse in 53 languages.
+                        var _voRateLimited = null;
                         var _voSkipWrap = document.getElementById('cc-vo-skip-wrap');
                         var _voSkipBtn  = document.getElementById('cc-vo-skip-btn');
                         if (_voSkipWrap) _voSkipWrap.style.display = '';
                         if (_voSkipBtn) {
-                            _voSkipBtn.onclick = function () {
+                            _voSkipBtn.onclick = function() {
                                 _voSkipRequested = true;
                                 _voSkipBtn.disabled = true;
                                 _voSkipBtn.textContent = s('msgskipping');
@@ -10769,16 +11509,44 @@ define([
                         // Failures are deliberately non-fatal: a missing clip makes that one
                         // feedback silent, which is far better than failing the whole build,
                         // and the player never substitutes another voice.
-                        const pregenQuizFeedback = async (section) => {
+                        const pregenQuizFeedback = async(section) => {
                             if (_voSkipRequested) return;
-                            var dp = (section.cards || []).filter(function (c) {
+                            var dp = (section.cards || []).filter(function(c) {
                                 return c && c.cardType === 'decision-point';
                             })[0];
-                            if (!dp || !Array.isArray(dp.options) || !dp.options.length) return;
+                            if (!dp) return;
 
-                            for (var oi = 0; oi < dp.options.length; oi++) {
-                                if (_voSkipRequested) return;
-                                var opt = dp.options[oi];
+                            // v15.3.13: every option on every question, not just question one.
+                            //
+                            // A decision-point can carry three questions now.
+                            // normalizeCardSchema keeps dp.options pointing at question ONE
+                            // for backward compatibility, so a loop over dp.options narrates
+                            // four of twelve options and the other eight fall through to the
+                            // player's "no pre-generated feedback clip - silent by design"
+                            // path. Silent by design is right for a missing clip; it is not
+                            // right for two thirds of a quiz nobody tried to narrate.
+                            //
+                            // Flattened rather than nested so the clip index stays a single
+                            // running number: sectionid carries it, and restarting at 0 on
+                            // question two would have overwritten question one's clips.
+                            var _dpOpts = [];
+                            if (Array.isArray(dp.questions) && dp.questions.length) {
+                                dp.questions.forEach(function(q) {
+                                    (q.options || []).forEach(function(o) { _dpOpts.push(o); });
+                                });
+                            } else if (Array.isArray(dp.options)) {
+                                _dpOpts = dp.options;
+                            }
+                            if (!_dpOpts.length) return;
+
+                            for (var oi = 0; oi < _dpOpts.length; oi++) {
+                                // v15.4.3: twelve options per section is the single biggest
+                                // consumer of the speech allowance in a build - three questions
+                                // times four options - so this is the loop most likely to meet
+                                // the ceiling, and the one where carrying on after a refusal
+                                // does the most damage.
+                                if (_voSkipRequested || _voRateLimited) return;
+                                var opt = _dpOpts[oi];
                                 var fbText = (opt && opt.feedback ? String(opt.feedback) : '').trim();
                                 if (!fbText || opt.feedbackAudioUrl) { continue; }
                                 try {
@@ -10794,6 +11562,13 @@ define([
                                     var _qResp = await ccPost(_qFd, 'quiz feedback TTS');
                                     if (!_qResp.ok) { throw new Error('TTS returned ' + _qResp.status); }
                                     var _qData = await _qResp.json();
+                                    var _qRl = ccRateLimitInfo(_qData);
+                                    if (_qRl) {
+                                        if (!_voRateLimited) { _voRateLimited = _qRl; }
+                                        ccWarn('[QUIZ VOICE] rate limited on section ' + section.id
+                                            + '  -  stopping quiz feedback rather than retrying.');
+                                        return;
+                                    }
                                     if (!_qData.success || !_qData.audioContent) {
                                         throw new Error(_qData.error || 'no audio returned');
                                     }
@@ -10822,10 +11597,185 @@ define([
                             }
                         };
 
-                        const pregenOne = async (section, attempt) => {
+                        /**
+                         * v15.4.0: synthesise ONE script and persist it, returning its URL.
+                         *
+                         * Lifted verbatim out of pregenOne so that the same TTS call, the
+                         * same 210-second abort and the same file-store persist serve both
+                         * the per-card loop below and the legacy whole-section path. Two
+                         * copies of this would be two places for the abort timeout, the
+                         * billing key or the persist fallback to drift.
+                         *
+                         * @param {Object} section  The manifest section (for ids and billing).
+                         * @param {String} text     The narration script to speak.
+                         * @param {String} keySuffix Appended to the section id for the file
+                         *                          store, so each card's clip is its own file.
+                         * @return {Object} {url, wordCount} - url is an HTTPS file-store URL,
+                         *                  or a data: URL when the persist failed.
+                         */
+                        const pregenClip = async(section, text, keySuffix) => {
+                            const formData = new FormData();
+                            formData.append('sesskey', M.cfg.sesskey);
+                            formData.append('action', 'generate_voice');
+                            formData.append('cmid', cmid);
+                            formData.append('text', text);
+                            formData.append('sectionid', String(section.id) + (keySuffix || ''));
+                            formData.append('subtopickey', section.billingKey || '');
+                            formData.append('language', voiceLanguage);
+                            formData.append('voice', voiceName);
+
+                            var _clipAbort = new AbortController();
+                            var _clipTimer = setTimeout(function() {
+                                _clipAbort.abort();
+                                ccWarn('[VOICEOVER BUILDER] ABORT ' + section.id + (keySuffix || '')
+                                    + '  -  210s timeout exceeded');
+                            }, 210000);
+                            let response;
+                            try {
+                                response = await fetch(M.cfg.wwwroot + '/mod/contentcreator/ajax.php', {
+                                    method: 'POST', body: formData, signal: _clipAbort.signal
+                                });
+                            } finally {
+                                clearTimeout(_clipTimer);
+                            }
+                            if (!response.ok) { throw new Error('Voice API returned ' + response.status); }
+                            const data = await response.json();
+                            // v15.4.3: a refusal is not a failure to retry. Tagged and raised
+                            // so every retry loop above can recognise it and stop, and the run
+                            // can be halted once rather than failing section by section.
+                            const _rl = ccRateLimitInfo(data);
+                            if (_rl) {
+                                if (!_voRateLimited) { _voRateLimited = _rl; }
+                                throw ccRateLimitError(_rl);
+                            }
+                            if (!data.success || !data.audioContent) {
+                                throw new Error(data.error || 'No audio returned');
+                            }
+                            var wordCount = text.split(/\s+/).filter(Boolean).length;
+                            // Persist to the file store immediately. A data: URL survives only
+                            // until saveManifest's stripAudio() turns it into the 'pregenerated'
+                            // sentinel, and a sentinel with no file behind it is a card that
+                            // regenerates itself on the teacher's first play - billed again.
+                            try {
+                                var _fd = new FormData();
+                                _fd.append('sesskey', M.cfg.sesskey);
+                                _fd.append('action', 'save_voiceover_file');
+                                _fd.append('cmid', cmid);
+                                _fd.append('sectionid', String(section.id) + (keySuffix || ''));
+                                _fd.append('audiocontent', data.audioContent);
+                                _fd.append('audiotype', data.audioType || 'audio/ogg');
+                                var _resp = await ccPost(_fd, 'voiceover persist');
+                                if (_resp.ok) {
+                                    var _d = await _resp.json();
+                                    if (_d.success && _d.url) {
+                                        return {url: _d.url, wordCount: wordCount};
+                                    }
+                                }
+                            } catch (_pErr) {
+                                ccWarn('[VOICEOVER BUILDER] persist failed for ' + section.id
+                                    + (keySuffix || '') + ': ' + _pErr.message + '  -  falling back to a data URL');
+                            }
+                            return {
+                                url: 'data:' + (data.audioType || 'audio/ogg') + ';base64,' + data.audioContent,
+                                wordCount: wordCount
+                            };
+                        };
+
+                        /**
+                         * v15.4.0: ONE CLIP PER CARD.
+                         *
+                         * Until now a section was one audio file covering all seven cards, and
+                         * the player worked out where each card's narration sat inside it by
+                         * splitting the duration in proportion to word counts. An estimate is
+                         * not a timing: in production the voice ran about twenty seconds past
+                         * the hook card into the next one's script, and every card after that
+                         * resumed in the wrong place. No arithmetic fixes that, because the
+                         * information - where card 2 actually starts - was never in the file.
+                         *
+                         * Per card, it does not need to be. The card being read has its own
+                         * clip; it starts at zero and ends when the card's narration ends.
+                         * `ended` is a fact rather than a guess, so the reveal, the Next Card
+                         * unlock and the completion gate all key off something real.
+                         *
+                         * Two things fall out of it for free. A teacher who edits one card
+                         * re-synthesises one card instead of the whole section. And the
+                         * on-demand path can generate just the card the learner is looking
+                         * at, rather than several minutes of audio before the first word.
+                         *
+                         * A card that contributes no narration gets no clip - see
+                         * cardNarrationParts(). The section-level fields are folded into the
+                         * script of the first card the narration loop reaches - card 0
+                         * normally, card 1 on a section whose card 0 was replaced by a
+                         * promoted section.voiceoverText - which is where the renderer draws
+                         * them. What matters is that they are inside SOME card's clip; a word
+                         * that belongs to no card is a word no clip says.
+                         *
+                         * @param {Object} section The manifest section.
+                         * @return {Boolean} True when every card that needed a clip got one.
+                         */
+                        const pregenCards = async(section) => {
+                            var parts = [];
+                            try {
+                                parts = CcState.cardNarrationParts(section, generatedManifest) || [];
+                            } catch (e) {
+                                ccWarn('[VOICEOVER BUILDER] could not split ' + section.id
+                                    + ' into per-card scripts: ' + e.message);
+                                return false;
+                            }
+                            if (!parts.length) { return false; }
+                            var allOk = true;
+                            for (var pi = 0; pi < parts.length; pi++) {
+                                if (_voSkipRequested || _voRateLimited) { return false; }
+                                var part = parts[pi];
+                                var card = (section.cards || [])[part.cardIndex];
+                                if (!card || !part.text.trim()) { continue; }
+                                // Already have this exact script as audio - the teacher edited
+                                // one card and the rest are untouched. Skipping it is the whole
+                                // point of hashing per card.
+                                if (CcState.cardVoiceoverIsFresh(card, part.hash)) {
+                                    ccLog('[VOICEOVER BUILDER] card ' + part.cardIndex + ' of '
+                                        + section.id + ' is unchanged  -  keeping its clip');
+                                    continue;
+                                }
+                                var clip = null;
+                                for (var attempt = 1; attempt <= 3 && !clip; attempt++) {
+                                    try {
+                                        clip = await pregenClip(section, part.text, '_c' + part.cardIndex);
+                                    } catch (err) {
+                                        // v15.4.3: never retry a refusal. Three attempts per
+                                        // card against a bucket that is already empty is how
+                                        // one locked-out build made sixty requests, each of
+                                        // them taking a slot and delaying its own recovery.
+                                        if (err && err.ccRateLimited) {
+                                            ccWarn('[VOICEOVER BUILDER] rate limited on card '
+                                                + part.cardIndex + ' of ' + section.id
+                                                + '  -  stopping rather than retrying.');
+                                            return false;
+                                        }
+                                        ccError('[VOICEOVER BUILDER] card ' + part.cardIndex + ' of '
+                                            + section.id + ' attempt ' + attempt + ': ' + err.message);
+                                        if (attempt < 3) {
+                                            await new Promise(function(r) { setTimeout(r, attempt * 2000); });
+                                        }
+                                    }
+                                }
+                                if (!clip) { allOk = false; continue; }
+                                card.voiceoverUrl = clip.url;
+                                card.voiceoverStatus = 'complete';
+                                card.voiceoverWordCount = clip.wordCount;
+                                card.voiceoverSchemaVersion = CcState.VOICEOVER_SCHEMA_VERSION;
+                                card.voiceoverTextHash = part.hash;
+                            }
+                            return allOk;
+                        };
+
+                        const pregenOne = async(section, attempt) => {
                             attempt = attempt || 1;
                             // v12.57: Exit immediately if user clicked "Skip voiceover generation".
-                            if (_voSkipRequested) { return; }
+                            // v15.4.3: and the same for a rate-limit refusal. Once the bucket is
+                            // empty every remaining section would fail identically; carrying on
+                            // only makes the wait longer and the log unreadable.
+                            if (_voSkipRequested || _voRateLimited) { return; }
                             // v13.97: the spinner goes on AFTER the skip guard. Marking it
                             // before meant every section still queued when the teacher hit
                             // Skip was flipped back to a spinner by its own no-op call and
@@ -10844,7 +11794,107 @@ define([
                                 // v13.97: nothing to narrate - mark it, do not leave the
                                 // cell on a spinner that will never resolve.
                                 if (!voText.trim()) { ccPtVoiceover(section.id, 'skipped'); return; }
-                                
+
+                                // v15.4.0: per-card first. A section with cards gets one clip
+                                // per card and never a whole-section file; the section-level
+                                // fields below are then a SUMMARY of that, not audio of their
+                                // own, which is what keeps isSectionVoiceoverComplete(),
+                                // allVoiceoversComplete() and manifest.voiceoversComplete
+                                // working unchanged against a per-card manifest.
+                                //
+                                // The whole-section path underneath is still reached by legacy
+                                // sections that carry no cards[] at all. It is not dead code and
+                                // must not be deleted: those sections exist in saved courses.
+                                if (section.cards && section.cards.length) {
+                                    var _cardsOk = await pregenCards(section);
+                                    if (_voSkipRequested) {
+                                        // v15.4.2: leave a COHERENT half-built section.
+                                        //
+                                        // Skip used to return here with some cards clipped and
+                                        // no flag set. `sectionIsPerCard` reads a clip on a card
+                                        // as the flag, so the section played per-card - and the
+                                        // player's preload, which skips per-card sections, never
+                                        // filled in the rest. Stamping the flag says plainly
+                                        // what this section is, so the preload completes it
+                                        // instead of walking past it. The clips already paid for
+                                        // are kept; discarding them would bill for them twice.
+                                        var _anyClip = (section.cards || []).some(function(c) {
+                                            return c && typeof c.voiceoverUrl === 'string' && c.voiceoverUrl;
+                                        });
+                                        if (_anyClip) {
+                                            section.voiceoverPerCard = true;
+                                            section.voiceoverStatus = 'pending';
+                                        }
+                                        return;
+                                    }
+                                    if (_cardsOk) {
+                                        ccPtVoiceover(section.id, 'ok');
+                                        section.voiceoverUrl = 'pregenerated';
+                                        section.voiceoverStatus = 'complete';
+                                        section.voiceoverSchemaVersion = CcState.VOICEOVER_SCHEMA_VERSION;
+                                        section.voiceoverTextHash = CcState.voiceoverTextHash(voText);
+                                        section.voiceoverWordCount = voText.split(/\s+/).filter(Boolean).length;
+                                        section.voiceoverPerCard = true;
+                                        if (activitiesEnabled) { await pregenQuizFeedback(section); }
+                                        completed++;
+                                        var _pcPercent = Math.round((completed / allSections.length) * 100);
+                                        document.getElementById('cc-gen-progress').style.width = _pcPercent + '%';
+                                        document.getElementById('cc-gen-status').textContent =
+                                            'Pre-generating voiceovers (' + completed + '/' + allSections.length + ')';
+                                        return;
+                                    }
+                                    // v15.4.3: NO WHOLE-SECTION FALLBACK. A card-narrated
+                                    // section stays card-narrated.
+                                    //
+                                    // v15.4.2 fell back to one clip for the section when a card
+                                    // would not synthesise, reasoning that "one file that says
+                                    // everything is better than six that say most of it". That
+                                    // reasoning was wrong on both halves.
+                                    //
+                                    // The file it builds is the architecture this release
+                                    // exists to remove: one clip covering seven cards, with the
+                                    // player estimating each card's boundary by word count. That
+                                    // estimate is what ran the voice twenty seconds past the
+                                    // hook card into the next one's script. Falling back to it
+                                    // reinstates the reported defect on exactly the sections
+                                    // that were already having trouble - and it also DELETES the
+                                    // per-card clips that did succeed, so work already paid for
+                                    // is thrown away and the whole section is bought again.
+                                    //
+                                    // And it hides the problem: a section that fell back looks
+                                    // complete to every readiness check in the player.
+                                    //
+                                    // A hole is recoverable and a wrong architecture is not.
+                                    // The section keeps the clips it has, is stamped as
+                                    // per-card and pending, and the player fills the gaps -
+                                    // preloadCardClips() on the teacher's next visit, or
+                                    // playCardNarration() on demand. Both paths were built in
+                                    // v15.4.2 and both are exercised by the test suite.
+                                    var _madeCount = (section.cards || []).filter(function(c) {
+                                        return c && typeof c.voiceoverUrl === 'string' && c.voiceoverUrl;
+                                    }).length;
+                                    ccWarn('[VOICEOVER BUILDER] per-card narration incomplete for '
+                                        + section.id + '  -  ' + _madeCount + ' of ' + (section.cards || []).length
+                                        + ' cards have a clip. Keeping them; the player will fill the rest '
+                                        + 'on demand rather than rebuilding the slide as one file.');
+                                    section.voiceoverPerCard = true;
+                                    section.voiceoverStatus = 'pending';
+                                    ccPtVoiceover(section.id, _madeCount ? 'ok' : 'failed');
+                                    if (activitiesEnabled && _madeCount && !_voRateLimited) {
+                                        await pregenQuizFeedback(section);
+                                    }
+                                    completed++;
+                                    var _phPercent = Math.round((completed / allSections.length) * 100);
+                                    document.getElementById('cc-gen-progress').style.width = _phPercent + '%';
+                                    document.getElementById('cc-gen-status').textContent =
+                                        'Pre-generating voiceovers (' + completed + '/' + allSections.length + ')';
+                                    return;
+                                }
+
+                                // Legacy sections only, from here down: no cards[] at all. Those
+                                // exist in saved courses and are narrated as one file because
+                                // they have no cards to divide. This is not dead code.
+
                                 const formData = new FormData();
                                 formData.append('sesskey', M.cfg.sesskey);
                                 formData.append('action', 'generate_voice');
@@ -10864,7 +11914,7 @@ define([
                                 // abort fires. Previously no timeout existed here, so a single stuck
                                 // section caused "Pre-generating voiceovers..." to appear forever.
                                 var _builderAbortCtrl = new AbortController();
-                                var _builderAbortTimer = setTimeout(function () {
+                                var _builderAbortTimer = setTimeout(function() {
                                     _builderAbortCtrl.abort();
                                     ccWarn('[VOICEOVER BUILDER v12.57] ABORT section ' + section.id + '  -  210s timeout exceeded on attempt ' + attempt);
                                 }, 210000);
@@ -10934,11 +11984,23 @@ define([
                                     // v13.93: quiz feedback narration, same voice, same build.
                                     if (activitiesEnabled) { await pregenQuizFeedback(section); }
                                 } else {
+                                    var _secRl = ccRateLimitInfo(data);
+                                    if (_secRl) { throw ccRateLimitError(_secRl); }
                                     throw new Error(data.error || 'No audio returned');
                                 }
                             } catch (err) {
+                                // v15.4.3: a refusal is not retried. See the note on
+                                // _voRateLimited - three attempts against an empty bucket cost
+                                // three more slots and cannot succeed.
+                                if (err && err.ccRateLimited) {
+                                    if (!_voRateLimited) { _voRateLimited = err.ccRateLimited; }
+                                    ccWarn('[VOICEOVER BUILDER] rate limited on section '
+                                        + (section.id || '?') + '  -  stopping rather than retrying.');
+                                    ccPtVoiceover(section.id, 'failed');
+                                    return;
+                                }
                                 ccError('[VOICEOVER BUILDER v8.4.11] PRE-GEN FAIL section ' + (section.id || '?') + ' | attempt: ' + attempt + ' | ' + err.message);
-                                if (attempt < 3 && !section.voiceoverUrl) {
+                                if (attempt < 3 && !section.voiceoverUrl && !_voRateLimited) {
                                     var retryDelay = attempt * 2000;
                                     ccLog('[VOICEOVER BUILDER v8.4.11] RETRY section ' + section.id + ' in ' + (retryDelay/1000) + 's (attempt ' + (attempt+1) + '/3)');
                                     await new Promise(r => setTimeout(r, retryDelay));
@@ -10959,8 +12021,8 @@ define([
                         // a voiceover event, so its row would sit on "Generating" forever.
                         try {
                             var _voIds = {};
-                            allSections.forEach(function (sec) { _voIds[sec.id] = true; });
-                            CC_PT.order.forEach(function (rowId) {
+                            allSections.forEach(function(sec) { _voIds[sec.id] = true; });
+                            CC_PT.order.forEach(function(rowId) {
                                 if (!_voIds[rowId]) { ccPtVoiceover(rowId, 'skipped'); }
                             });
                         } catch (_ptErr) {
@@ -10969,7 +12031,8 @@ define([
 
                         const promises = [];
                         while (index < allSections.length) {
-                            while (promises.length < CONCURRENT && index < allSections.length && !_voSkipRequested) {
+                            while (promises.length < CONCURRENT && index < allSections.length
+                                    && !_voSkipRequested && !_voRateLimited) {
                                 const section = allSections[index++];
                                 const p = pregenOne(section, 1).then(() => {
                                     promises.splice(promises.indexOf(p), 1);
@@ -10985,12 +12048,29 @@ define([
                         if (_voSkipWrap) _voSkipWrap.style.display = 'none';
                         var _builderVoDur = ((Date.now() - _builderVoStart) / 1000).toFixed(1);
                         var _withUrl = allSections.filter(s => s.voiceoverUrl).length;
-                        if (_voSkipRequested) {
+                        if (_voRateLimited) {
+                            // v15.4.3: ONE message, not sixty. The run stopped on purpose, the
+                            // author is told what stopped it and when they can finish, and the
+                            // sections that did get audio keep it.
+                            var _rlWait = ccWaitPhrase(_voRateLimited.retryafter);
+                            var _rlWhere = (_voRateLimited.scope === 'site')
+                                ? 'This site has reached its hourly ceiling for speech generation.'
+                                : 'You have reached your hourly limit for speech generation.';
+                            ccWarn('%c[VOICEOVER BUILDER] PRE-GEN STOPPED  -  rate limited on the \''
+                                + _voRateLimited.bucket + '\' bucket at ' + _voRateLimited.ceiling
+                                + '/hour. ' + _withUrl + '/' + allSections.length
+                                + ' sections have audio. Retry in ' + _rlWait + '.');
+                            document.getElementById('cc-gen-status').textContent =
+                                _rlWhere + ' ' + _withUrl + ' of ' + allSections.length
+                                + ' slides have audio. The rest can be generated in ' + _rlWait
+                                + '  -  open the module and press Play, or ask an administrator '
+                                + 'to raise the limit in the Content Creator settings.';
+                        } else if (_voSkipRequested) {
                             ccLog('%c[VOICEOVER BUILDER v12.57] PRE-GEN SKIPPED by user  -  ' + _withUrl + '/' + allSections.length + ' sections completed before skip', 'color: #f59e0b; font-weight: bold');
                         } else {
                             ccLog('%c[VOICEOVER BUILDER v8.4.11] PRE-GEN COMPLETE | ' + _builderVoDur + 's | success: ' + _withUrl + '/' + allSections.length + ' sections', 'color: #8b5cf6; font-weight: bold');
                         }
-                        if (_withUrl < allSections.length && !_voSkipRequested) {
+                        if (_withUrl < allSections.length && !_voSkipRequested && !_voRateLimited) {
                             ccError('[VOICEOVER BUILDER v8.4.11] WARNING: ' + (allSections.length - _withUrl) + ' sections FAILED pre-generation after 3 attempts each.');
                         }
                         
@@ -11031,7 +12111,7 @@ define([
                                     generatedManifest.topics,
                                     _mlLang.code,
                                     cmid,
-                                    function (p) {
+                                    function(p) {
                                         var pct = Math.round((p.current / p.total) * 100);
                                         document.getElementById('cc-gen-progress').style.width = pct + '%';
                                         document.getElementById('cc-gen-status').textContent =
@@ -11064,7 +12144,7 @@ define([
                             // CC-ML-DEBUG v13.3
                             if (_mlResult) {
                                 var _dbgTopics = (_mlResult.topics || []).length;
-                                var _dbgSects = (_mlResult.topics || []).reduce(function (a,t){return a+(t.sections||[]).length;},0);
+                                var _dbgSects = (_mlResult.topics || []).reduce(function(a,t){return a+(t.sections||[]).length;},0);
                                 ccLog('%c[CC-ML BUILDER CONTENT]',
                                     'background:#16a34a;color:#fff;padding:2px 6px;border-radius:3px;',
                                     _mlLang.code + ' generated: topics=' + _dbgTopics + ' sections=' + _dbgSects);
@@ -11079,8 +12159,8 @@ define([
                                         'Pre-generating ' + _mlLang.label + ' voiceovers...';
                                     document.getElementById('cc-gen-progress').style.width = '0%';
                                     var _mlSections = [];
-                                    _mlResult.topics.forEach(function (t) {
-                                        (t.sections || []).forEach(function (s) {
+                                    _mlResult.topics.forEach(function(t) {
+                                        (t.sections || []).forEach(function(s) {
                                             // FIX-CC-ML-SECTION-FILTER (v13.15): Previously only collected sections
                                             // with s.cards — excluded description-only and legacy sections, leaving
                                             // them with no voiceover and causing the INCOMPLETE VOICEOVERS loop.
@@ -11100,14 +12180,153 @@ define([
                                     // Fix: factory IIFE captures langCode as a true parameter (by value),
                                     // immune to outer-scope reassignment. The inner fn variable is used
                                     // for reliable self-reference in the recursive retry path.
-                                    var pregenLangOne = (function (langCode) {
-                                        var fn = async function (section, attempt) {
+                                    var pregenLangOne = (function(langCode) {
+                                        /**
+                                         * v15.4.2: one clip per card, in THIS language.
+                                         *
+                                         * v15.4.0 gave the primary language per-card narration and
+                                         * left every additional language on the whole-section path.
+                                         * The translated sections still carried `voiceoverPerCard`
+                                         * (and, before the generator fix, the English clips), so the
+                                         * player took the per-card branch, found no clip for the
+                                         * language, and played nothing - while this function had
+                                         * just paid for a whole-section file no code path can reach.
+                                         * Silent and billed, which is the worst of both.
+                                         *
+                                         * @param {Object} section The translated section.
+                                         * @return {Boolean} True when every card that needed a clip got one.
+                                         */
+                                        var pregenLangCards = async function(section) {
+                                            var parts = [];
+                                            try {
+                                                parts = CcState.cardNarrationParts(section, _mlResult) || [];
+                                            } catch (e) {
+                                                ccWarn('[MULTI-LANG VO] could not split ' + section.id
+                                                    + ' into per-card scripts: ' + e.message);
+                                                return false;
+                                            }
+                                            if (!parts.length) { return false; }
+                                            var allOk = true;
+                                            for (var pi = 0; pi < parts.length; pi++) {
+                                                if (_voRateLimited) { return false; }
+                                                var part = parts[pi];
+                                                var card = (section.cards || [])[part.cardIndex];
+                                                if (!card || !part.text.trim()) { continue; }
+                                                if (CcState.cardVoiceoverIsFresh(card, part.hash)) { continue; }
+                                                var ok = false;
+                                                for (var att = 1; att <= 3 && !ok; att++) {
+                                                    try {
+                                                        var _cfd = new FormData();
+                                                        _cfd.append('sesskey', M.cfg.sesskey);
+                                                        _cfd.append('action', 'generate_voice');
+                                                        _cfd.append('cmid', cmid);
+                                                        _cfd.append('text', part.text);
+                                                        // The player builds this same key from
+                                                        // activeLang + section id + _cN. If the two
+                                                        // ever drift the clip is generated here and
+                                                        // looked for somewhere else.
+                                                        _cfd.append('sectionid', langCode + '_'
+                                                            + String(section.id) + '_c' + part.cardIndex);
+                                                        _cfd.append('subtopickey', section.billingKey || '');
+                                                        _cfd.append('language', langCode);
+                                                        _cfd.append('voice', voiceName);
+                                                        var _cr = await ccPost(_cfd, 'multilanguage card TTS');
+                                                        if (!_cr.ok) { throw new Error('HTTP ' + _cr.status); }
+                                                        var _cd = await _cr.json();
+                                                        var _cdRl = ccRateLimitInfo(_cd);
+                                                        if (_cdRl) {
+                                                            if (!_voRateLimited) { _voRateLimited = _cdRl; }
+                                                            ccWarn('[MULTI-LANG VO] rate limited on '
+                                                                + langCode + ' sec ' + section.id
+                                                                + '  -  stopping rather than retrying.');
+                                                            return false;
+                                                        }
+                                                        if (!_cd.success || !_cd.audioContent) {
+                                                            throw new Error(_cd.error || 'No audio');
+                                                        }
+                                                        // Persisted immediately for the same reason
+                                                        // the section path does it (v12.68): an
+                                                        // additional language has no reload path that
+                                                        // would recover a stripped data: URL.
+                                                        var _pfd = new FormData();
+                                                        _pfd.append('sesskey', M.cfg.sesskey);
+                                                        _pfd.append('action', 'save_voiceover_file');
+                                                        _pfd.append('cmid', cmid);
+                                                        _pfd.append('sectionid', langCode + '_'
+                                                            + String(section.id) + '_c' + part.cardIndex);
+                                                        _pfd.append('audiocontent', _cd.audioContent);
+                                                        _pfd.append('audiotype', _cd.audioType || 'audio/ogg');
+                                                        var _pr = await ccPost(_pfd, 'multilanguage card persist');
+                                                        if (!_pr.ok) { throw new Error('persist HTTP ' + _pr.status); }
+                                                        var _pd = await _pr.json();
+                                                        if (!_pd.success || !_pd.url) {
+                                                            throw new Error(_pd.error || 'persist returned no url');
+                                                        }
+                                                        card.voiceoverUrl = _pd.url;
+                                                        card.voiceoverStatus = 'complete';
+                                                        card.voiceoverWordCount = part.words;
+                                                        card.voiceoverSchemaVersion = CcState.VOICEOVER_SCHEMA_VERSION;
+                                                        card.voiceoverTextHash = part.hash;
+                                                        ok = true;
+                                                    } catch (ce) {
+                                                        ccWarn('[MULTI-LANG VO] ' + langCode + ' sec '
+                                                            + section.id + ' card ' + part.cardIndex
+                                                            + ' attempt ' + att + ': ' + ce.message);
+                                                        if (att < 3) {
+                                                            await new Promise(function(r) { setTimeout(r, att * 2000); });
+                                                        }
+                                                    }
+                                                }
+                                                if (!ok) { allOk = false; }
+                                            }
+                                            return allOk;
+                                        };
+                                        var fn = async function(section, attempt) {
                                             attempt = attempt || 1;
                                             try {
                                                 // v13.94.6: narrate this pack in ITS language.
                                                 useNarrationLanguage(langCode);
                                                 var voText = CcState.buildVoiceoverText(section, _mlResult);
                                                 if (!voText.trim()) { _mlDone++; return; }
+                                                // v15.4.2: per card first, exactly as the primary
+                                                // language does. The whole-section clip below stays
+                                                // for sections with no cards[] and as the fallback
+                                                // when a card will not synthesise.
+                                                if (section.cards && section.cards.length) {
+                                                    var _lcOk = await pregenLangCards(section);
+                                                    if (_lcOk) {
+                                                        section.voiceoverUrl = 'pregenerated';
+                                                        section.voiceoverStatus = 'complete';
+                                                        section.voiceoverPerCard = true;
+                                                        section.voiceoverWordCount = voText.split(/\s+/).filter(Boolean).length;
+                                                        section.voiceoverSchemaVersion = CcState.VOICEOVER_SCHEMA_VERSION;
+                                                        section.voiceoverTextHash = CcState.voiceoverTextHash(voText);
+                                                        _mlDone++;
+                                                        document.getElementById('cc-gen-progress').style.width =
+                                                            Math.round((_mlDone / (_mlSections.length || 1)) * 100) + '%';
+                                                        return;
+                                                    }
+                                                    // v15.4.3: no whole-section fallback here
+                                                    // either. Same reasoning as the primary
+                                                    // language - the file it builds is the
+                                                    // estimator architecture this release
+                                                    // removed, and building it throws away the
+                                                    // clips already paid for in this language.
+                                                    var _mlMade = (section.cards || []).filter(function(c) {
+                                                        return c && typeof c.voiceoverUrl === 'string' && c.voiceoverUrl;
+                                                    }).length;
+                                                    ccWarn('[MULTI-LANG VO] per-card narration incomplete for '
+                                                        + langCode + ' sec ' + section.id + '  -  ' + _mlMade
+                                                        + ' of ' + (section.cards || []).length
+                                                        + ' cards have a clip. Keeping them rather than rebuilding '
+                                                        + 'the slide as one file.');
+                                                    section.voiceoverPerCard = true;
+                                                    section.voiceoverStatus = 'pending';
+                                                    _mlDone++;
+                                                    document.getElementById('cc-gen-progress').style.width =
+                                                        Math.round((_mlDone / (_mlSections.length || 1)) * 100) + '%';
+                                                    return;
+                                                }
                                                 var fd = new FormData();
                                                 fd.append('sesskey', M.cfg.sesskey);
                                                 fd.append('action', 'generate_voice');
@@ -11155,10 +12374,22 @@ define([
                                                     section.voiceoverSchemaVersion = CcState.VOICEOVER_SCHEMA_VERSION;
                                                     section.voiceoverTextHash = CcState.voiceoverTextHash(voText);
                                                     ccLog('%c[VOICEOVER BUILDER v12.68] MULTI-LANG PERSIST OK ' + langCode + ' sec ' + section.id + ' -> ' + _persistData.url, 'color:#10b981');
-                                                } else { throw new Error(d.error || 'No audio'); }
+                                                } else {
+                                                    var _mlRl = ccRateLimitInfo(d);
+                                                    if (_mlRl) { throw ccRateLimitError(_mlRl); }
+                                                    throw new Error(d.error || 'No audio');
+                                                }
                                             } catch (e) {
-                                                if (attempt < 3) {
-                                                    await new Promise(function (rr) { setTimeout(rr, attempt * 2000); });
+                                                if (e && e.ccRateLimited) {
+                                                    if (!_voRateLimited) { _voRateLimited = e.ccRateLimited; }
+                                                    ccWarn('[MULTI-LANG VO] rate limited on ' + langCode
+                                                        + ' sec ' + (section.id || '?')
+                                                        + '  -  stopping rather than retrying.');
+                                                    _mlDone++;
+                                                    return;
+                                                }
+                                                if (attempt < 3 && !_voRateLimited) {
+                                                    await new Promise(function(rr) { setTimeout(rr, attempt * 2000); });
                                                     return fn(section, attempt + 1);
                                                 }
                                                 ccWarn('[MULTI-LANG VO] ' + langCode + ' sec ' + (section.id || '?') + ' failed: ' + e.message);
@@ -11172,8 +12403,8 @@ define([
                                     var _MLCONC = 3;
                                     while (_mlIdx2 < _mlSections.length) {
                                         while (_mlPromises2.length < _MLCONC && _mlIdx2 < _mlSections.length) {
-                                            (function (_sec2) {
-                                                var _p2 = pregenLangOne(_sec2, 1).then(function () {
+                                            (function(_sec2) {
+                                                var _p2 = pregenLangOne(_sec2, 1).then(function() {
                                                     _mlPromises2.splice(_mlPromises2.indexOf(_p2), 1);
                                                 });
                                                 _mlPromises2.push(_p2);
@@ -11187,8 +12418,8 @@ define([
                                 }
                                 // CC-ML-DEBUG v13.3: audit voiceover coverage before pushing
                                 var _mlVoCount = 0, _mlVoMiss = 0;
-                                (_mlResult.topics || []).forEach(function (t) {
-                                    (t.sections || []).forEach(function (s) {
+                                (_mlResult.topics || []).forEach(function(t) {
+                                    (t.sections || []).forEach(function(s) {
                                         if (s.slideType === 'activity') { return; }
                                         if (s.voiceoverUrl && (s.voiceoverUrl.startsWith('http') || s.voiceoverUrl === 'pregenerated')) { _mlVoCount++; }
                                         else { _mlVoMiss++; }
@@ -11285,7 +12516,7 @@ define([
             const parsed = JSON.parse(trimmed);
             const list = Array.isArray(parsed) ? parsed : [parsed];
             const msgs = list
-                .map(function (item) { return item && (item.message || item.error); })
+                .map(function(item) { return item && (item.message || item.error); })
                 .filter(Boolean);
             ccWarn('[BUILDER] vendor returned a structured error: ' + trimmed.slice(0, 400));
             if (msgs.length) {
@@ -11464,24 +12695,41 @@ define([
         // branch reported EVERY completed VET/Workplace/University module as
         // "General Learning". The manifest records the route it was built with; use it.
         const lockedMode = ccNormaliseTeacherRoute(manifest.mode) || selectedMode;
-        const modeLabel = lockedMode === 'vet' ? 'Vocational (RTO)' : lockedMode === 'workplace' ? 'Workplace Training' : lockedMode === 'university' ? 'University' : 'General Learning';
+        // v15.4.6: a lookup, not a ternary chain, and it names every route.
+        //
+        // v15.1.1 fixed this line by correcting its INPUT and left the chain alone, so the
+        // two routes added after it - Policy & Compliance and Topics and Text - both fell
+        // into the final `else` and a finished compliance module reported itself to the
+        // teacher as "General Learning". The labels were also the only hard-coded English
+        // on this screen, so no site could translate or reword them; they now come from
+        // the same strings the mode picker uses.
+        const CC_MODE_LABEL_KEYS = {
+            vet: 'msgmodevettitle',
+            workplace: 'msgmodewptitle',
+            university: 'msgmodeunititle',
+            policy: 'msgmodepolicytitle',
+            topicstext: 'msgmodetopicstitle',
+            general: 'msgmodegeneraltitle',
+            pd: 'msgmodepdtitle'
+        };
+        const modeLabel = s(CC_MODE_LABEL_KEYS[lockedMode] || 'msgmodegeneraltitle');
 
         // v11.73: Extract validity gate results per topic from manifest cards (replaces dual scoring)
         let qaResultsHtml = '';
         const topicResults = [];
         if (manifest.topics) {
-            manifest.topics.forEach(function (topic) {
+            manifest.topics.forEach(function(topic) {
                 const cards = [];
                 if (topic.sections) {
-                    topic.sections.forEach(function (section) {
+                    topic.sections.forEach(function(section) {
                         if (section.cards) {
-                            section.cards.forEach(function (card) { cards.push(card); });
+                            section.cards.forEach(function(card) { cards.push(card); });
                         }
                     });
                 }
                 if (cards.length > 0) {
-                    const passed = cards.some(function (c) { return c.qualityAction === 'VALIDITY_GATE_PASS'; });
-                    const failed = cards.some(function (c) { return c.qualityAction === 'FAILED'; });
+                    const passed = cards.some(function(c) { return c.qualityAction === 'VALIDITY_GATE_PASS'; });
+                    const failed = cards.some(function(c) { return c.qualityAction === 'FAILED'; });
                     topicResults.push({
                         title: topic.title || topic.name || s('msguntitledtopic'),
                         pass: passed && !failed
@@ -11492,7 +12740,7 @@ define([
 
         if (topicResults.length > 0) {
             qaResultsHtml = '<div class="cc-qa-results"><h3 class="cc-qa-results-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>' + s('msgqaresultstitle') + '</h3><p class="cc-qa-results-desc">' + s('msgqadesc') + '</p>';
-            topicResults.forEach(function (t) {
+            topicResults.forEach(function(t) {
                 const badgeClass = 'cc-qa-badge-pass';
                 const badgeLabel = s('msgvalid');
                 qaResultsHtml += '<div class="cc-qa-topic-row">';

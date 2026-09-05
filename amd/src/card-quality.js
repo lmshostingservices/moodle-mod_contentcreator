@@ -30,7 +30,7 @@
  * @copyright  2026 LMS-Labs
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function () {
+define([], function() {
     'use strict';
 
     var CARD_QUALITY = {
@@ -55,7 +55,7 @@ define([], function () {
                 criteria: [
                     { id: 'VET-CONCEPT-1', rule: 'heading is a citable instrument or an empty string; it is never a restatement of the card title or an invented obligation.', check: 'regex', polarity: 'require', re: new RegExp('(Act|Regulations?|Code of Practice|AS\\/NZS \\d|AS \\d|ISO \\d|Standard)\\b') },
                     { id: 'VET-CONCEPT-2', rule: 'keyInfo states a duty on the worker, expressed as something they do or must not do before proceeding.', check: 'judgement', polarity: null, re: null },
-                    { id: 'VET-CONCEPT-3', rule: 'Each of the three conceptInsights states a mechanism with its intermediate step named and a figure attached, not an outcome with adjectives on it.', check: 'judgement', polarity: null, re: null },
+                    { id: 'VET-CONCEPT-3', rule: 'Each of the five conceptInsights states a mechanism with its intermediate step named and a figure attached, not an outcome with adjectives on it.', check: 'judgement', polarity: null, re: null },
                     { id: 'VET-CONCEPT-4', rule: 'conceptInsights[0] opens by correcting the guess the learner is most likely to have made at the end of Card 1.', check: 'judgement', polarity: null, re: null },
                     { id: 'VET-CONCEPT-5', rule: 'summaryLine names the person, place or object from Card 1; it is not identical or near-identical to keyInfo or to the heading.', check: 'judgement', polarity: null, re: null },
                     { id: 'VET-CONCEPT-6', rule: 'Every technical term is defined in worker\'s language within twenty words of its first use on the card.', check: 'judgement', polarity: null, re: null },
@@ -139,8 +139,24 @@ define([], function () {
                     { id: 'WP-HOOK-4', rule: 'sceneParts[3].text ends on a decision the learner must make, as a direct second-person question; the characters do not resolve it.', check: 'regex', polarity: 'require', re: new RegExp('\\b(you|your)\\b[^?]{0,120}\\?\\s*$', 'i') },
                     { id: 'WP-HOOK-5', rule: 'No RTO or assessment vocabulary appears anywhere on the card.', check: 'regex', polarity: 'forbid', re: new RegExp('\\b(unit of competency|performance criteria|assessor|deemed competent|evidence requirement|range statement|foundation skills)\\b', 'i') },
                     { id: 'WP-HOOK-6', rule: 'keyTakeaway is two sentences carrying the figure the business decision turns on, and it is not a statement about communication, trust or understanding.', check: 'judgement', polarity: null, re: null },
-                    { id: 'WP-HOOK-7', rule: 'A second, competing pressure is stacking up while the main problem is being handled - not one clean interaction in an empty room.', check: 'regex', polarity: 'require', re: new RegExp('\\b(meanwhile|at the same time|while (you|she|he)|another (customer|call|email)|phone (is ringing|rings|keeps ringing)|your manager|line (is|\'s) backing up|more (customers|calls) waiting)\\b', 'i') },
-                    { id: 'WP-HOOK-8', rule: 'The other person in the scene behaves unreasonably in some specific way - raised voice, refusal, interruption - not a calm, cooperative interaction throughout.', check: 'regex', polarity: 'require', re: new RegExp('\\b(raises? (her|his|their) voice|interrupts?|refuses? to|insists?|won\'t accept|demands?|threatens? to|crosses? (her|his|their) arms|slams?|snaps?)\\b', 'i') },
+                    // v15.1.9: was check:'regex', polarity:'require' - a HARD gate demanding a second
+                    // stacking pressure on the opening card of every Workplace pack, whatever the topic.
+                    // It forced the model to invent pressure the source document never described, and a
+                    // compliant card without it failed and burned a paid repair call. It also contradicted
+                    // this route's own instruction three lines earlier in the prompt: "Never manufacture
+                    // drama, exaggerate risk, or use fear to make a point - the pull comes from the detail
+                    // being true and recognisable, not from the stakes being raised." Kept as guidance the
+                    // model still reads, scoped to topics where competing pressure is genuinely part of
+                    // the work, and no longer machine-enforced on subjects that have none.
+                    { id: 'WP-HOOK-7', rule: 'Where the work genuinely happens under competing demands, show the second pressure stacking up while the main problem is handled - drawn from the reference material, never invented to add drama. A topic with no such pressure must not manufacture one.', check: 'judgement', polarity: null, re: null },
+                    // v15.1.9: was check:'regex', polarity:'require'. Requiring someone to raise a voice,
+                    // refuse, interrupt, demand or slam something on EVERY Workplace opening card is the
+                    // clearest case of the same problem: a learner who meets that pattern across thirty
+                    // modules stops reading the card that is supposed to hook them. Compare VET-HOOK-8,
+                    // which asks for a real pressure toward the shortcut (a supervisor, a deadline) - that
+                    // is grounded in how workplace error actually happens; a shouting customer on a topic
+                    // about stock reconciliation is not.
+                    { id: 'WP-HOOK-8', rule: 'Where the scene involves another person and the subject is about handling them, their behaviour is specific and difficult rather than uniformly cooperative. Interpersonal conflict is never added to a topic that is not about it.', check: 'judgement', polarity: null, re: null },
                 ]
             },
             'concept-explainer': {
@@ -149,7 +165,7 @@ define([], function () {
                 criteria: [
                     { id: 'WP-CONCEPT-1', rule: 'heading is an exact string from the uploaded reference material or the trainer instructions, or it is an empty string.', check: 'judgement', polarity: null, re: null },
                     { id: 'WP-CONCEPT-2', rule: 'keyInfo carries a number attached to a business unit and names what that requirement protects.', check: 'judgement', polarity: null, re: null },
-                    { id: 'WP-CONCEPT-3', rule: 'Each of the three conceptInsights states a mechanism with its intermediate step named and a figure attached.', check: 'judgement', polarity: null, re: null },
+                    { id: 'WP-CONCEPT-3', rule: 'Each of the five conceptInsights states a mechanism with its intermediate step named and a figure attached.', check: 'judgement', polarity: null, re: null },
                     { id: 'WP-CONCEPT-4', rule: 'conceptInsights[0] opens on the correction, not the definition — the sentence that tells the reader the thing they assumed is wrong.', check: 'judgement', polarity: null, re: null },
                     { id: 'WP-CONCEPT-5', rule: 'The card survives the swap test — at least three domain nouns from the source, and no panel that would read identically in a pack about another subject.', check: 'judgement', polarity: null, re: null },
                     { id: 'WP-CONCEPT-6', rule: 'No sentence ends in a trailing benefit clause that adds no information.', check: 'regex', polarity: 'forbid', re: new RegExp(',\\s*(which|leading to|making sure|ensuring|helping to)\\b[^.]*\\b(satisfaction|outcomes|success|effectiveness|trust|results|performance)\\b', 'i') },
@@ -402,6 +418,90 @@ define([], function () {
                 ]
             }
         },
+        // v15.2.0: POLICY & COMPLIANCE. Deliberately NOT carried over from Workplace:
+        // WP-HOOK-2 (a cost in a unit the business counts), WP-HOOK-7 (a second competing
+        // pressure) and WP-HOOK-8 (the other person behaves unreasonably). Those exist to
+        // force emotional stakes into a business scenario. A policy document has no
+        // customer, no queue and no dollar cost, so a card inheriting them can only pass by
+        // inventing detail - which on this route is the defect, not the texture. They are
+        // replaced by fidelity rules: quote the source, and never state an obligation,
+        // figure or penalty the document does not contain.
+        'policy': {
+            'hook-scenario': {
+                intent: 'Establish who the policy covers and why it exists, so the rule that follows has somewhere to attach - never a dramatised incident.',
+                prompt: 'Panel 1 names who this policy covers in the document\'s own coverage wording, within its first fifteen words. Panel 2 states the risk or problem the policy manages, in the source\'s own terms. Panel 4 ends on a direct second-person applicability question the reader can answer from the document alone.',
+                criteria: [
+                    { id: 'POL-SCOPE-1', rule: 'Panel 1 states who the policy applies to - role, employment type or location - using the document\'s own coverage wording, not an invented generalisation.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-SCOPE-2', rule: 'Panel 2 states the purpose or risk the policy manages, in the document\'s own terms, never a manufactured incident.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-SCOPE-3', rule: 'No manufactured interpersonal conflict anywhere on the card - nobody raises a voice, interrupts, refuses, demands or threatens.', check: 'regex', polarity: 'forbid', re: new RegExp('\\b(raises? (her|his|their) voice|interrupts?|refuses? to|demands?|threatens? to|storms? (off|out))\\b', 'i') },
+                    { id: 'POL-SCOPE-4', rule: 'No INVENTED dollar figure or business-cost metric on the card - this route has no business-impact requirement, so a figure the source does not state misstates the policy. A threshold the document itself states is required, not forbidden.', check: 'regex', polarity: 'forbid', sourceAware: true, re: new RegExp('\\$\\d|\\b(dollars?|revenue|callbacks?)\\b', 'i') },
+                    { id: 'POL-SCOPE-5', rule: 'Where the card names the governing document it uses the source\'s real title or section - never an invented policy name or clause number.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-SCOPE-6', rule: 'Panel 4 ends on a direct second-person applicability or scope question, not a decision under invented pressure.', check: 'regex', polarity: 'require', re: new RegExp('\\b(you|your)\\b[^?]{0,120}\\?', 'i') },
+                    { id: 'POL-SCOPE-7', rule: 'keyTakeaway states the single most consequential scope or purpose fact from the document, not a general \'this policy matters\' line.', check: 'judgement', polarity: null, re: null }
+                ]
+            },
+            'concept-explainer': {
+                intent: 'Show the rule itself - quoted or closely paraphrased - rather than assert that a rule exists.',
+                prompt: 'At least one keyPoints[].text is a direct quotation or close paraphrase of the policy\'s own operative clause. heading is the document\'s real title or section, or an empty string, never invented. Every policy-specific term is defined in plain English at first use.',
+                criteria: [
+                    { id: 'POL-CONCEPT-1', rule: 'heading is the exact document title or section reference from the source, or an empty string; never a restatement of the card title and never an invented policy name.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-CONCEPT-2', rule: 'At least one keyPoints[].text is a direct quotation or close paraphrase of the policy\'s own operative clause, not a summary of what such a policy usually says.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-CONCEPT-3', rule: 'keyInfo states the actual rule and what it protects using only the source\'s own reasoning - never an invented rationale.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-CONCEPT-4', rule: 'Every numeric threshold, timeframe or figure is the literal value stated in the source. Where the source states none, none appears.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-CONCEPT-5', rule: 'No claim about external law appears unless the source document itself is, or cites, that instrument.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-CONCEPT-6', rule: 'Every policy-specific term is defined in plain English within twenty words of first use.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-CONCEPT-7', rule: 'summaryLine names the scope or audience established on card 1 and is not a near-duplicate of keyInfo.', check: 'continuity', polarity: 'require', re: null }
+                ]
+            },
+            'mental-model': {
+                intent: 'Turn the policy\'s own process into an action sequence - never an invented workflow.',
+                prompt: 'Each step is an action the source\'s own process requires. Any timeframe or quantity is the literal figure the source states; where it states none, name the responsible role instead. The final step names what now exists after the process completes.',
+                criteria: [
+                    { id: 'POL-MODEL-1', rule: 'Each step is an action the policy\'s own stated process requires - recognise the trigger, do the act, notify the named role - never an invented workflow.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-MODEL-2', rule: 'No step\'s only verb is a talking or noticing verb.', check: 'regex', polarity: 'forbid', re: new RegExp('^(Discuss|Explain|Consider|Understand|Communicate|Review|Observe|Reflect|Monitor)\\b', 'i') },
+                    { id: 'POL-MODEL-3', rule: 'Any threshold, timeframe or quantity is the literal figure the source states; where the source gives none, the step names the responsible role or process instead of a fabricated number.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-MODEL-4', rule: 'One step names who to tell and where - the role, team or system - exactly as the source names it.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-MODEL-5', rule: 'The final step names what now exists after the process completes - a lodged form, a logged case, a communicated decision - not \'the matter is handled\'.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-MODEL-6', rule: 'The sequence connects to the obligation named on card 2, not a freestanding procedure.', check: 'continuity', polarity: 'require', re: null }
+                ]
+            },
+            'mistakes': {
+                intent: 'Correct a plausible misreading of the policy\'s own wording - never invent a breach drama or a penalty the document does not state.',
+                prompt: 'Each error is a specific misreading of the policy\'s actual wording. Each consequence corrects it against the document\'s own wording. State the document\'s own consequence ONLY where that wording is literally in the source.',
+                criteria: [
+                    { id: 'POL-MISTAKE-1', rule: 'No error string opens with a character-flaw gerund.', check: 'regex', polarity: 'forbid', re: new RegExp('^(Ignoring|Neglecting|Overlooking|Failing to|Rushing|Not caring|Assuming all)\\b', 'i') },
+                    { id: 'POL-MISTAKE-2', rule: 'Each error is a plausible misreading of the policy\'s actual wording - a scope error, a threshold error, a \'this does not apply to me\' error - not an invented behavioural drama.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-MISTAKE-3', rule: 'Each consequence corrects the misreading by restating what the document actually says.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-MISTAKE-4', rule: 'No disciplinary outcome, dismissal, timeframe or figure appears unless it is the literal wording of the source policy.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-MISTAKE-5', rule: 'No two consequences end on the same outcome.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-MISTAKE-6', rule: 'At least one item ties back to the scope or rule established earlier in the pack.', check: 'continuity', polarity: 'require', re: null }
+                ]
+            },
+            'competency-summary': {
+                intent: 'Ten retrievable facts - five compliant actions, five breach patterns - at the source\'s own level of specificity, never virtues.',
+                prompt: 'standardItems are compliant actions at the source\'s own specificity, never abstract virtues. errorItems name a specific breach pattern, not a character flaw. No item duplicates the mistakes card.',
+                criteria: [
+                    { id: 'POL-SUMMARY-1', rule: 'Every standardItems[].text is verb-first and names a compliant action at the source\'s own level of specificity, not an abstract virtue.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-SUMMARY-2', rule: 'No item is built on an abstract virtue noun.', check: 'regex', polarity: 'forbid', re: new RegExp('\\b(integrity|professionalism|credibility|reputation|trustworthiness)\\b', 'i') },
+                    { id: 'POL-SUMMARY-3', rule: 'Each errorItems[].error names a specific breach pattern from the policy, not a character flaw.', check: 'regex', polarity: 'forbid', re: new RegExp('^(Ignoring|Neglecting|Overlooking|Failing to|Assuming all|Not caring)\\b', 'i') },
+                    { id: 'POL-SUMMARY-4', rule: 'Each consequence states only what the source says happens, or the corrected rule where the source is silent - never an invented disciplinary outcome or figure.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-SUMMARY-5', rule: 'No item duplicates one already used on the mistakes card.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-SUMMARY-6', rule: 'The card closes the loop with the scope or purpose established on card 1.', check: 'continuity', polarity: 'require', re: null }
+                ]
+            },
+            'decision-point': {
+                intent: 'Discriminate between a correct reading and a plausible misreading of the document, grounded in cards 1-5 - never guessable, never inventing a rationale.',
+                prompt: 'All four options 10-16 words at the same level of detail. At least one wrong answer is a misreading already surfaced on the mistakes card. Every consequence quotes or closely paraphrases the source.',
+                criteria: [
+                    { id: 'POL-DECISION-1', rule: 'All four options are 10-16 words and the correct one is not identifiable by length alone.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-DECISION-2', rule: 'No option contains an absolutist strawman marker.', check: 'regex', polarity: 'forbid', re: new RegExp('\\b(only|solely|all|never|ignore|overlook|rely solely)\\b', 'i') },
+                    { id: 'POL-DECISION-3', rule: 'At least one wrong answer is a misreading already surfaced on the mistakes card, not an absurd option.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-DECISION-4', rule: 'Every consequence names the specific clause or rule that makes that option right or wrong, quoting or closely paraphrasing the source - never inventing a rationale.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-DECISION-5', rule: 'No consequence states a disciplinary outcome or figure the source does not state.', check: 'judgement', polarity: null, re: null },
+                    { id: 'POL-DECISION-6', rule: 'The situation ties to the scope or obligation established earlier in the pack.', check: 'continuity', polarity: 'require', re: null }
+                ]
+            },
+        },
         'topicstext': {
             'overview': {
                 intent: 'Establish what the subject is in one standalone sentence, then state what is measurably different in the world for someone who has grasped it - so the article has a reader before it has a topic.',
@@ -499,11 +599,23 @@ define([], function () {
                 { id: 'GEN-TITLE-1', rule: 'title is a specific, topic-grounded heading - never a generic label such as "Understand", "Explanation" or the topic name repeated verbatim.', check: 'judgement', polarity: null, re: null }
             ]
         },
+        'applied-scenario': {
+            intent: 'RESOLVE - return to Card 1\'s world and finish its story: the same person, the same problem, later on, with the model from Card 3 meeting a case it does not cleanly cover.',
+            prompt: 'The SAME person and the SAME situation as Card 1, later the same day or the next time this comes up. sceneParts[0].text opens by naming what has CHANGED since Card 1 - how much time has passed, what has been tried, where the problem now stands. One panel states what it costs if this goes unresolved, named concretely rather than as a category. sceneParts[2].text introduces a complication the model from Card 3 does not cleanly cover and ends on the learner deciding, as a direct second-person question. sceneParts[3].text resolves it by NAMING the thing - the figure, the threshold, the actual words to say - not by recommending a category. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake.',
+            criteria: [
+                { id: 'GEN-APPLIED-1', rule: 'The same person and situation as Card 1 return, and the first panel names what has changed since then.', check: 'continuity', polarity: 'require', re: null },
+                { id: 'GEN-APPLIED-2', rule: 'One panel names what it costs concretely - a figure, a deadline, a named consequence - not a category such as "poor outcomes".', check: 'judgement', polarity: null, re: null },
+                { id: 'GEN-APPLIED-3', rule: 'Panel 3 ends on a direct second-person question about a case the model from Card 3 does not cleanly cover.', check: 'regex', polarity: 'require', re: new RegExp('\\b(you|your)\\b[^?]{0,120}\\?\\s*$', 'i') },
+                { id: 'GEN-APPLIED-4', rule: 'Panel 4 resolves by naming the specific thing to do, not by recommending a category.', check: 'judgement', polarity: null, re: null },
+                { id: 'GEN-APPLIED-5', rule: 'No panel ends with the characters resolving it among themselves or the learner admiring their own progress - the learner must be the one deciding.', check: 'regex', polarity: 'forbid', re: new RegExp('\\b(reflect|realise|realize|impressed|appreciates|motivates)\\b', 'i') },
+                { id: 'GEN-TITLE-1', rule: 'title is a specific, topic-grounded heading - never a generic label such as "Apply", "Scenario" or "Continuing".', check: 'judgement', polarity: null, re: null }
+            ]
+        },
         'mistakes': {
-            intent: 'EXPLORE - go deeper than Cards 1-2 by teaching a second concept, a misconception, a trade-off, an exception or a relationship the learner would otherwise miss. This is the card that stops the pack reading as intro + bullets + example + summary.',
+            intent: 'EXPLORE - go deeper than Cards 1-4 by teaching a second concept, a misconception, a trade-off, an exception or a relationship the learner would otherwise miss. This is the card that stops the pack reading as intro + bullets + example + summary.',
             prompt: 'Decide what "deeper" means for THIS topic: a second important concept, what beginners commonly misunderstand, a trade-off or exception, a relationship between two ideas already introduced, or evidence that complicates the simple version from Card 2. Frame each item as a mistake/consequence pair only where that is genuinely the deepening move - the underlying job is depth, not error-avoidance for its own sake. Each item must be one a capable learner could plausibly get wrong or miss, with a specific, non-generic consequence.',
             criteria: [
-                { id: 'GEN-MISTAKE-1', rule: 'Each item is plausible, specific to the subject, and adds genuine depth beyond Cards 1-2 rather than restating them.', check: 'judgement', polarity: null, re: null },
+                { id: 'GEN-MISTAKE-1', rule: 'Each item is plausible, specific to the subject, and adds genuine depth beyond Cards 1-4 rather than restating them.', check: 'judgement', polarity: null, re: null },
                 { id: 'GEN-MISTAKE-2', rule: 'Each consequence teaches both the cost of getting it wrong and the corrective principle or distinction.', check: 'judgement', polarity: null, re: null },
                 { id: 'GEN-MISTAKE-3', rule: 'No two items are merely paraphrases of the same error or the same idea.', check: 'judgement', polarity: null, re: null },
                 { id: 'GEN-TITLE-1', rule: 'title is a specific, topic-grounded heading - never a generic label such as "Explore", "Going Deeper" or "More Information".', check: 'judgement', polarity: null, re: null }
@@ -520,10 +632,10 @@ define([], function () {
             ]
         },
         'decision-point': {
-            intent: 'CHALLENGE - require the learner to think WITH the knowledge from Cards 1-4, using whichever challenge type creates real cognitive friction for this topic.',
-            prompt: 'Choose the challenge type that fits: a realistic decision, spot-the-mistake, predict-the-outcome, choose-between-approaches, a diagnose task, a worked problem, a misconception challenge, a mini case study, or a "what would you do" prompt. The correct option must depend on understanding built across Cards 1-4, not on trivia or definition recall. Build distractors from real misconceptions, wrong boundaries, or the right rule misapplied to a neighbouring case. Feedback explains why each option is tempting and the exact reasoning that separates it from the best answer.',
+            intent: 'CHALLENGE - require the learner to think WITH the knowledge from Cards 1-6, using whichever challenge type creates real cognitive friction for this topic.',
+            prompt: 'Choose the challenge type that fits: a realistic decision, spot-the-mistake, predict-the-outcome, choose-between-approaches, a diagnose task, a worked problem, a misconception challenge, a mini case study, or a "what would you do" prompt. The correct option must depend on understanding built across Cards 1-6, not on trivia or definition recall. Build distractors from real misconceptions, wrong boundaries, or the right rule misapplied to a neighbouring case. Feedback explains why each option is tempting and the exact reasoning that separates it from the best answer.',
             criteria: [
-                { id: 'GEN-DECISION-1', rule: 'The question tests application or discrimination built on Cards 1-4, not definition recall or trivia.', check: 'judgement', polarity: null, re: null },
+                { id: 'GEN-DECISION-1', rule: 'The question tests application or discrimination built on Cards 1-6, not definition recall or trivia.', check: 'judgement', polarity: null, re: null },
                 { id: 'GEN-DECISION-2', rule: 'All four options are parallel, plausible and similar in detail.', check: 'judgement', polarity: null, re: null },
                 { id: 'GEN-DECISION-3', rule: 'Wrong-answer feedback identifies the misconception or boundary error that made the option tempting.', check: 'judgement', polarity: null, re: null },
                 { id: 'GEN-TITLE-1', rule: 'title is a specific, topic-grounded heading - never a generic label such as "Challenge" or "Test Your Knowledge".', check: 'judgement', polarity: null, re: null }
@@ -535,13 +647,13 @@ define([], function () {
             criteria: [
                 { id: 'GEN-SUMMARY-1', rule: 'Good items describe observable understanding, decisions or actions.', check: 'judgement', polarity: null, re: null },
                 { id: 'GEN-SUMMARY-2', rule: 'Bad items name specific misconceptions or failure patterns, not character flaws.', check: 'judgement', polarity: null, re: null },
-                { id: 'GEN-SUMMARY-3', rule: 'The summary adds retrieval/consolidation value rather than repeating Card 5 (Challenge) verbatim.', check: 'judgement', polarity: null, re: null },
+                { id: 'GEN-SUMMARY-3', rule: 'The summary adds retrieval/consolidation value rather than repeating Cards 1-4 verbatim.', check: 'judgement', polarity: null, re: null },
                 { id: 'GEN-TITLE-1', rule: 'title is a specific, topic-grounded heading - never a generic label such as "Consolidate", "Summary", "Key Takeaways" or "Conclusion".', check: 'judgement', polarity: null, re: null }
             ]
         }
     };
 
-    var getCardQuality = function (mode, cardType) {
+    var getCardQuality = function(mode, cardType) {
         var r = CARD_QUALITY[mode];
         return (r && r[cardType]) || null;
     };
@@ -552,19 +664,19 @@ define([], function () {
      * consumer: prompts.js calls this so the model sees exactly what generator.js will
      * check it against afterward.
      */
-    var renderCardQuality = function (mode, order) {
+    var renderCardQuality = function(mode, order) {
         var r = CARD_QUALITY[mode];
         if (!r) { return ''; }
         var out = ['', 'QUALITY STANDARD FOR EACH CARD  -  this is what the card is judged against.',
             'These are not style notes. A card that misses them is regenerated.', ''];
-        (order || Object.keys(r)).forEach(function (ct, i) {
+        (order || Object.keys(r)).forEach(function(ct, i) {
             var q = r[ct];
             if (!q) { return; }
             out.push('CARD ' + (i + 1) + ' - ' + ct.toUpperCase());
             out.push('WHAT IT IS FOR: ' + q.intent);
             out.push(q.prompt);
             out.push('IT IS CHECKED FOR:');
-            q.criteria.forEach(function (c) { out.push('  - ' + c.rule); });
+            q.criteria.forEach(function(c) { out.push('  - ' + c.rule); });
             out.push('');
         });
         return out.join('\n');

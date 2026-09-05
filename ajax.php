@@ -481,8 +481,28 @@ function mod_contentcreator_check_ratelimit($bucket, $max, $window) {
         \mod_contentcreator\ratelimiter::enforce($USER->id, $bucket, $max, $window);
     } catch (\moodle_exception $e) {
         debugging('mod_contentcreator rate limit hit on bucket ' . $bucket . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
+        // FIX-CC-RATELIMIT-NOT-MACHINE-READABLE (v15.4.3): every refusal now carries a code.
+        //
+        // The body was `{success: false, error: "<translated sentence>"}` and nothing else,
+        // so a client could only recognise a rate limit by matching English prose - in a
+        // plugin that ships 53 languages. None of them did, so all of them retried: the
+        // voiceover builder made three attempts per card and three more for the section
+        // fallback, every one of them certain to be refused and every one of them taking
+        // another slot. A live build logged sixty such requests and pushed its own reset
+        // an hour further out.
+        //
+        // `errorcode`, `bucket`, `scope` and `retryafter` are language-independent, and
+        // `retryafter` is exact rather than advisory: the window slides, so the limiter
+        // knows precisely when the oldest call drops out.
+        $ratemeta = [
+            'errorcode' => 'ratelimited',
+            'bucket' => $bucket,
+            'scope' => ($e instanceof \mod_contentcreator\ratelimit_exception) ? $e->scope : 'user',
+            'retryafter' => ($e instanceof \mod_contentcreator\ratelimit_exception) ? $e->retryafter : $window,
+            'ceiling' => ($e instanceof \mod_contentcreator\ratelimit_exception) ? $e->ceiling : (int)$max,
+        ];
         if ($e->errorcode === 'errorsiteratelimited') {
-            mod_contentcreator_fail('errorsiteratelimited');
+            mod_contentcreator_fail('errorsiteratelimited', null, $ratemeta);
         }
         // FIX-CC-RATELIMIT-MESSAGE-MISLEADING (v13.95.1): every per-user breach was reported as
         // 'errorratelimited' - "You have made too many AI requests in a short time. Please wait
@@ -494,12 +514,15 @@ function mod_contentcreator_check_ratelimit($bucket, $max, $window) {
         // many "AI requests" pointed them at entirely the wrong problem. The detail message is
         // now passed through, and reads get wording that matches what they actually did.
         if ($bucket === 'vendorread') {
-            mod_contentcreator_fail('errorreadratelimited');
+            mod_contentcreator_fail('errorreadratelimited', null, $ratemeta);
         }
         // The exception's own message is used verbatim rather than rebuilt here: enforce()
         // resolves the admin-configured ceiling, which may differ from the $max default this
         // function was called with, and only it knows which value was actually applied.
-        mod_contentcreator_response(['success' => false, 'error' => $e->getMessage()]);
+        mod_contentcreator_response(array_merge(
+            ['success' => false, 'error' => $e->getMessage()],
+            $ratemeta
+        ));
     }
 }
 
@@ -702,9 +725,9 @@ try {
         // they had done nothing to earn. Reads consume no credits, so they get their own
         // generous bucket and can no longer starve the writes.
         if (isset($endpoint['method']) && $endpoint['method'] === 'GET') {
-            mod_contentcreator_check_ratelimit('vendorread', 600, HOURSECS);
+            mod_contentcreator_check_ratelimit('vendorread', 3000, HOURSECS);
         } else {
-            mod_contentcreator_check_ratelimit('vendor', 200, HOURSECS);
+            mod_contentcreator_check_ratelimit('vendor', 1500, HOURSECS);
         }
 
         // Each action may only reach endpoints of its own kind.
@@ -916,7 +939,7 @@ try {
         $context = context_module::instance($cm->id);
         require_login($cm->course, false, $cm);
         mod_contentcreator_require_manage($context, $cm);
-        mod_contentcreator_check_ratelimit('generate', 60, HOURSECS);
+        mod_contentcreator_check_ratelimit('generate', 600, HOURSECS);
 
         if (empty($siteid) || empty($apikey)) {
             mod_contentcreator_fail('errornotconfigured');
@@ -982,12 +1005,26 @@ try {
         // calls that belong to something already paid for. Optional and empty-safe: an older
         // client that does not send it is priced exactly as before.
         $subtopickey = optional_param('subtopickey', '', PARAM_ALPHANUMEXT);
+        // Forwarded to the vendor as the Idempotency-Key header.  (v15.3.13)
+        //
+        // The vendor charges at submit. If the browser gives up on this POST while PHP is
+        // still waiting - its own ceiling on that call is 180 seconds - a job may already
+        // have been created and paid for that the client can never see again. With a key, a
+        // repeat of the same submit returns the original job rather than buying the content
+        // a second time. Generated per logical attempt by generator.js, not per section;
+        // the block comment on callAI() explains why that distinction matters.
+        //
+        // PARAM_ALPHANUMEXT is the security-relevant part, not a formality: this string
+        // goes straight into an outbound HTTP header, and a value carrying CR or LF would
+        // be a header-injection vector. ALPHANUMEXT admits letters, digits, hyphen and
+        // underscore, which is exactly the shape the client generates.
+        $idempotencykey = optional_param('idempotencykey', '', PARAM_ALPHANUMEXT);
 
         $cm = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
         $context = context_module::instance($cm->id);
         require_login($cm->course, false, $cm);
         mod_contentcreator_require_manage($context, $cm);
-        mod_contentcreator_check_ratelimit('generate', 60, HOURSECS);
+        mod_contentcreator_check_ratelimit('generate', 600, HOURSECS);
 
         if (empty($siteid) || empty($apikey)) {
             mod_contentcreator_fail('errornotconfigured');
@@ -1010,7 +1047,15 @@ try {
                 'language' => $genlanguage,
                 'creditsToUse' => $creditsforasync,
                 'subtopicKey' => $subtopickey,
-            ]
+            ],
+            'POST',
+            // Only send the header when there is actually a key. An empty Idempotency-Key
+            // would be worse than none: it is one key shared by every submit on the site,
+            // and the vendor would answer the second section of a course with the first
+            // section's job.
+            $idempotencykey !== ''
+                ? ['headers' => ['Idempotency-Key: ' . $idempotencykey]]
+                : []
         );
 
         if (empty($result['ok']) || empty($result['jobId'])) {
@@ -1026,7 +1071,20 @@ try {
         // to the browser, so poll_job can tell an author's own job from somebody else's.
         mod_contentcreator_remember_job_owner($result['jobId'], $cmid);
 
-        mod_contentcreator_response(['success' => true, 'jobId' => $result['jobId'], 'async' => true]);
+        // Pass the vendor's idempotency acknowledgement through to the browser.  (v15.3.13)
+        //
+        // The client cannot safely retry an aborted submit unless it KNOWS the server
+        // honours Idempotency-Key - retrying against a server that does not reinstates the
+        // four-charges-per-section defect of v15.3.7 exactly. The vendor returns
+        // "idempotency": true on every keyed path and false on the legacy unkeyed one, so
+        // this is the only signal that makes the retry safe. Cast, so an absent field is a
+        // definite false rather than a missing key the JS has to guess about.
+        mod_contentcreator_response([
+            'success' => true,
+            'jobId' => $result['jobId'],
+            'async' => true,
+            'idempotency' => !empty($result['idempotency']),
+        ]);
     }
 
     // Asynchronous poll: check the status of a background generation job.
@@ -1161,7 +1219,7 @@ try {
         // capability is granted to student by default, so nothing changes until a site
         // chooses to prohibit it.
         require_capability('mod/contentcreator:generateondemand', $context);
-        mod_contentcreator_check_ratelimit('voice', 100, HOURSECS);
+        mod_contentcreator_check_ratelimit('voice', 2500, HOURSECS);
 
         if (empty($siteid) || empty($apikey)) {
             mod_contentcreator_fail('errornotconfigured');
@@ -1478,7 +1536,7 @@ try {
         $context = context_module::instance($cm->id);
         require_login($cm->course, false, $cm);
         mod_contentcreator_require_manage($context, $cm);
-        mod_contentcreator_check_ratelimit('generate', 60, HOURSECS);
+        mod_contentcreator_check_ratelimit('generate', 600, HOURSECS);
 
         if (empty($siteid) || empty($apikey)) {
             mod_contentcreator_fail('errornotconfigured');
@@ -1633,7 +1691,7 @@ try {
         $context = context_module::instance($cm->id);
         require_login($cm->course, false, $cm);
         mod_contentcreator_require_manage($context, $cm);
-        mod_contentcreator_check_ratelimit('generate', 60, HOURSECS);
+        mod_contentcreator_check_ratelimit('generate', 600, HOURSECS);
 
         if (empty($siteid) || empty($apikey)) {
             mod_contentcreator_fail('errornotconfigured');
@@ -1669,7 +1727,7 @@ try {
         $route = $data['route'] ?? 'vet';
         // Hook scenario narrative, for richer image context.
         $scenariocontext = $data['scenarioContext'] ?? '';
-        // v13.98.2: constrained to a short allowlist rather than passed through, because it
+        // Constrained to a short allowlist rather than passed through, because it  (v13.98.2)
         // reaches the vendor's image composer.
         $aspectratio = (string)($data['aspectRatio'] ?? '16:9');
         if (!in_array($aspectratio, ['16:9', '4:3', '3:2', '1:1'], true)) {
@@ -1703,7 +1761,7 @@ try {
                 'requirements' => $requirements,
                 'route' => $route,
                 'scenarioContext' => $scenariocontext,
-                // v13.98.2: forwarded so the bulk route composes for the shape the player
+                // Forwarded so the bulk route composes for the shape the player  (v13.98.2)
                 // actually displays. The single-slide route has always sent this; the bulk
                 // route - which produces almost every image in a pack - never did.
                 'aspectRatio' => $aspectratio,

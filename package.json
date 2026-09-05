@@ -1,19 +1,22 @@
 {
   "name": "moodle-mod_contentcreator",
-  "version": "13.66.0",
+  "version": "15.4.9",
   "description": "Build tooling for the mod_contentcreator AMD modules.",
   "private": true,
   "license": "GPL-3.0-or-later",
   "scripts": {
     "build": "grunt amd",
-    "lint": "grunt eslint"
+    "lint": "grunt eslint",
+    "test": "node tests/js/run-all.js"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
     "@babel/preset-env": "^7.24.0",
     "eslint": "^8.57.0",
     "grunt": "^1.6.1",
-    "terser": "^5.31.0"
+    "terser": "^5.31.0",
+    "jsdom": "^24.0.0",
+    "jquery": "^3.7.1"
   },
   "browserslist": [
     "> 0.5%",

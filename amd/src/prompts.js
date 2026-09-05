@@ -28,7 +28,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state', 'mod_contentcreator/card-quality'], function (Legislation, CcState, CardQuality) {
+define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state', 'mod_contentcreator/card-quality'], function(Legislation, CcState, CardQuality) {
     /**
      * v13.77 FIX-OBJECT-TEXT: entries in the card content arrays arrive as EITHER
      * plain strings or objects, depending on what the vendor API returns for that
@@ -39,7 +39,7 @@ define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state', 'mod_co
      * @param {*} entry A string, or an object such as {title, text} / {error, consequence}.
      * @return {String} Readable text for the entry, or an empty string.
      */
-    var ccEntryText = function (entry) {
+    var ccEntryText = function(entry) {
         if (entry === null || entry === undefined) { return ''; }
         if (typeof entry === 'string') { return entry; }
         if (typeof entry !== 'object') { return String(entry); }
@@ -59,9 +59,63 @@ define(['mod_contentcreator/legislation', 'mod_contentcreator/cc-state', 'mod_co
      * @param {Array} arr The array to flatten; anything non-array yields [].
      * @return {Array} Array of readable strings.
      */
-    var ccTextList = function (arr) {
+    var ccTextList = function(arr) {
         if (!Array.isArray(arr)) { return []; }
-        return arr.map(ccEntryText).filter(function (s) { return s; });
+        return arr.map(ccEntryText).filter(function(s) { return s; });
+    };
+
+    /**
+     * v15.3.7: never show the model a select's internal value.
+     *
+     * builder.js now resolves these to their labels before they reach the context
+     * (ccSelectLabel), which fixes every NEW pack. It does not fix the ones already in
+     * the database: a manifest saved before 15.3.7 carries `targetAudience:
+     * "new-starters"` on its context, and "Regenerate Failed" hands that context
+     * straight back to these builders. So the guard has to be here as well as there.
+     *
+     * Only touches a value that is unambiguously a slug - lower-case words joined by
+     * hyphens or underscores, no spaces. "new-starters" becomes "new starters";
+     * "Team Leader" and "Registered Nurse - Division 1" are left exactly as typed,
+     * because an author's own free text is not ours to reformat.
+     *
+     * @param {String} v A context value that may be a select slug.
+     * @return {String} The value, de-slugged if it was one.
+     */
+    var ccHumanValue = function(v) {
+        var str = String((v === null || v === undefined) ? '' : v).trim();
+        if (!str) { return ''; }
+        if (!/^[a-z0-9]+([-_][a-z0-9]+)+$/.test(str)) { return str; }
+        return str.replace(/[-_]+/g, ' ');
+    };
+
+    /**
+     * v15.3.7: the "- Location:" line, without the state printed twice.
+     *
+     * Four route builders each wrote:
+     *
+     *     `${context.location || context.country}${context.state ? ', ' + context.state : ''}`
+     *
+     * but gatherContext already sets `location` to `"${state}, ${countryCode}"` when a
+     * state is chosen. So a Victorian pack sent "- Location: VIC, AU, VIC" to the model
+     * on the VET, Workplace, PD and Policy routes. Harmless-looking, and it is the kind
+     * of thing that reads to a model as emphasis - the state named twice in a line about
+     * where the work happens - on routes whose prompts also tell it to set every example
+     * in that jurisdiction.
+     *
+     * Appends the state only when `location` does not already carry it, and is the one
+     * place this line is built so the four copies cannot drift again.
+     *
+     * @param {Object} context The generation context.
+     * @return {String} The formatted location, e.g. "VIC, AU".
+     */
+    var ccLocationLine = function(context) {
+        var base = String((context && (context.location || context.country)) || 'Australia').trim();
+        var state = String((context && context.state) || '').trim();
+        if (!state) { return base; }
+        // Word-boundary match so "WA" does not count as already present inside "WATER".
+        var already = new RegExp('(^|[\\s,])' + state.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+            + '($|[\\s,])', 'i').test(base);
+        return already ? base : (base + ', ' + state);
     };
 
     'use strict';
@@ -237,8 +291,30 @@ DO NOT write anything in English except:
 - Image prompt text (imagePrompt field only)
 
 EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
+
+Generate ALL content in ${languageName}. This is NON-NEGOTIABLE
 ===========================================================================
 `; };
+
+    // v15.3.13: that last line is not a restatement, and it must not be reworded.
+    //
+    // The vendor's server pattern-matches the exact string
+    // "Generate ALL content in <Language>. This is NON-NEGOTIABLE" and uses it to
+    // REAPPLY the language requirement on its own secondary repair passes - the
+    // under-floor expansion, the banned-register rewrite and the micro-expansion. Asked
+    // directly on 5 Sep whether ordering would break their cache, they answered with the
+    // order they wanted and then added, unprompted, "however, preserve the exact
+    // sentence".
+    //
+    // We were not sending it. So on a non-English pack every one of those repair passes
+    // ran with no language instruction attached, which is a plausible explanation for
+    // the long-standing complaint that translated packs come back with English creeping
+    // into the repaired fields - the fields the repair touched are exactly the ones that
+    // would lose the language.
+    //
+    // tests/js/test-routes.js pins the literal. If a future edit rewords it the string
+    // stops matching, the server stops reapplying, and nothing anywhere fails - which is
+    // why it is pinned rather than trusted.
 
 
     // ===========================================================================
@@ -273,14 +349,41 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
     // Legacy pd/topicstext remain readable for backwards compatibility and keep the old
     // 7-card unified schema, since existing saved courses on those modes are untouched.
     const GENERAL_CARD_SCHEMA = {
-        cardTypes: ['hook-scenario', 'concept-explainer', 'mistakes', 'mental-model', 'decision-point', 'competency-summary'],
+        // v15.3.13: reordered to the vendor's published contract
+        // (GET /contracts/cards/v1, 2026-09-04.1). This is NOT a documentation table -
+        // normalizeCards() backfills `cardType` POSITIONALLY from it whenever the model
+        // omits the field and the count matches, which is the only reason it exists. Left
+        // stale, it stamped four of General's six cards with the wrong type, so they
+        // rendered through the wrong renderer and were measured against the wrong field
+        // spec, and nothing reported it.
+        cardTypes: ['hook-scenario', 'concept-explainer', 'mental-model', 'applied-scenario', 'mistakes', 'competency-summary', 'decision-point'],
         contrastTypes: {
             'hook-scenario':      'workplace-scenario',
             'concept-explainer':  'translation',
+            'applied-scenario':   'workplace-scenario',
             'mistakes':           'error-list',
             'mental-model':       'action-grid',
             'decision-point':     'checklist',
             'competency-summary': 'checklist'
+        }
+    };
+
+    // v15.2.0: Policy & Compliance. Six cards, the same six General uses, so no renderer,
+    // CSS or SCORM change is needed. applied-scenario is dropped for the same class of
+    // reason General drops it: its renderer hard-codes a "Continuing the scenario..." banner
+    // (cc-card-slots.js:825) and its whole job is a SECOND dramatised scene with the same
+    // named person and a cost figure. That is precisely the manufactured-conflict machinery
+    // this route exists to remove - a Code of Conduct has no customer, no queue and no
+    // dollar cost, and forcing one produces invented detail stated as policy.
+    const POLICY_CARD_SCHEMA = {
+        cardTypes: ['hook-scenario', 'concept-explainer', 'mental-model', 'mistakes', 'competency-summary', 'decision-point'],
+        contrastTypes: {
+            'hook-scenario':      'workplace-scenario',
+            'concept-explainer':  'translation',
+            'mental-model':       'action-grid',
+            'mistakes':           'error-list',
+            'competency-summary': 'checklist',
+            'decision-point':     'checklist'
         }
     };
 
@@ -322,6 +425,7 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
 
     const getCardSchemaForMode = (mode) => {
         if (mode === 'general') return GENERAL_CARD_SCHEMA;
+        if (mode === 'policy') return POLICY_CARD_SCHEMA;
         if (mode === 'topicstext') return TOPICSTEXT_CARD_SCHEMA;
         if (mode === 'university') return UNIVERSITY_CARD_SCHEMA;
         if (mode === 'workplace') return WORKPLACE_CARD_SCHEMA;
@@ -329,11 +433,51 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
         return VET_CARD_SCHEMA;
     };
 
+    /**
+     * v15.3.11: routes whose card count is set by the CONTENT, not by a fixed shape.
+     *
+     * Every other route is a fixed sequence - VET is always the same seven cards doing
+     * the same seven jobs, and "Expected 7, got 6" is a real failure. Topics and Text is
+     * not that kind of route: it is a topic broken into as many subtopics as the topic
+     * actually has, each one a heading and its prose. Six subtopics is not a broken
+     * eight-subtopic pack.
+     *
+     * So this route declares a RANGE, and validateCards accepts anything inside it.
+     * Without this the route cannot exist: the validator hard-fails on an exact count,
+     * which is why the old build had to pin it to four fixed slots with fixed headings.
+     *
+     * min is 3 because two cards is a paragraph, not a topic. max is 10 because beyond
+     * that the two-column grid stops being scannable and the subtopics are really
+     * separate topics.
+     */
+    const CC_CARD_COUNT_RANGE = {
+        topicstext: { min: 3, max: 10 }
+    };
+
+    /**
+     * The card-count range for a route, or null when the route has a fixed count.
+     *
+     * @param {String} mode The route.
+     * @returns {Object|null} {min, max} or null.
+     */
+    const getCardCountRange = (mode) => {
+        return CC_CARD_COUNT_RANGE[mode] || null;
+    };
+
     const getCardCountForMode = (mode) => {
-        // v16: General is now 6 adaptive cards (Orient/Understand/Explore/Apply/
-        // Challenge/Consolidate), not the unified 7. See GENERAL_CARD_SCHEMA above.
-        if (mode === 'general') return 6;
-        if (mode === 'topicstext') return 5;
+        // v15.3.12: back to SIX - the vendor's ccExpectedCardCount for this route. See
+        // CC_CARD_ORDER.general above for why the v15.3.10 raise to seven was reverted.
+        if (mode === 'general') return 7;
+        // v15.2.0: Policy & Compliance - the same six card types as General.
+        if (mode === 'policy') return 6;
+        // v15.3.11: the MINIMUM complete pack - 3 subtopic cards plus the
+        // decision-point. This route's length is content-driven (CC_CARD_COUNT_RANGE),
+        // so there is no single "correct" count; validateCards uses the range instead.
+        // What this number still has to be right for is the REGENERATE COMPLETENESS
+        // check, which asks `cards.length >= expectedCardCount`. Set it above the
+        // minimum and every four-subtopic pack is judged incomplete and re-billed - the
+        // exact defect the card-order suite was written after.
+        if (mode === 'topicstext') { return CC_CARD_COUNT_RANGE.topicstext.min + 1; }
         // v13.98.1: seven since decision-point was added to the academic sequence.
         if (mode === 'university') return 7;
         return 7;
@@ -390,7 +534,7 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
      */
     const validateSubstitutionArtefacts = (cards) => {
         const text = JSON.stringify(cards).toLowerCase();
-        return SUBSTITUTION_ARTEFACTS.filter(function (p) { return text.indexOf(p) !== -1; });
+        return SUBSTITUTION_ARTEFACTS.filter(function(p) { return text.indexOf(p) !== -1; });
     };
 
     // ===========================================================================
@@ -413,7 +557,12 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
     // table for the card specs that use it, so the two cannot drift apart.
     //
     // `path`  - canonical field path after normalizeCardSchema() in generator.js.
-    // `alias` - vendor field names retained alongside the canonical one, tried in order.
+    // `alias` - vendor field names for the SAME array, tried in order when `path` is absent.
+    // `floorAs` - the vendor field name this field actually ships under, read by the server
+    //           word-floor guard ONLY. Use it where the vendor shape splits or renames the
+    //           field such that `alias` would be wrong - decision-point's four options ship
+    //           as standardItems[1] + errorItems[3], so standardItems is not an alias for
+    //           the options array, it is one quarter of it.
     // `label` - what the learner-facing field is called in a repair instruction.
     // `hint`  - what to ADD when the field is short. Never "make it longer".
     // ===========================================================================
@@ -422,15 +571,30 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
     const CC_SPEC_UNIFIED_BASE = {
         'hook-scenario': [
             { path: 'sceneParts[].title', alias: ['keyPoints[].title'], label: 'scene panel title', min: 3, max: 5 },
-            { path: 'sceneParts[].text', alias: ['keyPoints[].text'], label: 'scene panel text', min: 42, max: 56,
+            // v15.2.2: 46, not 42. The vendor's ccCheckWordFloors() blocks keyPoints[].text
+            // below 42 on hook-scenario and applied-scenario. Asking for 42 put our minimum
+            // exactly ON the floor: a model one word short failed the whole generation, which
+            // is the failure mode that took General down on 4 Sep. 46 keeps a 4-word buffer,
+            // the same buffer the evidenced consequence fix uses. Max stays 56 - three
+            // sentences under a 20-word cap is 57, so 56 is the arithmetic ceiling.
+            { path: 'sceneParts[].text', alias: ['keyPoints[].text'], label: 'scene panel text', min: 46, max: 56,
               hint: 'add the second sentence: what is happening now, or what it costs you. Name the place, the time of day and the thing you can see.' }
         ],
         'concept-explainer': [
             { path: 'conceptInsights[].title', alias: ['keyPoints[].title'], label: 'concept title', min: 3, max: 5 },
-            { path: 'conceptInsights[].text', alias: ['keyPoints[].text'], label: 'concept text', min: 35, max: 50,
+            // v15.4.0: 42-56, not 35-50. Floors contract 2026-09-05.1 puts the vendor's
+            // server-side floor for this field at 42 with a declared ceiling of 56, so a
+            // base of 35 is BELOW the floor - inert today, because every route overrides
+            // it, and a trap the moment a route stops. Base and overrides now agree, for
+            // the same reason v15.2.2 lifted summaryLine off the vendor's floor.
+            { path: 'conceptInsights[].text', alias: ['keyPoints[].text'], label: 'concept text', min: 42, max: 56,
               hint: 'add the specific figure, threshold, duration or named example from the reference material that makes this concept usable.' },
             { path: 'keyInfo', alias: ['legalLink.legalObligation'], label: 'obligation line', min: 25, max: 35 },
-            { path: 'summaryLine', label: 'summary line', min: 15, max: 20 }
+            // v15.2.2: 18-26, not 15-20. Every route already overrides this to 18-26, so the
+            // base was inert - but 15 sits exactly on the vendor's summaryLine floor of 15,
+            // so the day a route stopped overriding it, that route would fail on a one-word
+            // undershoot with nothing to explain why. Base and overrides now agree.
+            { path: 'summaryLine', label: 'summary line', min: 18, max: 26 }
         ],
         'mental-model': [
             { path: 'steps[].step', label: 'step label', min: 3, max: 6 },
@@ -439,16 +603,32 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
         ],
         'applied-scenario': [
             { path: 'sceneParts[].title', alias: ['keyPoints[].title'], label: 'scene panel title', min: 3, max: 5 },
-            { path: 'sceneParts[].text', alias: ['keyPoints[].text'], label: 'scene panel text', min: 42, max: 56,
+            // v15.2.2: 46, not 42 - vendor floor of 42, see hook-scenario above.
+            { path: 'sceneParts[].text', alias: ['keyPoints[].text'], label: 'scene panel text', min: 46, max: 56,
               hint: 'add the second sentence: what you do about it, or what it costs you.' }
         ],
         'mistakes': [
             { path: 'items[].mistake', alias: ['errorItems[].error'], label: 'mistake label', min: 6, max: 10 },
-            { path: 'items[].consequence', alias: ['errorItems[].consequence'], label: 'consequence', min: 34, max: 46,
+            { path: 'items[].consequence', alias: ['errorItems[].consequence'], label: 'consequence', min: 38, max: 50,
               hint: 'add the SECOND sentence, the one that lands it on a named person: who is standing there when this goes wrong and what it costs them.' }
         ],
         'competency-summary': [
-            { path: 'goodItems[].text', alias: ['standardItems[].text'], label: 'standard label', min: 6, max: 10 },
+            // v15.3.1: 7-10, reverting the v15.2.2 workaround now that the vendor's fix is
+            // live (floor contract 2026-09-04.1, confirmed in a production response).
+            //
+            // The workaround was right against the old broken floor of 10 and is WRONG
+            // against the new contract, for a reason that was not visible until the vendor
+            // published how repair works: their expansion passes target
+            // `min(floor + 4, declared maximum)`, and BOTH numbers come from THEIR table,
+            // where this field's declared maximum is 10. Asking 12-16 put our entire range
+            // above the ceiling their repair can ever produce - so their repair aimed at 9
+            // words while our prompt asked for 12-16, the two pulled against each other,
+            // and our own fieldIssues() would have reported every one of these labels short
+            // on every generation forever.
+            //
+            // 7 rather than 6 keeps two words of margin over the new floor of 5, which is
+            // what the vendor themselves suggested when they made the change.
+            { path: 'goodItems[].text', alias: ['standardItems[].text'], label: 'standard label', min: 7, max: 10 },
             { path: 'goodItems[].benefit', alias: ['standardItems[].benefit'], label: 'standard benefit', min: 14, max: 22,
               hint: 'say what it looks like on the job when this is done properly, in a supervisor\'s words. Not an abstract virtue.' },
             { path: 'badItems[].text', alias: ['errorItems[].error'], label: 'avoid label', min: 10, max: 12 },
@@ -456,7 +636,24 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
         ],
         'decision-point': [
             { path: 'question', alias: ['heading'], label: 'question', min: 18, max: 28 },
-            { path: 'options[].text', label: 'option', min: 10, max: 16,
+            // v15.3.1: back to 10-16, reverting the v15.2.2 raise for the same reason as the
+            // competency label above - the vendor's repair clamps this field to their
+            // declared maximum of 10, so a 12-18 ask sat entirely above a ceiling their
+            // repair could never reach. 10-16 is the value this field held for many
+            // releases and is the one with production evidence behind it.
+            //
+            // This range has ZERO margin over the vendor's floor of 10, which is the exact
+            // pathology they just fixed for the competency label (floor == declared max, so
+            // only the single top value passes). It is theirs to fix here too and is raised
+            // with them; test-field-ranges.js carries a dated exemption rather than a silent
+            // pass, so this cannot be forgotten.
+            //
+            // `floorAs` names the vendor field for the floor guard ONLY. It is deliberately
+            // not an `alias`: alias means "the same array under another name", and on the
+            // wire these four options are not one array - the correct answer ships as
+            // standardItems[1].text and the three distractors as errorItems[3].error - so an
+            // alias here makes the item-count guard read [1] where four options are meant.
+            { path: 'options[].text', floorAs: 'standardItems[].text', label: 'option', min: 10, max: 16,
               hint: 'every option names a specific action at the same level of detail. No stubs, no justification clause on the correct one.' },
             { path: 'options[].feedback', label: 'option feedback', min: 25, max: 38 }
         ]
@@ -468,12 +665,12 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
      * @param {Object} overrides {cardType: {fieldPath: {min, max}}}
      * @return {Object} A route field-spec table.
      */
-    const ccSpecFrom = function (overrides) {
+    const ccSpecFrom = function(overrides) {
         const out = {};
-        Object.keys(CC_SPEC_UNIFIED_BASE).forEach(function (ct) {
-            out[ct] = CC_SPEC_UNIFIED_BASE[ct].map(function (f) {
+        Object.keys(CC_SPEC_UNIFIED_BASE).forEach(function(ct) {
+            out[ct] = CC_SPEC_UNIFIED_BASE[ct].map(function(f) {
                 const copy = {};
-                Object.keys(f).forEach(function (k) { copy[k] = f[k]; });
+                Object.keys(f).forEach(function(k) { copy[k] = f[k]; });
                 const o = overrides && overrides[ct] && overrides[ct][f.path];
                 if (o) {
                     if (typeof o.min === 'number') { copy.min = o.min; }
@@ -531,7 +728,18 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
             'mental-model': { 'steps[].detail': { min: 90, max: 160 } },
             'mistakes': { 'items[].consequence': { min: 55, max: 110 } },
             'competency-summary': {
-                'goodItems[].benefit': { min: 30, max: 65 },
+                // v15.3.6: 14-22, down from 30-65. PD's house style is longer than every
+                // other route's - 90-160 word steps, 55-110 word consequences - and this
+                // field was raised to match. It cannot be: the vendor's repair ceiling for
+                // standardItems[].benefit is 22 words, so a 30-65 ask sat ENTIRELY above a
+                // ceiling their repair will not pass, and every benefit line on this route
+                // would have been reported short on every generation, forever.
+                //
+                // Caught by the declaredMax guard the day the vendor published the
+                // ceilings. Nothing before that could see it - the number that made it
+                // wrong was not knowable from this repository. PD's longer style stays in
+                // the fields that HAVE no ceiling, which is most of them.
+                'goodItems[].benefit': { min: 14, max: 22 },
                 'badItems[].consequence': { min: 22, max: 50 }
             },
             'decision-point': { 'question': { min: 22, max: 32 }, 'options[].feedback': { min: 30, max: 44 } }
@@ -542,30 +750,92 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
         // learner-facing heading - which no other route's cards carry at the top level.
         // These are safety rails, not targets. General learning needs enough room for
         // context + explanation + contrast + application, while still keeping each card
-        // purposeful. applied-scenario has no entry: General no longer generates it.
-        general: (function () {
+        // purposeful. v15.3.16: applied-scenario is back - the vendor raised General to
+        // seven and published the same seven-card array it already uses for vet, workplace
+        // and pd, so this route reuses a card shape that already exists rather than a new one.
+        general: (function() {
             const out = {};
-            ['hook-scenario', 'concept-explainer', 'mistakes', 'mental-model', 'decision-point', 'competency-summary'].forEach(function (ct) {
-                out[ct] = CC_SPEC_UNIFIED_BASE[ct].map(function (f) {
+            ['hook-scenario', 'concept-explainer', 'mental-model', 'applied-scenario', 'mistakes', 'decision-point', 'competency-summary'].forEach(function(ct) {
+                out[ct] = CC_SPEC_UNIFIED_BASE[ct].map(function(f) {
                     const copy = {};
-                    Object.keys(f).forEach(function (k) { copy[k] = f[k]; });
+                    Object.keys(f).forEach(function(k) { copy[k] = f[k]; });
                     return copy;
                 });
                 // v16: every General card carries its own AI-written heading.
                 out[ct].push({ path: 'title', label: 'card heading', min: 4, max: 10,
                     hint: 'write a specific, topic-grounded heading for this card - never a generic label like "Orient", "Explore" or the topic name repeated verbatim.' });
             });
+            // v15.1.2: General's ranges are now VET's. They were set 17-100% above every
+            // other route when the route was introduced in v15.0.0, and because v15.x was
+            // never promoted to production until 4 Sep 2026, no General pack had ever been
+            // generated against them. The first real run failed every subtopic:
+            //
+            //   SERVER RETURNED ERROR: Content generation did not meet the required word
+            //   ranges after repair.
+            //
+            // The pipeline cannot deliver these numbers. generator.js's own v13.98.2
+            // measurement, recorded at the CC_REPAIRABLE table, is that "every field asking
+            // for more than about 30 words comes back at 28-31 whatever range is requested,
+            // because the vendor runs its own expansion and rewrite passes over the output
+            // after ours". General asked 55-180 words a field - two to six times what comes
+            // back - so its ranges were unsatisfiable by construction, and no model, repair
+            // pass or retry could ever meet them. The one production run that salvaged
+            // anything kept 933 words against a 1,791-word minimum: 52%.
+            //
+            // VET asks 42-56 where General asked 55-90, and 80-140 where General asked
+            // 100-180. VET is the only route with evidence of generating successfully, so
+            // its numbers are the evidenced target rather than a guess. General now differs
+            // from VET only in carrying a `title` on every card.
+            //
+            // This does NOT make the content match the spec - VET is being flattened to
+            // ~30 words a field too, which is the v13.97.1 "9% of fields met their stated
+            // range" finding, still open and still vendor-side. It makes General fail the
+            // way the other routes fail (thin, reported) instead of erroring outright.
+            // Raising these again is safe only after the vendor stops rewriting to its own
+            // floor; until then a higher number here buys nothing and breaks the route.
             out['hook-scenario'][0].min = 3; out['hook-scenario'][0].max = 5;
-            out['hook-scenario'][1].min = 55; out['hook-scenario'][1].max = 80;
-            out['concept-explainer'][1].min = 60; out['concept-explainer'][1].max = 90;
-            out['concept-explainer'][2].min = 35; out['concept-explainer'][2].max = 55;
-            out['concept-explainer'][3].min = 22; out['concept-explainer'][3].max = 34;
-            out['mental-model'][1].min = 100; out['mental-model'][1].max = 180;
-            out['mistakes'][1].min = 55; out['mistakes'][1].max = 90;
-            out['competency-summary'][1].min = 28; out['competency-summary'][1].max = 48;
-            out['competency-summary'][3].min = 24; out['competency-summary'][3].max = 42;
-            out['decision-point'][0].min = 24; out['decision-point'][0].max = 38;
-            out['decision-point'][2].min = 35; out['decision-point'][2].max = 55;
+            out['concept-explainer'][1].min = 42; out['concept-explainer'][1].max = 56;
+            out['concept-explainer'][2].min = 30; out['concept-explainer'][2].max = 42;
+            out['concept-explainer'][3].min = 18; out['concept-explainer'][3].max = 26;
+            out['mental-model'][1].min = 80; out['mental-model'][1].max = 140;
+            out['decision-point'][0].min = 22; out['decision-point'][0].max = 32;
+            out['decision-point'][2].min = 30; out['decision-point'][2].max = 44;
+            return out;
+        }()),
+        // v15.2.0: Policy & Compliance uses VET's evidenced ranges verbatim. They are the
+        // only ranges in this file with proof they survive the vendor's rewrite pass intact.
+        // Inventing new ones is exactly what put General 2-6x above what the pipeline
+        // returns and took the route down on 4 Sep (see the comment in the general block).
+        // applied-scenario is deleted rather than left unused, so getCardWordRange() and
+        // the contract tests cannot disagree about whether this route has that card.
+        policy: (function() {
+            const out = ccSpecFrom({
+                'concept-explainer': {
+                    'conceptInsights[].text': { min: 42, max: 56 },
+                    'keyInfo': { min: 30, max: 42 },
+                    'summaryLine': { min: 18, max: 26 }
+                },
+                'mental-model': { 'steps[].detail': { min: 80, max: 140 } },
+                'decision-point': { 'question': { min: 22, max: 32 }, 'options[].feedback': { min: 30, max: 44 } }
+            });
+            delete out['applied-scenario'];
+            // v15.3.7: POLICY_SYSTEM_PROMPT asks for `title(4-10 words)` on all six cards,
+            // and nothing checked five of them. CC_SPEC_UNIFIED_BASE has no `title` entry
+            // (General adds one explicitly for exactly this reason) and validateCards's
+            // TITLED_CARD_TYPES gives this route the three-type short list - so five of
+            // six policy card titles were never length-checked, never counted by
+            // getCardWordRange, and never required by the structural gate. A card that
+            // came back with no title rendered headingless rather than failing.
+            //
+            // Same 4-10 range the prompt states, so the spec and the prompt agree; the
+            // hint is route-specific, because a policy card heading naming an invented
+            // clause is the defect this route exists to prevent.
+            Object.keys(out).forEach(function(ct) {
+                out[ct].push({ path: 'title', label: 'card heading', min: 4, max: 10,
+                    hint: 'name what this card actually establishes, in the document\'s own '
+                        + 'vocabulary - never an invented clause number or policy name, and '
+                        + 'never a generic label like "Scope" or the policy title repeated.' });
+            });
             return out;
         }()),
         // v13.98.1: raised so each card type reaches the route's stated floor, which four
@@ -601,25 +871,36 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
             // v13.98.1: University's new card 7.
             'decision-point': [
                 { path: 'question', alias: ['heading'], label: 'question', min: 22, max: 32 },
-                { path: 'options[].text', label: 'option', min: 10, max: 16,
+                // v15.3.1: 10-16 + floorAs - see CC_SPEC_UNIFIED_BASE decision-point.
+                { path: 'options[].text', floorAs: 'standardItems[].text', label: 'option', min: 10, max: 16,
                   hint: 'every option names a specific position at the same level of detail. No stubs, no justification clause on the correct one.' },
                 { path: 'options[].feedback', label: 'option feedback', min: 30, max: 44 }
             ]
         },
         topicstext: {
-            'overview': [{ path: 'paragraphs[]', label: 'paragraph', min: 55, max: 70 }],
-            'key-concepts': [
-                { path: 'paragraphs[]', label: 'paragraph', min: 55, max: 70 },
-                { path: 'keyTerms[].definition', label: 'key term definition', min: 12, max: 25 }
-            ],
-            'examples-application': [{ path: 'paragraphs[]', label: 'paragraph', min: 55, max: 70 }],
-            'key-takeaways': [
-                { path: 'paragraphs[]', label: 'paragraph', min: 55, max: 70 },
-                { path: 'goodItems[].text', label: 'sound-practice item', min: 8, max: 16 },
-                { path: 'badItems[].text', label: 'misconception item', min: 8, max: 16 }
+            // v15.3.11: ONE content-driven card type, not four fixed slots.
+            //
+            // The old four (overview / key-concepts / examples-application /
+            // key-takeaways) are gone from generation - the route now emits as many
+            // `subtopic` cards as the topic has parts. Their specs are removed rather
+            // than left behind: a spec for a card type nothing generates is dead weight
+            // that the field-range suite still has to reconcile against a prompt that no
+            // longer mentions it. Saved modules keep rendering, because rendering reads
+            // the card, not this table.
+            'subtopic': [
+                { path: 'paragraphs[]', label: 'paragraph', min: 58, max: 70 },
+                { path: 'keyTerms[].definition', label: 'key term definition', min: 12, max: 25 },
+                { path: 'title', label: 'subtopic heading', min: 2, max: 6,
+                  hint: 'name the actual subject of this card - never "Introduction", "Overview" or the topic name repeated.' }
             ],
             'decision-point': [
+                { path: 'goodItems[].text', label: 'sound-practice item', min: 8, max: 16 },
+                { path: 'badItems[].text', label: 'misconception item', min: 8, max: 16 },
                 { path: 'question', label: 'question', min: 15, max: 30 },
+                // v15.3.1: 10-16, tracking every other route. This
+                // route emits options[] on the wire, not standardItems[], so no vendor floor
+                // applies here and no alias is claimed - but a shared CC_OPTION_SPEC and a
+                // shared parity rule cannot mean two different things on two routes.
                 { path: 'options[].text', label: 'option', min: 10, max: 16,
                   hint: 'every option names a specific action at the same level of detail. No stubs, no justification clause on the correct one.' },
                 { path: 'options[].feedback', label: 'option feedback', min: 12, max: 25 }
@@ -634,6 +915,7 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
      * A correct answer of 27 words against distractors of 5, 4 and 7 - which is what
      * v13.97.1 produced - is answerable by shape alone, without reading a word of it.
      */
+    // v15.3.1: 10-16, tracking the decision-point option ranges above.
     const CC_OPTION_SPEC = { min: 10, max: 16, maxRatio: 1.4 };
 
     /**
@@ -672,7 +954,17 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
      */
     const CC_EXPECTED_ITEMS = {
         'hook-scenario': { 'sceneParts[].title': 4, 'sceneParts[].text': 4 },
-        'concept-explainer': { 'conceptInsights[].title': 3, 'conceptInsights[].text': 3 },
+        // v15.4.0: five, not three. Cards contract 2026-09-05.3 (read from the live
+        // production endpoint on 5 September, after the vendor published it) requires
+        // exactly five key points of 42-56 words, 210-280 for the card. The author's
+        // reason was simpler than the contract's: three points is thin for the one card
+        // on the route whose whole job is to explain the subject.
+        //
+        // This number is what getCardWordRange() multiplies the per-field ranges by, so
+        // changing it here is what moves the card's whole-card floor with it. Changing the
+        // prompt alone would have left the card measured against a three-point floor and
+        // reported as long on every section.
+        'concept-explainer': { 'conceptInsights[].title': 5, 'conceptInsights[].text': 5 },
         // v13.98.3: the prompt asks for 4-5 steps. Costing it at 4 told the repair pass
         // that a compliant 5-step card should be cut by ~56 words. depthIssues() now
         // measures the card's ACTUAL step count; this stays as the floor for the range.
@@ -710,7 +1002,7 @@ EVERY OTHER VALUE must be in ${languageName}. This is an absolute requirement.
         const counts = CC_EXPECTED_ITEMS[cardType] || {};
         let min = 0;
         let max = 0;
-        specs.forEach(function (f) {
+        specs.forEach(function(f) {
             // v13.98.3: where a card was actually returned, cost it on the number of items
             // it really has. Several specs allow a range (mental-model 4-5 steps,
             // frameworks 2-3, keyTerms 3-4) and costing them at the minimum told the repair
@@ -881,7 +1173,7 @@ that does none of these - this is instructional storytelling, not decorative fic
      */
     const CC_LEARNING_BLUEPRINT_BLOCK = `PLAN THE LEARNING BEFORE YOU WRITE THE CARDS:
 Before drafting, privately build a concise Learning Blueprint from the topic, learner, desired
-outcome and source. Do not output the blueprint. Use it to control the whole seven-card sequence.
+outcome and source. Do not output the blueprint. Use it to control the whole six-card sequence.
 Determine: (1) the learning destination; (2) what the learner can already be assumed to know;
 (3) prerequisite concepts; (4) the two-to-five load-bearing ideas; (5) their dependency order;
 (6) what the learner must ultimately recognise, decide, explain or do; (7) likely misconceptions;
@@ -889,9 +1181,9 @@ Determine: (1) the learning destination; (2) what the learner can already be ass
 decision points; (11) the best example or scenario; (12) the instructional treatment that fits.
 Do not force an entire topic into one framework. Frameworks are tools. The learning job chooses the
 framework, never the other way around.
-Build a progression across cards: experience/curiosity -> explanation -> usable model -> applied
-contrast -> mistakes -> capability summary -> independent decision. Each card must move the learner
-forward rather than restating the previous card.`;
+Build a progression across cards: experience/curiosity -> explanation -> mistakes -> usable model ->
+independent decision -> capability summary. Each card must move the learner forward rather than
+restating the previous card.`;
 
 
     /**
@@ -1078,7 +1370,7 @@ ${CC_SHARED_QUALITY_RULES}
 
 DOMAIN: Match the unit topic. HLTAID  ->  DRSABCD, scene safety. WHS  ->  hazard identification, risk control hierarchy. Trades  ->  tools, calibration. Admin  ->  documents, systems. Only include PPE/WHS if genuinely part of the skill.
 
-VOICE: Supervisor coaching on the job. Sentences under 20 words (three of them carry a 42-56 word field). Use "you". Plain words: "check" not "evaluate", "make sure" not "ensure".
+VOICE: Supervisor coaching on the job. Sentences under 20 words (three of them carry a 46-56 word field). Use "you". Plain words: "check" not "evaluate", "make sure" not "ensure".
 
 THIS ROUTE IS VOCATIONAL  -  it is not workplace training and not professional development.
 Everything on these cards must support competent performance. Translate the unit into observable
@@ -1236,13 +1528,13 @@ is important; each one shows it happening. The takeaway carries the load-bearing
 with its numbers in it, then says what that changes. Nothing here could be dropped into
 a pack about a different subject and still make sense.
 
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 42-56 words in total, 2nd person, specific: name the place, the time of day, the equipment, what the learner can see or hear. Sentence one sets the scene. Sentence two says what is happening or what it means for you. Sentence three names the detail that makes it real - the number, the time, the reading, the person. Never one long run-on sentence)}, highlightText(optional, max 20 words), keyTakeaway(REQUIRED, 28-38 words, exactly 2 sentences - see KEY TAKEAWAY above)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 46-56 words in total, 2nd person, specific: name the place, the time of day, the equipment, what the learner can see or hear. Sentence one sets the scene. Sentence two says what is happening or what it means for you. Sentence three names the detail that makes it real - the number, the time, the reading, the person. Never one long run-on sentence)}, highlightText(optional, max 20 words), keyTakeaway(REQUIRED, 28-38 words, exactly 2 sentences - see KEY TAKEAWAY above)
    PANEL 1 opens on a NAMED person, a MOMENT and a STAKE inside its first fifteen words.
    PANEL 4 IS THE COMMITMENT POINT and it is the most important sentence on the card. It ends on
    a decision the LEARNER has to make, addressed to them, as a direct question ending in a
    question mark. It must NOT end with the characters resolving it themselves - if the people in
    the scene work it out, the learner has watched somebody else learn and committed to nothing.
-2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(42-56 words  -  how the thing actually works on the job, with the figure, tolerance, interval or named method that makes it usable)}, heading(the Act, regulation or code of practice this sits under  -  name it as a worker would say it, not by section number). If this topic genuinely sits under no such document, return heading as an empty string and keyInfo as the plain requirement - never invent one, and never restate a fact as though it were an obligation., keyInfo(30-42 words  -  the duty it places on this learner, in plain English. What a WORKER must do, not what the RTO must evidence), summaryLine(18-26 words linking to Card 1)
+2. concept-explainer  -  keyPoints[5]{title(3-5 words), text(42-56 words  -  how the thing actually works on the job, with the figure, tolerance, interval or named method that makes it usable)}, heading(the Act, regulation or code of practice this sits under  -  name it as a worker would say it, not by section number). If this topic genuinely sits under no such document, return heading as an empty string and keyInfo as the plain requirement - never invent one, and never restate a fact as though it were an obligation., keyInfo(30-42 words  -  the duty it places on this learner, in plain English. What a WORKER must do, not what the RTO must evidence), summaryLine(18-26 words linking to Card 1  -  one full sentence that names the person, place or task from Card 1 and says what they now know. This is a SENTENCE, not a caption: "Back on the same job, you now know which reading tells you to stop and who you tell before you do." is the right length and shape)
    TEST: each of the three panels must contain something a learner could be WRONG about. A panel
    that only says a thing is important is not a panel.
    PANEL 1 ANSWERS CARD 1'S QUESTION and opens on the thing that CONTRADICTS THE OBVIOUS GUESS.
@@ -1264,17 +1556,17 @@ a pack about a different subject and still make sense.
    AT LEAST THREE of the steps must OPERATE ON A NUMBER OR A NAMED THING. ONE step is a BRANCH
    the learner chooses before the next step means anything. ONE step says WHY its threshold sits
    where it does.
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 42-56 words in total. Sentence one sets the situation. Sentence two says what you do about it. Sentence three says what it costs you if you do not, named concretely. Never one long run-on sentence)}  -  the SAME job and the SAME people as Card 1, later the same day or on the next shift. The place may move (a different bay, room, vehicle, client or site) but the learner and the task carry over, and this card must open by naming what has changed since Card 1. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake, highlightText(optional, max 20 words)
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 46-56 words in total. Sentence one sets the situation. Sentence two says what you do about it. Sentence three says what it costs you if you do not, named concretely. Never one long run-on sentence)}  -  the SAME job and the SAME people as Card 1, later the same day or on the next shift. The place may move (a different bay, room, vehicle, client or site) but the learner and the task carry over, and this card must open by naming what has changed since Card 1. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake, highlightText(optional, max 20 words)
    PANEL 3 IS A SECOND COMMITMENT POINT: a complication the rule from Card 3 does NOT cleanly
    cover, ending on the learner deciding, as a direct question.
    PANEL 4 resolves it by NAMING THE THING, not by recommending a category.
-5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), icon, consequence(EXACTLY 3 short sentences, 34-46 words in total. AT MOST ONE of the five may be a communication or paperwork habit; four must be errors of SUBSTANCE in the work itself. No two consequences may end on the same outcome. Sentence one states the specific operational impact. Sentence two names what has to happen now to put it right. Sentence three makes it land on a real person in this job: name who is standing there when it goes wrong and what it costs them, in plain words a worker would use  -  "The apprentice on the other end of the load is the one who wears it.")}
+5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), icon, consequence(EXACTLY 3 short sentences, 38-50 words in total. AT MOST ONE of the five may be a communication or paperwork habit; four must be errors of SUBSTANCE in the work itself. No two consequences may end on the same outcome. Sentence one states the specific operational impact. Sentence two names what has to happen now to put it right. Sentence three makes it land on a real person in this job: name who is standing there when it goes wrong and what it costs them, in plain words a worker would use  -  "The apprentice on the other end of the load is the one who wears it.")}
    A MISTAKE IS A THING DONE WRONGLY, NOT AN ATTITUDE HELD WRONGLY. Banned as an opening:
    Ignoring..., Neglecting..., Overlooking..., Failing to..., Rushing..., Assuming all... .
    Each names the SPECIFIC WRONG ACTION with its number, and each consequence names the SPECIFIC
    TECHNICAL RESULT and the number it should have been. These are errors a KNOWLEDGEABLE person
    makes at the edge of their competence.
-6. competency-summary  -  title(topic-specific, phrased as the competency itself  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  what it looks like on the job when this is done properly, in the words a supervisor would use signing it off. "The apprentice who follows you through the gate copies whatever you just did, so do it the way you would want it copied." This is the standard an assessor would accept, said plainly)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}
+6. competency-summary  -  title(topic-specific, phrased as the competency itself  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 7-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  what it looks like on the job when this is done properly, in the words a supervisor would use signing it off. "The apprentice who follows you through the gate copies whatever you just did, so do it the way you would want it copied." This is the standard an assessor would accept, said plainly)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}
    THESE ARE FACTS IN IMPERATIVE FORM, NOT VIRTUES. The avoid column names the specific WRONG
    BELIEF, not the vice.
 7. decision-point  -  heading(the question itself, 22-32 words, 2nd person, a real situation with the numbers in it), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(32-44 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(30-44 words explaining why it is wrong)}
@@ -1466,7 +1758,7 @@ REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve named s
 
 ${CC_SHARED_QUALITY_RULES}
 
-VOICE: Team leader coaching a colleague. Sentences under 20 words (three of them carry a 42-56 word field). Use "you". Focus on business impact: productivity, customer satisfaction, costs. No RTO audit language.
+VOICE: Team leader coaching a colleague. Sentences under 20 words (three of them carry a 46-56 word field). Use "you". Focus on business impact: productivity, customer satisfaction, costs. No RTO audit language.
 
 THIS ROUTE IS WORKPLACE TRAINING  -  it is not VET and not professional development.
 The organisation is the source of context and, where supplied, policy authority. Teach what the employee
@@ -1623,7 +1915,7 @@ is important; each one shows it happening. The takeaway carries the load-bearing
 with its numbers in it, then says what that changes. Nothing here could be dropped into
 a pack about a different subject and still make sense.
 
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 42-56 words in total, 2nd person, specific: name the place, the time of day, the system or equipment, what the learner can see or hear. Sentence one sets the scene. Sentence two says what is happening or what it costs you. Sentence three names the detail that makes it real - the number, the time, the system, the person. Never one long run-on sentence)}, highlightText(optional, max 20 words), keyTakeaway(REQUIRED, 28-38 words, exactly 2 sentences - see KEY TAKEAWAY above)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 46-56 words in total, 2nd person, specific: name the place, the time of day, the system or equipment, what the learner can see or hear. Sentence one sets the scene. Sentence two says what is happening or what it costs you. Sentence three names the detail that makes it real - the number, the time, the system, the person. Never one long run-on sentence)}, highlightText(optional, max 20 words), keyTakeaway(REQUIRED, 28-38 words, exactly 2 sentences - see KEY TAKEAWAY above)
    PANEL 1 opens on a NAMED person, a MOMENT and a STAKE inside its first fifteen words.
    "Marcus rings at 4pm, three days out, and he cannot get the food down."
    PANEL 4 IS THE COMMITMENT POINT and it is the most important sentence on the card. It must end
@@ -1635,7 +1927,7 @@ a pack about a different subject and still make sense.
    TEST: a reader must be able to say what time of day it is, who is present, what is about to go
    wrong, and what THEY would do about it. If the four panels only describe a meeting where the
    subject was discussed, the card has not started yet.
-2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(42-56 words  -  the mechanism, not the label: how the thing actually works, with the figure, threshold, duration or named method that makes it usable)}, heading, keyInfo(30-42 words), summaryLine(18-26 words linking to Card 1)
+2. concept-explainer  -  keyPoints[5]{title(3-5 words), text(42-56 words  -  the mechanism, not the label: how the thing actually works, with the figure, threshold, duration or named method that makes it usable)}, heading, keyInfo(30-42 words), summaryLine(18-26 words linking to Card 1  -  one full sentence that names the person, place or task from Card 1 and says what they now know. This is a SENTENCE, not a caption: "Back on the same job, you now know which reading tells you to stop and who you tell before you do." is the right length and shape)
    heading: the internal policy, SOP or service standard this sits under, by its real name - the
    document a colleague would actually be sent to. Name a document ONLY if the reference material
    or the trainer instructions name one. If they do not, return heading as an EMPTY STRING. An
@@ -1687,7 +1979,7 @@ a pack about a different subject and still make sense.
    AT LEAST THREE of the steps must OPERATE ON A NUMBER OR A NAMED THING. ONE step is a BRANCH
    the learner chooses before the next step means anything. ONE step says WHY its threshold sits
    where it does.
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 42-56 words in total. Sentence one sets the situation. Sentence two says what you do about it. Sentence three says what it costs you if you do not, named concretely. Never one long run-on sentence)}  -  the SAME job and the SAME people as Card 1, later the same day or on the next shift. The place may move (a different bay, room, vehicle, client or site) but the learner and the task carry over, and this card must open by naming what has changed since Card 1. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake, highlightText(optional, max 20 words)
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 46-56 words in total. Sentence one sets the situation. Sentence two says what you do about it. Sentence three says what it costs you if you do not, named concretely. Never one long run-on sentence)}  -  the SAME job and the SAME people as Card 1, later the same day or on the next shift. The place may move (a different bay, room, vehicle, client or site) but the learner and the task carry over, and this card must open by naming what has changed since Card 1. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake, highlightText(optional, max 20 words)
    PANEL 3 IS THE COMMITMENT POINT: it introduces a complication that the rule from Card 3 does
    NOT cleanly cover, and ends on the learner deciding, as a direct question. The taught rule
    has an edge and this is where the learner meets it.
@@ -1698,7 +1990,7 @@ a pack about a different subject and still make sense.
    PANEL 3 IS A SECOND COMMITMENT POINT: a complication the rule from Card 3 does NOT cleanly
    cover, ending on the learner deciding, as a direct question.
    PANEL 4 resolves it by NAMING THE THING, not by recommending a category.
-5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), icon, consequence(EXACTLY 3 short sentences, 34-46 words in total. Sentence one states the specific business, safety or regulatory impact. Sentence two names what has to happen now to put it right. Sentence three makes it land on a real person: name the customer, colleague or team member standing in it and what it costs them, in plain words  -  "The customer who waited three days for that callback is the one who tells forty people about it.")}
+5. mistakes  -  errorItems[5]{error(verb or "Not...", 6-10 words), icon, consequence(EXACTLY 3 short sentences, 38-50 words in total. Sentence one states the specific business, safety or regulatory impact. Sentence two names what has to happen now to put it right. Sentence three makes it land on a real person: name the customer, colleague or team member standing in it and what it costs them, in plain words  -  "The customer who waited three days for that callback is the one who tells forty people about it.")}
    AT MOST ONE of the five may be a communication or process habit. Four must be errors of
    SUBSTANCE in the subject itself - the wrong figure, the wrong threshold, the missed step, the
    rule applied to the wrong case.
@@ -1721,7 +2013,7 @@ a pack about a different subject and still make sense.
    Each names the SPECIFIC WRONG ACTION with its number, and each consequence names the SPECIFIC
    TECHNICAL RESULT and the number it should have been. These are errors a KNOWLEDGEABLE person
    makes at the edge of their competence.
-6. competency-summary  -  title(topic-specific, phrased as the standard the team is held to  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  what it saves, prevents or protects, named concretely: the callback that never happens, the escalation that stops at you, the customer who stays. "The order you check twice is the one nobody has to apologise for on Monday.")}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}
+6. competency-summary  -  title(topic-specific, phrased as the standard the team is held to  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 7-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  what it saves, prevents or protects, named concretely: the callback that never happens, the escalation that stops at you, the customer who stays. "The order you check twice is the one nobody has to apologise for on Monday.")}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}
    AT MOST ONE of the five standards may be about how you talk to people. The rest are the
    subject done properly.
    THESE TEN ITEMS ARE FACTS IN IMPERATIVE FORM, NOT VIRTUES. "Set the load at seven grams per
@@ -1902,13 +2194,13 @@ is important; each one shows it happening. The takeaway carries the load-bearing
 with its numbers in it, then says what that changes. Nothing here could be dropped into
 a pack about a different subject and still make sense.
 
-1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 42-56 words in total, 2nd person, specific professional detail: who is in the room, the deadline, what was said, what is at stake. Sentence one sets the scene. Sentence two says what is happening or what it costs you. Sentence three names the detail that makes it real - the number, the time, the system, the person. Never one long run-on sentence)}, highlightText(optional, max 20 words), keyTakeaway(REQUIRED, 28-38 words, exactly 2 sentences - see KEY TAKEAWAY above)
+1. hook-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 46-56 words in total, 2nd person, specific professional detail: who is in the room, the deadline, what was said, what is at stake. Sentence one sets the scene. Sentence two says what is happening or what it costs you. Sentence three names the detail that makes it real - the number, the time, the system, the person. Never one long run-on sentence)}, highlightText(optional, max 20 words), keyTakeaway(REQUIRED, 28-38 words, exactly 2 sentences - see KEY TAKEAWAY above)
    PANEL 1 opens on a NAMED person, a MOMENT and a STAKE inside its first fifteen words.
    PANEL 4 IS THE COMMITMENT POINT and it is the most important sentence on the card. It ends on
    a decision the LEARNER has to make, addressed to them, as a direct question ending in a
    question mark. It must NOT end with the characters resolving it themselves - if the people in
    the scene work it out, the learner has watched somebody else learn and committed to nothing.
-2. concept-explainer  -  keyPoints[3]{title(3-5 words), text(42-56 words  -  what the principle actually claims and where it stops holding, not a restatement of its name)}, heading(the name of the principle, model or professional standard this rests on  -  NOT a law, act or regulation). If this topic genuinely sits under no such document, return heading as an empty string and keyInfo as the plain requirement - never invent one, and never restate a fact as though it were an obligation., keyInfo(30-42 words  -  what that principle actually requires of the practitioner, in plain English), summaryLine(18-26 words linking to Card 1)
+2. concept-explainer  -  keyPoints[5]{title(3-5 words), text(42-56 words  -  what the principle actually claims and where it stops holding, not a restatement of its name)}, heading(the name of the principle, model or professional standard this rests on  -  NOT a law, act or regulation). If this topic genuinely sits under no such document, return heading as an empty string and keyInfo as the plain requirement - never invent one, and never restate a fact as though it were an obligation., keyInfo(30-42 words  -  what that principle actually requires of the practitioner, in plain English), summaryLine(18-26 words linking to Card 1  -  one full sentence that names the person, place or task from Card 1 and says what they now know. This is a SENTENCE, not a caption: "Back on the same job, you now know which reading tells you to stop and who you tell before you do." is the right length and shape)
    TEST: each of the three panels must contain something a thoughtful practitioner could DISAGREE
    with. A panel nobody could argue against is a panel with no claim in it.
    PANEL 1 ANSWERS CARD 1'S QUESTION and opens on the thing that CONTRADICTS THE OBVIOUS GUESS.
@@ -1925,7 +2217,7 @@ a pack about a different subject and still make sense.
    A step that merely defines its label has failed. If no named framework improves the teaching, use
    a clear topic-specific sequence instead.
 
-4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 42-56 words in total. Sentence one sets the situation. Sentence two says what you do about it. Sentence three says what it costs you if you do not, named concretely. Never one long run-on sentence)}
+4. applied-scenario  -  keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 46-56 words in total. Sentence one sets the situation. Sentence two says what you do about it. Sentence three says what it costs you if you do not, named concretely. Never one long run-on sentence)}
    A name on its own is not a scene. If you name someone, put them somewhere at a time doing
    something: what was said, what is due, who else is in the room.
    -  the SAME role and the SAME people as Card 1, later the same day or the next time this comes up. The place may move (a different meeting, call, one-to-one or client) but the learner and the situation carry over, and this card must open by naming what has changed since Card 1. This card renders under a "Continuing the scenario" banner, so an unrelated new scenario reads to the learner as a mistake, highlightText(optional, max 20 words)
@@ -1952,14 +2244,12 @@ a pack about a different subject and still make sense.
    the rest are errors of judgement, of timing, or of what you committed to and did not do.
 6. competency-summary  -  THE MODEL IS MAGER'S CRITERION-REFERENCED OBJECTIVE: condition +
    performance + standard. title(topic-specific, phrased as the capability being built  -  NOT
-   "You Are Ready When You Can"), standardItems[5]{text(verb-first, 6-10 words  -  a short label,
+   "You Are Ready When You Can"), standardItems[5]{text(verb-first, 7-10 words  -  a short label,
    not a sentence, using an OBSERVABLE verb: identifies, checks, states, names, agrees, confirms -
-   never understands, knows, appreciates, is aware of), benefit(30-65 words - a safety rail, not a
-   target. State the CONDITION this applies under, the observable PERFORMANCE, and the STANDARD
-   that makes it count as done - not an abstract virtue. "Given a report who has missed the same
-   kind of deadline twice, states the specific dates and the specific cost, not a character
-   judgement - because a fact the other person can check is a fact they can act on, and a
-   judgement is only something to defend against.")}, errorItems[5]{error(verb or "Assuming...",
+   never understands, knows, appreciates, is aware of), benefit(14-22 words. State the observable
+   PERFORMANCE and the STANDARD that makes it count as done - not an abstract virtue. "States the
+   specific dates and the specific cost, not a character judgement the other person can only
+   defend against.")}, errorItems[5]{error(verb or "Assuming...",
    10-12 words), consequence(22-50 words - a safety rail, not a target: name the specific wrong
    belief being corrected and what it costs when someone acts on it)}
    THESE ARE FACTS IN IMPERATIVE FORM, NOT VIRTUES. The avoid column names the specific WRONG
@@ -2008,7 +2298,7 @@ a pack about a different subject and still make sense.
     //   5 decision-point         NOT a content card - it renders as the activity block
     //
     // LENGTH IS A HARD REQUIREMENT, not a style note. Exactly two paragraphs a card,
-    // 55-70 words each. The route's depth floor and readability band in generator.js
+    // 58-70 words each. The route's depth floor and readability band in generator.js
     // are set to match; do not raise one without the other.
     //
     // PLAIN TEXT IS A HARD REQUIREMENT. The v13.91 output shipped literal "\n\n"
@@ -2017,6 +2307,114 @@ a pack about a different subject and still make sense.
     // normalizeCardSchema() splits on them defensively as well  -  belt and braces,
     // because this is the defect the owner saw first.
     // ===========================================================================
+// v15.2.0: POLICY & COMPLIANCE.
+//
+// Every other route is built to make abstract material concrete by inventing a scene around
+// it. This one is built the opposite way: the source document IS the subject, and invention
+// is the failure mode. A learner who repeats a fabricated response time or disciplinary
+// outcome as if it were their employer's actual policy is a liability, not a trained member
+// of staff - and an expert review of running a Code of Conduct through the Workplace route
+// found exactly that risk, because Workplace hard-requires a named customer, a clock time
+// and a business-countable cost that a policy document does not contain.
+//
+// So this prompt states the fidelity rule first, before any card contract, and the card
+// contract below asks for quotation rather than dramatisation. The route deliberately has
+// no manufactured-conflict requirement and no business-cost requirement; see the
+// CARD_QUALITY.policy table for the criteria that replace them.
+const POLICY_SYSTEM_PROMPT = `You are an expert compliance-training designer turning an organisation's own policy, code of conduct or procedure document into training that staff will be held to.
+
+Return ONLY valid JSON: { "cards": [...] } - exactly 6 cards, in the order below. No markdown and no code fences.
+All fields must be returned exactly as specified. Do not rename, omit or reorder fields.
+
+${CC_SHARED_QUALITY_RULES}
+
+FIDELITY IS THE WHOLE JOB - THIS OVERRIDES EVERY OTHER INSTRUCTION IN THIS PROMPT:
+The uploaded document is the subject matter, not background reading. A learner will be held to
+what you write as if it were the policy itself.
+
+- Teach only what the document actually says. Where it is precise, use its words.
+- NEVER invent an obligation, a timeframe, a threshold, a dollar figure, a notice period, a
+  disciplinary outcome or a dismissal. If the document does not state a consequence for a
+  breach, say what the rule requires - do not supply a consequence.
+- NEVER invent a policy name, clause number, Act, Regulation or standard. If the source names
+  none, return an empty string rather than a plausible-looking reference. An invented
+  authority is worse than none.
+- Where the document is silent or ambiguous, name the role or process a reader should ask,
+  rather than resolving the ambiguity yourself. You are teaching a settled document, not
+  interpreting a contested one or giving legal advice.
+- Scene-setting detail may NOT be invented on this route. Other routes allow invented names
+  and settings as texture; here a reader cannot tell invented texture from stated policy, so
+  there is none.
+
+WHAT THIS ROUTE DOES NOT DO, and must not simulate:
+- No manufactured conflict. Nobody raises their voice, refuses, interrupts, storms off or
+  behaves unreasonably. A policy is not a customer-service incident.
+- No business-impact costing. Do not attach dollars, callbacks, queue positions or lost
+  minutes to a rule. Most policies have no such cost and inventing one is the failure above.
+- No dramatised breach. Do not narrate someone being disciplined, dismissed or investigated.
+- No second escalating scenario. The pack teaches a rule; it does not tell a story.
+
+VOICE: Address the reader as "you". Plain, exact, calm. Prefer the document's own noun for a
+thing over a synonym - if it says "grievance", do not write "complaint". Define every
+policy-specific term in plain English within twenty words of first use. Sentences under 22 words.
+
+CARDS (generate in this order):
+
+1. hook-scenario = SCOPE & PURPOSE - title(4-10 words), keyPoints[4]{title(3-5 words), icon, text(46-56 words)}, highlightText(optional), keyTakeaway(28-38 words).
+   Establish who the policy covers and why it exists BEFORE any rule is stated, so the detail
+   that follows has somewhere to attach.
+   Panel 1 names WHO this policy covers - the role, employment type or location - using the
+   document's own scope or coverage wording, inside its first fifteen words.
+   Panel 2 states WHY the organisation has this policy: the risk or problem it manages, in
+   the document's own terms. Never invent an incident that prompted it.
+   Panel 3 states what is specifically expected of the reader.
+   Panel 4 ends on a direct second-person APPLICABILITY question the reader could answer from
+   the document alone - "Does this still apply to you on a day you work from home?" - never a
+   decision under invented pressure.
+   keyTakeaway states the single most consequential scope or purpose fact.
+
+2. concept-explainer = WHAT THE POLICY SAYS - title(4-10 words), keyPoints[5]{title(3-5 words), text(42-56 words)}, heading, keyInfo(30-42 words), summaryLine(18-26 words linking to Card 1  -  one full sentence that names the person, place or task from Card 1 and says what they now know. This is a SENTENCE, not a caption: "Back on the same job, you now know which reading tells you to stop and who you tell before you do." is the right length and shape).
+   Show the rule. Do not assert that a rule exists.
+   At least one keyPoints[].text must be a direct quotation or close paraphrase of the
+   policy's actual operative clause - not a summary of what a policy like this usually says.
+   heading is the document's real title or section reference, or an EMPTY STRING if the
+   source names none. Never invented.
+   keyInfo states what the rule requires and what it protects, using only the source's own
+   reasoning.
+   summaryLine links back to the scope established on Card 1.
+
+3. mental-model = WHAT YOU MUST DO - title(4-10 words), steps[3-5]{step(3-6 words), icon, detail(80-140 words)}.
+   The document's own process, as actions: recognise the trigger, do the required act, tell
+   the named role, know what record now exists.
+   Any threshold, timeframe or quantity in a step must be the literal figure the source
+   states. Where the source states none, name the responsible role or process instead of
+   inventing a number.
+   The final step names what now exists after the process completes - a lodged form, a logged
+   case, a decision communicated - never "the matter is handled".
+
+4. mistakes = COMMON MISREADINGS - title(4-10 words), errorItems[5]{error(6-10 words), icon, consequence(38-50 words)}.
+   Each error is a plausible MISREADING of the policy's actual wording - a scope error, a
+   threshold error, a "this does not apply to me" error - not a character flaw and not an
+   invented breach drama.
+   Each consequence corrects the misreading by restating what the document actually says. It
+   may state the document's own consequence of breach ONLY where that wording is literally in
+   the source; otherwise it restates the corrected rule.
+
+5. competency-summary = COMPLIANCE AT A GLANCE - title(4-10 words), standardItems[5]{text(7-10 words), benefit(14-22 words)}, errorItems[5]{error(10-12 words), consequence(14-18 words)}.
+   A job aid the learner can return to without re-reading the pack.
+   standardItems are compliant actions at the source's own level of specificity ("declare a
+   conflict of interest before it arises"), never abstract virtues ("act with integrity").
+   errorItems name a specific breach pattern. No item repeats one already used on Card 4.
+
+6. decision-point = CHECK YOUR UNDERSTANDING - title(4-10 words), heading(22-32 words), standardItems[1]{text(10-16 words), consequence(30-44 words)}, errorItems[3]{error(10-16 words), consequence(30-44 words)}.
+   A real but undramatised situation answerable only from Cards 1-5.
+   At least one wrong answer is a misreading already surfaced on Card 4, not an absurd option.
+   Every consequence names the specific clause or rule that makes that option right or wrong,
+   quoting or closely paraphrasing the source - never inventing a rationale.
+
+Do NOT return a voiceoverText field on any card.
+`;
+
 const GENERAL_SYSTEM_PROMPT = `You are an expert instructional designer and learning storyteller generating high-quality adult learning that is not formal VET, organisation-specific Workplace training, or University academic study.
 
 Return ONLY valid JSON: { "cards": [...] } - exactly 6 cards, in the order below. No markdown and no code fences.
@@ -2051,15 +2449,16 @@ when the learner is making a decision or practising a skill; otherwise use the c
 
 LENGTH / WORD RANGE: the field ranges below are safety rails, not targets. Use enough space to teach the
 idea properly, but never pad a simple idea. If the available duration is short, reduce scope before reducing
-teaching quality. Sentences should be clear and readable; vary sentence length naturally instead of forcing
+teaching quality. Sentences under 22 words; vary sentence length naturally instead of forcing
 every thought into the same clipped rhythm.
 
-THE SIX-CARD LEARNING ARC - THIS SUPERSEDES THE GENERIC SEVEN-CARD PROGRESSION ABOVE FOR THIS ROUTE:
-General's six cards each carry a FIXED instructional job. The job never changes; everything else about
+THE SEVEN-CARD LEARNING ARC - THIS SUPERSEDES THE GENERIC SEVEN-CARD PROGRESSION ABOVE FOR THIS ROUTE:
+General's seven cards each carry a FIXED instructional job. The job never changes; everything else about
 the card does - what it teaches, how it opens, which technique or model it uses, and above all its
-HEADING. The six jobs, in order, are: ORIENT -> UNDERSTAND -> EXPLORE -> APPLY -> CHALLENGE -> CONSOLIDATE.
-Together they must take the learner from interest, to understanding, to depth, to application, to tested
-thinking, to something they can retrieve and use later. No card may simply restate an earlier one.
+HEADING. The seven jobs, in order, are: ORIENT -> UNDERSTAND -> APPLY -> RESOLVE -> EXPLORE -> CONSOLIDATE -> CHALLENGE.
+Together they must take the learner from interest, to understanding, to application, to the errors that
+derail it, to something they can retrieve and use later, and finally to tested thinking. No card may
+simply restate an earlier one.
 
 EVERY CARD RETURNS A "title" FIELD - THE LEARNER-FACING HEADING:
 "title" is a specific, topic-grounded heading you write for THIS course, in THIS learner's language -
@@ -2069,20 +2468,22 @@ Matters", "Understand", "Explore", "Going Deeper", "More Information", "Apply", 
 "Challenge", "Test Your Knowledge", "Consolidate", "Summary", "Key Takeaways", "Conclusion", or the
 course topic on its own with no other words.
 GOOD EXAMPLES (topic: personal budgeting): "Why Does My Money Disappear So Quickly?" (Card 1),
-"The Three Jobs Every Dollar Has" (Card 2), "The Real Difference Between Needs, Wants and Commitments"
-(Card 3), "Turning a $420 Shortfall Around" (Card 4), "Sarah Has $420 Left - What Should She Do?"
-(Card 5), "Your 10-Minute Weekly Money Routine" (Card 6). Same six jobs, completely different course,
+"The Three Jobs Every Dollar Has" (Card 2), "Turning a $420 Shortfall Around"
+(Card 3), "A Second Payday, the Same Shortfall" (Card 4), "The Real Difference Between
+Needs, Wants and Commitments" (Card 5), "Your 10-Minute Weekly Money Routine" (Card 6),
+"$420 Left - What Should You Do?" (Card 7). Same seven jobs, completely different course,
 completely different headings - every heading must feel like it belongs only to THIS topic.
 
 CONTINUITY:
 When a scenario helps, establish one recurring person, setting, pressure, misconception and consequence
-on Card 1 (Orient). Return to that world on Card 4 (Apply) and consider it again on Card 5 (Challenge).
-The learner should feel one problem being understood more deeply across six cards, not six unrelated
+on Card 1 (Orient). Return to that world on Card 3 (Apply), finish its story on Card 4 (Resolve), and
+consider it again on Card 7 (Challenge).
+The learner should feel one problem being understood more deeply across seven cards, not seven unrelated
 mini-lessons. Do not force characters into purely factual material when a worked example is clearer.
 
 CARD CONTRACT (generate in this exact order):
 
-1. hook-scenario = ORIENT - title(4-10 words), sceneParts[4]{title(3-5 words), icon, text(55-80 words)}, highlightText(optional), keyTakeaway(28-38 words).
+1. hook-scenario = ORIENT - title(4-10 words), keyPoints[4]{title(3-5 words), icon, text(46-56 words)}, highlightText(optional), keyTakeaway(28-38 words).
    INSTRUCTIONAL RESPONSIBILITY: create interest, establish relevance, and connect the topic to something
    the learner can already understand. Choose the strongest opening technique for THIS topic: a realistic
    situation, a misconception, a surprising consequence, a question, a mini-story, a relatable problem, a
@@ -2090,7 +2491,7 @@ CARD CONTRACT (generate in this exact order):
    fully teach the concept here - create the reason and the mental context for learning it. End the final
    panel with a genuine learner decision/question when the topic supports one; for factual topics end
    with a prediction gap Card 2 resolves.
-2. concept-explainer = UNDERSTAND - title(4-10 words), conceptInsights[3]{title(3-5 words), text(60-90 words)}, heading, keyInfo(35-55 words), summaryLine(22-34 words).
+2. concept-explainer = UNDERSTAND - title(4-10 words), keyPoints[5]{title(3-5 words), text(42-56 words)}, heading, keyInfo(30-42 words), summaryLine(18-26 words linking to Card 1  -  one full sentence that names the person, place or task from Card 1 and says what they now know. This is a SENTENCE, not a caption: "Back on the same job, you now know which reading tells you to stop and who you tell before you do." is the right length and shape).
    INSTRUCTIONAL RESPONSIBILITY: build the learner's foundational mental model. Identify the load-bearing
    concept(s) that must be understood before anything later will make sense, and choose the explanatory
    structure that fits: What->Why->How->Apply, a familiar idea bridged into the real mechanism via
@@ -2098,17 +2499,7 @@ CARD CONTRACT (generate in this exact order):
    merely what. Answer Card 1 directly. heading names a sourced model/principle/standard only when one
    genuinely applies; otherwise return an empty string - this is separate from "title", the card's own
    heading. keyInfo is the usable rule or explanation, not invented compliance.
-3. mistakes = EXPLORE - title(4-10 words), items[5]{mistake(6-10 words), icon, consequence(55-90 words)}.
-   INSTRUCTIONAL RESPONSIBILITY: deepen the learner's understanding beyond the foundation Card 2 built.
-   Use the reference material and the Learning Blueprint to decide what the learner most needs next - a
-   second important concept, a mechanism, a misconception, a relationship, an exception, a trade-off, a
-   consequence, a category/type, a deeper example, or an important distinction a beginner usually misses.
-   The "mistake" items are the vehicle for this: each one names something a capable learner genuinely
-   gets wrong, and its "consequence" is where the real depth is taught - why it is tempting, the specific
-   mechanism or distinction that makes it wrong, what to do instead, and why the alternative works. Do not
-   repeat Card 2. At least three mistakes must be errors of substance in the topic, not generic
-   communication/process habits.
-4. mental-model = APPLY - title(4-10 words), steps[4-5]{step(3-6 words), icon, detail(100-180 words)}.
+3. mental-model = APPLY - title(4-10 words), steps[4-5]{step(3-6 words), icon, detail(80-140 words)}.
    INSTRUCTIONAL RESPONSIBILITY: move understanding into practical use. Apply the INSTRUCTIONAL MODEL
    ROUTER above: select the model whose reasoning structure matches what the learner must actually DO
    with this content - GROW for a coaching conversation, PDCA for iterative improvement, 5 Whys for root
@@ -2119,8 +2510,41 @@ CARD CONTRACT (generate in this exact order):
    contain a real decision, action, diagnostic question, threshold, cue or reasoning move, show what error
    it prevents, and how the learner knows they are ready to move on. Prefer the Card 1 world when a
    scenario was established.
-5. decision-point = CHALLENGE - title(4-10 words), heading(24-38 words), standardItems[1]{text(10-16 words), consequence(35-55 words)}, errorItems[3]{error(10-16 words), consequence(35-55 words)}.
-   INSTRUCTIONAL RESPONSIBILITY: require the learner to think WITH the knowledge from Cards 1-4, not
+4. applied-scenario = RESOLVE - title(4-10 words), keyPoints[4]{title(3-5 words), icon, text(EXACTLY 3 short sentences, 46-56 words in total. Sentence one sets the situation. Sentence two says what the learner does about it. Sentence three says what it costs them if they do not, named concretely. Never one long run-on sentence)}, highlightText(optional, max 20 words).
+   INSTRUCTIONAL RESPONSIBILITY: return to Card 1's world and finish its story. The SAME
+   person and the SAME situation as Card 1, later the same day or the next time this comes
+   up - the place may move, but the learner and the problem carry over, and this card must
+   open by naming what has CHANGED since Card 1. It renders under a "Continuing the
+   scenario" banner, so an unrelated new scenario reads to the learner as a mistake.
+   This is the card General went without, and its absence is why the route's story stopped
+   after the opening: the learner met a person and a problem and never found out what
+   happened to them.
+   A name on its own is not a scene. If you name someone, put them somewhere at a time
+   doing something: what was said, what is due, who else is there.
+   PANEL 3 IS A COMMITMENT POINT: a complication the model from Card 3 does NOT cleanly
+   cover, ending on the learner deciding, addressed to them as a direct question.
+   PANEL 4 resolves it by NAMING THE THING, not by recommending a category.
+5. mistakes = EXPLORE - title(4-10 words), errorItems[5]{error(6-10 words), icon, consequence(38-50 words)}.
+   INSTRUCTIONAL RESPONSIBILITY: deepen the learner's understanding beyond the foundation Card 2 built.
+   Use the reference material and the Learning Blueprint to decide what the learner most needs next - a
+   second important concept, a mechanism, a misconception, a relationship, an exception, a trade-off, a
+   consequence, a category/type, a deeper example, or an important distinction a beginner usually misses.
+   The "mistake" items are the vehicle for this: each one names something a capable learner genuinely
+   gets wrong, and its "consequence" is where the real depth is taught - why it is tempting, the specific
+   mechanism or distinction that makes it wrong, what to do instead, and why the alternative works. Do not
+   repeat Card 2. At least three mistakes must be errors of substance in the topic, not generic
+   communication/process habits.
+6. competency-summary = CONSOLIDATE - title(4-10 words), standardItems[5]{text(7-10 words), benefit(14-22 words)}, errorItems[5]{error(10-12 words), consequence(14-18 words)}.
+   INSTRUCTIONAL RESPONSIBILITY: make the important learning easy to retrieve and use later. Choose the
+   most useful retention treatment for THIS topic: a practical playbook, a checklist, rules of thumb, an
+   action plan, Start-Stop-Continue, a decision guide, memorable principles, a next-step routine, or a
+   quick-reference method - standardItems and errorItems carry that treatment (standardItems = what to do / what
+   good looks like; errorItems = what to avoid and why). Do not merely repeat Cards 1-5. State observable
+   understanding/action, not virtues: what can the learner now recognise, explain, decide or do that they
+   could not do before?
+
+7. decision-point = CHALLENGE - title(4-10 words), heading(22-32 words), standardItems[1]{text(10-16 words), consequence(30-44 words)}, errorItems[3]{error(10-16 words), consequence(30-44 words)}.
+   INSTRUCTIONAL RESPONSIBILITY: require the learner to think WITH the knowledge from Cards 1-6, not
    simply re-read it. Choose the challenge best suited to the topic: a realistic decision, spot-the-
    mistake, predict-the-outcome, choose-between-approaches, diagnose-the-problem, a worked problem, a
    misconception challenge, or a mini case study - all four options are the same underlying mechanism
@@ -2130,185 +2554,146 @@ CARD CONTRACT (generate in this exact order):
    misconceptions, boundary errors, or a rule that would be correct in a neighbouring case. Feedback must
    teach the reasoning, including why the wrong option feels reasonable. Avoid trivia and simple keyword
    recall.
-6. competency-summary = CONSOLIDATE - title(4-10 words), goodItems[5]{text(6-10 words), benefit(28-48 words)}, badItems[5]{text(10-12 words), consequence(24-42 words)}.
-   INSTRUCTIONAL RESPONSIBILITY: make the important learning easy to retrieve and use later. Choose the
-   most useful retention treatment for THIS topic: a practical playbook, a checklist, rules of thumb, an
-   action plan, Start-Stop-Continue, a decision guide, memorable principles, a next-step routine, or a
-   quick-reference method - goodItems and badItems carry that treatment (goodItems = what to do / what
-   good looks like; badItems = what to avoid and why). Do not merely repeat Cards 1-5. State observable
-   understanding/action, not virtues: what can the learner now recognise, explain, decide or do that they
-   could not do before?
-
 Do not return voiceoverText. Visible card content is the narration.
 `;
 
+    // ===========================================================================
+    // TOPICS AND TEXT  -  v15.3.11 REBUILT AROUND SUBTOPICS
+    //
+    // The route was withdrawn from the wizard (ccNormaliseTeacherRoute folded it onto
+    // General) but clients asked for it back: not everyone wants the seven-card
+    // narrative shape, and some subjects are simply a topic with parts.
+    //
+    // What changed from the v13.92 build. It had FOUR FIXED SLOTS - Overview, Key
+    // Concepts, Examples & Application, Key Takeaways - whose headings were supplied by
+    // the platform and whose content the model had to squeeze into that shape whatever
+    // the subject was. The prompt even said "Do NOT return a heading... The four
+    // headings are fixed". That is not a topics-and-text layout, it is a four-card
+    // essay, and it forced "Leadership Styles" and "Leadership Principles" into slots
+    // named after neither.
+    //
+    // Now the topic sets the shape: as many SUBTOPIC cards as the topic genuinely has,
+    // between three and ten, each carrying its own heading and its own prose. The
+    // platform numbers them and colours them by position; the model chooses what they
+    // are and what they are called. validateCards accepts the range - see
+    // CC_CARD_COUNT_RANGE.
+    // ===========================================================================
     const TOPICSTEXT_SYSTEM_PROMPT = `You are an expert writer of short-course learning content. You write clear, compact explanatory prose for adults.
 
-Return ONLY valid JSON: { "cards": [...] }  -  exactly 5 cards, in the order below. If fewer or more than 5 cards are returned, the output is invalid. No markdown, no code fences.
+Return ONLY valid JSON: { "cards": [...] }. No markdown, no code fences.
+
+HOW MANY CARDS: Break the topic into the subtopics it actually has - a MINIMUM of 3 and a
+MAXIMUM of 10 - and return one "subtopic" card for each, in teaching order, followed by
+exactly one "decision-point" card at the end.
+- Let the subject decide the number. A topic with five real parts gets five cards. Do not
+  pad to reach ten and do not compress eight genuine subtopics into four.
+- Each subtopic must be a DISTINCT part of the topic that could carry its own heading in a
+  textbook. If two cards could swap their prose without anyone noticing, they are one card.
+- Order them so each builds on the one before.
 
 FIELDS: Return every field exactly as specified. Do not rename, omit, add or reorder fields.
 
-HEADINGS: Do NOT return a heading, title or name field on cards 1-4. The four headings are fixed and are supplied by the platform. Writing your own heading, or repeating the topic name, breaks the layout.
+1-N. subtopic  -  heading, paragraphs[2]
+   heading: the subtopic's own heading, 2-6 words, in title case. This is what the learner
+   sees at the top of the card, numbered by the platform - "1. Leadership Principles",
+   "2. Leadership Styles". Name the actual subject of THIS card. Never a generic label
+   ("Introduction", "Overview", "Part Two", "Conclusion"), never the course or topic name
+   repeated, and never the same heading twice in one topic.
+   paragraphs: EXACTLY 2 separate strings. Each paragraph 58-70 words.
+   keyTerms: exactly 1 - {term(1-4 words), definition(12-25 words)}. The one term from THIS
+   subtopic a learner must be able to define afterwards, defined without using the term
+   itself. These become the Flip and Learn cards, so the definition must stand alone
+   without the paragraph beside it.
+
+LAST. decision-point  -  title, question, options[4]{text(10-16 words), correct, feedback}
+   One multiple-choice question testing understanding of the subtopics above, not recall of
+   a phrase.
+   title: 3-7 words naming what is being checked. No topic name repeated verbatim.
+   question: 15-30 words, answerable only by someone who understood the article.
+   options: exactly 4. Exactly ONE has correct: true.
+   ANSWER-LENGTH PARITY: all four options MUST be the same length and the same level of
+   detail (10-16 words each, each naming a specific action). The correct one must not be
+   the longest, the most detailed, or the only one carrying a justification clause. Wrong
+   options are complete, plausible choices, not two-word stubs and not absurd.
+   AT LEAST TWO of the four options must be things a competent person might actually
+   choose. The best distractor is the RIGHT answer to a NEIGHBOURING CASE.
+   FEEDBACK ON EVERY OPTION (12-25 words) says why someone would believe it, then what is
+   wrong, and it contains a FACT. Feedback that only predicts a bad outcome teaches nothing.
+   goodItems: exactly 3 - {text(8-16 words)}. Things a competent person DOES, drawn from
+   the subtopics above, each one judgeable on its own.
+   badItems: exactly 3 - {text(8-16 words)}. Things to avoid, each plainly wrong rather
+   than merely less good. These six become the Category Sort, so an item must be sortable
+   without the card it came from: state the action, not a virtue or a vice.
 
 PARAGRAPH FORMAT  -  READ THIS TWICE:
 - Each paragraph is a SEPARATE STRING in the paragraphs[] array.
-- NEVER write the characters backslash-n. Never write \\n, \\r, <br>, <p>, "--", markdown, bullet characters, asterisks, or numbered list markers anywhere in any paragraph.
+- NEVER write the characters backslash-n. Never write \n, \r, <br>, <p>, "--", markdown,
+  bullet characters, asterisks, or numbered list markers anywhere in any paragraph.
 - A paragraph is plain sentences and nothing else.
+- Do NOT number your own headings. The platform numbers the cards; writing "1." into the
+  title produces "1. 1. Leadership Principles".
 
 LENGTH  -  A HARD LIMIT:
-- Cards 1-4 carry EXACTLY TWO paragraphs each.
-- Each paragraph is 55-70 words. Not 40. Not 90. This limit is about the PARAGRAPHS only.
-- The prose on a card is therefore 110-140 words. Never write a third paragraph, and never let
-  a paragraph run past 70 words.
-- The key takeaway, the key terms and the sort items on cards 1, 2 and 4 sit OUTSIDE that
-  count. Write them to their own ranges below. They are not paragraph text and they do not
-  compete with it - shortening a paragraph to make room for them is the one thing you must
-  not do.
-- This is short-course content on a screen. Cut anything the learner does not need. Do not pad to reach a count.
+- Each paragraph is 58-70 words. Not 40. Not 90.
+- A card therefore carries 116-210 words. Never write a fourth paragraph, and never let a
+  paragraph run past 70 words.
+- This is short-course content on a screen. Cut anything the learner does not need. Do not
+  pad to reach a count.
 
-VOICE: Explain to an intelligent adult who does not know the subject yet. Third person. Plain, confident, specific. Define a term the first time it is used. Sentences under 22 words. No hedging, no moralising, no "in this module you will learn", no calls to action.
+VOICE: Explain to an intelligent adult who does not know the subject yet. Third person.
+Plain, confident, specific. Define a term the first time it is used.
+Sentences under 22 words. No hedging, no moralising, no "in this module you will learn",
+and no calls to action.
 
-REFERENCE MATERIAL: When present, use it as the PRIMARY source. Keep named systems, people, works, places, dates and terms  -  never replace a specific with a generic.
+TEACH SOMETHING ON EVERY CARD: each subtopic must contain something a reader could not
+have guessed - a mechanism, a figure, a distinction, a named method, a worked case, a
+condition under which the general rule does not hold. A card that only asserts that the
+subtopic is important has failed.
 
-${CC_SHARED_QUALITY_RULES}
+REFERENCE MATERIAL: When source material is supplied, teach from it - its figures, its
+names, its examples - rather than writing the generic version of the subject. Where it is
+silent, say what is generally true rather than inventing a specific.
 
-MADE OF THINGS, NOT CATEGORIES  -  this is the standard the whole pack is judged against.
-
-A TEACHABLE SPECIFIC is an atom of transferable substance. It is one of:
-  - a number, duration, threshold, dose, ratio or tolerance (10-12 grams per kilo per day; 6-8
-    seconds; 30 grams an hour; 5 centimetres deep)
-  - a named thing: a tool, a standard, a protocol, a study, a product, a person
-  - a rule WITH its boundary ("under 30 minutes, nothing during exercise; past 90 minutes it
-    becomes critical")
-  - a mechanism with its middle step named ("beta-alanine raises carnosine, carnosine buffers
-    the muscle")
-  - a named failure state and how you would recognise it ("bonking: you can keep moving, you
-    cannot hold the pace")
-
-These are NOT teachable specifics, and a card built from them is a card with the content taken
-out: tailored, balanced, appropriate, optimal, effective, individual needs, best practice,
-in-depth understanding, staying informed, clear communication.
-
-EVERY CARD MUST CARRY TEACHABLE SPECIFICS appropriate to its job. Prefer source-grounded numbers,
-thresholds, named things, mechanisms, examples and boundaries when they materially teach the topic.
-Never manufacture a number or named authority merely to satisfy specificity. If the source supplies a
-figure that changes the learner's decision or understanding, preserve it where that learning is taught.
-
-THE COLLEAGUE TEST: would a learner repeat this to someone at work tomorrow? Nobody repeats
-"understanding energy systems is essential for tailored advice". People repeat "you can rinse
-it and spit it out, the receptors are in your mouth" and "ten grams per kilo, which is about
-fourteen cups of rice, which is why nobody manages it the first time". Write the second kind.
-
-MAKE THE LEARNER COMMIT BEFORE YOU EXPLAIN.
-The learner must be wrong about something, early, in their own head. A learner who has silently
-guessed "you would load for a week" and is then told "two to four days, and here is the study"
-remembers it. A learner told the same fact cold has read a sentence. Every card specification
-below says where its commitment point is. They are not optional and they are not decoration.
-
-CARDS (generate in this order):
-
-WORKED EXAMPLE  -  card 1 for the topic "Carbohydrate loading before endurance events".
-Match this shape and these lengths. The bracketed counts are annotation, not output.
-
-{
-  "cardType": "overview",
-  "paragraphs": [
-    "Carbohydrate loading is a dietary strategy used before prolonged endurance events.
-     It raises the amount of glycogen stored in the muscles and the liver. It involves
-     lifting carbohydrate intake to roughly ten to twelve grams per kilogram of body
-     weight daily. That intake is held for the two to four days before competition. The
-     aim is to start the event with fuel stores as full as possible.",  [67 words]
-    "The strategy exists because glycogen is limited in a way that stored fat is not. An
-     endurance athlete carries enough body fat to fuel many hours of activity. Fat
-     converts into usable energy too slowly to sustain a high pace, however. Once
-     glycogen runs low the athlete can keep moving but cannot hold the same speed.
-     Runners describe that state as hitting the wall."  [64 words]
-  ],
-  "keyTakeaway": "Carbohydrate loading is worth roughly two to three per cent over a set distance,
-      which decides places in competitive fields. The volume of food it requires is large
-      enough that a first attempt usually fails without rehearsal."  [37 words]
-}
-
-WHY THIS PASSES: sentence one is a true definition that stands alone. Paragraph two gives the
-reason the thing exists, with the mechanism and the numbers, not an assertion that it is
-useful. It is third person throughout and asks the reader nothing. The takeaway carries the
-figure that makes the topic worth knowing and the practical catch that goes with it.
-
-
-1. overview  -  paragraphs[2], keyTakeaway(REQUIRED, 28-38 words, exactly 2 sentences - see KEY TAKEAWAY above)
-   Paragraph 1: say what the subject IS. Open with a plain definitional sentence that names
-   the subject and places it in its broadest true category. No metaphor, no question, no
-   anecdote, no statistic.
-   Paragraph 2: why it matters and what changes for someone who understands it  -  concrete
-   stakes, consequence or usefulness.
-   TEST: sentence one must survive being read alone as a true definition.
-
-2. key-concepts  -  paragraphs[2], keyTerms[3-4]{term, definition}
-   The two or three load-bearing ideas the rest of the article depends on. Name each idea,
-   define it in one sentence, then say what work it does in the subject. Prefer ideas that are
-   DISTINCTIONS (X as against Y) over ideas that are only labels.
-   Give the simplest COMPLETE version of each idea, never a simplification you must retract.
-   keyTerms: 3-4 terms drawn from these paragraphs. term = 1-4 words. definition = ONE
-   sentence, 12-25 words, that stands on its own without the term in front of it. These become
-   flip cards in the activity block, so a definition must be learnable in isolation.
-
-   Each idea is given as a MECHANISM WITH ITS PARTS NAMED, with its figure attached, not as a
-   label with a definition after it.
-3. examples-application  -  paragraphs[2]
-   The same ideas in real situations. Give two concrete examples, cases, settings or contexts
-   and show what the ideas from card 2 look like in each. Name real particulars  -  a place, a
-   role, a situation, a decision. Where two approaches differ, say what each buys and at what
-   cost.
-   Everything here must trace back to card 2. Do not introduce a new concept.
-   DO NOT ask the reader questions or write a story with named characters.
-   TEST: at least one sentence must take the form "X rather than Y, because...".
-
-   Name real particulars: a place, a role, a number, a decision. An example with no specific in
-   it is a category with an anecdote painted on.
-4. key-takeaways  -  paragraphs[2], goodItems[3]{text}, badItems[3]{text}
-   Paragraph 1: the points that must survive if the learner forgets everything else, written as
-   prose, not a list. Say why each one matters, not just that it does.
-   Paragraph 2: the most common mistaken belief about this subject. Name it, say plainly it is
-   mistaken, say why it is plausible, then give the correct account. This paragraph MUST contain
-   an explicit negation  -  "is not", "does not", "contrary to".
-   goodItems: 3 short statements (8-16 words) that are sound practice or correct understanding.
-   badItems: 3 short statements (8-16 words) that are the matching errors or misconceptions.
-   These six become a drag-to-sort activity, so each must be judgeable on its own, and a
-   badItem must be plainly wrong rather than merely less good.
-
-   The good and bad items are FACTS IN IMPERATIVE FORM, not virtues and vices.
-5. decision-point  -  title, question, options[4]{text(10-16 words), correct, feedback}
-   ANSWER-LENGTH PARITY: all four options MUST be the same length and the same level of detail (10-16 words each, each naming a specific action). The correct one must not be the longest, the most detailed, or the only one carrying a justification clause. Wrong options are complete, plausible choices, not two-word stubs and not absurd.
-   One multiple-choice question testing understanding of cards 1-4, not recall of a phrase.
-   title: 3-7 words naming what is being checked. No topic name repeated verbatim.
-   question: 15-30 words, answerable only by someone who understood the article.
-   options: exactly 4. Exactly ONE has correct: true. The three wrong answers must each be
-   plausible to someone who half-understood. feedback on every option: 12-25 words saying why
-   it is right or exactly what the misunderstanding is.
-   TEST: a reader who understood the article should have to think for a moment, and a reader who
-   skimmed it should be genuinely tempted by at least two of the wrong answers. If the correct
-   answer can be picked without reading the question, rewrite all four.
-
-VOICEOVER: do NOT return a voiceoverText field on any card. The narration for this route is the
-paragraphs themselves, read verbatim, so that the card reveal and the highlighted paragraph stay
-in step with the audio. A separate narration script would desynchronise them.
-   AT LEAST TWO of the four options must be things a COMPETENT practitioner might actually
-   choose. The best distractor is the RIGHT answer to a NEIGHBOURING CASE.
-   FEEDBACK ON EVERY OPTION says why someone would believe it, then what is wrong, and it
-   contains a FACT. Feedback that only predicts a bad outcome teaches nothing.`;
+Do NOT return a voiceoverText field on any card. The narration for this route is the
+paragraphs themselves, read verbatim, so that the card reveal and the highlighted
+paragraph stay in step with the audio. A separate narration script would desynchronise
+them.
+`;
 
     // ===========================================================================
     // SYSTEM PROMPT SELECTORS
     // ===========================================================================
 const CC_CARD_ORDER = {
-        // v16: General - Orient, Understand, Explore, Apply, Challenge, Consolidate.
+        // v16: General - Orient, Understand, Apply, Resolve, Explore, Consolidate, Challenge.
         // See GENERAL_CARD_SCHEMA and GENERAL_SYSTEM_PROMPT for what each job means.
-        general: ['hook-scenario', 'concept-explainer', 'mistakes', 'mental-model', 'decision-point', 'competency-summary'],
+        // v15.3.10: applied-scenario restored. It is the SECOND SCENARIO - the same
+        // people and task as Card 1, later the same day - and General was the only
+        // narrative route without one, so its story stopped after the opening card.
+        // v15.3.12 REVERTED to six. applied-scenario was restored to General in
+        // v15.3.10 on the strength of the route's own system prompt asking for a
+        // "seven-card sequence" - but the CARD COUNT FOR THIS ROUTE IS NOT OURS TO SET.
+        // generator.js sends `route` precisely so the server uses its own
+        // ccExpectedCardCount, and the vendor's is 6 for general. Asking for 7 produced
+        // 6 back, "Expected 7 cards, got 6" on every section, a billed repair pass each
+        // time, and - worst of it - the card the pipeline dropped was HOOK-SCENARIO, so
+        // packs shipped with no opening scenario at all. Losing the first scenario is a
+        // bigger hole than never having the second.
+        //
+        // Restore when the vendor adds applied-scenario to `general` server-side; the
+        // client side is this line, getCardCountForMode, CC_FIELD_SPECS.general, the
+        // GENERAL_SYSTEM_PROMPT card list and the mode-card chips.
+        general: ['hook-scenario', 'concept-explainer', 'mental-model', 'applied-scenario', 'mistakes', 'competency-summary', 'decision-point'],
         vet: ['hook-scenario', 'concept-explainer', 'mental-model', 'applied-scenario', 'mistakes', 'competency-summary', 'decision-point'],
         workplace: ['hook-scenario', 'concept-explainer', 'mental-model', 'applied-scenario', 'mistakes', 'competency-summary', 'decision-point'],
         pd: ['hook-scenario', 'concept-explainer', 'mental-model', 'applied-scenario', 'mistakes', 'competency-summary', 'decision-point'],
         university: ['concept-anchor', 'theoretical-framework', 'analytical-lens', 'ethics-considerations', 'case-study-1', 'case-study-2', 'decision-point'],
-        topicstext: ['overview', 'key-concepts', 'examples-application', 'key-takeaways', 'decision-point']
+        // v15.3.11: content-driven. The card order is now 'as many subtopic cards as the
+        // topic has, then the decision-point'. This entry is the SHAPE, used for the
+        // expected-order lookup; the count comes from CC_CARD_COUNT_RANGE.
+        topicstext: ['subtopic', 'decision-point'],
+        // v15.2.0: Scope & Purpose, What The Policy Says, What You Must Do,
+        // Common Misreadings, Compliance at a Glance, Check Your Understanding.
+        policy: ['hook-scenario', 'concept-explainer', 'mental-model', 'mistakes', 'competency-summary', 'decision-point']
     };
 
     const getCardQualityBlock = (mode) => {
@@ -2319,13 +2704,236 @@ const CC_CARD_ORDER = {
         }
     };
 
+    /**
+     * v15.3.13: three questions on the decision-point card, on every route.
+     *
+     * The author asked for three multiple-choice questions instead of one. There were two
+     * ways to get there and the vendor was asked which they preferred: three
+     * decision-point CARDS, or one card carrying three QUESTIONS. They chose the second,
+     * and the reason is the one that has cost this plugin the most - the card count is
+     * theirs, not ours, it is pinned by a strict output schema at their end, and the last
+     * time the two halves disagreed it took General down. Three cards would have moved
+     * the count and the ordered sequence on all seven routes. Three questions move a
+     * field.
+     *
+     * Written as ONE block appended to every route's system prompt rather than edited
+     * into seven prompt literals, because "apply it to all routes" is a promise that
+     * seven separate copies cannot keep. Routes with no decision-point get nothing.
+     *
+     * THE FALLBACK CLAUSE IS LOAD-BEARING. The vendor's v2 schema is built and verified
+     * but not yet published, so production still constrains output to the v1 shape. A
+     * prompt that demanded `questions` against a schema that forbids it would be asking
+     * for something the model is not permitted to emit - and an unsatisfiable instruction
+     * is how the 4 Sep General outage began. Naming the legal alternative in the same
+     * breath means both servers get a request they can answer, and the day the vendor
+     * publishes, three questions start arriving with no client release at all.
+     *
+     * @param {String} mode The route.
+     * @returns {String} The block, or '' for a route with no decision-point.
+     */
+    /**
+     * v15.4.1: the people in the scenarios need different names each time.
+     *
+     * Reported after four General packs: "we seem to have Sarah and Jamie appearing a
+     * lot". Two causes, and only one of them was ours - the General prompt's worked
+     * example of card headings named Sarah twice, and an example name is the strongest
+     * instruction in a prompt whether or not it was meant as one. That example is now
+     * nameless. The other cause is the model's own habit: left to itself it reaches for
+     * the same half-dozen names in every generation, which makes a library of courses
+     * read as if one person works everywhere.
+     *
+     * So the rule is explicit, and it is about VARIETY ACROSS packs rather than within
+     * one - continuity inside a section is wanted and is asked for separately. The banned
+     * list is short on purpose: it names the defaults actually seen, and a long list would
+     * read as a puzzle to route around rather than a rule.
+     *
+     * v15.4.2: every route that can put a person on a card, not just the five that open
+     * with hook-scenario.
+     *
+     * The v15.4.1 gate was `order.indexOf('hook-scenario')`, on the reasoning that
+     * University and Topics-and-Text "carry no recurring person". That is wrong for
+     * University: its sequence ends with case-study-1 and case-study-2, which are nothing
+     * but people in situations, and its decision point puts the reader in one. Topics and
+     * Text carries a decision point too. The model's default-name habit does not know
+     * which route it is on, so the block now follows the CARDS that can name someone, and
+     * the continuity sentence names whichever of those cards this route actually has
+     * rather than assuming the five-card scenario shape.
+     *
+     * @param {String} mode Route id.
+     * @return {String} The prompt block, or an empty string.
+     */
+    const CC_PERSON_CARDS = ['hook-scenario', 'applied-scenario', 'case-study-1',
+        'case-study-2', 'decision-point', 'subtopic'];
+
+    const getNamingBlock = (mode) => {
+        // FIX-CC-POLICY-NAMING-CONTRADICTION (v15.4.6): Policy gets the OPPOSITE rule.
+        //
+        // v15.4.4 made this block universal so an eighth route could not be written
+        // without it. That was right for the six narrative routes and wrong for this one:
+        // it told Policy & Compliance to "give the recurring person a name" and to carry
+        // it "through hook-scenario, decision-point, because that is one story" - on the
+        // single route whose whole contract is that there is no story. Its own system
+        // prompt, twenty lines earlier, says "No manufactured conflict", "No dramatised
+        // breach", "never a manufactured incident" and "Never invent an incident that
+        // prompted it". The model was handed both and had to pick.
+        //
+        // A policy does not have a protagonist. It has roles - the worker, the
+        // supervisor, People and Culture - and that is how the document itself refers to
+        // people, so it is how the course should. The ban list is kept, because a model
+        // that reaches for a name anyway must not reach for Sarah.
+        if (mode === 'policy') {
+            return `
+
+===========================================================================
+PEOPLE: ROLES, NOT CHARACTERS
+===========================================================================
+Name no one. This course teaches a document, and the document does not have a
+cast. Refer to people the way the policy itself does - by role: "the worker",
+"your supervisor", "the People and Culture team", "the person who receives the
+report". Second person is better still: say what YOU must do.
+
+There is no recurring person, no continuing situation and no story running
+between the cards. A card that opens on a named individual having a difficult
+morning is the manufactured drama this route exists to remove, and it will fail
+the card's own checks.
+
+If a worked example is genuinely needed to make a clause concrete, describe the
+SITUATION and the ROLE - "a casual employee at a site the organisation does not
+own" - and name no one.
+
+If, despite the above, a name is unavoidable, NEVER use: Sarah, Jamie, Sam,
+Jake, Alex, Emma, John, Mike, Lisa, Priya, Maria. Any name appearing in the
+examples in these instructions is an illustration and must not be reused.
+===========================================================================
+`;
+        }
+        const order = CC_CARD_ORDER[mode] || [];
+        // Filter the ROUTE's order, not the reference list, so the cards are named in the
+        // sequence the model is about to write them in.
+        const present = order.filter((t) => CC_PERSON_CARDS.indexOf(t) !== -1);
+        if (!present.length) { return ''; }
+        // Name the route's own cards. A prompt that tells University to carry a name
+        // "through Card 1, the applied scenario and the decision point" is describing a
+        // sequence University does not have, and a rule that does not match the output
+        // schema is a rule the model discards.
+        const CONTINUITY = present.length > 1
+            ? `The same name should carry through ${present.join(', ')}, because that is
+one story; but a different course must get a different person.`
+            : `A different course must get a different person.`;
+        return `
+
+===========================================================================
+THE PEOPLE IN THE SCENARIO
+===========================================================================
+Give the recurring person a name that belongs to THIS course - its industry,
+its setting and the country it is written for. ${CONTINUITY}
+
+NEVER use: Sarah, Jamie, Sam, Jake, Alex, Emma, John, Mike, Lisa, Priya, Maria.
+These are the names that arrive by default, and a library of courses in which
+every scenario stars the same person reads as a template rather than as
+training. Any name that appears in the examples in these instructions is an
+illustration and must not be reused.
+
+Give the person a role and a place as well as a name. "On the loading dock at
+the end of night shift" tells the learner where they are; "an employee" tells
+them nothing. Where the topic is factual and a person would be an intrusion,
+use a worked example instead and name no one.
+===========================================================================
+`;
+    };
+
+    const getDecisionPointBlock = (mode) => {
+        const order = CC_CARD_ORDER[mode] || [];
+        if (order.indexOf('decision-point') === -1) { return ''; }
+        // v15.3.19: the legacy single-question fallback is offered on Topics and Text ONLY.
+        //
+        // It was written when v2 was built but unpublished, so a server that could not
+        // emit `questions` needed somewhere to go. On the fixed routes that is now the
+        // opposite of true: cards contract 2026-09-05.3 REJECTS the legacy decision fields
+        // outright, so a model that takes the fallback produces a card the vendor refuses
+        // and the section fails. Topics and Text is not a fixed route and carries its
+        // decision in its own shape, so it keeps the escape hatch.
+        const FALLBACK = (mode === 'topicstext')
+            ? ' If - and only if - your output schema rejects "questions", fall back to '
+              + 'the card contract\'s own single-decision shape carrying the strongest of '
+              + 'the three questions. '
+            : ' There is no fallback: the single-question fields are rejected on this '
+              + 'route, so a card that uses them fails the whole section. ';
+        return `
+
+===========================================================================
+DECISION POINT  -  THREE QUESTIONS INSTEAD OF ONE
+===========================================================================
+Return the decision-point card in this shape, carrying THREE questions:
+
+{
+  "cardType": "decision-point",
+  "schemaVersion": 2,
+  "questions": [
+    { "question": "...",
+      "options": [
+        {"text": "...", "feedback": "..."},
+        {"text": "...", "feedback": "..."},
+        {"text": "...", "feedback": "..."},
+        {"text": "...", "feedback": "..."}
+      ],
+      "correctIndex": 0,
+      "feedback": "..." },
+    { ... }, { ... }
+  ]
+}
+
+Exactly three questions. Exactly four options each. correctIndex is 0-3 and
+says which option is right.
+
+This is the ONLY shape that can carry three questions. The single-question
+fields described in the card contract above cannot represent them, so use
+this one.${FALLBACK}Never invent field names, and never return an empty or
+partial questions array.
+
+"questions" AND "schemaVersion" BELONG TO THIS CARD AND NO OTHER. Do not put
+them on the concept-explainer, the competency-summary or any other card, even
+if the output schema appears to allow it. On 5 September a live pack returned
+all three questions attached to the competency-summary and the decision-point
+in the old single-question shape: the learner was shown ONE question, and the
+other two were read as prose on a card that never asked for them.
+
+KEEP EVERY OTHER FIELD THE CARD CONTRACT ASKED FOR ON THIS CARD. "questions"
+replaces the single question and its options and nothing else. If the
+contract asked this card for goodItems and badItems, return them exactly as
+specified alongside "questions" - on the Topics and Text route those six
+items ARE the Category Sort activity, and a card that drops them costs the
+learner a whole activity while still looking complete.
+
+FEEDBACK GOES ON EVERY OPTION. A learner who picks a wrong answer learns from
+being told why THAT answer is wrong, not why a different one is right - so
+each option carries its own "feedback", and the question-level "feedback"
+explains the correct answer. Options may be plain strings if you have nothing
+per-option to say, but that is the weaker card.
+
+THE THREE QUESTIONS MUST TEST THREE DIFFERENT THINGS. Question 1 checks the
+rule or principle the pack taught. Question 2 puts it in a situation where
+the obvious answer is wrong. Question 3 asks what the learner would DO, in
+the world this pack is set in. Three rewordings of one question is a failed
+card.
+
+OPTION PARITY APPLIES TO EVERY QUESTION, not just the first. Within a
+question, all four options must be within three words of each other. A
+correct answer that is visibly the longest can be picked without being read,
+and the question then measures nothing. Every distractor must be an answer a
+real learner would choose.
+===========================================================================
+`;
+    };
+
     const getSystemPromptForMode = (mode) => {
-        if (mode === 'general') return GENERAL_SYSTEM_PROMPT + getCardQualityBlock('general');
-        if (mode === 'topicstext') return TOPICSTEXT_SYSTEM_PROMPT + getCardQualityBlock('topicstext');
-        if (mode === 'university') return UNIVERSITY_SYSTEM_PROMPT + getCardQualityBlock('university');
-        if (mode === 'workplace') return WORKPLACE_SYSTEM_PROMPT + getCardQualityBlock('workplace');
-        if (mode === 'pd') return PD_SYSTEM_PROMPT + getCardQualityBlock('pd');
-        return VET_SYSTEM_PROMPT + getCardQualityBlock('vet');
+        if (mode === 'general') return GENERAL_SYSTEM_PROMPT + getCardQualityBlock('general') + getDecisionPointBlock('general') + getNamingBlock('general');
+        if (mode === 'policy') return POLICY_SYSTEM_PROMPT + getCardQualityBlock('policy') + getDecisionPointBlock('policy') + getNamingBlock('policy');
+        if (mode === 'topicstext') return TOPICSTEXT_SYSTEM_PROMPT + getCardQualityBlock('topicstext') + getDecisionPointBlock('topicstext') + getNamingBlock('topicstext');
+        if (mode === 'university') return UNIVERSITY_SYSTEM_PROMPT + getCardQualityBlock('university') + getDecisionPointBlock('university') + getNamingBlock('university');
+        if (mode === 'workplace') return WORKPLACE_SYSTEM_PROMPT + getCardQualityBlock('workplace') + getDecisionPointBlock('workplace') + getNamingBlock('workplace');
+        if (mode === 'pd') return PD_SYSTEM_PROMPT + getCardQualityBlock('pd') + getDecisionPointBlock('pd') + getNamingBlock('pd');
+        return VET_SYSTEM_PROMPT + getCardQualityBlock('vet') + getDecisionPointBlock('vet') + getNamingBlock('vet');
     };
 
     const getFiveCardSystemPromptForMode = getSystemPromptForMode;
@@ -2407,7 +3015,7 @@ const CC_CARD_ORDER = {
             multi,
             (topicsBlock || '').trim(),
             ''
-        ].filter(function (part, i) { return i === 0 || part !== ''; }).join('\n\n');
+        ].filter(function(part, i) { return i === 0 || part !== ''; }).join('\n\n');
     };
 
     // ===========================================================================
@@ -2464,7 +3072,7 @@ Do NOT use English for any card content. Ignore any English writing style or spe
         lines.push(`- Topic: ${topic.title || topic.name || ''}`);
         if (topic.outcome) { lines.push(`- What the reader should understand: ${topic.outcome}`); }
         if (context.subjectArea) { lines.push(`- Subject area: ${context.subjectArea}`); }
-        if (context.targetAudience) { lines.push(`- Written for: ${context.targetAudience}`); }
+        if (context.targetAudience) { lines.push(`- Written for: ${ccHumanValue(context.targetAudience)}`); }
         if (context.courseName) { lines.push(`- Part of: ${context.courseName}`); }
 
         // v13.92: the v13.91 mechanism-structure pin is gone with the card it pinned.
@@ -2479,7 +3087,7 @@ ${context.additionalInstructions ? `\nAUTHOR INSTRUCTIONS: ${context.additionalI
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${ccRelevantSource(context.priorityContent, topic, CC_SOURCE_BUDGET)}` : ''}
 
 Write all 5 cards in order: overview, key-concepts, examples-application, key-takeaways, decision-point.
-Remember: no heading fields on cards 1-4, exactly two paragraphs each, 55-70 words per paragraph, and never the characters backslash-n anywhere.${ccSiblingBlock(topic)}${langSuffix}`;
+Remember: no heading fields on cards 1-4, exactly two paragraphs each, 58-70 words per paragraph, and never the characters backslash-n anywhere.${ccSiblingBlock(topic)}${langSuffix}`;
     };
 
     /**
@@ -2618,7 +3226,7 @@ Remember: no heading fields on cards 1-4, exactly two paragraphs each, 55-70 wor
             context && (context.industryContext || context.industry),
             context && (context.jobRole || context.jobTitle || context.learnerRole),
             context && context.targetAudience]
-            .filter(function (v) { return v && String(v).trim() && String(v).trim().toLowerCase() !== 'general'; });
+            .filter(function(v) { return v && String(v).trim() && String(v).trim().toLowerCase() !== 'general'; });
         const thin = specifics.length < 2;
 
         const contextRule = thin
@@ -2726,7 +3334,7 @@ the researcher - so the two cases could not be swapped for each other or for ano
         if (!siblings || siblings.length < 2) { return ''; }
         const idx = (topic._sectionIndex || 0);
         const others = siblings
-            .map(function (t, i) { return (i === idx) ? null : (i + 1) + '. ' + t; })
+            .map(function(t, i) { return (i === idx) ? null : (i + 1) + '. ' + t; })
             .filter(Boolean);
         if (!others.length) { return ''; }
         return `
@@ -2796,7 +3404,7 @@ able to say what is on yours and not on any of theirs.`;
         const title = String((topic && (topic.title || topic.name)) || '');
         const stop = /^(the|and|for|with|from|that|this|are|was|how|why|what|when|its|their|your|you|a|an|of|in|on|to|is|it|be|as|at|by|or|not)$/i;
         const terms = title.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
-            .filter(function (w) { return w.length > 2 && !stop.test(w); });
+            .filter(function(w) { return w.length > 2 && !stop.test(w); });
 
         // Group into SECTIONS, not paragraphs.
         //
@@ -2806,7 +3414,7 @@ able to say what is on yours and not on any of theirs.`;
         // not, so the budget filled with titles and the content they introduce was left
         // behind. A heading has to travel with the text it heads.
         const raw = src.split(/\n\s*\n/);
-        const isHeading = function (b) {
+        const isHeading = function(b) {
             const line = b.trim();
             if (line.length > 90 || line.indexOf('\n') !== -1) { return false; }
             const letters = line.replace(/[^A-Za-z]/g, '');
@@ -2815,14 +3423,14 @@ able to say what is on yours and not on any of theirs.`;
         };
         const blocks = [];
         let cur = '';
-        raw.forEach(function (b) {
+        raw.forEach(function(b) {
             // A heading starts a new section, provided the current one has some body.
             if (isHeading(b) && cur.length > 400) { blocks.push(cur); cur = b; return; }
             cur = cur ? (cur + '\n\n' + b) : b;
             if (cur.length > 2200) { blocks.push(cur); cur = ''; }
         });
         if (cur.trim()) { blocks.push(cur); }
-        const lows = blocks.map(function (b) { return b.toLowerCase(); });
+        const lows = blocks.map(function(b) { return b.toLowerCase(); });
 
         // Weight a title word by how RARE it is in this document. "Nutrition" and
         // "exercise" appear in every block of a sports-nutrition source and separate
@@ -2830,16 +3438,16 @@ able to say what is on yours and not on any of theirs.`;
         // completely. Without this the common words drown out the discriminating ones and
         // a section gets the opening of the document again.
         const idf = {};
-        terms.forEach(function (t) {
+        terms.forEach(function(t) {
             let df = 0;
-            lows.forEach(function (l) { if (l.indexOf(t) !== -1) { df++; } });
+            lows.forEach(function(l) { if (l.indexOf(t) !== -1) { df++; } });
             idf[t] = Math.log((blocks.length + 1) / (df + 1)) + 0.25;
         });
 
-        const scored = blocks.map(function (b, i) {
+        const scored = blocks.map(function(b, i) {
             const low = lows[i];
             let score = 0;
-            terms.forEach(function (t) {
+            terms.forEach(function(t) {
                 let from = 0, n = 0, at;
                 while ((at = low.indexOf(t, from)) !== -1) { n++; from = at + t.length; }
                 // Diminishing returns, so one long block cannot dominate on repetition.
@@ -2855,7 +3463,7 @@ able to say what is on yours and not on any of theirs.`;
         // The opening always travels: it frames the subject for every section.
         const out = [];
         let used = 0;
-        const take = function (entry) {
+        const take = function(entry) {
             if (used + entry.block.length + 2 > limit) { return false; }
             out.push(entry); used += entry.block.length + 2; return true;
         };
@@ -2863,8 +3471,8 @@ able to say what is on yours and not on any of theirs.`;
         // small - it is context, not content, and the section's own material matters more.
         for (let i = 0; i < scored.length && used < limit * 0.08; i++) { take(scored[i]); }
         const taken = {};
-        out.forEach(function (e) { taken[e.i] = true; });
-        scored.slice().sort(function (a, b) { return b.score - a.score; }).forEach(function (e) {
+        out.forEach(function(e) { taken[e.i] = true; });
+        scored.slice().sort(function(a, b) { return b.score - a.score; }).forEach(function(e) {
             if (!taken[e.i] && e.score > 0) { if (take(e)) { taken[e.i] = true; } }
         });
         // Fill what is left with the blocks NEAREST the ones already chosen, so a selected
@@ -2874,18 +3482,18 @@ able to say what is on yours and not on any of theirs.`;
         // never saw it.
         const chosen = Object.keys(taken).map(Number);
         if (chosen.length) {
-            scored.filter(function (e) { return !taken[e.i]; })
-                .map(function (e) {
+            scored.filter(function(e) { return !taken[e.i]; })
+                .map(function(e) {
                     let d = Infinity;
-                    chosen.forEach(function (c) { d = Math.min(d, Math.abs(c - e.i)); });
+                    chosen.forEach(function(c) { d = Math.min(d, Math.abs(c - e.i)); });
                     return { e: e, d: d };
                 })
-                .sort(function (a, b) { return a.d - b.d || a.e.i - b.e.i; })
-                .forEach(function (x) { if (!taken[x.e.i] && take(x.e)) { taken[x.e.i] = true; } });
+                .sort(function(a, b) { return a.d - b.d || a.e.i - b.e.i; })
+                .forEach(function(x) { if (!taken[x.e.i] && take(x.e)) { taken[x.e.i] = true; } });
         }
 
-        out.sort(function (a, b) { return a.i - b.i; });
-        return out.map(function (e) { return e.block; }).join('\n\n');
+        out.sort(function(a, b) { return a.i - b.i; });
+        return out.map(function(e) { return e.block; }).join('\n\n');
     };
 
     const buildFiveCardUserPrompt = (context, topic) => {
@@ -2894,6 +3502,9 @@ able to say what is on yours and not on any of theirs.`;
         }
         if (context?.mode === 'topicstext') {
             return buildTopicsTextUserPrompt(context, topic);
+        }
+        if (context?.mode === 'policy') {
+            return buildPolicyFiveCardUserPrompt(context, topic);
         }
         if (context?.mode === 'university') {
             return buildUniversityFiveCardUserPrompt(context, topic);
@@ -2910,8 +3521,8 @@ able to say what is on yours and not on any of theirs.`;
     const buildGeneralFiveCardUserPrompt = (context, topic) => {
         const langPrefix = getLangPrefixForUserPrompt(context);
         const langSuffix = getLangSuffixForUserPrompt(context);
-        const learner = context.targetAudience || context.learnerRole || context.jobTitle || 'Adult learner';
-        const level = context.experienceLevel || context.jobLevel || 'Beginner to intermediate';
+        const learner = ccHumanValue(context.targetAudience || context.learnerRole || context.jobTitle) || 'Adult learner';
+        const level = ccHumanValue(context.experienceLevel || context.jobLevel) || 'Beginner to intermediate';
         const desiredOutcome = topic.outcome || context.desiredOutcome || context.learningOutcome || '';
         const struggles = context.learnerChallenges || context.commonStruggles || context.whatUsuallyGoesWrong || '';
         const realExample = context.realExample || context.exampleToInclude || '';
@@ -2943,10 +3554,10 @@ scope rather than depth if the duration is short.${ccSiblingBlock(topic)}${ccVar
         if (context.unitCode) contextLines.push(`- Unit Code: ${context.unitCode}`);
         if (context.unitTitle) contextLines.push(`- Unit Title: ${context.unitTitle}`);
         contextLines.push(`- Topic: ${topic.title || topic.name || ''}`);
-        contextLines.push(`- Learner Role: ${context.learnerRole || context.jobTitle || 'Worker'}`);
+        contextLines.push(`- Learner Role: ${ccHumanValue(context.learnerRole || context.jobTitle) || 'Worker'}`);
         contextLines.push(`- Industry: ${context.industryContext || context.industry || 'General'}`);
-        contextLines.push(`- Location: ${context.location || context.country || 'Australia'}${context.state ? `, ${context.state}` : ''}`);
-        contextLines.push(`- Job Level: ${context.jobLevel || 'Worker'}`);
+        contextLines.push(`- Location: ${ccLocationLine(context)}`);
+        contextLines.push(`- Job Level: ${ccHumanValue(context.jobLevel) || 'Worker'}`);
         if (context.equipmentList?.length) contextLines.push(`- Equipment: ${context.equipmentList.join('; ')}`);
         
         return `${langPrefix}Create a 7-card vocational learning sequence.
@@ -2974,15 +3585,15 @@ Generate the full 7-card sequence.${ccSiblingBlock(topic)}${ccVarietyBlock(topic
         const langPrefix = getLangPrefixForUserPrompt(context);
         const langSuffix = getLangSuffixForUserPrompt(context);
         const contextLines = [];
-        if (context.trainingType) contextLines.push(`- Training Type: ${context.trainingType}`);
+        if (context.trainingType) contextLines.push(`- Training Type: ${ccHumanValue(context.trainingType)}`);
         if (context.companyName) contextLines.push(`- Company: ${context.companyName}`);
         if (context.department) contextLines.push(`- Department: ${context.department}`);
-        if (context.targetAudience) contextLines.push(`- Target Audience: ${context.targetAudience}`);
+        if (context.targetAudience) contextLines.push(`- Target Audience: ${ccHumanValue(context.targetAudience)}`);
         contextLines.push(`- Topic: ${topic.title || topic.name || ''}`);
-        contextLines.push(`- Learner Role: ${context.learnerRole || context.jobTitle || 'Worker'}`);
+        contextLines.push(`- Learner Role: ${ccHumanValue(context.learnerRole || context.jobTitle) || 'Worker'}`);
         contextLines.push(`- Industry: ${context.industryContext || context.industry || 'General'}`);
-        contextLines.push(`- Location: ${context.location || context.country || 'Australia'}${context.state ? `, ${context.state}` : ''}`);
-        contextLines.push(`- Job Level: ${context.jobLevel || 'Worker'}`);
+        contextLines.push(`- Location: ${ccLocationLine(context)}`);
+        contextLines.push(`- Job Level: ${ccHumanValue(context.jobLevel) || 'Worker'}`);
         if (context.equipmentList?.length) contextLines.push(`- Equipment: ${context.equipmentList.join('; ')}`);
         
         return `${langPrefix}Create a 7-card workplace training sequence.
@@ -3001,19 +3612,99 @@ ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${ccRelevantSource(context.p
 Generate the full 7-card sequence.${ccSiblingBlock(topic)}${ccVarietyBlock(topic.title || topic.name || '', context.mode, topic, context)}${langSuffix}`;
     };
 
+    /**
+     * v15.3.7 FIX-CC-POLICY-USER-PROMPT.
+     *
+     * buildFiveCardUserPrompt() had no `policy` branch, so a Policy section fell all the
+     * way through to buildVetFiveCardUserPrompt(). The consequences were not cosmetic:
+     *
+     *  - POLICY_SYSTEM_PROMPT asks for exactly 6 cards. The VET user prompt asks, twice,
+     *    for "a 7-card vocational learning sequence". The model obeys the more specific
+     *    instruction, returns 7, `validateCards` fails with "Expected 6 cards, got 7" and
+     *    a structural repair pass fires - a SECOND billed AI call on 100% of Policy
+     *    sections. With no billingKey on the subtopic (fixed separately in v15.3.6c) that
+     *    repair was also billed as a whole extra subtopic.
+     *  - The seventh card is absorbed by relabelling: `applied-scenario` is silently
+     *    renamed to a second `mistakes`, so the pack ships two Common Misreadings cards
+     *    and no Check Your Understanding.
+     *  - The VET prompt frames the work as vocational competency against units and
+     *    elements, which is the wrong subject entirely for a code of conduct.
+     *
+     * This builder is deliberately NOT a copy of the Workplace one. Two things are
+     * removed rather than adapted:
+     *
+     *  - ccVarietyBlock() is omitted. It instructs the model to INVENT a specific
+     *    situation and commit to it ("a general brief is permission to choose"), which is
+     *    the exact opposite of POLICY_SYSTEM_PROMPT's "Scene-setting detail may NOT be
+     *    invented on this route". Sending both puts two contradictory rules in one call
+     *    and the user prompt, being last and more concrete, tends to win.
+     *  - Equipment, job tasks and "real workplace example" are omitted. They pull toward
+     *    invented operational texture a reader cannot distinguish from stated policy.
+     *
+     * `sourceExtract` is the section's own clause text, attached per-section by
+     * generator.js. It is presented FIRST and as the authority, with the rest of the
+     * document following as context only, so a figure from an unrelated section is not
+     * available to be lifted.
+     *
+     * @param {Object} context The generation context (mode 'policy').
+     * @param {Object} topic The section being generated.
+     * @returns {string} The user prompt.
+     */
+    const buildPolicyFiveCardUserPrompt = (context, topic) => {
+        const langPrefix = getLangPrefixForUserPrompt(context);
+        const langSuffix = getLangSuffixForUserPrompt(context);
+        const meta = context.policyMeta || {};
+        // Only the four fields gatherPolicyMeta() actually collects, plus the filename it
+        // records as the honest fallback for "which document is this?".
+        const docTitle = String(meta.title || meta.sourceFilename || '').trim();
+        const contextLines = [];
+        if (docTitle) contextLines.push(`- Policy document: ${docTitle}`);
+        if (meta.owner) contextLines.push(`- Policy owner: ${meta.owner}`);
+        if (meta.contact) contextLines.push(`- Who staff ask about this policy: ${meta.contact}`);
+        if (context.companyName) contextLines.push(`- Organisation: ${context.companyName}`);
+        if (context.department) contextLines.push(`- Department: ${context.department}`);
+        if (context.targetAudience) contextLines.push(`- Who is being trained: ${ccHumanValue(context.targetAudience)}`);
+        contextLines.push(`- Section being taught: ${topic.title || topic.name || ''}`);
+        contextLines.push(`- Learner role: ${ccHumanValue(context.learnerRole || context.jobTitle) || 'Staff member'}`);
+        contextLines.push(`- Location: ${ccLocationLine(context)}`);
+
+        const extract = String(context.sourceExtract || topic.sourceExtract || '').trim();
+        const whole = context.priorityContent
+            ? ccRelevantSource(context.priorityContent, topic, CC_SOURCE_BUDGET)
+            : '';
+
+        return `${langPrefix}Create a 6-card policy and compliance sequence from the source below.
+
+CONTEXT:
+${contextLines.join('\n')}
+${context.additionalInstructions ? `\nTRAINER INSTRUCTIONS: ${context.additionalInstructions}` : ''}
+${extract ? `\nTHIS SECTION'S SOURCE TEXT  -  this is the authority for every card. Teach THIS:\n"""\n${extract}\n"""` : ''}
+${whole ? `\nTHE REST OF THE DOCUMENT  -  context only. Do not teach from it, and never take a\nfigure, timeframe, threshold or clause reference from here and attach it to this section:\n"""\n${whole}\n"""` : ''}
+
+The CONTEXT block above is administrative metadata the trainer typed in. It tells you what the
+document is and who owns it. It is not policy content: never state it as a rule or an obligation.
+
+Every obligation, figure, timeframe, role name and clause reference in your six cards must be
+traceable to the section source text above. Where it states none, name the role or process a
+reader should ask instead of supplying one. Return an empty string rather than a plausible
+reference. Do not open any card with an invented incident, meeting or confrontation.
+
+Generate the full 6-card sequence.${ccSiblingBlock(topic)}${langSuffix}`;
+    };
+
     const buildPDFiveCardUserPrompt = (context, topic) => {
         const langPrefix = getLangPrefixForUserPrompt(context);
         const langSuffix = getLangSuffixForUserPrompt(context);
         const contextLines = [];
-        if (context.trainingType) contextLines.push(`- Training Type: ${context.trainingType}`);
+        if (context.trainingType) contextLines.push(`- Training Type: ${ccHumanValue(context.trainingType)}`);
         if (context.companyName) contextLines.push(`- Organisation: ${context.companyName}`);
         if (context.department) contextLines.push(`- Department: ${context.department}`);
-        if (context.targetAudience) contextLines.push(`- Target Audience: ${context.targetAudience}`);
+        if (context.targetAudience) contextLines.push(`- Target Audience: ${ccHumanValue(context.targetAudience)}`);
         contextLines.push(`- Topic: ${topic.title || topic.name || ''}`);
-        contextLines.push(`- Learner Role: ${context.learnerRole || context.jobTitle || 'Professional'}`);
+        contextLines.push(`- Learner Role: ${ccHumanValue(context.learnerRole || context.jobTitle) || 'Professional'}`);
         contextLines.push(`- Industry: ${context.industryContext || context.industry || 'General'}`);
-        contextLines.push(`- Location: ${context.location || context.country || 'Australia'}${context.state ? `, ${context.state}` : ''}`);
-        contextLines.push(`- Experience Level: ${context.jobLevel || 'Mid-career professional'}`);
+        contextLines.push(`- Location: ${ccLocationLine(context)}`);
+        contextLines.push(`- Experience Level: ${ccHumanValue(context.jobLevel) || 'Mid-career professional'}`);
         
         return `${langPrefix}Create a 7-card professional development learning sequence.
 
@@ -3321,7 +4012,7 @@ Generate the full 7-card sequence.${ccUniVarietyBlock(topic.title || topic.name 
         // starved prompt, not these prompts. No word-count regression is established.
         const DOUBLE_WORD_ALLOWLIST = ['that', 'have', 'said', 'well', 'had', 'long'];
         const beforeDoubles = allText;
-        allText = allText.replace(/\b([A-Za-z]{4,})(\s+)\1\b/g, function (match, word, gap) {
+        allText = allText.replace(/\b([A-Za-z]{4,})(\s+)\1\b/g, function(match, word, gap) {
             if (DOUBLE_WORD_ALLOWLIST.indexOf(word.toLowerCase()) !== -1) { return match; }
             return word;
         });
@@ -3604,28 +4295,207 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         return 'Topic: ' + (topicTitle || '')
             + '\n\nISSUES TO FIX:\n' + issueList
             + '\n\nCURRENT CARDS:\n' + JSON.stringify(cards)
-            + '\n\nReturn the corrected { "cards": [...] } with exactly 5 cards, same order,'
-            + ' preserving everything the issues do not mention.';
+            // v15.3.11: the count is CONTENT-DRIVEN on this route, so a repair must
+            // return the same number of cards it was handed - not a fixed 5. Hard-coding
+            // 5 told the model to invent a card, or drop one, on every repair of a pack
+            // that is not exactly five long, which after the subtopic rebuild is most of
+            // them.
+            + '\n\nReturn the corrected { "cards": [...] } with EXACTLY the same number of'
+            + ' cards you were given (' + (Array.isArray(cards) ? cards.length : 0) + '),'
+            + ' in the same order, preserving everything the issues do not mention.'
+            + ' Do not add a card and do not remove one.';
     };
 
+    // v15.1.7 FIX-CC-GENERAL-REPAIR-WAS-VET. General had no branch in either dispatcher
+    // below, so both fell through to the VET default - and VET's repair prompt ends
+    // "exactly 7 cards" and describes an applied-scenario card General does not have.
+    // General generates 6. So every General section that needed a targeted repair was
+    // handed a VET contract on its last attempt, came back at 7 cards (or in vocational
+    // "Unit / Industry / Role" framing for an arbitrary General topic), failed structural
+    // validation with "Expected 6 cards, got 7", and fell to the failure placeholders with
+    // no attempts left - after paying for the repair call.
+    //
+    // This is the same defect as v15.1.3's, on the other half of the pipeline: the
+    // generation prompt was corrected there, the repair prompt was never looked at. It is
+    // the "EXCEPTION on TARGETED REPAIR" in the 4 Sep production logs, sitting behind the
+    // initial-generation failure that was fixed first.
+    //
+    // Built the way v13.98.3 built every other route's: derived from the route's own
+    // system prompt, never a hand-copied contract. That release's own comment - "a copy of
+    // a contract is a contract that will drift... every route now does the same" - was
+    // written before General existed, which is exactly how General came to be the one
+    // route it was not true of.
+    // v15.2.0: Policy gets its own repair pair for the reason General did not have one and
+    // silently used VET's - a repair prompt that is another route's contract is a repair that
+    // fails validation on its last attempt after being paid for.
+    const buildPolicyContentRepairSystemPrompt = (context) => {
+        const langBlock = getLanguageInstructions(context?.language || context?.voiceLanguage || 'en-AU');
+        return POLICY_SYSTEM_PROMPT
+            + '\n\nYou are REPAIRING an existing pack, not writing a new one.'
+            + '\nThe card contract above is authoritative - it is the same contract the'
+            + '\npack was generated against, including its fidelity rules.'
+            + '\n\nFix ONLY the fields the listed issues name. A field the issues do not'
+            + '\nname must come back byte-for-byte unchanged.'
+            + '\n\nA repair may NEVER add an obligation, timeframe, threshold, figure or'
+            + '\nconsequence that is not in the source document. If a field is short and the'
+            + '\nsource has nothing more to say, leave it short and correct rather than'
+            + '\npadding it with invented policy - a short true card beats a long false one.'
+            + langBlock;
+    };
+
+    const buildPolicyContentRepairPrompt = (cards, issues, topicTitle = '', context = {}) => {
+        const langPrefix = getLangPrefixForUserPrompt(context);
+        // v15.3.7 FIX-CC-POLICY-REPAIR-NO-SOURCE: send the source with the repair.
+        //
+        // The system prompt tells the model "a repair may NEVER add an obligation,
+        // timeframe, threshold, figure or consequence that is not in the source
+        // document" - and then the user prompt sent it the issue list and the cards, and
+        // no source. The model was given a fidelity constraint and nothing to check
+        // itself against, on the one route where an unanchored figure is the defect.
+        //
+        // Worse in combination with the fidelity checks now reaching the repair queue at
+        // all (v15.3.7): the repair for "INVENTED FIGURES - these numbers are in the
+        // course and NOT in the source" is impossible to perform without the source.
+        //
+        // The data was already at the call site - generator.js passes the per-section
+        // context, which carries sourceExtract - and buildPolicyFiveCardUserPrompt sends
+        // both. This is the same context, so it is the same text the cards were
+        // generated from.
+        const extract = String(context.sourceExtract || '').trim();
+        const whole = (!extract && context.priorityContent)
+            ? String(context.priorityContent).slice(0, CC_SOURCE_BUDGET)
+            : '';
+        const sourceBlock = extract
+            ? `\nTHE SOURCE THIS SECTION WAS WRITTEN FROM  -  every figure, timeframe, role\nand clause in your repair must be traceable to this text:\n"""\n${extract}\n"""\n`
+            : (whole
+                ? `\nTHE SOURCE DOCUMENT  -  every figure, timeframe, role and clause in your\nrepair must be traceable to this text:\n"""\n${whole}\n"""\n`
+                : '');
+        return `${langPrefix}SURGICAL FIX for: ${topicTitle || 'this policy'}
+
+Fix ONLY these structural issues  -  do NOT rewrite or rephrase any other content:
+${issues.slice(0, 5).map(i => `- ${i}`).join('\n')}
+
+Keep ALL existing content, wording and quoted policy text exactly as it is.
+Only modify the specific broken fields listed above, and never by inventing policy detail.
+${sourceBlock}
+CURRENT CARDS:
+${JSON.stringify(cards, null, 2)}
+
+Return ONLY a valid JSON object with "cards" array of exactly ${getCardCountForMode('policy')} cards.`;
+    };
+
+    const buildGeneralContentRepairSystemPrompt = (context) => {
+        const langBlock = getLanguageInstructions(context?.language || context?.voiceLanguage || 'en-AU');
+        return GENERAL_SYSTEM_PROMPT
+            + '\n\nYou are REPAIRING an existing pack, not writing a new one.'
+            + '\nThe card contract above is authoritative - it is the same contract the'
+            + '\npack was generated against.'
+            + '\n\nFix ONLY the fields the listed issues name. A field the issues do not'
+            + '\nname must come back byte-for-byte unchanged.'
+            + '\n\nLength issues run BOTH ways and the issue text says which. An issue'
+            + '\nsaying a field is N words and needs X-Y, where N is BELOW X, means ADD a'
+            + '\nsentence carrying a specific - a figure, a threshold, a named example, a'
+            + '\nnamed person, a named consequence - and keep every sentence already there.'
+            + '\nAn issue saying a field is ABOVE its range means CUT: remove the weakest'
+            + '\nclause rather than trimming every sentence evenly.'
+            + '\n\nNever pad with adjectives, restatement or filler. A repair that returns'
+            + '\nless content than it was given is discarded and the earlier version ships.'
+            + langBlock;
+    };
+
+    const buildGeneralContentRepairPrompt = (cards, issues, topicTitle = '', context = {}) => {
+        const langPrefix = getLangPrefixForUserPrompt(context);
+        return `${langPrefix}SURGICAL FIX for: ${topicTitle || 'this topic'}
+
+Fix ONLY these structural issues  -  do NOT rewrite or rephrase any other content:
+${issues.slice(0, 5).map(i => `- ${i}`).join('\n')}
+
+Keep ALL existing content, scenarios, text, and details exactly as they are.
+Only modify the specific broken fields listed above.
+
+CURRENT CARDS:
+${JSON.stringify(cards, null, 2)}
+
+Return ONLY a valid JSON object with "cards" array of exactly ${getCardCountForMode('general')} cards.`;
+    };
+
+    /**
+     * v15.4.4 FIX-CC-SARAH-COMES-BACK-IN-THE-REPAIR: the repair prompt carries the naming
+     * rule too.
+     *
+     * "Still generating Sarah everywhere in the scenarios - must be hardcoded in the prompt
+     * somewhere!" Not hardcoded: MISSING. v15.4.1 added the naming block to the seven
+     * GENERATION prompts and stopped there, and the repair pass is a separate prompt built
+     * by a separate function. A repair fires whenever a field lands under a vendor floor,
+     * which on a live build is most sections and often several fields in one - and what it
+     * rewrites is `keyPoints[].text`, the scene-panel prose where the person is named. So
+     * generation was told never to use Sarah, produced someone else, failed a word floor,
+     * and the repair - told nothing about names - rewrote the panel and put her back.
+     *
+     * Verified before fixing, by building all seven repair prompts and searching them: not
+     * one contained the rule. The same "one half of a contract moved" shape as the card
+     * order, the vendor floors and the English sort instruction.
+     *
+     * Appended in ONE place rather than inside each of the seven builders, so the eighth
+     * cannot be written without it.
+     *
+     * @param {String} mode    Route id.
+     * @param {Object} context Generation context.
+     * @return {String} The repair system prompt.
+     */
     const getContentRepairPromptForMode = (mode, context) => {
-        if (mode === 'topicstext') {
-            return buildTopicsTextContentRepairSystemPrompt(context);
-        }
-        if (mode === 'university') {
-            return buildUniversityContentRepairSystemPrompt(context);
-        }
-        if (mode === 'workplace') {
-            return buildWorkplaceContentRepairSystemPrompt(context);
-        }
-        if (mode === 'pd') {
-            return buildPDContentRepairSystemPrompt(context);
-        }
-        return buildContentRepairSystemPrompt(context);
+        const base = (function() {
+            if (mode === 'policy') {
+                return buildPolicyContentRepairSystemPrompt(context);
+            }
+            if (mode === 'general') {
+                return buildGeneralContentRepairSystemPrompt(context);
+            }
+            if (mode === 'topicstext') {
+                return buildTopicsTextContentRepairSystemPrompt(context);
+            }
+            if (mode === 'university') {
+                return buildUniversityContentRepairSystemPrompt(context);
+            }
+            if (mode === 'workplace') {
+                return buildWorkplaceContentRepairSystemPrompt(context);
+            }
+            if (mode === 'pd') {
+                return buildPDContentRepairSystemPrompt(context);
+            }
+            return buildContentRepairSystemPrompt(context);
+        })();
+        // A repair must not rename the person either - it is rewriting a panel that already
+        // names someone, and the rule tells it which names are off limits if it reaches for
+        // a new one.
+        //
+        // v15.4.6: except on Policy, where the rule above is the opposite one. Telling a
+        // policy repair to "keep the person" would preserve exactly what the block it
+        // follows has just asked it to remove, and repair fires on most sections of a live
+        // build - so this trailer, not the generation prompt, would be the last word.
+        const _keepOrDrop = (mode === 'policy')
+            ? `
+NO PERSON SURVIVES THE REPAIR. If the text you are repairing names an individual,
+that is a defect in the text: rewrite it to refer to the role instead - "the worker",
+"your supervisor", "the person who receives the report" - or to the reader directly.
+Do not preserve the name and do not substitute another one.
+`
+            : `
+KEEP THE PERSON. If the text you are repairing already names someone, that is the
+person's name - do not change it, and do not introduce a second name. The rule above
+applies only if you must name someone the text does not already name.
+`;
+        return base + getNamingBlock(mode) + _keepOrDrop;
     };
 
     const buildContentRepairPromptForMode = (cards, issues, topicTitle, context) => {
         const mode = context?.mode || 'vet';
+        if (mode === 'policy') {
+            return buildPolicyContentRepairPrompt(cards, issues, topicTitle, context);
+        }
+        if (mode === 'general') {
+            return buildGeneralContentRepairPrompt(cards, issues, topicTitle, context);
+        }
         if (mode === 'topicstext') {
             return buildTopicsTextContentRepairPrompt(cards, issues, topicTitle, context);
         }
@@ -3672,7 +4542,12 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         buildGeneralFiveCardUserPrompt: buildGeneralFiveCardUserPrompt,
         TOPICSTEXT_SYSTEM_PROMPT: TOPICSTEXT_SYSTEM_PROMPT,
         buildTopicsTextUserPrompt: buildTopicsTextUserPrompt,
+        POLICY_SYSTEM_PROMPT: POLICY_SYSTEM_PROMPT,
+        buildPolicyFiveCardUserPrompt: buildPolicyFiveCardUserPrompt,
         getFiveCardSystemPromptForMode: getFiveCardSystemPromptForMode,
+        // v15.3.11: content-driven card counts (Topics and Text).
+        CC_CARD_COUNT_RANGE: CC_CARD_COUNT_RANGE,
+        getCardCountRange: getCardCountRange,
         buildChatGptPromptFile: buildChatGptPromptFile,
         buildFiveCardUserPrompt: buildFiveCardUserPrompt,
         normalizeCards: normalizeCards,

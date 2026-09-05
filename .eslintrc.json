@@ -23,6 +23,14 @@
       }
     ],
     "eqeqeq": "error",
-    "no-prototype-builtins": "error"
+    "no-prototype-builtins": "error",
+    "space-before-function-paren": [
+      "error",
+      "never"
+    ],
+    "space-in-parens": [
+      "error",
+      "never"
+    ]
   }
 }

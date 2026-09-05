@@ -31,7 +31,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['mod_contentcreator/cc-state'], function (CcState) {
+define(['mod_contentcreator/cc-state'], function(CcState) {
     'use strict';
 
     // World-Class Topic-End Activities (v6.4.4)
@@ -100,7 +100,7 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
     // v15 WORLD-CLASS: Four teacher-facing routes. Legacy pd/topicstext remain readable,
     // but new generation should normalise them to General. Pedagogy is selected from the
     // learning job, not from the old route name.
-    const WORLD_CLASS_ROUTES = Object.freeze(['vet', 'workplace', 'university', 'general']);
+    const WORLD_CLASS_ROUTES = Object.freeze(['vet', 'workplace', 'university', 'general', 'policy']);
     const normaliseRoute = (mode) => {
         if (mode === 'pd' || mode === 'topicstext') return 'general';
         return WORLD_CLASS_ROUTES.includes(mode) ? mode : 'general';
@@ -126,6 +126,273 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
             if (score > bestScore) { best = job; bestScore = score; }
         });
         return best;
+    };
+
+    // =======================================================================
+    // v15.3.0: POLICY - the syllabus is the document's own table of contents
+    // =======================================================================
+    //
+    // Every other route derives its topic and subtopic counts from a requested course
+    // DURATION (see DURATION_CONFIG below): a 10-minute course gets 3 topics of 2. That
+    // is right when the author is commissioning training and the shape is theirs to
+    // choose. It is backwards for a policy, where the syllabus already exists - the
+    // document has sections, and those sections ARE the topics. Asking "how long should
+    // this be?" about a Code of Conduct produces a course that stops in the middle of
+    // clause 7 because the clock ran out.
+    //
+    // So a policy course has exactly as many subtopics as the policy has sections.
+
+    /** Section headings a policy document actually uses. */
+    const POLICY_HEADING_PATTERNS = [
+        // "3." / "3.2" / "3.2.1" followed by a title on the same line.
+        /^\s*(\d+(?:\.\d+)*)[.)]?\s+([A-Z][^\n]{2,80})$/,
+        // "SECTION 4 - REPORTING" or "Section 4: Reporting".
+        /^\s*(?:SECTION|CLAUSE|PART|ARTICLE)\s+(\d+(?:\.\d+)*)\s*[-–:.]?\s*([^\n]{2,80})$/i,
+        // A short ALL-CAPS line on its own, which is how most policies title a section.
+        /^\s*([A-Z][A-Z\s&'(),/-]{3,60})\s*$/
+    ];
+
+    /**
+     * A heading is only a heading if what follows it is prose. Two consecutive
+     * ALL-CAPS lines are a letterhead, not a syllabus.
+     */
+    const POLICY_MIN_SECTION_WORDS = 25;
+
+    /**
+     * Split a policy document into its own sections.
+     *
+     * @param {String} text The extracted document text.
+     * @return {Array} [{title, body, wordCount}] in document order.
+     */
+    const splitPolicySections = (text) => {
+        const lines = String(text || '').split(/\r?\n/);
+        const found = [];
+        lines.forEach((line, i) => {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.length > 90) { return; }
+            for (let p = 0; p < POLICY_HEADING_PATTERNS.length; p++) {
+                const m = trimmed.match(POLICY_HEADING_PATTERNS[p]);
+                if (!m) { continue; }
+                // The last pattern captures the whole line as the title; the numbered
+                // ones capture the number and the title separately.
+                const title = (m[2] || m[1] || '').trim();
+                if (!title || title.length < 3) { break; }
+                found.push({ line: i, title: title.replace(/\s+/g, ' ') });
+                break;
+            }
+        });
+        if (!found.length) { return []; }
+
+        // v15.3.6: keep the PREAMBLE.
+        //
+        // Bodies started at the first heading, so everything above it was discarded - and
+        // in a policy that is routinely the part that matters: the purpose statement, the
+        // definitions, and often the headline penalty. A course generated from the
+        // document would simply never mention them.
+        const preambleLines = lines.slice(0, found[0].line);
+        const preambleBody = preambleLines.join('\n').trim();
+        const preambleWords = preambleBody ? preambleBody.split(/\s+/).filter(Boolean).length : 0;
+
+        const sections = found.map((h, idx) => {
+            const from = h.line + 1;
+            const to = idx + 1 < found.length ? found[idx + 1].line : lines.length;
+            const body = lines.slice(from, to).join('\n').trim();
+            return { title: h.title, body: body, wordCount: body ? body.split(/\s+/).filter(Boolean).length : 0 };
+        });
+
+        // Fold a section too short to teach into the one that follows it. A one-line
+        // "Purpose" heading above a substantial "Scope" section is a label, not a
+        // syllabus entry, and turning it into its own six-card pack would spend a
+        // learner's attention - and a generation credit - on nothing.
+        const merged = [];
+        // The preamble has no heading of its own, so it is carried into the first section
+        // exactly as a too-short section would be. Below the fold-threshold it is a title
+        // block and belongs with what follows; above it, it is content in its own right
+        // and the fold loop will keep it as its own section.
+        let carry = preambleWords
+            ? { title: 'Purpose and scope', body: preambleBody, wordCount: preambleWords }
+            : null;
+        sections.forEach((sec) => {
+            if (carry) {
+                sec = {
+                    title: carry.title + ' & ' + sec.title,
+                    body: (carry.body + '\n' + sec.body).trim(),
+                    wordCount: carry.wordCount + sec.wordCount
+                };
+                carry = null;
+            }
+            if (sec.wordCount < POLICY_MIN_SECTION_WORDS) { carry = sec; return; }
+            merged.push(sec);
+        });
+        // A trailing short section has nothing after it to fold into, so it joins the
+        // one before - or stands alone if it is the only thing there is.
+        if (carry) {
+            if (merged.length) {
+                const last = merged[merged.length - 1];
+                last.title = last.title + ' & ' + carry.title;
+                last.body = (last.body + '\n' + carry.body).trim();
+                last.wordCount += carry.wordCount;
+            } else {
+                merged.push(carry);
+            }
+        }
+        return merged;
+    };
+
+    /**
+     * Plan a Policy & Compliance course from the document's own structure.
+     *
+     * Returns null when the document has no usable heading structure, so the caller
+     * falls back to the ordinary duration-shaped plan rather than producing a
+     * one-section course from a document the splitter could not read.
+     *
+     * @param {String} documentText The extracted policy text.
+     * @param {Object} context      Generation context (policy metadata, etc).
+     * @return {Object|null} A topic plan, or null.
+     */
+    /**
+     * Most subtopics a policy course may plan.
+     *
+     * v15.3.6: every other route is capped by DURATION_CONFIG at 5 topics x 3 subtopics.
+     * This path had no bound at all, so a 150-clause policy planned 150 subtopics - 150
+     * generations, each billed. Given this product's history with per-subtopic billing
+     * that is a real hazard, not a theoretical one. Sections past the cap are folded into
+     * the last one rather than dropped, so no clause is silently lost from the course.
+     */
+    const POLICY_MAX_SUBTOPICS = 15;
+
+    const planPolicyTopics = (documentText, context) => {
+        let sections = splitPolicySections(documentText);
+        // One section is not a structure - it means the splitter found a heading and no
+        // others, which is indistinguishable from finding nothing useful.
+        if (sections.length < 2) { return null; }
+        if (sections.length > POLICY_MAX_SUBTOPICS) {
+            const kept = sections.slice(0, POLICY_MAX_SUBTOPICS - 1);
+            const rest = sections.slice(POLICY_MAX_SUBTOPICS - 1);
+            kept.push({
+                title: rest[0].title + ' and ' + (rest.length - 1) + ' further section'
+                    + (rest.length > 2 ? 's' : ''),
+                body: rest.map(function(r) { return r.title + '\n' + r.body; }).join('\n\n'),
+                wordCount: rest.reduce(function(n, r) { return n + r.wordCount; }, 0)
+            });
+            sections = kept;
+        }
+
+        const meta = (context && context.policyMeta) || {};
+        const policyName = String(meta.title || (context && context.topic) || 'Policy').trim();
+        // selectActivityType takes the types already spent, so a course does not open with
+        // the same activity five times. Every other planner path threads this; passing one
+        // argument throws inside its .filter().
+        const usedActivityTypes = [];
+
+        return {
+            source: 'document-structure',
+            policyName: policyName,
+            topics: [{
+                id: 'policy-1',
+                title: policyName,
+                subtopics: sections.map((sec, i) => ({
+                    id: 'policy-1-' + (i + 1),
+                    // v15.3.6c: billingKey, number and activityType - present on every
+                    // other planner path and missing here.
+                    //
+                    // The vendor uses billingKey to recognise a voiceover or image call as
+                    // already paid for inside the subtopic price. Blank, every TTS and
+                    // image call on a Policy pack is billed separately and a structural
+                    // repair is billed as a second subtopic. This plugin already has a
+                    // doc titled "URGENT revenue leak: subtopics billed 1 credit"; this is
+                    // the same class of defect, and it went live the moment the mode ===
+                    // 'policy' planner branch made this function reachable at all.
+                    billingKey: (CcState && CcState.newBillingKey) ? CcState.newBillingKey() : '',
+                    number: i + 1,
+                    activityType: (function() {
+                        const t = selectActivityType(sec.title + ' ' + sec.body.slice(0, 200),
+                            usedActivityTypes);
+                        usedActivityTypes.push(t);
+                        return t;
+                    }()),
+                    title: sec.title,
+                    // The section's own text, threaded into the generation context by
+                    // generator.js so policyFidelityIssues() compares a card against THIS
+                    // clause rather than the whole document - a figure lifted from an
+                    // unrelated section is then caught instead of passing because it
+                    // appeared somewhere in the file. Wired up in v15.3.6; before that this
+                    // field was written and never read, and the claim above was false.
+                    sourceExtract: sec.body,
+                    wordCount: sec.wordCount,
+                    learningJob: classifyLearningJob(sec.title + ' ' + sec.body.slice(0, 400))
+                }))
+            }]
+        };
+    };
+
+    /**
+     * Attach each planned subtopic to the clause of the document it is about.
+     *
+     * FIX-CC-POLICY-PLAN-OVERRIDE (v15.4.5). The Policy route used to plan from the
+     * document's table of contents INSTEAD of from what the author ticked, so a
+     * three-subtopic selection built a fifteen-subtopic course - the cap, not a
+     * coincidence - and the author was billed for all fifteen. The wizard requires a
+     * selection ("Please select at least one Major Learning Topic") and then discarded
+     * it, which is worse than not asking.
+     *
+     * The author's selection now decides the shape. The document still decides the
+     * SOURCE: this matches each chosen subtopic to the clause it names, so
+     * policyFidelityIssues() still checks a card against its own clause rather than
+     * against the whole file. A subtopic that matches nothing keeps an empty extract
+     * and falls back to the whole document, which is what the check did before
+     * per-clause extracts existed.
+     *
+     * @param {Object} plan         A plan from planWorkplaceTopics/planUniversityTopics.
+     * @param {String} documentText The extracted policy text.
+     * @return {Object} The same plan, with sourceExtract filled in where it could be.
+     */
+    const groundPolicySubtopics = (plan, documentText) => {
+        const sections = splitPolicySections(String(documentText || ''));
+        if (!plan || !plan.topics || sections.length < 1) { return plan; }
+
+        const words = (s) => String(s || '').toLowerCase().match(/[a-z0-9]+/g) || [];
+        // Words too common in policy headings to carry any signal about WHICH clause.
+        const STOP = ['and', 'or', 'the', 'of', 'to', 'a', 'an', 'for', 'in', 'on', 'at',
+            'this', 'that', 'policy', 'procedure', 'section', 'clause', 'part'];
+        // Numbers are kept whatever their length: in a policy heading a bare number is
+        // the clause number, which is the most distinguishing token there is.
+        const keyWords = (s) => words(s)
+            .filter(w => (w.length > 2 || /^\d+$/.test(w)) && STOP.indexOf(w) === -1);
+
+        const used = [];
+        plan.topics.forEach(function(topic) {
+            (topic.subtopics || []).forEach(function(sub) {
+                if (sub.sourceExtract) { return; }
+                const want = keyWords(sub.title);
+                if (!want.length) { return; }
+                let best = null;
+                let bestScore = 0;
+                sections.forEach(function(sec, i) {
+                    const have = keyWords(sec.title);
+                    if (!have.length) { return; }
+                    const hits = want.filter(w => have.indexOf(w) !== -1).length;
+                    if (!hits) { return; }
+                    // Normalise by the shorter side so "Scope" matching the "Scope"
+                    // clause beats "Scope" matching "Purpose, scope and application".
+                    let score = hits / Math.min(want.length, have.length);
+                    // A clause already claimed by an earlier subtopic is still allowed -
+                    // two chosen subtopics may legitimately teach one long clause - but
+                    // an unclaimed clause of equal strength wins.
+                    if (used.indexOf(i) !== -1) { score -= 0.01; }
+                    if (score > bestScore) { bestScore = score; best = i; }
+                });
+                // Half the shorter title's key words must line up. Below that the match
+                // is a coincidence, and a wrong extract is worse than none: the fidelity
+                // check would then flag every correct figure in the card as invented.
+                if (best !== null && bestScore >= 0.5) {
+                    sub.sourceExtract = sections[best].body;
+                    sub.sourceHeading = sections[best].title;
+                    used.push(best);
+                }
+            });
+        });
+        return plan;
     };
 
     const DURATION_CONFIG = {
@@ -703,11 +970,47 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
      * Plan topics from Workplace document-extracted topics (v6.4.0)
      * Uses AI-suggested topics from uploaded documents
      * Focus: Policy/procedure clarity, business impact framing, role-based content
+     *
+     * ------------------------------------------------------------------------
+     * FIX-CC-WP-SUBTOPIC-DOUBLING (v15.4.5). ONE CARD ON SCREEN = ONE SUBTOPIC.
+     *
+     * The Workplace and Policy screen asks for ONE major topic ("This is your
+     * major topic. AI will suggest sub topics (A, B, C) under it") and then
+     * renders one tick-box card per suggestion. The author ticks the ones they
+     * want and is told "N subtopics confirmed".
+     *
+     * This function used to read each of those cards as a TOPIC and then build
+     * `Math.min(config.subtopicsPerTopic, Math.max(2, card.subtopics.length))`
+     * sections beneath it - a hard floor of two. So three ticked cards became
+     * six generated sections, seven became fourteen: every Workplace pack ever
+     * built generated, and billed, at least double what its author selected.
+     * Where a card carried no sub-list of its own the floor invented the
+     * sections outright, and they shipped with the placeholder titles the
+     * loop had made up:
+     *
+     *     Reporting            (the card the author ticked)
+     *       1. Section 1       <- invented, billed, and shown to learners
+     *       2. Section 2       <- invented, billed, and shown to learners
+     *
+     * It also produced N topics, so subtopic numbering restarted at each card
+     * (1.1, 1.2, 2.1, 2.2...) on routes that are supposed to be one topic with
+     * a flat series of subtopics - the shape general, pd, topicstext and
+     * university already use, and the shape the numbering fix in v15.4.2
+     * assumes.
+     *
+     * The card the author ticked is now the section that gets built: one topic,
+     * one subtopic per ticked card, nothing invented and nothing multiplied.
+     * A card's own sub-list is no longer a source of extra sections - it is the
+     * key points of that one section, which is what it always described.
+     *
+     * @param {Array} workplaceTopics The cards the author ticked, in screen order.
+     * @param {Number} duration       Requested course length, in minutes.
+     * @param {Object} context        Generation context.
+     * @return {Object} A topic plan of exactly workplaceTopics.length subtopics.
      */
     const planWorkplaceTopics = (workplaceTopics, duration, context) => {
-        const config = DURATION_CONFIG[duration] || DURATION_CONFIG[10];
-        const topics = [];
         const usedActivityTypes = [];
+        const ctx = context || {};
 
         if (!workplaceTopics || workplaceTopics.length === 0) {
             return {
@@ -721,60 +1024,79 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
             };
         }
 
-        workplaceTopics.forEach((topic, t) => {
-            const subtopics = [];
-            const topicSubtopics = topic.subtopics || [];
-            const subtopicCount = Math.min(config.subtopicsPerTopic, Math.max(2, topicSubtopics.length));
+        // The same bound the Policy planner uses. The vendor sizes its suggestion
+        // list from the requested duration so this is not normally reached, but an
+        // unbounded count here is a per-subtopic billing hazard and this product
+        // has already shipped one of those.
+        const cards = workplaceTopics.slice(0, POLICY_MAX_SUBTOPICS);
 
-            for (let s = 0; s < subtopicCount; s++) {
-                const subtopicData = topicSubtopics[s] || { title: `Section ${s + 1}` };
-                const subtopicTitle = subtopicData.title || `Section ${s + 1}`;
-                
-                // Each subtopic gets its own activity (v6.4.4)
-                const activityType = selectActivityType(subtopicTitle, usedActivityTypes);
-                usedActivityTypes.push(activityType);
+        const majorTitle = String(
+            ctx.courseTitle || ctx.courseName || ctx.majorTopic || ctx.topic || 'Training'
+        ).replace(/\.\s*$/, '').trim();
 
-                // v6.6.4: Workplace route - generate keyPoints dynamically from subtopic
-                // Parse the subtopic title to extract action and object
-                const subtopicWords = subtopicTitle.split(/\s+/);
-                const actionVerb = subtopicWords[0] || 'Complete';
-                const actionObject = subtopicWords.slice(1).join(' ');
-                
-                const dynamicWorkplaceKeyPoints = subtopicData.keyPoints || [
+        const subtopics = cards.map(function(card, s) {
+            const subtopicTitle = String((card && card.title) || ('Section ' + (s + 1))).trim();
+
+            // Each subtopic gets its own activity (v6.4.4)
+            const activityType = selectActivityType(subtopicTitle, usedActivityTypes);
+            usedActivityTypes.push(activityType);
+
+            // The card's own sub-list is what this section should COVER. Taking it as
+            // the key points is what it was written to be; taking it as a list of
+            // further sections is what caused the doubling above.
+            const cardPoints = (Array.isArray(card && card.subtopics) ? card.subtopics : [])
+                .map(function(sub) {
+                    if (typeof sub === 'string') { return sub.trim(); }
+                    return String((sub && (sub.title || sub.text || sub.description)) || '').trim();
+                })
+                .filter(Boolean);
+
+            // v6.6.4: Workplace route - generate keyPoints dynamically from subtopic
+            // Parse the subtopic title to extract action and object
+            const subtopicWords = subtopicTitle.split(/\s+/);
+            const actionVerb = subtopicWords[0] || 'Complete';
+            const actionObject = subtopicWords.slice(1).join(' ');
+
+            const dynamicWorkplaceKeyPoints = (card && card.keyPoints) || (cardPoints.length
+                ? cardPoints
+                : [
                     `${actionVerb} ${actionObject} according to your organisation's policy`,
                     `Follow the ${subtopicTitle.toLowerCase()} procedure for your role`,
                     `Confirm ${subtopicTitle.toLowerCase()} is documented and compliant`
-                ];
-                
-                subtopics.push({
-                    id: `subtopic_${t}_${s}`,
-                    billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
-                    number: `${t + 1}.${s + 1}`,
-                    title: subtopicTitle,
-                    keyPoints: dynamicWorkplaceKeyPoints,
-                    activityType: activityType, // Each subtopic has its own activity
-                    policyReference: subtopicData.policyReference || null
-                });
-            }
+                ]);
 
-            topics.push({
-                id: topic.id || `topic_${t}`,
-                number: t + 1,
-                title: topic.title || `Topic ${t + 1}`,
-                description: topic.description || '',
-                subtopics: subtopics,
-                sourceDocument: topic.sourceDocument || null
-            });
+            return {
+                id: `subtopic_0_${s}`,
+                billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
+                // '1.N', matching planUniversityTopics - these routes are all one topic
+                // with a flat series of subtopics, so the shape should not differ between
+                // them. Only the VET display path reads this; every other route numbers
+                // from the render order (builder.js renderTopicItem, v15.4.2).
+                number: `1.${s + 1}`,
+                title: subtopicTitle,
+                description: String((card && card.description) || '').trim(),
+                keyPoints: dynamicWorkplaceKeyPoints,
+                activityType: activityType, // Each subtopic has its own activity
+                policyReference: (card && card.policyReference) || null,
+                sourceDocument: (card && card.sourceDocument) || null
+            };
         });
 
         return {
             version: '6.5.0',
             mode: 'workplace',
             context: context,
-            companyName: context.companyName || '',
-            topics: topics,
-            totalTopics: topics.length,
-            totalSubtopics: topics.reduce((sum, t) => sum + t.subtopics.length, 0),
+            companyName: ctx.companyName || '',
+            topics: [{
+                id: 'topic_0',
+                number: 1,
+                title: majorTitle,
+                description: '',
+                subtopics: subtopics,
+                sourceDocument: (cards[0] && cards[0].sourceDocument) || null
+            }],
+            totalTopics: 1,
+            totalSubtopics: subtopics.length,
             estimatedMinutes: duration
         };
     };
@@ -805,6 +1127,53 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
             return planUniversityTopics(outcomes, duration, context, topicHierarchy);
         } else if (mode === 'workplace' && (selectedMajorTopics || workplaceTopics)) {
             return planWorkplaceTopics(selectedMajorTopics || workplaceTopics, duration, context);
+        // v15.3.6: POLICY. This branch did not exist, so every Policy & Compliance build
+        // fell through to the throw below and the author saw "Failed to generate topic
+        // structure" before a single AI call was made - the route could not be used at
+        // all. Exactly the defect the comment above records for Topics-and-Text, repeated,
+        // and planPolicyTopics() was unreachable dead code as a result.
+        //
+        // The document's own structure is preferred: a policy's syllabus is its table of
+        // contents, not a duration. When the document has no usable headings
+        // planPolicyTopics returns null and this falls back to the same author-outcomes
+        // path Workplace uses, so a policy supplied as flat prose still builds.
+        } else if (mode === 'policy') {
+            const policyText = (context && (context.priorityContent || context.referenceMaterial
+                || context.documentText)) || '';
+            // FIX-CC-POLICY-PLAN-OVERRIDE (v15.4.5). THE AUTHOR'S SELECTION DECIDES THE
+            // SHAPE; the document decides the source.
+            //
+            // This branch used to try planPolicyTopics FIRST and use the author's ticked
+            // subtopics only when the document had no headings. Since validateStep2()
+            // refuses to continue until the author has ticked at least one, and the
+            // route refuses to run without a document at all, that meant the normal path
+            // - a real policy with a table of contents - always threw the selection away.
+            // Three ticked subtopics built a fifteen-subtopic course, because fifteen is
+            // POLICY_MAX_SUBTOPICS and the document had more clauses than that. Fifteen
+            // generations, fifteen images, fifteen voiceovers, all billed, none asked for.
+            //
+            // groundPolicySubtopics() keeps what the document plan was actually for:
+            // each subtopic still carries the clause it teaches, so the fidelity check
+            // still compares a card against its own clause.
+            const chosen = selectedMajorTopics || workplaceTopics;
+            if (chosen && chosen.length) {
+                return groundPolicySubtopics(
+                    planWorkplaceTopics(chosen, duration, context), policyText);
+            }
+            if (outcomes && outcomes.length) {
+                return groundPolicySubtopics(
+                    planUniversityTopics(outcomes, duration, context, topicHierarchy), policyText);
+            }
+            // No selection at all. The document's own table of contents is a better
+            // course than nothing, and this is the path the Policy planner was written
+            // for; it is now the fallback rather than the override.
+            const structured = planPolicyTopics(policyText, context);
+            if (structured) { return structured; }
+            if (topicHierarchy) {
+                return planUniversityTopics(outcomes, duration, context, topicHierarchy);
+            }
+            throw new Error('Invalid planning inputs: Policy & Compliance needs either a '
+                + 'document with section headings, or selected topics to build from.');
         } else {
             throw new Error('Invalid planning inputs: missing required data for mode: ' + mode);
         }
@@ -919,6 +1288,10 @@ define(['mod_contentcreator/cc-state'], function (CcState) {
         planVETTopics: planVETTopics,
         planUniversityTopics: planUniversityTopics,
         planWorkplaceTopics: planWorkplaceTopics,
+        // v15.3.0: Policy & Compliance plans from the document, not from a duration.
+        planPolicyTopics: planPolicyTopics,
+        groundPolicySubtopics: groundPolicySubtopics,
+        splitPolicySections: splitPolicySections,
         ACTIVITY_TYPES: ACTIVITY_TYPES,
         selectActivityType: selectActivityType,
         normaliseRoute: normaliseRoute,

@@ -62,7 +62,9 @@ $string['completionviewallslidesdesc'] = 'Student must view all slides to comple
 $string['completionviewallslides_help'] = 'If enabled, students must navigate through all content slides to complete the activity.';
 $string['completionallactivities'] = 'Student must complete all activities at 100%';
 $string['completionallactivitiesdesc'] = 'Student must score 100% on every Decision Challenge activity';
-$string['completionallactivities_help'] = 'If enabled, students must achieve a perfect score (100%) on all Decision Challenge activities embedded in the content. Each challenge contains a quiz, flip cards, and a category sort — all three must be passed.';
+$string['completionallactivities_help'] = 'If enabled, students must achieve a perfect score (100%) on all Decision Challenge activities embedded in the content. Each challenge contains a quiz, flip cards, and a category sort — all three must be passed.
+
+For a Policy &amp; Compliance course used as a record that staff have read and understood a policy, enable this rather than "view all slides". Viewing is a click-through record; completing every Decision Challenge at 100% records that the learner could actually distinguish the policy\'s rule from a plausible misreading of it. Moodle timestamps completion, so that record is the attestation. Neither condition is proof the learner has read the document itself, so if your organisation needs audit-grade attestation, decide before you rely on this whether a completion timestamp meets that bar.';
 $string['aisettings'] = 'AI Configuration';
 $string['aisettingsdesc'] = 'Configure the AI provider settings for content generation.';
 $string['siteid'] = 'Site ID';
@@ -188,6 +190,10 @@ $string['sitelimitgeneratedesc'] = 'Maximum credit-consuming AI requests per hou
 $string['taskprunevoicecache'] = 'Prune cached voiceover audio';
 $string['voicecacheretention'] = 'Keep cached voiceover audio for (days)';
 $string['voicecacheretentiondesc'] = 'Generated speech is cached site-wide so identical text is never billed twice. A weekly scheduled task deletes cache entries older than this. Deleting one costs only the credits to regenerate that exact text, so the default is deliberately long. Set to 0 to keep cached audio forever - note that nothing else ever removes it.';
+$string['pronunciations'] = 'Voiceover pronunciation list';
+$string['pronunciationsdesc'] = 'Words the voice reads wrongly, and how they should sound. One per line as <b>word=how to say it</b>, for example:<br /><pre>Moodle=Moo-dul
+LMS Labs=L M S Labs
+SWMS=swims</pre>Matching is whole-word and ignores case, and a longer entry wins over a shorter one inside it, so "New South Wales" is safe to list alongside "Wales". The respelling is used <b>only in the spoken narration</b> - nothing on screen changes. Lines starting with # are ignored, as are single characters and very common words such as "the" or "is" - one of those would rewrite narration across every module on the site. A term listed twice wins on its first appearance.<br /><br />Changing this list changes the narration script, so only slides containing a listed word are affected - every other slide keeps its audio untouched.<br /><br /><b>Cost warning.</b> An affected slide is re-synthesised automatically, without a confirmation step, the next time a teacher or editor opens that activity - that costs credits. Students are never charged and keep hearing the existing audio until a teacher opens the activity. Edit this list deliberately: a term that appears across many courses will re-synthesise a slide in each of them.<br /><br />The list applies only to narration in the site\'s configured voice language. Additional-language packs are left alone, because an English-phonetic respelling read by a non-English voice sounds worse than the original word.';
 $string['privacy:metadata:files'] = 'Content Creator stores two kinds of audio file. Voiceovers are generated for an activity\'s own content and stored against that activity. Cached speech is stored site-wide, keyed by a hash of the text, voice and language, so identical text is never generated twice. Both are produced from content authored by a teacher, never from anything a learner has written, and neither contains personal data.';
 $string['cachedef_ratelimit'] = 'Rate limit counters for AI generation requests';
 $string['cachedef_jobowner'] = 'Ownership records binding an asynchronous generation job to the user and activity it was issued to';
@@ -612,6 +618,17 @@ $string['cclabel_whatThePolicyRequires'] = 'What the policy requires';
 $string['cclabel_selectContentLanguage'] = 'Select content language';
 $string['cclabel_listenToUnlock'] = 'listen to unlock';
 
+// V15.3.0: one card at a time, on every route.
+$string['cclabel_muteVoiceover'] = 'Mute narration';
+$string['cclabel_unmuteVoiceover'] = 'Unmute narration';
+$string['cclabel_readToContinue'] = 'read this card';
+$string['cclabel_cardRevealedAnnounce'] = 'Card {number} of {total}';
+$string['cclabel_cardReveal'] = 'Card reveal';
+$string['cclabel_oneCardAtATime'] = 'Show one card at a time';
+$string['cclabel_oneCardAtATimeDesc'] = 'Reveal cards one by one with a Next Card button, so attention stays on the card in front of the learner.';
+$string['cclabel_cardDwellSeconds'] = 'Seconds on each card when there is no narration (0 = no wait)';
+$string['cclabel_cardDwellSecondsDesc'] = 'With narration on, the audio sets the pace and this is ignored.';
+
 // V13.94.3: The 3-activity Decision Challenge suite.
 $string['cclabel_challengeMode'] = 'Challenge Mode';
 $string['cclabel_completeNActivities'] = 'Complete {count} activities to prove your mastery';
@@ -628,7 +645,13 @@ $string['cclabel_nextActivity'] = 'Next Activity';
 $string['cclabel_seeResults'] = 'See Results';
 $string['cclabel_goodPractice'] = 'Good Practice';
 $string['cclabel_avoidLabel'] = 'Avoid';
-$string['cclabel_sortInstruction'] = 'Read each item carefully and decide: does it belong to {positive} or {negative}?';
+// This string, not the one in translations.js, is what English actually shows.  (v15.4.1)
+// The player resolves a label from the Moodle lang file first and falls back to
+// translations.js, so v15.3.19's rewrite landed in 52 languages and not in the one the
+// author was reading. It tells the learner what to DO now, in the order the controls are
+// in: the drag first, the buttons as the alternative.
+$string['cclabel_sortInstruction'] = 'Drag each item into {positive} or {negative}, or tap a button below it.';
+$string['cclabel_sortItemAria'] = 'Item to sort. Left arrow for {positive}, right arrow for {negative}.';
 $string['cclabel_itemXofY'] = 'Item {current} of {total}';
 $string['cclabel_scoreLabel'] = 'Score';
 $string['cclabel_nActivitiesComplete'] = '{current} / {total} Activities Complete';
@@ -833,7 +856,7 @@ $string['msgregenfailedtitle'] = 'Regenerating Failed Content';
 $string['msgcreatelearningcontent'] = 'Create Learning Content';
 $string['msgwizardsubtitle'] = 'Build engaging, compliant learning experiences with AI assistance';
 $string['msgchoosemode'] = 'Choose Your Learning Mode';
-$string['msgchoosemodesubtitle'] = 'Select the mode that matches your educational context. This determines how content is structured and mapped.';
+$string['msgchoosemodesubtitle'] = 'Choose the learning environment. The AI then selects the instructional approach that best fits the content.';
 $string['msgstepchoosemode'] = 'Choose your mode and enter your topics';
 $string['msgstepaddcontext'] = 'Add context and generate your slides';
 $string['msgstepgenerate'] = 'Generate your slides';
@@ -845,11 +868,21 @@ $string['msgmodeunidesc'] = 'Academic courses with Bloom\'s Taxonomy alignment';
 $string['msgoutcomedriven'] = 'Learning outcome-driven structure';
 $string['msgcriticalthinking'] = 'Critical thinking emphasis';
 $string['msgacademictone'] = 'Academic tone and terminology';
-// Deprecated at v15.1.1: University gained a Decision Point (quiz) card at v13.98.1, so this
-// string became factually wrong on the only screen that used it. Kept defined so any site
-// overriding it does not hit a missing-string error; replaced in use by the string below.
-$string['msgnoquizcard'] = 'No quiz card and no jurisdiction legislation on this route.';
 $string['msgnojurisdictionlegislation'] = 'No jurisdiction legislation on this route.';
+$string['msgmodepolicytitle'] = 'Policy & Compliance';
+$string['msgmodepolicydesc'] = 'Turn a policy, code of conduct or procedure into training staff will be held to.';
+$string['msgdifferpolicy'] = 'Teaches what your document actually says, quoting it rather than inventing scenarios, figures or penalties it does not contain.';
+$string['msgpolicyquotessource'] = 'Quotes the policy\'s own wording';
+$string['msgpolicynoinvention'] = 'Never invents obligations or penalties';
+$string['msgpolicydocrequired'] = 'Generates from the uploaded document';
+$string['msgpolicyplainregister'] = 'Plain and exact, no manufactured drama';
+$string['msgcardnamepolicyscope'] = 'Scope & Purpose';
+$string['msgcardnamepolicysays'] = 'What the Policy Says';
+$string['msgcardnamepolicydo'] = 'What You Must Do';
+$string['msgcardnamepolicymisreadings'] = 'Common Misreadings';
+$string['msgcardnamepolicyglance'] = 'Compliance at a Glance';
+$string['msgcardnamepolicycheck'] = 'Check Your Understanding';
+$string['msgpolicysourcenote'] = 'Upload the policy document - this route generates from the source, not from the topic title.';
 $string['msgentercoursetitleai'] = 'Enter course title, AI suggests topics';
 $string['msgorpasteowntopics'] = 'Or paste your own topics';
 $string['msgmodetopicstitle'] = 'Topics and Text';
@@ -877,6 +910,31 @@ $string['msgextractingdoc'] = 'Extracting content from document...';
 $string['msgtrainingcontexthint'] = 'Provide context about the training to help AI create relevant, realistic scenarios.';
 $string['msgmajortopicwphint'] = 'This is your major topic. AI will suggest sub topics (A, B, C) under it - from your uploaded document if you provided one, otherwise from the topic and context you entered here.';
 $string['msgselecttrainingtype'] = 'Select training type...';
+
+// V15.3.0: Policy & Compliance route - the document metadata a compliance course carries.
+// Policy shares Workplace's context SCREEN but not its identity. Before these  (v15.4.6)
+// existed, an author who deliberately picked Policy & Compliance was told they were on
+// "Learning Context - Workplace Training" and asked to upload their company documents.
+$string['msgcontextpolicytitle'] = 'Learning Context - Policy & Compliance';
+$string['msgcontextpolicysubtitle'] = 'Upload the policy, code of conduct or procedure. The course teaches what that document actually says, quoting it rather than inventing scenarios around it.';
+$string['msginstructionpolicy'] = '<strong>One document per content pack.</strong> This route builds the course from the document you upload and will not invent an obligation, a timeframe or a penalty it does not contain. Each subtopic you select becomes a learning slide. Enter the policy title exactly as it appears on the document - learners are told this is what they are held to. <strong>Best practice:</strong> re-generate the pack whenever the policy is reviewed, so the course and the document never disagree.';
+$string['msgpolicydocument'] = 'Policy Document';
+$string['msgpolicydetails'] = 'Policy details';
+$string['msgpolicydetailshint'] = 'Shown to learners on every slide, so they always know which document this course teaches and how current it is.';
+$string['msgpolicytitle'] = 'Policy title (exactly as it appears on the document)';
+$string['msgphpolicytitle'] = 'e.g. Code of Conduct';
+$string['msgpolicytitlehint'] = 'Required. This is the document learners are told they are held to, so it must match the real title.';
+$string['msgpolicyowner'] = 'Policy owner (department or role)';
+$string['msgphpolicyowner'] = 'e.g. People &amp; Culture';
+$string['msgpolicyreviewed'] = 'Last reviewed';
+$string['msgpolicycontact'] = 'Who to ask about this policy';
+$string['msgphpolicycontact'] = 'e.g. hr@example.com';
+$string['msgpolicycontacthint'] = 'A learner who does not understand a rule needs somewhere to go. Leave blank to omit.';
+$string['cclabel_policyFullDocument'] = 'Full policy';
+$string['cclabel_policyOwner'] = 'Owner';
+$string['cclabel_policyReviewed'] = 'Last reviewed';
+$string['cclabel_policyContact'] = 'Questions';
+$string['cclabel_policyStripLabel'] = 'About this policy';
 $string['msgcontextunititle'] = 'Learning Context - University';
 $string['msgcontextunisubtitle'] = 'Follow the steps below to build your course content. Each section unlocks as you complete the previous one.';
 $string['msgmajortopichint'] = 'This is your major topic. AI will suggest sub topics (A, B, C) under it.';
@@ -961,7 +1019,7 @@ $string['cclabel_responseClassification'] = 'Response Classification';
 $string['cclabel_correctSequence'] = 'Correct Sequence';
 $string['cclabel_escalationSituations'] = 'Escalation Situations';
 $string['cclabel_reflectionPoints'] = 'Reflection Points';
-$string['cclabel_imageUploadHint'] = 'JPEG, PNG, WebP, GIF (max 5MB). Landscape images work best &mdash; ideal ratio is 16:9 (e.g. 1920&times;1080).';
+$string['cclabel_imageUploadHint'] = 'Accepted formats: JPEG, PNG, WebP, GIF (max 5MB). Landscape images work best &mdash; ideal ratio is 16:9 (e.g. 1920&times;1080).';
 $string['cclabel_correctAnswerLabel'] = 'Correct answer';
 $string['cclabel_bodyText'] = 'Body Text';
 $string['cclabel_standardItems'] = 'Standard Items';
@@ -1190,7 +1248,7 @@ $string['msgtamanagers'] = 'Managers';
 $string['msgtacontractors'] = 'Contractors / Visitors';
 $string['msgtaspecificdept'] = 'Specific Department';
 $string['msggenerates7cardspersection'] = '7 cards per section';
-// v13.96: the route picker used to print a 6-7 item list of long card descriptions per
+// The route picker used to print a 6-7 item list of long card descriptions per  (v13.96)
 // route. Because VET, Workplace and PD share the same seven card types, ~90% of that text
 // was duplicated across three cards sitting side by side, which is exactly why the real
 // differences between the routes were invisible. The card list is now just the names, and
@@ -1213,21 +1271,20 @@ $string['msgcardnamekeyconcepts'] = 'Key Concepts';
 $string['msgcardnameexamplesapplication'] = 'Examples & Application';
 $string['msgcardnamekeytakeaways'] = 'Key Takeaways';
 
-// v16: General's own six adaptive cards - internal instructional-job labels shown on the
+// General's own six adaptive cards - internal instructional-job labels shown on the  (v16)
 // route-picker screen. Learner-facing headings are generated by the AI per topic.
-$string['msgcardnamegeneralorient'] = 'Orient';
-$string['msgcardnamegeneralunderstand'] = 'Understand';
-$string['msgcardnamegeneralexplore'] = 'Explore';
-$string['msgcardnamegeneralapply'] = 'Apply';
-$string['msgcardnamegeneralchallenge'] = 'Challenge';
-$string['msgcardnamegeneralconsolidate'] = 'Consolidate';
+$string['msgcardnamegeneralorient'] = 'Opening Scenario';
+$string['msgcardnamegeneralunderstand'] = 'Core Concept';
+$string['msgcardnamegeneralexplore'] = 'Common Mistakes';
+$string['msgcardnamegeneralapply'] = 'Mental Model';
+$string['msgcardnamegeneralchallenge'] = 'Check Your Understanding';
+$string['msgcardnamegeneralconsolidate'] = 'Summary Checklist';
 
 $string['msghowitdiffers'] = 'How it differs';
 $string['msgdiffervet'] = 'Written to be assessable. Names the tool, the form, the reading and the sign-off, and cites the Act or code of practice behind it. The only route that imports a unit of competency and maps performance criteria.';
 $string['msgdifferworkplace'] = 'Built around what the business measures &ndash; the customer, the cost, the turnaround. Points at your own policies, SOPs and systems by name, with no RTO or assessment language anywhere.';
 $string['msgdifferuniversity'] = 'Seven academic cards. Frameworks with their originators and limits, ethics dimensions, two full case studies that disagree with each other, and a decision question that tests the analysis. Bloom\'s level drives the verbs. No workplace scenarios.';
 $string['msgdifferpd'] = 'About judgement, not procedure. Lives in conversations and decisions &ndash; what you notice, what you say next, how you repair it. Cites a principle or professional standard rather than a law.';
-$string['msgdiffertopicstext'] = 'Plain explanatory prose on any subject, written in the third person. No workplace framing, no compliance, no scenarios or characters &ndash; just the subject, explained well.';
 
 $string['msggenerates6cardspersection'] = '6 cards per section';
 $string['msggenerates4cardspersectionplus3activities'] = '4 cards + 3 activities per section';
@@ -1245,7 +1302,7 @@ $string['msgstep2label'] = 'Learning Context';
 $string['msgstep3label'] = 'Topics & Generate';
 $string['msgtryagain'] = 'Try Again';
 $string['msghowitworks'] = 'How It Works  -  3 Simple Steps';
-$string['msghowstep1'] = 'Select VET, Workplace, University, or PD / Short Courses mode below. Then enter your major topic and sub topics.';
+$string['msghowstep1'] = 'Select VET, Workplace, University, Policy & Compliance, General Learning or Topics and Text below. Then enter the topic and the learner context you actually know.';
 $string['msghowstep2'] = 'Select your industry and topics, then click Generate — AI builds your slides automatically. Optionally, paste reference content or use the ChatGPT prompt when you need more control or want to upload documents as guides.';
 $string['msghowstep3'] = 'AI builds your slides with text, images, voiceover, and real-world scenarios  -  all from your refined content.';
 $string['msgimportantonetopic'] = '<strong>Important:</strong> Each Content Creator activity is designed for <strong>one major topic only</strong>. For effective learning, place revision activities between your topics  -  use <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> to reinforce understanding before students move to the next topic.';
@@ -1259,14 +1316,14 @@ $string['msgaiextractstopics'] = 'AI extracts topics from your content';
 $string['msginductionsafety'] = 'Induction, safety &amp; policy training';
 $string['msgmodeunititle'] = 'University / Higher Ed';
 $string['msgcarflow'] = 'Concept-Application-Reflection flow';
-$string['msgmodepdtitle'] = 'PD / Short Courses';
+$string['msgmodepdtitle'] = 'Professional Development (legacy)';   // withdrawn from the mode picker; kept for saved modules
 $string['msgmodepddesc'] = 'Professional development, upskilling & staff training courses';
 $string['msgpracticalskills'] = 'Practical, skills-focused content';
 $string['msgcpdmicrocreds'] = 'Perfect for CPD &amp; micro-credentials';
 $string['msguniversalheadings'] = 'Universal headings &ndash; no compliance or scenario framing';
 $string['msgshortbydesign'] = 'Short by design: two paragraphs a card, easy to digest';
 $string['msgunitcodelabel'] = 'Unit Code *';
-$string['msgtgaapiunavailable'] = 'TGA API unavailable';
+$string['msgtgaapiunavailable'] = 'The TGA API is unavailable';
 $string['msgdownloadunitpdf'] = 'Download the unit PDF from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> and upload it here.';
 $string['msgopenuniton'] = 'Open the unit on <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a>, select all text (Ctrl+A / Cmd+A) and paste here.';
 $string['msgchooseoneelement'] = 'Choose <strong>one element</strong> to generate learning content for. Generate each element separately so you can place <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> between them for revision and deeper learning.';
@@ -1426,7 +1483,7 @@ $string['msgplanninglayer'] = 'Planning Layer';
 $string['msgselectall'] = 'Select All';
 $string['msgdeselectall'] = 'Deselect All';
 $string['msgskipvoiceover'] = 'Skip voiceover generation and continue';
-$string['msgvoiceoverslater'] = 'Voiceovers will be generated when the activity is first opened.';
+$string['msgvoiceoverslater'] = 'Card narration is generated when a learner first opens the activity, so their first view is slower. Quiz feedback narration is only made here - skipping leaves it silent until you regenerate.';
 $string['msgexportexcel'] = 'Export Excel Mapping';
 $string['msgresetstartover'] = 'Reset & Start Over';
 $string['msgpastesubtopicsintro'] = 'Paste the subtopics for your major topic below (one per line). Each subtopic will become a separate learning slide:';
@@ -1486,7 +1543,33 @@ $string['msgbasedonworkplacedoc'] = 'Based on your workplace document';
 $string['msgnsubtopic'] = '{$a} subtopic';
 $string['msgnsubtopics'] = '{$a} subtopics';
 
-// v15: Four-route world-class learning architecture.
+// Four-route world-class learning architecture.  (v15)
+// v15.3.11: Topics and Text, reinstated as a selectable route.
+$string['msgmodetopicstexttitle'] = 'Topics &amp; Text';
+$string['msgmodetopicstextdesc'] = 'A topic broken into its own subtopics - a heading and clear prose for each, with no fixed card shape.';
+$string['msgdiffertopicstext'] = 'The subject sets the shape: as many subtopic cards as the topic actually has, each with the heading the AI wrote for it.';
+$string['msgttsubtopiccards'] = 'Up to 10 subtopic cards per topic';
+$string['msgttownheadings'] = 'Each card carries its own heading';
+$string['msgtttwocolumn'] = 'Two-column layout, revealed one at a time';
+$string['msgttsameactivities'] = 'Same end-of-topic activities as every route';
+$string['msgttgeneratescards'] = 'Generates 3-10 numbered subtopic cards per section, plus the activities';
+// Route-chooser clarity lines - who each route is for, and what the author  (v15.3.11)
+// needs to hand before starting.
+$string['msgchoosethisif'] = 'Choose this if:';
+$string['msgyouwillneed'] = 'You will need:';
+$string['msgchoosevet'] = 'you are an RTO delivering nationally recognised training and the content has to stand up to audit.';
+$string['msgneedvet'] = 'the unit code (imported from training.gov.au). Reference documents optional.';
+$string['msgchooseworkplace'] = 'you are training your own staff on how things are done here - your policies, systems and standards.';
+$string['msgneedworkplace'] = 'nothing, but a company document gives far better results than a topic title alone.';
+$string['msgchooseuniversity'] = 'you are teaching an academic subject and want frameworks, ethics and competing case studies rather than workplace scenarios.';
+$string['msgneeduniversity'] = 'your learning outcomes. No documents required.';
+$string['msgchoosepolicy'] = 'you have one document - a policy, code of conduct or procedure - and staff will be held to exactly what it says.';
+$string['msgneedpolicy'] = 'the policy document itself, and its title. This route will not run without it.';
+$string['msgchoosegeneral'] = 'your subject is none of the above - professional development, soft skills, induction, or anything taught to adults.';
+$string['msgneedgeneral'] = 'a topic. Everything else is optional.';
+$string['msgchoosetopicstext'] = 'you want a clean read - headings and prose - rather than scenarios, and the seven-card shape does not suit your subject.';
+$string['msgneedtopicstext'] = 'a topic. Optionally paste or upload source material to teach from.';
+$string['msgcardnamegeneralapplycontext'] = 'Second Scenario';
 $string['msgmodegeneraltitle'] = 'General Learning';
 $string['msgmodegeneraldesc'] = 'Adaptive learning for short courses, professional development, personal learning and any subject that is not formal VET, organisation-specific workplace training or university study.';
 $string['msgdiffergeneral'] = 'The AI first works out the learning job — concept, procedure, decision, behaviour, communication, awareness or skill — then selects the teaching model that best fits the content instead of forcing every topic into the same template.';
@@ -1522,8 +1605,17 @@ $string['msgstudentmisunderstandingoptional'] = 'What do students commonly misun
 $string['msgphstudentmisunderstanding'] = 'e.g. Students confuse correlation with causation';
 $string['msgcaseexampleoptional'] = 'Case or example to include (optional)';
 $string['msgphuniexample'] = 'e.g. A prescribed study, case, experiment or current application';
-$string['msghowstep1'] = 'Select VET, Workplace, University, or General Learning below. Then enter the topic and the learner context you actually know.';
-$string['msgchoosemodesubtitle'] = 'Choose the learning environment. The AI then selects the instructional approach that best fits the content.';
-// Keep legacy labels available for historical saved activities, but they are no longer teacher-facing creation routes.
-$string['msgmodepdtitle'] = 'Professional Development (legacy)';
-$string['msgmodetopicstitle'] = 'Topics and Text (legacy)';
+// This block used to redefine FIVE keys that are already declared earlier in  (v15.4.6)
+// this file. PHP takes the last assignment, so the earlier ones were dead and the values
+// here were the live ones - which nobody reading the first declaration would know.
+//
+// Two of them were actively wrong. Topics and Text was withdrawn from the mode picker,
+// labelled "(legacy)" here, and then RESTORED as a teacher-selectable route in v15.3.11
+// (see ccNormaliseTeacherRoute in builder.js, which stopped folding it for that reason) -
+// but this line was never taken back, so the mode card for a live route read "Topics and
+// Text (legacy)". msghowstep1 named four routes on a screen that offers six.
+//
+// Each key is now declared exactly once, at its original position, with the value that is
+// actually correct. tests/js/test-builder-strings.js fails on a duplicate key.
+// PD alone remains legacy: it is genuinely not on the mode picker any more, and
+// ccNormaliseTeacherRoute folds it onto General. Its label lives at its first declaration.

@@ -135,6 +135,8 @@ if ($canmanage && (!$islocked || $editmode)) {
     // Show the builder for teachers when there is no content, or when in edit mode.
     $enablevoice = get_config('mod_contentcreator', 'enablevoice') ?: 1;
     $voicelanguage = get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU';
+    // V15.1.5: site pronunciation list, applied to narration only. See cc-state.js.
+    $pronunciations = (string)(get_config('mod_contentcreator', 'pronunciations') ?: '');
 
     $PAGE->requires->js_call_amd(
         'mod_contentcreator/builder',
@@ -143,11 +145,15 @@ if ($canmanage && (!$islocked || $editmode)) {
             'cmid' => $cm->id,
             'enableVoice' => (bool)$enablevoice,
             'voiceLanguage' => $voicelanguage,
+            'pronunciations' => $pronunciations,
         ]]
     );
 } else {
     // Show the player for students, and for teachers when content is locked and edit mode is off.
     $requirefocus = get_config('mod_contentcreator', 'requirefocus') ?: 0;
+    // V15.1.5: the player re-derives narration for staleness checks and on-demand speech,
+    // so it needs the same list the builder used or the two would disagree on every hash.
+    $pronunciations = (string)(get_config('mod_contentcreator', 'pronunciations') ?: '');
 
     // Only show the Edit button when Moodle's edit mode is on, the top right toggle (v6.5.3).
     // V11.12 FIX: $PAGE->user_is_editing() returns false on mod/xxx/view.php pages because
@@ -163,6 +169,9 @@ if ($canmanage && (!$islocked || $editmode)) {
             'canEdit' => $caneditslides,
             'isTeacher' => (bool)$isstaff,
             'requireFocus' => (bool)$requirefocus,
+            'pronunciations' => $pronunciations,
+            // V15.1.8: the pronunciation list applies only to this language's narration.
+            'voiceLanguage' => get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU',
             'courseUrl' => (new moodle_url('/course/view.php', ['id' => $cm->course]))->out(false),
         ]]
     );
@@ -177,8 +186,8 @@ echo $OUTPUT->header();
 // FIX-CC-COMPLETION-SPLIT (v13.12): Completion tracking AFTER header.
 // $OUTPUT->header() has already written all session data (editedpages, etc.).
 // We now close the session ourselves and call update_state() directly.
-// update_state() has NO is_header_printed() check, so no DEBUG_DEVELOPER warning fires.
-// set_module_viewed() is intentionally NOT used here — it would trigger either the
+// The update_state() call has NO is_header_printed() check, so no DEBUG_DEVELOPER warning fires.
+// Deliberately NOT set_module_viewed() here — it would trigger either the
 // "before header" or "session mutation" warning. This approach produces neither.
 \core\session\manager::write_close();
 $completion = new completion_info($course);

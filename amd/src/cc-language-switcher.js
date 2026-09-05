@@ -26,7 +26,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define(['mod_contentcreator/cc-voiceover'], function (CcVoiceover) {
+define(['mod_contentcreator/cc-voiceover'], function(CcVoiceover) {
     'use strict';
 
     var LANGUAGE_LABELS = CcVoiceover.LANGUAGE_LABELS;
@@ -36,7 +36,7 @@ define(['mod_contentcreator/cc-voiceover'], function (CcVoiceover) {
      * @param {string} str
      * @returns {string}
      */
-    var _esc = function (str) {
+    var _esc = function(str) {
         return String(str)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -65,13 +65,13 @@ define(['mod_contentcreator/cc-voiceover'], function (CcVoiceover) {
      *                                 language tab is selected.
      * @returns {string} HTML string for the .cc5-lang-switcher bar, or ''.
      */
-    var renderLangSwitcherHtml = function (manifest, activeLang, getLabel) {
+    var renderLangSwitcherHtml = function(manifest, activeLang, getLabel) {
         var ml = manifest.multiLanguage;
         if (!ml || !ml.length) {
             return '';
         }
         // Only render when at least one additional language has generated topics.
-        var hasPopulated = ml.some(function (e) { return e.topics && e.topics.length > 0; });
+        var hasPopulated = ml.some(function(e) { return e.topics && e.topics.length > 0; });
         if (!hasPopulated) {
             return '';
         }
@@ -90,7 +90,7 @@ define(['mod_contentcreator/cc-voiceover'], function (CcVoiceover) {
         // labelled group of buttons with aria-pressed, which is what they actually are.
         var _lbl = (typeof getLabel === 'function')
             ? getLabel
-            : function (k) { return k === 'selectContentLanguage' ? 'Select content language' : k; };
+            : function(k) { return k === 'selectContentLanguage' ? 'Select content language' : k; };
 
         var html = '<div class="cc5-lang-switcher" role="group" aria-label="' +
             _esc(_lbl('selectContentLanguage')) + '">';
@@ -100,7 +100,7 @@ define(['mod_contentcreator/cc-voiceover'], function (CcVoiceover) {
             (activeLangCode === '' ? 'true' : 'false') +
             '" data-testid="btn-lang-primary">' + _esc(primaryLabel) + '</button>';
 
-        ml.forEach(function (entry) {
+        ml.forEach(function(entry) {
             if (!entry.topics || !entry.topics.length) {
                 return;
             }

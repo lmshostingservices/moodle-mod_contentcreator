@@ -33,7 +33,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function () {
+define([], function() {
     'use strict';
 
     /** Current plugin version  -  single source of truth for builder.js and player5.js. */
@@ -53,7 +53,7 @@ define([], function () {
     // test-version-mirror.js asserts this equals $plugin->release and runs with the suite,
     // so a fourth recurrence fails a test instead of reaching production.
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.1.1';
+    var CC_VERSION = '15.4.9';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was
@@ -106,14 +106,14 @@ define([], function () {
         // no-console rule is disabled here and nowhere else.
         /* eslint-disable no-console */
         var log = verbose
-            ? function () {
+            ? function() {
                 console.log.apply(console, [prefix].concat(Array.prototype.slice.call(arguments)));
             }
-            : function () {};
-        var warn = function () {
+            : function() {};
+        var warn = function() {
             console.warn.apply(console, [prefix].concat(Array.prototype.slice.call(arguments)));
         };
-        var error = function () {
+        var error = function() {
             console.error.apply(console, [prefix].concat(Array.prototype.slice.call(arguments)));
         };
         /* eslint-enable no-console */
@@ -162,12 +162,24 @@ define([], function () {
         s = s.replace(/\bso you\s+safety\b/gi, 'so you maintain safety');
         s = s.replace(/\bso you\s+the\s+safety\b/gi, 'so you ensure the safety');
         s = s.replace(/\bso you\s+the\s+/gi, 'so you understand the ');
-        s = s.replace(/\bso you\s+(?:optimal|proper|adequate|sufficient|full|complete|clear|immediate|minimal|consistent|accurate|appropriate|correct|comfortable|effective|efficient|maximum|minimum|good|better|best|safe|total|reliable|thorough|reasonable|necessary|successful|secure|healthy|stable|strong|smooth|timely|rapid|quick|clean|standard|suitable|regular|balanced|controlled|steady|uniform)\b/gi, function (match) {
+        s = s.replace(/\bso you\s+(?:optimal|proper|adequate|sufficient|full|complete|clear|immediate|minimal|consistent|accurate|appropriate|correct|comfortable|effective|efficient|maximum|minimum|good|better|best|safe|total|reliable|thorough|reasonable|necessary|successful|secure|healthy|stable|strong|smooth|timely|rapid|quick|clean|standard|suitable|regular|balanced|controlled|steady|uniform)\b/gi, function(match) {
             return 'so you ensure ' + match.replace(/^so you\s+/i, '');
         });
         s = s.replace(/\b(is|are|was|were)\s+because\s+because\b/gi, '$1 because');
         s = s.replace(/\b(\w{4,})\s+\1\b/g, '$1');
         s = s.replace(/\.\s*\.\s*/g, '. ');
+        // v15.3.18: a sentence-ending period that follows a period-inside-a-quote.
+        //
+        // Reported from a live pack: the narration said the word "dot". The source read
+        // `For example, 'So what you're saying is.'.` - the model closes the quoted
+        // example with its own full stop, then the sentence adds another outside the
+        // quote mark. The `. .` collapse above cannot see it, because the two periods are
+        // separated by the quote character rather than by whitespace. Chirp reads the
+        // orphan aloud, and it is just as wrong on screen: both the renderer and the
+        // narrator run every field through this function.
+        //
+        // Handles straight and curly, single and double quotes, and a closing bracket.
+        s = s.replace(/([.!?])\s*(['\u2019"\u201d)\]])\s*\./g, '$1$2 ');
         s = s.replace(/\s{2,}/g, ' ');
         return s.trim();
     }
@@ -298,10 +310,10 @@ define([], function () {
             raw = fb ? [fb] : [];
         }
         var out = [];
-        raw.forEach(function (item) {
+        raw.forEach(function(item) {
             var t = typeof item === 'string' ? item : ((item && (item.text || item.paragraph || item.body)) || '');
             if (!t) { return; }
-            t.replace(/\\r\\n|\\n|\\r/g, '\n').replace(/<br\s*\/?>/gi, '\n').split(/\n+/).forEach(function (part) {
+            t.replace(/\\r\\n|\\n|\\r/g, '\n').replace(/<br\s*\/?>/gi, '\n').split(/\n+/).forEach(function(part) {
                 var c = part.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')
                             .replace(/\*\*(.+?)\*\*/g, '$1')
                             .replace(/\s{2,}/g, ' ')
@@ -358,6 +370,152 @@ define([], function () {
      */
     function setLabelResolver(fn) {
         _proseLabelResolver = (typeof fn === 'function') ? fn : null;
+    }
+
+    // =======================================================================
+    // v15.1.5: PRONUNCIATION LIST
+    //
+    // A site admin lists words the voice reads wrongly and how they should sound -
+    // company names, product names, acronyms, place names. The respelling replaces the
+    // word in the NARRATION ONLY, on its way to Chirp 3 HD. Nothing on screen changes:
+    // this runs inside buildVoiceoverText(), which builds the audio script and is never
+    // used to render a card.
+    //
+    // Staleness comes free. voiceoverTextHash() is computed over the string this
+    // function returns, and the player already compares that hash against the one
+    // stored on each section (player5.js ~15064). Change the list and the hash changes,
+    // so affected sections are flagged stale by the mechanism that already exists -
+    // teachers get the usual "apply updates" prompt and choose when to spend credits.
+    // No new staleness machinery, and no surprise re-synthesis.
+    //
+    // SUBSTITUTION SAFETY. generator.js's BANNED_PHRASE_RULES is the cautionary tale:
+    // blanket replacements produced "so you accuracy" and turned landscape painting into
+    // environment painting, and the corruption ran through every card before anyone
+    // noticed. So:
+    //   - ONE pass over one combined pattern, longest term first. Replacing each term in
+    //     its own pass looks equivalent and is not: with "New South Wales=New South Wales"
+    //     and "Wales=Wayls" both listed, the second pass re-reads what the first produced
+    //     and gives "New South Wayls". A single pass consumes each match and moves past it.
+    //   - whole words only - "AI" must never rewrite the middle of "AIDS". The boundary is
+    //     `(^|[^\w])` ... `(?!\w)` rather than \b, because \b needs a word character on the
+    //     inside edge and a term like "C++" has none, so \b would never fire for it.
+    //     Written without lookbehind, which older Safari does not support.
+    //   - the term is escaped, so a list entry containing . or ( or + is a literal
+    //   - the respelling is used exactly as the admin typed it. An earlier version
+    //     preserved the capitalisation of the matched word, which turned every acronym
+    //     into Title Case ("SWMS" -> "Swims"). It was also pointless: this string is read
+    //     aloud by Chirp 3 HD and never displayed, and case does not change pronunciation.
+    //   - a malformed line is skipped, never guessed at
+    //   - the list applies ONLY to the language it was written for. An admin writes English
+    //     respellings ("Moo-dul"); feeding those to a Japanese or French voice on an
+    //     additional-language pack produces worse pronunciation than leaving the word alone,
+    //     because the respelling is English phonetics. The base language is the site's
+    //     configured voice language; the active language is set per pack as narration is
+    //     built. Compared on the primary subtag, so en-AU and en-GB are the same language.
+    var _pronunciations = [];
+    var _pronRe = null;
+    var _pronSay = null;
+    var _pronBaseLang = '';
+    var _pronActiveLang = '';
+
+    /** Primary subtag: 'en-AU' -> 'en'. */
+    function _primaryLang(code) {
+        return String(code || '').trim().toLowerCase().split('-')[0];
+    }
+
+    /**
+     * Set the language the narration currently being built is in.
+     *
+     * @param {String} lang BCP-47 code.
+     */
+    function setNarrationLanguage(lang) {
+        _pronActiveLang = _primaryLang(lang);
+    }
+
+    /**
+     * Set the site's pronunciation list. Called once at init from the page config.
+     *
+     * @param {Array|String} list Either [{term, say}] or raw "term=say" lines.
+     */
+    function setPronunciations(list, baseLanguage) {
+        _pronBaseLang = _primaryLang(baseLanguage);
+        // v15.1.5: a term this list must refuse. The list is site-wide and the substitution
+        // is whole-word but otherwise unconstrained, so a single careless entry - "a=uh",
+        // "is=izz" - rewrites narration on essentially every module on the site AND, because
+        // staleness is the hash of the substituted script, flags every one of those sections
+        // for regeneration at once. On a plugin that bills per AI call, one typo in an admin
+        // textarea should not be able to do that. Single characters and the commonest
+        // function words are therefore skipped: nobody needs to respell "the", and the cost
+        // of being wrong here is asymmetric.
+        var REFUSED = (
+            'a an and are as at be but by for from had has have he her his i if in is it its '
+            + 'me my no not of on or our she so that the their them then there these they this '
+            + 'to too us was we were what when which who will with you your'
+        ).split(' ');
+        var entries = [];
+        var seen = {};
+        var add = function(term, say) {
+            term = String(term || '').trim();
+            say = String(say || '').trim();
+            if (!term || !say) { return; }
+            if (term.length < 2) { return; }
+            if (REFUSED.indexOf(term.toLowerCase()) !== -1) { return; }
+            // A term listed twice in different cases (AI= and ai=) matched the same words but
+            // silently resolved to whichever sorted last. First entry wins, deterministically.
+            var key = term.toLowerCase();
+            if (seen[key]) { return; }
+            seen[key] = true;
+            entries.push({term: term, say: say});
+        };
+        if (typeof list === 'string') {
+            list.split(/\r?\n/).forEach(function(line) {
+                if (!line || line.trim().charAt(0) === '#') { return; }
+                var at = line.indexOf('=');
+                if (at < 1) { return; }
+                add(line.slice(0, at), line.slice(at + 1));
+            });
+        } else if (Array.isArray(list)) {
+            list.forEach(function(e) { if (e) { add(e.term, e.say); } });
+        }
+        // Longest term first. JS alternation takes the FIRST branch that matches at a
+        // position, so ordering the branches longest-first is what makes the longest term
+        // win: "New South Wales" is tried, and matches, before "Wales" is reached.
+        entries.sort(function(a, b) { return b.term.length - a.term.length; });
+        _pronunciations = entries;
+        _pronRe = null;
+        _pronSay = null;
+        if (!entries.length) { return; }
+        // Object.create(null): a term that lowercases to "__proto__" would otherwise assign
+        // nothing (silently) yet still resolve on lookup to Object.prototype, so the
+        // `say === undefined` guard below would miss it and the narration would receive the
+        // literal string "[object Object]". A prototype-less map cannot do that.
+        _pronSay = Object.create(null);
+        var alternatives = entries.map(function(e) {
+            _pronSay[e.term.toLowerCase()] = e.say;
+            return e.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }).join('|');
+        _pronRe = new RegExp('(^|[^\\w])(' + alternatives + ')(?!\\w)', 'gi');
+    }
+
+    /**
+     * Apply the pronunciation list to a narration string.
+     *
+     * @param {String} text Narration text.
+     * @return {String} The same text with listed terms respelled.
+     */
+    function applyPronunciations(text) {
+        if (!_pronRe || !text) { return text; }
+        // Skip additional-language packs. Only gate when BOTH languages are known - if the
+        // caller never told us either, applying the list is the old, expected behaviour.
+        if (_pronBaseLang && _pronActiveLang && _pronBaseLang !== _pronActiveLang) { return text; }
+        // lastIndex is reset because the regex is /g and is reused across calls.
+        _pronRe.lastIndex = 0;
+        return String(text).replace(_pronRe, function(match, before, term) {
+            var say = _pronSay[String(term).toLowerCase()];
+            // `before` is the boundary character the pattern had to consume (there is no
+            // lookbehind here), so it is put back untouched.
+            return (say === undefined) ? match : before + say;
+        });
     }
 
     // v13.94.3: the resolver was introduced for prose headings only, but the SAME
@@ -417,7 +575,7 @@ define([], function () {
      */
     function _lblf(key, fallback, params) {
         var s = _lbl(key, fallback);
-        Object.keys(params || {}).forEach(function (p) {
+        Object.keys(params || {}).forEach(function(p) {
             s = s.split('{' + p + '}').join(params[p]);
         });
         return s;
@@ -475,7 +633,7 @@ define([], function () {
         }
         if (arr.length) {
             var last = String(arr[arr.length - 1]);
-            variants.forEach(function (v) {
+            variants.forEach(function(v) {
                 var core = v.replace(/[\s.!?。！？]+$/, '');
                 if (!core) { return; }
                 var esc = core.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -520,7 +678,7 @@ define([], function () {
         if (heading) {
             segs.push({ cardIndex: cardIndex, cardType: card.cardType, kind: 'heading', paraIndex: -1, text: heading });
         }
-        paras.forEach(function (p, i) {
+        paras.forEach(function(p, i) {
             segs.push({ cardIndex: cardIndex, cardType: card.cardType, kind: 'para', paraIndex: i, text: p });
         });
         return segs;
@@ -555,7 +713,7 @@ define([], function () {
         if (withOut !== buildVoiceoverText(section, manifest)) { return []; }
 
         var segs = [];
-        ranges.forEach(function (r) {
+        ranges.forEach(function(r) {
             var text = r.text || '';
             var words = text.split(/\s+/).filter(Boolean).length;
             // A card that contributed no narration - decision-point always, and any card
@@ -565,6 +723,64 @@ define([], function () {
             segs.push({ cardIndex: r.cardIndex, text: text, words: words });
         });
         return segs;
+    }
+
+    /**
+     * v15.4.0: ONE NARRATION SCRIPT PER CARD, with the hash that identifies it.
+     *
+     * This is the read side of per-card audio, and it is deliberately built on top of
+     * buildCardVoiceoverSegments rather than beside it. That function's whole design is
+     * that the segment map and the narration come from ONE traversal of the section - it
+     * asserts as much before returning - so deriving the per-card scripts from it means
+     * the audio a card is given and the text the player checks it against cannot come
+     * apart. A second traversal written "just for the audio" is how they would.
+     *
+     * The hash is what makes a clip disposable. A teacher edits card 3; the script for
+     * card 3 changes; its hash no longer matches the one stored beside its clip, so that
+     * ONE clip is regenerated. Before this, editing any card invalidated the whole
+     * section's audio and every card was re-synthesised and re-billed.
+     *
+     * A card that contributes no narration - decision-point always, and any card whose
+     * fields are empty - gets no entry. There is nothing to say about it, so there is
+     * nothing to synthesise, and it must not appear as a card awaiting audio forever.
+     *
+     * @param {Object} section  A manifest section.
+     * @param {Object} manifest The manifest, for the contrast labels.
+     * @return {Array} [{cardIndex, text, words, hash}] in spoken order.
+     */
+    function cardNarrationParts(section, manifest) {
+        var segs = buildCardVoiceoverSegments(section, manifest) || [];
+        return segs.map(function(seg) {
+            return {
+                cardIndex: seg.cardIndex,
+                text: seg.text,
+                words: seg.words,
+                hash: voiceoverTextHash(seg.text)
+            };
+        });
+    }
+
+    /**
+     * v15.4.0: is this card's stored clip still the right clip?
+     *
+     * The same three-part test the section-level playback has used since v11.02 - schema
+     * version, a URL that is really there, and a text hash that still matches - applied
+     * one card at a time. Anything unstamped is treated as stale rather than trusted: an
+     * unstamped entry predates the fix that added the stamp, and cannot be vouched for.
+     *
+     * @param {Object} card The card.
+     * @param {String} hash The hash of the script the card would be given today.
+     * @return {Boolean} True when the stored clip can be played as-is.
+     */
+    function cardVoiceoverIsFresh(card, hash) {
+        if (!card || !hash) { return false; }
+        if (card.voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION) { return false; }
+        var url = card.voiceoverUrl;
+        if (typeof url !== 'string' || !url) { return false; }
+        if (url !== 'pregenerated' && url.indexOf('http') !== 0 && url.indexOf('data:') !== 0) {
+            return false;
+        }
+        return card.voiceoverTextHash === hash;
     }
 
     /**
@@ -580,7 +796,7 @@ define([], function () {
         if (!isProseSection(section)) { return []; }
         var segs = [];
         var proseIdx = 0;
-        (section.cards || []).forEach(function (card) {
+        (section.cards || []).forEach(function(card) {
             if (!card || PROSE_CARD_TYPES.indexOf(card.cardType) < 0) { return; }
             segs = segs.concat(proseCardSegments(card, proseIdx));
             proseIdx++;
@@ -610,7 +826,7 @@ define([], function () {
         var terms = section.terminology || [];
         if (terms.length) {
             var voTermParts = [];
-            terms.forEach(function (term) {
+            terms.forEach(function(term) {
                 var name = (term.term || '').trim();
                 var def = (term.definition || '').trim();
                 // v13.94.3: ' means ' was spliced between two translated
@@ -655,6 +871,27 @@ define([], function () {
             if (scenario.context) parts.push(_fg(scenario.context));
             if (scenario.complication) parts.push(_fg(scenario.complication));
         }
+    }
+
+    /**
+     * v15.4.0: the finishing pass applied to a narration script before it is spoken.
+     *
+     * Extracted so that the whole-section script and every per-card range get byte-for-byte
+     * the same treatment. They did not before: the ranges were only ever word-counted, so
+     * skipping this was invisible. Per-card audio makes each range its own TTS request, and
+     * an artefact left in one is an artefact a learner hears.
+     *
+     * @param {String} text Joined narration parts.
+     * @return {String} The script as it should be spoken.
+     */
+    function _finishNarration(text) {
+        var out = String(text || '');
+        out = out.replace(/\.\. /g, '. ').replace(/\.\.$/g, '.');
+        // v12.57 FIX-VO-SYMBOLS: strip any residual markdown horizontal rules that
+        // survived field extraction (e.g. came through card.voiceoverText verbatim).
+        out = out.replace(/-{3,}/g, '').replace(/\*{3,}/g, '').replace(/#{1,6}\s*/g, '');
+        out = out.replace(/\s{2,}/g, ' ');
+        return out;
     }
 
     function buildVoiceoverText(section, manifest, cardRangesOut) {
@@ -720,12 +957,12 @@ define([], function () {
                         _ranges.push({ cardIndex: 0, text: parts.slice(_promotedStart).join('. ') });
                     }
                 }
-                var _voEmitCard = function (card) {
+                var _voEmitCard = function(card) {
                     if (!card) return;
                     // v13.92: Topics-and-Text - read the visible prose verbatim, heading
                     // first, so the audio timeline maps one-to-one onto what is on screen.
                     if (PROSE_CARD_TYPES.indexOf(card.cardType) >= 0) {
-                        proseCardSegments(card, 0).forEach(function (seg) {
+                        proseCardSegments(card, 0).forEach(function(seg) {
                             parts.push(_fg(seg.text));
                         });
                         return;
@@ -748,8 +985,27 @@ define([], function () {
                             'competency-summary':['youAreReadyWhenYouCan',   'You Are Ready When You Can'],
                             'decision-point':    ['yourDecision',            'Your Decision']
                         };
+                        // v15.4.6: Policy speaks its OWN headings, the same six the card
+                        // renderer now shows. The comment above records that these keys
+                        // are deliberately shared with the flow badge in cc-card-slots.js
+                        // - which is precisely why this table had to move when that one
+                        // did. Left alone, the badge would read "Scope & Purpose" while
+                        // the voice said "Scene Setting" over the same card: the two
+                        // halves of one contract, one of them moved. Every other route
+                        // falls through to the table above, unchanged.
+                        var _POLICY_HEADINGS = {
+                            'hook-scenario':     ['policyCardScope',       'Scope & Purpose'],
+                            'concept-explainer': ['policyCardSays',        'What the Policy Says'],
+                            'mental-model':      ['policyCardDo',          'What You Must Do'],
+                            'mistakes':          ['policyCardMisreadings', 'Common Misreadings'],
+                            'competency-summary':['policyCardGlance',      'Compliance at a Glance'],
+                            'decision-point':    ['policyCardCheck',       'Check Your Understanding']
+                        };
+                        var _voRoute = String((manifest && (manifest.mode || manifest.routeMode))
+                            || (section && section.routeMode) || '').trim();
                         var _7parts = [];
-                        var _7head = _7CARD_HEADINGS[card.cardType];
+                        var _7head = (_voRoute === 'policy' && _POLICY_HEADINGS[card.cardType])
+                            || _7CARD_HEADINGS[card.cardType];
                         var _7headLabel = _7head ? _lbl(_7head[0], _7head[1]) : '';
                         var _7headText = '';
                         if (_7headLabel) {
@@ -764,7 +1020,7 @@ define([], function () {
                             // characters reduces a translated label to '', which would
                             // have matched any heading that is also non-Latin - every
                             // heading in a Japanese module - and silently dropped it.
-                            var _norm = function (s) { return (s || '').replace(/[^a-zA-Z]/g, '').toLowerCase(); };
+                            var _norm = function(s) { return (s || '').replace(/[^a-zA-Z]/g, '').toLowerCase(); };
                             var _titleNorm = _norm(_cardHeading);
                             var _titleIsDupe = (_titleNorm !== '' &&
                                     (_titleNorm === _norm(_7headLabel) || _titleNorm === _norm(_7head && _7head[1])))
@@ -848,7 +1104,7 @@ define([], function () {
                         } else {
                             if (card.cardType === 'hook-scenario' || card.cardType === 'applied-scenario') {
                                 if (card.sceneParts && card.sceneParts.length) {
-                                    card.sceneParts.forEach(function (part) {
+                                    card.sceneParts.forEach(function(part) {
                                         if (part.title) _7parts.push(_fg(part.title));
                                         // v13.94.6: the renderer resolves a scene part's
                                         // body through six aliases and this read three, so
@@ -869,7 +1125,7 @@ define([], function () {
                                 }
                             } else if (card.cardType === 'concept-explainer') {
                                 if (card.conceptInsights && card.conceptInsights.length) {
-                                    card.conceptInsights.forEach(function (insight) {
+                                    card.conceptInsights.forEach(function(insight) {
                                         if (insight.title) _7parts.push(_fg(insight.title));
                                         var iText = insight.text || insight.content || insight.description || '';
                                         if (iText) _7parts.push(_fg(iText));
@@ -885,7 +1141,7 @@ define([], function () {
                                 _pushLegalLinkFields(_7parts, card);
                             } else if (card.cardType === 'mental-model') {
                                 if (card.steps && card.steps.length) {
-                                    card.steps.forEach(function (s) {
+                                    card.steps.forEach(function(s) {
                                         var _mmStep = s.step || s.action || s.title || '';
                                         if (_mmStep)  _7parts.push(_fg(_mmStep));
                                         // v13.94.6: renderMentalModel() resolves the step
@@ -901,7 +1157,7 @@ define([], function () {
                                 }
                             } else if (card.cardType === 'mistakes') {
                                 if (card.items && card.items.length) {
-                                    card.items.forEach(function (item) {
+                                    card.items.forEach(function(item) {
                                         if (typeof item === 'string') { _7parts.push(_fg(item)); }
                                         else {
                                             // v13.94.6: renderMistakesCard() takes
@@ -925,7 +1181,7 @@ define([], function () {
                                     // v13.94.3: spoken sub-heading, was English-only. Same
                                     // key as the rendered column header in cc-card-slots.js.
                                     _7parts.push(_lbl('whatGoodLooksLike', 'What Good Looks Like') + '.');
-                                    _compGoodItems.forEach(function (gi) {
+                                    _compGoodItems.forEach(function(gi) {
                                         // v13.94.6: the renderer reads text||behaviour||
                                         // criterion; reading text alone narrated an empty
                                         // string for every promoted legacy item that used
@@ -943,7 +1199,7 @@ define([], function () {
                                 if (card.badItems && card.badItems.length) {
                                     // v13.94.3: spoken sub-heading, was English-only.
                                     _7parts.push(_lbl('whatToAvoid', 'What to Avoid') + '.');
-                                    card.badItems.forEach(function (bi) {
+                                    card.badItems.forEach(function(bi) {
                                         if (typeof bi === 'string') { _7parts.push(_fg(bi)); return; }
                                         // v13.94.6: the prompt asks for a 10+ word
                                         // consequence on every bad item, the normaliser
@@ -1019,7 +1275,7 @@ define([], function () {
                 // by exactly the length of the accent cards. The first card is the
                 // nearest thing on screen to where these render.
                 var _voSectionFieldsDone = false;
-                _voCards.forEach(function (card, _vi) {
+                _voCards.forEach(function(card, _vi) {
                     var _cardStart = parts.length;
                     if (!_voSectionFieldsDone) {
                         _pushSectionLevelFields(parts, section);
@@ -1035,7 +1291,27 @@ define([], function () {
                 });
                 // A one-card section whose only card was consumed by the promoted
                 // section.voiceoverText leaves the loop with nothing to hang these on.
-                if (!_voSectionFieldsDone) { _pushSectionLevelFields(parts, section); }
+                //
+                // v15.4.2: "nothing to hang them on" used to mean they were pushed into the
+                // script and into no range at all. Under whole-section audio that was
+                // harmless - the words were in the file, only the highlight was off. Under
+                // per-card audio a word outside every range is a word in no clip, so the
+                // description, the requirements grid and the contrast columns of a
+                // single-card section were simply never spoken. They belong to the one card
+                // there is, so they are appended to its range.
+                if (!_voSectionFieldsDone) {
+                    var _sfStart = parts.length;
+                    _pushSectionLevelFields(parts, section);
+                    var _sfText = parts.slice(_sfStart).join('. ');
+                    if (_ranges && _sfText) {
+                        if (_ranges.length) {
+                            var _sfLast = _ranges[_ranges.length - 1];
+                            _sfLast.text = _sfLast.text ? (_sfLast.text + '. ' + _sfText) : _sfText;
+                        } else {
+                            _ranges.push({ cardIndex: 0, text: _sfText });
+                        }
+                    }
+                }
             } else {
                 // Legacy section (no cards array)  -  simplified handling
                 if (section.voiceoverText) {
@@ -1046,7 +1322,7 @@ define([], function () {
                         parts.push(_fg(stripped));
                     }
                     if (section.requirements && section.requirements.length) {
-                        section.requirements.forEach(function (r) {
+                        section.requirements.forEach(function(r) {
                             var t = typeof r === 'string' ? r : (r.text || r.requirement || '');
                             if (t) parts.push(_fg(t));
                         });
@@ -1060,10 +1336,10 @@ define([], function () {
                         // bundle - see _CONTRAST_LABEL_KEYS.
                         var cKeys = _CONTRAST_LABEL_KEYS[cType] || _CONTRAST_LABEL_KEYS['dos-donts'];
                         if (positiveItems.length) {
-                            parts.push(_lbl(cKeys.positive, cLabels.positive) + '. ' + positiveItems.map(function (item) { return _fg(item); }).join('. '));
+                            parts.push(_lbl(cKeys.positive, cLabels.positive) + '. ' + positiveItems.map(function(item) { return _fg(item); }).join('. '));
                         }
                         if (negativeItems.length) {
-                            parts.push(_lbl(cKeys.negative, cLabels.negative) + '. ' + negativeItems.map(function (item) { return _fg(item); }).join('. '));
+                            parts.push(_lbl(cKeys.negative, cLabels.negative) + '. ' + negativeItems.map(function(item) { return _fg(item); }).join('. '));
                         }
                     }
                     // v13.94.6: body moved to _pushSectionLevelFields() so the card-based
@@ -1074,12 +1350,33 @@ define([], function () {
             }
         }
 
-        var text = parts.join('. ');
-        text = text.replace(/\.\. /g, '. ').replace(/\.\.$/g, '.');
-        // v12.57 FIX-VO-SYMBOLS: Final pass  -  strip any residual markdown horizontal rules
-        // that survived field extraction (e.g. came through card.voiceoverText verbatim).
-        text = text.replace(/-{3,}/g, '').replace(/\*{3,}/g, '').replace(/#{1,6}\s*/g, '');
-        text = text.replace(/\s{2,}/g, ' ');
+        var text = _finishNarration(parts.join('. '));
+        // v15.1.5: the pronunciation list is applied LAST, to the finished script, and to
+        // every range entry with the same function.
+        //
+        // Both matter. _ranges carries {cardIndex, text} - text, not character offsets -
+        // and buildCardVoiceoverSegments() turns each entry into a word count to drive
+        // card highlighting during playback. Substituting the returned string but not the
+        // ranges would leave the highlight counting words that are no longer spoken;
+        // substituting both keeps them in step even when a respelling changes the word
+        // count ("Moodle" -> "Moo dul"). And because the substitution is deterministic,
+        // buildCardVoiceoverSegments()'s own `withOut !== buildVoiceoverText(...)`
+        // assertion still holds - both calls apply the same list.
+        text = applyPronunciations(text);
+        if (_ranges) {
+            // v15.4.0: each range gets the SAME finishing pass as the whole script, not
+            // just the pronunciation list.
+            //
+            // Until per-card audio this did not matter much: the ranges only drove a word
+            // count. Now each range IS a TTS request, so a range that skipped the ".."
+            // collapse and the horizontal-rule strip would be SPOKEN with the artefacts
+            // the section-level script had removed - the "dot" defect, one card at a time.
+            _ranges.forEach(function(r) {
+                if (r && typeof r.text === 'string') {
+                    r.text = applyPronunciations(_finishNarration(r.text)).trim();
+                }
+            });
+        }
         return text.trim();
     }
 
@@ -1118,20 +1415,20 @@ define([], function () {
         if (obj.skillStatement) parts.push(_fg(obj.skillStatement));
         if (obj.relevance) parts.push(_fg(obj.relevance));
         if (obj.keyIndicators && obj.keyIndicators.length) {
-            parts.push(obj.keyIndicators.map(function (ind) {
+            parts.push(obj.keyIndicators.map(function(ind) {
                 return _fg(typeof ind === 'string' ? ind : (ind.text || ''));
             }).join('. '));
         }
         // -- business-impact ------------------------------------------------
         if (obj.impactStatement) parts.push(_fg(obj.impactStatement));
         if (obj.keyMetrics && obj.keyMetrics.length) {
-            parts.push(obj.keyMetrics.map(function (m) { return _fg(m); }).join('. '));
+            parts.push(obj.keyMetrics.map(function(m) { return _fg(m); }).join('. '));
         }
         // v13.94.6: renderBusinessImpact() prints consequences[] as its own list under
         // the key metrics, and nothing narrated it - a generated, billed, displayed
         // list that was silent on every University business-impact card.
         if (obj.consequences && obj.consequences.length) {
-            parts.push(obj.consequences.map(function (c) {
+            parts.push(obj.consequences.map(function(c) {
                 return _fg(typeof c === 'string' ? c : (c.text || c.description || ''));
             }).join('. '));
         }
@@ -1139,7 +1436,7 @@ define([], function () {
         if (obj.conceptDefinition) parts.push(_fg(obj.conceptDefinition));
         if (obj.significance) parts.push(_fg(obj.significance));
         if (obj.keyTerms && obj.keyTerms.length) {
-            obj.keyTerms.forEach(function (t) {
+            obj.keyTerms.forEach(function(t) {
                 // v13.94.3: second ' means ' splice, same defect and same key as the
                 // terminology loop in buildVoiceoverText().
                 if (t.term && t.definition) {
@@ -1160,14 +1457,14 @@ define([], function () {
             ? obj.cognitiveConsiderations
             : (obj.considerations || []);
         if (_considerations.length) {
-            _considerations.forEach(function (c) {
+            _considerations.forEach(function(c) {
                 if (typeof c === 'string') { parts.push(_fg(c)); }
                 else if (c.dimension && c.description) { parts.push(_fg(c.dimension) + '. ' + _fg(c.description)); }
                 else { parts.push(_fg(c.text || c.description || '')); }
             });
         }
         if (!_isCaseStudy && obj.analysisPrompts && obj.analysisPrompts.length) {
-            parts.push(obj.analysisPrompts.map(function (p) { return _fg(p); }).join('. '));
+            parts.push(obj.analysisPrompts.map(function(p) { return _fg(p); }).join('. '));
         }
         // -- performance-anchor ---------------------------------------------
         if (obj.pcStatement) parts.push(_fg(obj.pcStatement));
@@ -1177,7 +1474,7 @@ define([], function () {
         if (obj.turningPoint) parts.push(_fg(obj.turningPoint));
         if (obj.consequence) parts.push(_fg(obj.consequence));
         if (obj.optimisationTips && obj.optimisationTips.length) {
-            parts.push(obj.optimisationTips.map(function (t) { return _fg(t); }).join('. '));
+            parts.push(obj.optimisationTips.map(function(t) { return _fg(t); }).join('. '));
         }
         if (obj.reflection) {
             var _ref = obj.reflection;
@@ -1185,7 +1482,7 @@ define([], function () {
             else if (_ref.question) {
                 parts.push(_fg(_ref.question));
                 if (_ref.sampleAnswers && Array.isArray(_ref.sampleAnswers) && _ref.sampleAnswers.length) {
-                    parts.push(_ref.sampleAnswers.map(function (a) { return _fg(a); }).join('. '));
+                    parts.push(_ref.sampleAnswers.map(function(a) { return _fg(a); }).join('. '));
                 }
             }
         }
@@ -1193,16 +1490,16 @@ define([], function () {
         if (obj.keyPrinciple) parts.push(_fg(obj.keyPrinciple));
         // -- structured lists, all of which render ABOVE bodyText -------------
         if (obj.standardItems && obj.standardItems.length) {
-            parts.push(obj.standardItems.map(function (s) { return _fg(typeof s === 'string' ? s : (s.text || '')); }).join('. '));
+            parts.push(obj.standardItems.map(function(s) { return _fg(typeof s === 'string' ? s : (s.text || '')); }).join('. '));
         }
         if (obj.actions && obj.actions.length) {
-            obj.actions.forEach(function (a) {
+            obj.actions.forEach(function(a) {
                 if (a.heading) parts.push(_fg(a.heading));
-                if (a.bullets && a.bullets.length) parts.push(a.bullets.map(function (b) { return _fg(b); }).join('. '));
+                if (a.bullets && a.bullets.length) parts.push(a.bullets.map(function(b) { return _fg(b); }).join('. '));
             });
         }
         if (obj.steps && obj.steps.length) {
-            obj.steps.forEach(function (s) {
+            obj.steps.forEach(function(s) {
                 if (typeof s === 'string') { parts.push(_fg(s)); }
                 else {
                     var _legStep = s.step || s.action || '';
@@ -1213,13 +1510,13 @@ define([], function () {
             });
         }
         if (obj.errorItems && obj.errorItems.length) {
-            obj.errorItems.forEach(function (e) {
+            obj.errorItems.forEach(function(e) {
                 if (e.error) parts.push(_fg(e.error));
                 if (e.consequence) parts.push(_fg(e.consequence));
             });
         }
         if (obj.risks && obj.risks.length) {
-            obj.risks.forEach(function (r) {
+            obj.risks.forEach(function(r) {
                 if (r.risk || r.text) parts.push(_fg(r.risk || r.text));
                 if (r.likelihood) parts.push(_fg(r.likelihood));
                 if (r.impact) parts.push(_fg(r.impact));
@@ -1229,7 +1526,7 @@ define([], function () {
         }
         var _voPolItems = obj.policyItems || obj.policies || [];
         if (_voPolItems.length) {
-            _voPolItems.forEach(function (p) {
+            _voPolItems.forEach(function(p) {
                 if (typeof p === 'string') { parts.push(_fg(p)); }
                 else {
                     if (p.policy) parts.push(_fg(p.policy + (p.requirement ? ': ' + p.requirement : '')));
@@ -1238,7 +1535,7 @@ define([], function () {
             });
         }
         if (obj.frameworks && obj.frameworks.length) {
-            obj.frameworks.forEach(function (fw) {
+            obj.frameworks.forEach(function(fw) {
                 if (fw.name) parts.push(_fg(fw.name));
                 if (fw.originator) parts.push(_fg(fw.originator));
                 if (fw.principle) parts.push(_fg(fw.principle));
@@ -1255,21 +1552,21 @@ define([], function () {
             });
         }
         if (obj.frameworkSteps && obj.frameworkSteps.length) {
-            obj.frameworkSteps.forEach(function (s) {
+            obj.frameworkSteps.forEach(function(s) {
                 if (s.step) parts.push(_fg(s.step));
                 if (s.explanation) parts.push(_fg(s.explanation));
                 if (s.example) parts.push(_fg(s.example));
             });
         }
         if (obj.applications && obj.applications.length) {
-            obj.applications.forEach(function (a) {
+            obj.applications.forEach(function(a) {
                 if (a.situation) parts.push(_fg(a.situation));
                 if (a.action) parts.push(_fg(a.action));
                 if (a.rationale) parts.push(_fg(a.rationale));
             });
         }
         if (obj.pitfallItems && obj.pitfallItems.length) {
-            obj.pitfallItems.forEach(function (p) {
+            obj.pitfallItems.forEach(function(p) {
                 if (p.pitfall) parts.push(_fg(p.pitfall));
                 if (p.consequence) parts.push(_fg(p.consequence));
                 if (p.correction) parts.push(_fg(p.correction));
@@ -1280,10 +1577,10 @@ define([], function () {
         if (!obj.bodyText && obj.description) parts.push(_fg(obj.description));
         // -- the few fields that really do render after the body -------------
         if (obj.keyPoints && obj.keyPoints.length) {
-            parts.push(obj.keyPoints.map(function (p) { return _fg(typeof p === 'string' ? p : (p.text || '')); }).join('. '));
+            parts.push(obj.keyPoints.map(function(p) { return _fg(typeof p === 'string' ? p : (p.text || '')); }).join('. '));
         }
         if (_isCaseStudy && obj.analysisPrompts && obj.analysisPrompts.length) {
-            parts.push(obj.analysisPrompts.map(function (p) { return _fg(p); }).join('. '));
+            parts.push(obj.analysisPrompts.map(function(p) { return _fg(p); }).join('. '));
         }
         if (obj.keyInsight) parts.push(_fg(obj.keyInsight));
         if (obj.criticalReflection) parts.push(_fg(obj.criticalReflection));
@@ -1326,7 +1623,7 @@ define([], function () {
         var limit = ms || 210000;
         label = label || 'The request';
         var ctrl = new AbortController();
-        var timer = setTimeout(function () { ctrl.abort(); }, limit);
+        var timer = setTimeout(function() { ctrl.abort(); }, limit);
         init = init || {};
         // A caller that already manages its own AbortController keeps it - overwriting
         // the signal would silently disarm their abort (the player's voiceover path has
@@ -1337,11 +1634,11 @@ define([], function () {
         }
         init.signal = ctrl.signal;
         return fetch(url, init)
-            .then(function (response) {
+            .then(function(response) {
                 clearTimeout(timer);
                 return response;
             })
-            .catch(function (err) {
+            .catch(function(err) {
                 clearTimeout(timer);
                 if (err && err.name === 'AbortError') {
                     throw new Error(label + ' timed out after '
@@ -1380,10 +1677,10 @@ define([], function () {
         }
         return fetchWithDeadline(ajaxUrl(),
             {method: 'POST', body: body, credentials: 'same-origin'}, 'The request to ' + endpoint)
-            .then(function (response) {
+            .then(function(response) {
                 return response.json();
             })
-            .then(function (data) {
+            .then(function(data) {
                 if (!data || data.success !== true) {
                     throw new Error((data && data.error) || 'Request failed');
                 }
@@ -1414,10 +1711,10 @@ define([], function () {
         body.append('file', file);
         return fetchWithDeadline(ajaxUrl(),
             {method: 'POST', body: body, credentials: 'same-origin'}, 'The upload to ' + endpoint)
-            .then(function (response) {
+            .then(function(response) {
                 return response.json();
             })
-            .then(function (data) {
+            .then(function(data) {
                 if (!data || data.success !== true) {
                     throw new Error((data && data.error) || 'Upload failed');
                 }
@@ -1446,10 +1743,10 @@ define([], function () {
         }
         return fetchWithDeadline(ajaxUrl(),
             {method: 'POST', body: body, credentials: 'same-origin'}, 'The download from ' + endpoint)
-            .then(function (response) {
+            .then(function(response) {
                 var type = response.headers.get('Content-Type') || '';
                 if (type.indexOf('application/json') !== -1) {
-                    return response.json().then(function (data) {
+                    return response.json().then(function(data) {
                         throw new Error((data && data.error) || 'Download failed');
                     });
                 }
@@ -1506,10 +1803,19 @@ define([], function () {
         // alias so player5.js's existing init call keeps working unchanged.
         setLabelResolver: setLabelResolver,
         setProseHeadingResolver: setProseHeadingResolver,
+        // v15.1.5: site pronunciation list. setPronunciations() is called once at init by
+        // builder.js and player5.js from the page config; applyPronunciations() is exported
+        // for tests/js/test-pronunciations.js.
+        setPronunciations: setPronunciations,
+        setNarrationLanguage: setNarrationLanguage,
+        applyPronunciations: applyPronunciations,
         proseParagraphs: proseParagraphs,
         isProseSection: isProseSection,
         buildProseVoiceoverSegments: buildProseVoiceoverSegments,
         buildCardVoiceoverSegments: buildCardVoiceoverSegments,
+        // v15.4.0: per-card narration.
+        cardNarrationParts: cardNarrationParts,
+        cardVoiceoverIsFresh: cardVoiceoverIsFresh,
         ajaxUrl: ajaxUrl,
         vendorFetch: vendorFetch,
         vendorUpload: vendorUpload,

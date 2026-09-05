@@ -32,10 +32,34 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function () {
+define([], function() {
     'use strict';
 
-    var getLabel, escapeHtml, fixGrammar, getIcon, resolveScenePartIcon, formatTextWithDocLinks;
+    // v15.3.10 declared hasIcon and usesNumberedSteps here because the mental-model
+    // renderer honoured a stored step icon. v15.3.18 removed that branch - the steps are
+    // numbered unconditionally - so nothing in this module calls either any more, and they
+    // are gone rather than left as two names that look like they are doing something.
+    // player5.js still passes them into init(); an unread key in that object is harmless
+    // and removing it there would be a change to the module boundary for no gain.
+    var getLabel, escapeHtml, fixGrammar, getIcon,
+        resolveScenePartIcon, formatTextWithDocLinks;
+
+    /**
+     * v15.3.13: the score a Challenge has to reach to count as complete.
+     *
+     * This number is stated to the learner on the challenge start screen AND enforced by
+     * player5's _showChallengeComplete, which records `challengeComplete` for Moodle
+     * completion tracking. Those two lived apart - the screen did not exist and the
+     * enforcement was a bare `pct === 100` - which is the shape of defect that has cost
+     * this plugin the most: one half of a contract moves and the other half is discovered
+     * by a user. The lang string `completionallactivities` ("Student must complete all
+     * activities at 100%") is the third copy; it is the setting label a teacher reads in
+     * the module form, so it stays a lang string, but tests/js/test-challenge-start.js
+     * asserts it still says the same number as this constant.
+     *
+     * Change it here and the start screen, the pass check and the test all move together.
+     */
+    var CC_CHALLENGE_PASS_PCT = 100;
 
     /**
      * Inject helper functions from player5.js scope.
@@ -64,7 +88,7 @@ define([], function () {
     // sentence is one key with {placeholders} substituted in.
     function _lbl(key, params) {
         var s = getLabel(key);
-        Object.keys(params || {}).forEach(function (k) {
+        Object.keys(params || {}).forEach(function(k) {
             s = s.split('{' + k + '}').join(params[k]);
         });
         return s;
@@ -77,6 +101,55 @@ define([], function () {
         getIcon                = helpers.getIcon;
         resolveScenePartIcon   = helpers.resolveScenePartIcon;
         formatTextWithDocLinks = helpers.formatTextWithDocLinks;
+        // v15.4.6: the renderers can now ask which route they are drawing. See flowPill().
+        getRoute               = helpers.getRoute || function() { return ''; };
+    }
+
+    /** Supplied by player5 at init; returns the route this pack was built with. */
+    var getRoute = function() { return ''; };
+
+    /**
+     * The eyebrow pill above a card, in the register of the route that is running.
+     *
+     * FIX-CC-POLICY-NARRATIVE-LABELS (v15.4.6). These pills were hard-coded to the
+     * narrative routes' wording, so a Policy & Compliance learner - reading a course
+     * whose entire contract is "plain and exact, no manufactured drama", generated from
+     * a system prompt that says "No dramatised breach" and "never a manufactured
+     * incident" - was shown:
+     *
+     *     Scene Setting | What This Means | How to Handle It | Watch Out For |
+     *     You Are Ready When You Can…
+     *
+     * "Scene Setting" over a clause from a code of conduct is the exact register the
+     * route removes from the content, reintroduced by the chrome. It is also not what
+     * the author was promised: the route advertises six card names on the mode-picker
+     * card - Scope & Purpose, What the Policy Says, What You Must Do, Common
+     * Misreadings, Compliance at a Glance, Check Your Understanding - and the learner
+     * saw five different ones.
+     *
+     * The pill is a label, not content, so this is a lookup and not a new renderer.
+     * Every other route is unchanged: an absent override falls through to the default
+     * key, which is what all six of them already used.
+     *
+     * @param {String} defaultKey The label key the narrative routes use.
+     * @param {String} cardType   The card being drawn.
+     * @return {String} The resolved, escaped pill text.
+     */
+    var CC_ROUTE_PILL_LABELS = {
+        policy: {
+            'hook-scenario':      'policyCardScope',
+            'concept-explainer':  'policyCardSays',
+            'mental-model':       'policyCardDo',
+            'mistakes':           'policyCardMisreadings',
+            'competency-summary': 'policyCardGlance',
+            'decision-point':     'policyCardCheck'
+        }
+    };
+
+    function flowPill(defaultKey, cardType) {
+        var byRoute = CC_ROUTE_PILL_LABELS[getRoute()];
+        var key = (byRoute && byRoute[cardType]) || defaultKey;
+        return escapeHtml(getLabel(key));
     }
 
     // ---------------------------------------------------------------------------
@@ -102,7 +175,7 @@ define([], function () {
         if (beats.length <= 1) {
             var excParts = raw.split(/[!?]\s+(?=[A-Z])/);
             if (excParts.length >= 2) {
-                beats = excParts.map(function (p) { return p.trim(); }).filter(function (p) { return p.length > 12; });
+                beats = excParts.map(function(p) { return p.trim(); }).filter(function(p) { return p.length > 12; });
             }
         }
         return beats.length >= 2 ? beats : [raw];
@@ -136,7 +209,7 @@ define([], function () {
             var kpColors = ['orange', 'green', 'blue', 'purple'];
             var kpIcons  = ['lightbulb', 'check-circle', 'award', 'brain'];
             html += '<div class="cc5-kp-grid">';
-            section.keyPoints.forEach(function (pt, idx) {
+            section.keyPoints.forEach(function(pt, idx) {
                 var ptText = typeof pt === 'string' ? pt : (pt.text || '');
                 if (!ptText) return;
                 var colorClass = 'cc5-req-' + kpColors[idx % kpColors.length];
@@ -162,12 +235,12 @@ define([], function () {
         html += '<div class="cc5-card-header">' + getIcon('list-checks') + '<h4>' + escapeHtml(fixGrammar(section.heading || 'Action Breakdown')) + '</h4></div>';
         html += '<div class="cc5-card-body"><div class="cc5-action-grid">';
         if (section.actions && section.actions.length) {
-            section.actions.forEach(function (action) {
+            section.actions.forEach(function(action) {
                 html += '<div class="cc5-action-item">';
                 html += '<h5>' + escapeHtml(fixGrammar(action.heading || '')) + '</h5>';
                 if (action.bullets && action.bullets.length) {
                     html += '<ul>';
-                    action.bullets.forEach(function (b) { html += '<li>' + escapeHtml(fixGrammar(b)) + '</li>'; });
+                    action.bullets.forEach(function(b) { html += '<li>' + escapeHtml(fixGrammar(b)) + '</li>'; });
                     html += '</ul>';
                 }
                 html += '</div>';
@@ -187,7 +260,7 @@ define([], function () {
         html += '<div class="cc5-card-body">';
         if (section.standardItems && section.standardItems.length) {
             html += '<ul class="cc5-standard-checklist">';
-            section.standardItems.forEach(function (item) {
+            section.standardItems.forEach(function(item) {
                 html += '<li>' + getIcon('check-circle') + ' <span>' + escapeHtml(fixGrammar(typeof item === 'string' ? item : (item.text || ''))) + '</span></li>';
             });
             html += '</ul>';
@@ -210,7 +283,7 @@ define([], function () {
         if (section.consequence) html += '<div class="cc5-scenario-consequence"><strong>Consequence:</strong> ' + escapeHtml(fixGrammar(section.consequence)) + '</div>';
         if (section.optimisationTips && section.optimisationTips.length) {
             html += '<div class="cc5-scenario-tips"><h5>' + (getLabel('tipsForHandling') || 'Tips for Handling This') + '</h5><ul class="cc5-tips-list">';
-            section.optimisationTips.forEach(function (tip) { html += '<li>' + escapeHtml(fixGrammar(tip)) + '</li>'; });
+            section.optimisationTips.forEach(function(tip) { html += '<li>' + escapeHtml(fixGrammar(tip)) + '</li>'; });
             html += '</ul></div>';
         }
         html += '</div></div>';
@@ -226,7 +299,7 @@ define([], function () {
         html += '<div class="cc5-card-body">';
         if (section.errorItems && section.errorItems.length) {
             html += '<div class="cc5-error-items">';
-            section.errorItems.forEach(function (item) {
+            section.errorItems.forEach(function(item) {
                 html += '<div class="cc5-error-item">';
                 html += '<div class="cc5-error-text">' + getIcon('x-circle') + ' <span>' + escapeHtml(fixGrammar(item.error || '')) + '</span></div>';
                 if (item.consequence) html += '<div class="cc5-error-consequence">' + escapeHtml(fixGrammar(item.consequence)) + '</div>';
@@ -260,7 +333,7 @@ define([], function () {
         if (terms.length) {
             // v13.94.3: keyTerms already existed in translations.js, unused here.
             html += '<div class="cc5-concept-terms"><h5>' + escapeHtml(getLabel('keyTerms')) + '</h5><dl>';
-            terms.forEach(function (t) {
+            terms.forEach(function(t) {
                 html += '<dt>' + escapeHtml(fixGrammar(t.term || '')) + '</dt>';
                 html += '<dd>' + escapeHtml(fixGrammar(t.definition || '')) + '</dd>';
             });
@@ -280,7 +353,7 @@ define([], function () {
         html += '<div class="cc5-card-header">' + getIcon('layers') + '<h4>' + escapeHtml(fixGrammar(section.heading || 'Theoretical Framework')) + '</h4></div>';
         html += '<div class="cc5-card-body">';
         if (section.frameworks && section.frameworks.length) {
-            section.frameworks.forEach(function (fw) {
+            section.frameworks.forEach(function(fw) {
                 html += '<div class="cc5-framework-item"><h5>' + escapeHtml(fixGrammar(fw.name || '')) + '</h5>';
                 if (fw.originator)  html += '<p class="cc5-fw-originator"><em>' + escapeHtml(fixGrammar(fw.originator)) + '</em></p>';
                 html += '<p>' + escapeHtml(fixGrammar(fw.principle || fw.description || '')) + '</p>';
@@ -310,12 +383,12 @@ define([], function () {
         var items = section.cognitiveConsiderations || section.considerations || [];
         if (items.length) {
             html += '<ul class="cc5-considerations-list">';
-            items.forEach(function (c) { html += '<li>' + escapeHtml(fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))) + '</li>'; });
+            items.forEach(function(c) { html += '<li>' + escapeHtml(fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))) + '</li>'; });
             html += '</ul>';
         }
         if (section.analysisPrompts && section.analysisPrompts.length) {
             html += '<div class="cc5-analysis-prompts"><h5>' + (getLabel('analysisQuestions') || 'Analysis Questions') + ':</h5><ul>';
-            section.analysisPrompts.forEach(function (p) { html += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
+            section.analysisPrompts.forEach(function(p) { html += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -332,7 +405,7 @@ define([], function () {
         html += '<div class="cc5-card-body">';
         if (section.considerations && section.considerations.length) {
             html += '<div class="cc5-ethics-list">';
-            section.considerations.forEach(function (c) {
+            section.considerations.forEach(function(c) {
                 if (typeof c === 'object' && c.dimension) {
                     html += '<div class="cc5-ethics-item"><strong>' + escapeHtml(fixGrammar(c.dimension)) + ':</strong> ';
                     html += escapeHtml(fixGrammar(c.description || '')) + '</div>';
@@ -359,7 +432,7 @@ define([], function () {
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
         if (section.analysisPrompts && section.analysisPrompts.length) {
             html += '<div class="cc5-analysis-prompts"><h5>Analysis Questions:</h5><ul>';
-            section.analysisPrompts.forEach(function (p) { html += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
+            section.analysisPrompts.forEach(function(p) { html += '<li>' + escapeHtml(fixGrammar(p)) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.keyInsight) {
@@ -387,12 +460,12 @@ define([], function () {
         if (section.keyMetrics && section.keyMetrics.length) {
             // v13.94.3: hard-coded English sub-heading.
             html += '<div class="cc5-key-metrics"><h5>' + escapeHtml(getLabel('keyMetrics')) + '</h5><ul>';
-            section.keyMetrics.forEach(function (m) { html += '<li>' + escapeHtml(fixGrammar(m)) + '</li>'; });
+            section.keyMetrics.forEach(function(m) { html += '<li>' + escapeHtml(fixGrammar(m)) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.consequences && section.consequences.length) {
             html += '<ul class="cc5-consequences-list">';
-            section.consequences.forEach(function (c) { html += '<li>' + escapeHtml(fixGrammar(c)) + '</li>'; });
+            section.consequences.forEach(function(c) { html += '<li>' + escapeHtml(fixGrammar(c)) + '</li>'; });
             html += '</ul>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -409,7 +482,7 @@ define([], function () {
         html += '<div class="cc5-card-body">';
         if (section.steps && section.steps.length) {
             html += '<ol class="cc5-action-steps">';
-            section.steps.forEach(function (s) {
+            section.steps.forEach(function(s) {
                 if (typeof s === 'string') {
                     html += '<li>' + escapeHtml(fixGrammar(s)) + '</li>';
                 } else {
@@ -436,7 +509,7 @@ define([], function () {
         html += '<div class="cc5-card-body">';
         if (section.risks && section.risks.length) {
             html += '<div class="cc5-risk-items">';
-            section.risks.forEach(function (r) {
+            section.risks.forEach(function(r) {
                 html += '<div class="cc5-risk-item">';
                 html += '<div class="cc5-risk-text">' + getIcon('alert-circle') + ' <span>' + escapeHtml(fixGrammar(r.risk || r.text || '')) + '</span></div>';
                 if (r.likelihood)  html += '<div class="cc5-risk-likelihood"><strong>Likelihood:</strong> ' + escapeHtml(fixGrammar(r.likelihood)) + '</div>';
@@ -462,7 +535,7 @@ define([], function () {
         var pols = section.policyItems || section.policies || [];
         if (pols.length) {
             html += '<div class="cc5-policy-items">';
-            pols.forEach(function (p) {
+            pols.forEach(function(p) {
                 if (typeof p === 'string') {
                     html += '<div class="cc5-policy-item"><p>' + escapeHtml(fixGrammar(p)) + '</p></div>';
                 } else {
@@ -500,7 +573,7 @@ define([], function () {
         if (indicators.length) {
             // v13.94.3: hard-coded English sub-heading.
             html += '<div class="cc5-skill-indicators"><h5>' + escapeHtml(getLabel('keyIndicators')) + '</h5><ul>';
-            indicators.forEach(function (ind) { html += '<li>' + escapeHtml(fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''))) + '</li>'; });
+            indicators.forEach(function(ind) { html += '<li>' + escapeHtml(fixGrammar(typeof ind === 'string' ? ind : (ind.text || ''))) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -518,7 +591,7 @@ define([], function () {
         var steps = section.frameworkSteps || [];
         if (steps.length) {
             html += '<ol class="cc5-framework-steps">';
-            steps.forEach(function (s) {
+            steps.forEach(function(s) {
                 html += '<li class="cc5-framework-step"><div class="cc5-framework-step-content">';
                 html += '<strong>' + escapeHtml(fixGrammar(s.step || '')) + '</strong>';
                 html += '<p>' + (s.explanation ? escapeHtml(fixGrammar(s.explanation)) : '') + '</p>';
@@ -547,7 +620,7 @@ define([], function () {
         var apps = section.applications || [];
         if (apps.length) {
             html += '<div class="cc5-application-items">';
-            apps.forEach(function (a, idx) {
+            apps.forEach(function(a, idx) {
                 html += '<div class="cc5-application-item">';
                 html += '<div class="cc5-application-scenario-label">';
                 html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -575,7 +648,7 @@ define([], function () {
         var pitfalls = section.pitfallItems || [];
         if (pitfalls.length) {
             html += '<div class="cc5-pitfall-items">';
-            pitfalls.forEach(function (p) {
+            pitfalls.forEach(function(p) {
                 html += '<div class="cc5-pitfall-item"><div class="cc5-pitfall-cols">';
                 html += '<div class="cc5-pitfall-negative">';
                 html += '<div class="cc5-pitfall-text">' + getIcon('x-circle') + ' <span>' + escapeHtml(fixGrammar(p.pitfall || '')) + '</span></div>';
@@ -609,7 +682,7 @@ define([], function () {
                 html += '<div class="cc5-scenario-reflection"><strong>Reflection:</strong> ' + escapeHtml(fixGrammar(section.reflection.question)) + '</div>';
                 if (section.reflection.sampleAnswers && Array.isArray(section.reflection.sampleAnswers)) {
                     html += '<ul class="cc5-scenario-reflection-answers">';
-                    section.reflection.sampleAnswers.forEach(function (ans) { html += '<li>' + escapeHtml(fixGrammar(ans)) + '</li>'; });
+                    section.reflection.sampleAnswers.forEach(function(ans) { html += '<li>' + escapeHtml(fixGrammar(ans)) + '</li>'; });
                     html += '</ul>';
                 }
             } else {
@@ -618,7 +691,7 @@ define([], function () {
         }
         if (section.optimisationTips && section.optimisationTips.length) {
             html += '<div class="cc5-optimisation-tips"><h5>' + (getLabel('optimisationTips') || 'Optimisation Tips') + '</h5><ul>';
-            section.optimisationTips.forEach(function (tip) { html += '<li>' + escapeHtml(fixGrammar(tip)) + '</li>'; });
+            section.optimisationTips.forEach(function(tip) { html += '<li>' + escapeHtml(fixGrammar(tip)) + '</li>'; });
             html += '</ul></div>';
         }
         if (section.bodyText) html += '<p>' + escapeHtml(fixGrammar(section.bodyText)) + '</p>';
@@ -642,7 +715,7 @@ define([], function () {
         // v13.94.3: flow-badge text was a hard-coded English literal, so a Japanese
         // module showed an English pill above translated prose. Same key the narration
         // uses in cc-state.js buildVoiceoverText().
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-hook">' + escapeHtml(getLabel('sceneSetting')) + '</span></div>';
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-hook">' + flowPill('sceneSetting', 'hook-scenario') + '</span></div>';
         // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
         // type and no code assigns one - only card 6 gets a title. So this rendered a
         // literal <h3></h3> on every hook-scenario card of every VET/Workplace/PD
@@ -657,7 +730,7 @@ define([], function () {
         if (section.sceneParts && section.sceneParts.length) {
             html += '<div class="cc5-scene-parts cc5-scene-parts-hook">';
             var hookUsedIcons = new Set();
-            section.sceneParts.forEach(function (part, idx) {
+            section.sceneParts.forEach(function(part, idx) {
                 var partText = part.text || part.content || part.description || part.detail || part.body || part.narrative || '';
                 var resolvedIcon = resolveScenePartIcon(part.icon, part.title, partText, idx, 'hook-scenario', hookUsedIcons);
                 html += '<div class="cc5-scene-part">';
@@ -676,7 +749,7 @@ define([], function () {
             if (content) {
                 var beats = splitIntoBeats(content);
                 html += '<div class="cc5-scene-parts cc5-scene-parts-hook">';
-                beats.forEach(function (beat, idx) {
+                beats.forEach(function(beat, idx) {
                     html += '<div class="cc5-scene-part">';
                     html += '<div class="cc5-scene-part-icon" style="font-size:0.82rem;font-weight:700;">' + (idx + 1) + '</div>';
                     html += '<div class="cc5-scene-part-body">';
@@ -698,7 +771,7 @@ define([], function () {
     function renderConceptExplainer(section) {
         var html = '<div class="cc5-card cc5-concept-explainer-card">';
         // v13.94.3: hard-coded English flow badge - see renderHookScenario.
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-concept">' + escapeHtml(getLabel('whatThisMeans')) + '</span></div>';
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-concept">' + flowPill('whatThisMeans', 'concept-explainer') + '</span></div>';
         // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
         // type and no code assigns one - only card 6 gets a title. So this rendered a
         // literal <h3></h3> on every concept-explainer card of every VET/Workplace/PD
@@ -714,7 +787,7 @@ define([], function () {
         if (section.conceptInsights && section.conceptInsights.length) {
             var ciPalette = ['cc5-ci-blue', 'cc5-ci-green', 'cc5-ci-orange', 'cc5-ci-purple'];
             html += '<div class="cc5-concept-insights">';
-            section.conceptInsights.forEach(function (insight, idx) {
+            section.conceptInsights.forEach(function(insight, idx) {
                 var colorClass = ciPalette[idx % ciPalette.length];
                 html += '<div class="cc5-concept-insight ' + colorClass + '">';
                 html += '<div class="cc5-ci-icon">';
@@ -735,7 +808,7 @@ define([], function () {
             if (content) {
                 var beats = splitIntoBeats(content);
                 html += '<div class="cc5-insight-chips">';
-                beats.forEach(function (beat, idx) {
+                beats.forEach(function(beat, idx) {
                     html += '<div class="cc5-insight-chip ' + chipPalette[idx % chipPalette.length] + '">';
                     html += '<div class="cc5-insight-icon">' + getIcon('chevron-right') + '</div>';
                     html += '<p>' + escapeHtml(fixGrammar(beat)) + '</p>';
@@ -745,7 +818,7 @@ define([], function () {
             }
             if (section.conceptItems && section.conceptItems.length) {
                 html += '<div class="cc5-concept-items-grid">';
-                section.conceptItems.forEach(function (item) {
+                section.conceptItems.forEach(function(item) {
                     html += '<div class="cc5-concept-item">';
                     if (item.icon) html += '<div class="cc5-concept-item-icon">' + getIcon(item.icon) + '</div>';
                     html += '<div class="cc5-concept-item-body">';
@@ -783,7 +856,7 @@ define([], function () {
     function renderMentalModel(section) {
         var html = '<div class="cc5-card cc5-mental-model-card">';
         // v13.94.3: hard-coded English flow badge - see renderHookScenario.
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-mental">' + escapeHtml(getLabel('howToHandleIt')) + '</span></div>';
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-mental">' + flowPill('howToHandleIt', 'mental-model') + '</span></div>';
         // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
         // type and no code assigns one - only card 6 gets a title. So this rendered a
         // literal <h3></h3> on every mental-model card of every VET/Workplace/PD
@@ -799,14 +872,41 @@ define([], function () {
             // Numbers (1, 2, 3) or icons appear in the left icon circle; step title
             // is the uppercase label; detail is the body text.
             html += '<div class="cc5-scene-parts cc5-scene-parts-mental">';
-            steps.forEach(function (s, idx) {
+            steps.forEach(function(s, idx) {
                 html += '<div class="cc5-scene-part">';
                 html += '<div class="cc5-scene-part-icon">';
-                if (s.icon) {
-                    html += getIcon(s.icon);
-                } else {
-                    html += '<span style="font-size:0.875rem;font-weight:700;line-height:1;">' + (idx + 1) + '</span>';
-                }
+                // v15.3.10: NUMBERED, always - unless a teacher picked an icon by hand.
+                //
+                // This was `if (s.icon) getIcon(s.icon)`, and getIcon turns an unknown
+                // name into a shield. The model was asked for an icon name and (on
+                // General and Policy) never told which names exist, so every step of
+                // every mental-model card rendered the same shield. The number fallback
+                // below it could never run, because s.icon was never empty.
+                //
+                // A mental-model card is a process and the prompt lets the model pick
+                // the framework - PDCA, GROW, 5 Whys, Diagnose-Test-Correct - so no
+                // fixed icon set fits them all. The step NUMBER fits every one of them
+                // and tells the learner where they are in the sequence.
+                // v15.3.18: NUMBERED. No exception, including for a teacher-set icon.
+                //
+                // v15.3.10 numbered the steps "unless a teacher picked an icon by hand",
+                // and read that choice from `s.icon` - the same field the model writes its
+                // own guess into. The two are indistinguishable once they are in one
+                // field, so the number appeared only when the model's guess happened not
+                // to be a real icon name. A live card showed icons on steps 1 and 2 and
+                // numbers on steps 3 and 4.
+                //
+                // generator.js now strips the model's icon at normalisation, which fixes
+                // newly generated packs - but every pack already saved still carries it,
+                // and those cards would keep rendering mixed forever. Numbering here fixes
+                // the existing ones too.
+                //
+                // This is also the honest design. A mental-model card is a sequence and
+                // the prompt lets the model choose the framework - PDCA, GROW, 5 Whys,
+                // Diagnose-Test-Correct - so no icon set fits them all, while the position
+                // in the sequence is the one thing every framework has. The step icon
+                // pickers have been removed from both card editors to match.
+                html += '<span class="cc5-mm-step-number">' + (idx + 1) + '</span>';
                 html += '</div>';
                 html += '<div class="cc5-scene-part-body">';
                 var stepTitle = s.step || s.action || s.title || '';
@@ -844,7 +944,7 @@ define([], function () {
         if (section.sceneParts && section.sceneParts.length) {
             html += '<div class="cc5-scene-parts cc5-scene-parts-applied">';
             var appliedUsedIcons = new Set();
-            section.sceneParts.forEach(function (part, idx) {
+            section.sceneParts.forEach(function(part, idx) {
                 var partText = part.text || part.content || part.description || part.detail || part.body || part.narrative || '';
                 var resolvedIcon = resolveScenePartIcon(part.icon, part.title, partText, idx, 'applied-scenario', appliedUsedIcons);
                 html += '<div class="cc5-scene-part">';
@@ -863,7 +963,7 @@ define([], function () {
             if (content) {
                 var beats = splitIntoBeats(content);
                 html += '<div class="cc5-scene-parts cc5-scene-parts-applied">';
-                beats.forEach(function (beat, idx) {
+                beats.forEach(function(beat, idx) {
                     html += '<div class="cc5-scene-part">';
                     html += '<div class="cc5-scene-part-icon" style="font-size:0.82rem;font-weight:700;">' + (idx + 1) + '</div>';
                     html += '<div class="cc5-scene-part-body">';
@@ -885,7 +985,7 @@ define([], function () {
     function renderDecisionPoint(section) {
         var html = '<div class="cc5-card cc5-decision-point-card">';
         // v13.94.3: yourDecision already existed in translations.js, unused here.
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-decision">' + escapeHtml(getLabel('yourDecision')) + '</span></div>';
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-decision">' + flowPill('yourDecision', 'decision-point') + '</span></div>';
         html += '<div class="cc5-continuity-banner cc5-activity-banner">';
         html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
         // v13.94.3: hard-coded English activity banner.
@@ -897,14 +997,34 @@ define([], function () {
         if (section.title) {
             html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(section.title)) + '</h3>';
         }
-        if (section.question) {
-            html += '<p class="cc5-dp-question">' + escapeHtml(fixGrammar(section.question)) + '</p>';
-        }
-        var opts = shuffleOptions(section.options || []); // v12.33 FIX-DP-SHUFFLE
+        // v15.3.13: this is the fallback renderer - reached only when a pack yields
+        // neither flip cards nor sort items, so there is no three-activity challenge to
+        // build. It still has to show all three questions, because the card it is drawing
+        // is the same card. Rendered stacked rather than one at a time: there is no
+        // activity panel here to page within, and the fold argument that drives the
+        // one-at-a-time quiz does not apply to a card with nothing after it.
+        var _dpQuestions = (Array.isArray(section.questions) && section.questions.length)
+            ? section.questions
+            : [{question: section.question || '', options: section.options || []}];
         var letters = ['A', 'B', 'C', 'D'];
+        _dpQuestions.forEach(function(_q, _qi) {
+        // v15.3.13: each question gets its own wrapper, and it is load-bearing rather
+        // than cosmetic. The Try Again handlers scope themselves with
+        // closest('.cc5-quiz-question'); without an element to find they fall back to
+        // the whole card, and pressing Try Again on question 2 wipes question 1.
+        // Stacked rather than one-at-a-time here - this fallback card has no activity
+        // panel to page within, and nothing follows it, so the fold argument that drives
+        // the challenge quiz does not apply.
+        html += '<div class="cc5-quiz-question cc5-quiz-question-stacked" data-q="' + _qi + '">';
+        if (_q.question) {
+            html += '<p class="cc5-dp-question">'
+                 +  (_dpQuestions.length > 1 ? (_qi + 1) + '. ' : '')
+                 +  escapeHtml(fixGrammar(_q.question)) + '</p>';
+        }
+        var opts = shuffleOptions(_q.options || []); // v12.33 FIX-DP-SHUFFLE
         if (opts.length) {
             html += '<div class="cc5-dp-options" data-answered="false">';
-            opts.forEach(function (opt, idx) {
+            opts.forEach(function(opt, idx) {
                 var letter = letters[idx] || String.fromCharCode(65 + idx);
                 var isCorrect = !!(opt.correct || opt.isCorrect);
                 // v13.86: correctness was conveyed by a background colour plus a CSS ::after
@@ -938,13 +1058,15 @@ define([], function () {
             html += '</div>';
         }
         html += '</div>';
+        });
+        html += '</div>';
         return html;
     }
 
     function renderMistakesCard(section) {
         var html = '<div class="cc5-card cc5-mistakes-card">';
         // v13.94.3: hard-coded English flow badge - see renderHookScenario.
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-mistakes">' + escapeHtml(getLabel('watchOutFor')) + '</span></div>';
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-mistakes">' + flowPill('watchOutFor', 'mistakes') + '</span></div>';
         // v13.94.3: emitted unconditionally, but NO prompt asks for `title` on this card
         // type and no code assigns one - only card 6 gets a title. So this rendered a
         // literal <h3></h3> on every mistakes card of every VET/Workplace/PD
@@ -959,7 +1081,7 @@ define([], function () {
         var legacyItems = section.errorItems || section.pitfallItems || [];
         var allItems = items.length ? items : legacyItems;
         var mistakesUsedIcons = new Set();
-        allItems.forEach(function (item, idx) {
+        allItems.forEach(function(item, idx) {
             var mistake = typeof item === 'string' ? item : (item.mistake || item.error || item.pitfall || '');
             var consequence = typeof item === 'string' ? '' : (item.consequence || '');
             var aiIcon = typeof item === 'string' ? '' : (item.icon || '');
@@ -971,7 +1093,16 @@ define([], function () {
             html += '</div>';
             if (consequence) {
                 html += '<div class="cc5-mistake-consequence">';
-                html += '<span class="cc5-consequence-label">' + getIcon('arrow-right') + ' Result</span>';
+                // v15.3.18: the "-> Result" label is gone.
+                //
+                // It was a hard-coded English literal (every sibling label on this card
+                // goes through getLabel), and it labelled the obvious: the consequence
+                // sits directly under the mistake, in its own tinted block, and reads as
+                // the result without being told so. Five of them down one card is five
+                // rows of chrome between the learner and the sentence that matters.
+                //
+                // The block keeps its own styling, so the consequence is still visibly
+                // separate from the mistake above it.
                 html += '<p>' + escapeHtml(fixGrammar(consequence)) + '</p>';
                 html += '</div>';
             }
@@ -987,7 +1118,7 @@ define([], function () {
         // through getLabel() in v13.94.3 - this one card type was missed, so every language
         // showed an English badge on competency-summary (VET/Workplace/PD card 6, and
         // General's Consolidate card). The key already exists in all 52 languages.
-        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-summary">' + escapeHtml(getLabel('youAreReadyWhenYouCan')) + '\u2026</span></div>';
+        html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-summary">' + flowPill('youAreReadyWhenYouCan', 'competency-summary') + (getRoute() === 'policy' ? '' : '\u2026') + '</span></div>';
         // v11.02 FIX-COMP-TITLE-DOUBLE: Suppress the title if it essentially duplicates
         // the badge text (old prompts used "You Are Ready When You Can" as the
         // example, so ChatGPT copied it verbatim). Compared against the English forms
@@ -1027,7 +1158,7 @@ define([], function () {
                 html += '<strong>' + escapeHtml(getLabel('whatGoodLooksLike')) + '</strong>';
                 html += '</div>';
                 html += '<ul class="cc5-dos-list">';
-                goodItems.forEach(function (item) {
+                goodItems.forEach(function(item) {
                     var text = typeof item === 'string' ? item : (item.text || item.behaviour || item.criterion || '');
                     // v13.95.8: the benefit line is the mirror of the consequence on the
                     // "What to Avoid" side, so both columns read as a short label plus one
@@ -1054,7 +1185,7 @@ define([], function () {
                 html += '<strong>' + escapeHtml(getLabel('whatToAvoid')) + '</strong>';
                 html += '</div>';
                 html += '<ul class="cc5-donts-list">';
-                badItems.forEach(function (item) {
+                badItems.forEach(function(item) {
                     var text = typeof item === 'string' ? item : (item.text || '');
                     // v13.85: the prompt asks for a 10+ word consequence on every one of
                     // these, and the normaliser now keeps it. Previously only the label
@@ -1100,28 +1231,47 @@ define([], function () {
         var flipIdx  = hasFlip ? ++actNum : -1;
         var sortIdx  = hasSort ? ++actNum : -1;
 
-        var html = '<div class="cc5-card cc5-decision-challenge" data-total-activities="' + totalActivities + '">';
+        // v15.3.18: cc5-challenge-at-start hides the progress stepper while panel 0 is
+        // showing. The start screen already names the three activities in order, with the
+        // same labels, so the stepper above it was the same list twice - and rendered in
+        // its inactive grey, which reads as three disabled controls. The class is removed
+        // by the panel-transition handler in player5.js the moment the learner starts, so
+        // the stepper appears exactly when it starts meaning something.
+        var html = '<div class="cc5-card cc5-decision-challenge cc5-challenge-at-start" data-total-activities="' + totalActivities + '">';
 
         // Decorative corner accent
         html += '<div class="cc5-challenge-corner-accent"></div>';
 
+        // v15.3.18: the badge and the progress stepper share one row.
+        //
+        // They were stacked, and the stepper is a full-width strip with its own vertical
+        // padding, so between the top of the block and the first question there were two
+        // bands of chrome and the gap between them. On a laptop that was most of the
+        // reason the activity opened below the fold. Side by side - badge left, progress
+        // right - they cost one row instead of three, and the stepper reads as a status
+        // indicator rather than a control the learner is meant to press.
+        html += '<div class="cc5-challenge-head">';
         html += '<div class="cc5-flow-badge"><span class="cc5-flow-pill cc5-flow-pill-decision">';
         html += '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
         // v13.94.3: hard-coded English badge.
         html += ' ' + escapeHtml(getLabel('challengeMode')) + '</span></div>';
 
-        html += '<div class="cc5-continuity-banner cc5-activity-banner">';
-        html += '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-        // v13.94.3: hard-coded English banner wrapped around a count - one parameterised
-        // key, since the number does not sit in the same place in every language.
-        html += '<span>' + _lbl('completeNActivities', {count: '<strong>' + totalActivities + '</strong>'}) + '</span>';
-        html += '</div>';
+        // v15.3.13: the "Complete N activities" banner used to sit HERE, directly above the
+        // quiz, together with the flow badge and the progress stepper. Three stacked strips
+        // of chrome pushed the first question below the fold on a laptop, so the learner
+        // arrived at an activity block whose activity they could not see. It has moved onto
+        // the start screen below, which is the one place that information is actually
+        // needed - before you begin, not while you are answering.
 
         // Progress stepper with icons
         html += '<div class="cc5-challenge-progress">';
 
-        // Quiz step
-        html += '<div class="cc5-challenge-step cc5-active" data-step="' + quizIdx + '">';
+        // Quiz step. v15.3.13: NOT active on render any more - the start screen is panel 0
+        // and holds the active class until "Start Activities" is pressed. A stepper that
+        // says you are on step 1 while you are still reading the brief is a lie, and the
+        // "cc5-done" marking in the next-button handler walks backwards from the active
+        // step, so getting this wrong mismarks the whole row.
+        html += '<div class="cc5-challenge-step" data-step="' + quizIdx + '">';
         html += '<span class="cc5-step-num"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>';
         // v13.94.3: hard-coded English progress-stepper label.
         html += '<span class="cc5-step-label">' + escapeHtml(getLabel('quiz')) + '</span>';
@@ -1150,14 +1300,112 @@ define([], function () {
             html += '</div>';
         }
         html += '</div>';
+        // Closes .cc5-challenge-head opened above the flow badge.
+        html += '</div>';
+
+        // -- Panel 0: the start screen (v15.3.13) ------------------------------
+        //
+        // Asked for after a learner opened an activity block and could not see an
+        // activity: the flow badge, the "Complete N activities" banner and the progress
+        // stepper together were tall enough to push question 1 under the fold on a
+        // laptop. Two things were wrong with that. The obvious one is the scroll. The
+        // less obvious one is that NOTHING anywhere told the learner what passing means,
+        // and on this plugin it is unusually strict - `completionallactivities` reads
+        // "Student must complete all activities at 100%", and _showChallengeComplete only
+        // records challengeComplete when pct === 100. A learner who gets two of three
+        // right has not half-finished the section; they have not finished it. That is
+        // worth saying before they start rather than after they fail.
+        //
+        // So the chrome moves here, the requirement is stated in the learner's language,
+        // and the block opens on one button. The 100% is not a magic number in a string:
+        // CC_CHALLENGE_PASS_PCT below is the same constant the completion check uses.
+        html += '<div class="cc5-challenge-panel cc5-challenge-start cc5-active" data-panel="0">';
+        html += '<div class="cc5-challenge-start-inner">';
+        html += '<div class="cc5-challenge-start-icon" aria-hidden="true">';
+        html += '<svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+        html += '</div>';
+        html += '<h3 class="cc5-challenge-start-title">' + escapeHtml(getLabel('challengeMode')) + '</h3>';
+        html += '<p class="cc5-challenge-start-lead">'
+             +  _lbl('completeNActivities', {count: '<strong>' + totalActivities + '</strong>'})
+             +  '</p>';
+
+        // The requirement, stated plainly and only once.
+        html += '<div class="cc5-challenge-start-requirement">';
+        html += '<span class="cc5-challenge-start-pct" aria-hidden="true">'
+             +  CC_CHALLENGE_PASS_PCT + '%</span>';
+        // {pct} is substituted from the shared constant rather than baked into the
+        // sentence. It used to be the literal "100%" in all 53 translations, which meant
+        // the panel read "100% You need 100% - every activity passed..." and changing the
+        // constant - the entire point of having one - produced "80% You need 100%".
+        // The big figure beside it is decoration for the eye and is aria-hidden, so a
+        // screen reader hears the sentence once.
+        html += '<span class="cc5-challenge-start-req-text">'
+             +  escapeHtml(_lbl('challengeRequirement', {pct: CC_CHALLENGE_PASS_PCT + '%'}))
+             +  '</span>';
+        html += '</div>';
+
+        // What the learner is about to do, in order. Same labels as the stepper, so the
+        // brief and the progress row cannot drift apart.
+        html += '<ol class="cc5-challenge-start-list">';
+        var _startSteps = [{n: quizIdx, label: getLabel('quiz')}];
+        if (hasFlip) { _startSteps.push({n: flipIdx, label: getLabel('flipAndLearn')}); }
+        if (hasSort) { _startSteps.push({n: sortIdx, label: getLabel('categorySort')}); }
+        _startSteps.forEach(function(s) {
+            html += '<li class="cc5-challenge-start-item">';
+            html += '<span class="cc5-challenge-start-num">' + s.n + '</span>';
+            html += '<span class="cc5-challenge-start-label">' + escapeHtml(s.label) + '</span>';
+            html += '</li>';
+        });
+        html += '</ol>';
+
+        // Reuses the existing next-button handler (and its class) so there is one
+        // panel-transition path, not two.
+        //
+        // The label is `startNow`, not `startActivities`, and the difference matters. On
+        // the prose and stepped routes the activity block is hidden until the learner
+        // presses a button already labelled "Start Activities" - so reusing that key put
+        // two identically-labelled buttons one click apart, and the second one looked
+        // like the first one had not worked.
+        html += '<button type="button" class="cc5-challenge-next-btn cc5-challenge-start-btn" '
+             +  'data-next="' + quizIdx + '">';
+        html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+        html += ' ' + escapeHtml(getLabel('startNow'));
+        html += '</button>';
+        html += '</div>';
+        html += '</div>';
 
         // -- Activity 1: Quiz --------------------------------------------------
-        html += '<div class="cc5-challenge-panel cc5-active" data-panel="' + quizIdx + '">';
+        html += '<div class="cc5-challenge-panel" data-panel="' + quizIdx + '">';
+        // v15.4.1: the heading leads, the chips follow.
+        //
+        // v15.3.18 put the chip row and the heading on one line to save vertical space. On
+        // the quiz that line carries four things - Activity n, the read-aloud notice, the
+        // heading and "Question 1 of 3" - and they ran into the progress stepper above.
+        // The heading is the one thing on this panel a learner needs first, so it goes on
+        // its own line at the top and everything else shares the line beneath it.
+        // v15.4.2: the AI-authored card title is back.
+        //
+        // v15.4.1 merged the activity number and the activity name into one pill and made
+        // that pill the panel's <h3>. On flip and sort that is the whole heading and it is
+        // correct. On the quiz it silently DELETED `dpCard.title` - the only heading the
+        // model writes for this panel - because the <h3> it used to occupy was now the
+        // pill's wrapper. So the title leads on its own line when the route supplies one,
+        // and the pill drops to a plain <span> on the chip row beneath it. When there is no
+        // title (VET, Workplace and PD never ask for one) the pill stays the <h3> so the
+        // panel still has a real heading in the outline.
+        var _dpTitle = dpCard.title ? String(dpCard.title).trim() : '';
+        if (_dpTitle) {
+            html += '<h3 class="cc5-panel-title">' + escapeHtml(fixGrammar(_dpTitle)) + '</h3>';
+        }
         html += '<div class="cc5-panel-header">';
+        html += '<' + (_dpTitle ? 'span' : 'h3') + ' class="cc5-panel-title-pill">';
         html += '<span class="cc5-panel-badge cc5-badge-quiz">';
         html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
         // v13.94.3: hard-coded English panel badge.
-        html += ' ' + escapeHtml(_lbl('activityNumber', {number: quizIdx})) + '</span>';
+        html += ' ' + escapeHtml(_lbl('activityNumber', {number: quizIdx}))
+             +  '<span class="cc5-panel-badge-sep" aria-hidden="true">&middot;</span>'
+             +  escapeHtml(getLabel('quiz')) + '</span>';
+        html += '</' + (_dpTitle ? 'span' : 'h3') + '>';
         // v13.32: Show "Questions & feedback are read aloud" notice when quiz voiceover is enabled
         if (quizVoiceEnabled) {
             html += '<span class="cc5-quiz-voice-badge">';
@@ -1174,50 +1422,104 @@ define([], function () {
         // activity block on those three routes emitted an empty <h3> carrying
         // `margin: 0 0 14px 0` - a phantom gap between the Challenge Mode pill and the
         // banner beneath it.
-        if (dpCard.title) {
-            html += '<h3 class="cc5-unified-title">' + escapeHtml(fixGrammar(dpCard.title)) + '</h3>';
-        }
-        if (dpCard.question) {
-            html += '<p class="cc5-dp-question">' + escapeHtml(fixGrammar(dpCard.question)) + '</p>';
-        }
-        var opts = shuffleOptions(dpCard.options || []); // v12.33 FIX-DP-SHUFFLE
+        // v15.3.13: three questions, shown one at a time.
+        //
+        // normalizeCardSchema folds both decision-point schemas into `questions`, so this
+        // loop draws v1 (one entry) and v2 (three) with the same code and never asks which
+        // it was handed. `dpCard.questions` is the whole contract with the generator; the
+        // fallback below covers a card that reached a renderer without passing through the
+        // normaliser, which happens in a couple of preview paths.
+        var _questions = Array.isArray(dpCard.questions) && dpCard.questions.length
+            ? dpCard.questions
+            : (dpCard.question ? [{question: dpCard.question, options: dpCard.options || []}] : []);
         var letters = ['A', 'B', 'C', 'D'];
-        if (opts.length) {
-            html += '<div class="cc5-dp-options" data-answered="false">';
-            opts.forEach(function (opt, idx) {
-                var letter = letters[idx] || String.fromCharCode(65 + idx);
-                var isCorrect = !!(opt.correct || opt.isCorrect);
-                // v13.86: correctness was conveyed by a background colour plus a CSS ::after
-                // glyph on a permanently empty span, on a div with no aria-pressed, no
-                // aria-disabled once locked, and feedback in no live region.
-                // v13.93: URL of this option's feedback narration, pre-generated at build
-                // time in the author's chosen Chirp 3 HD voice. Carried on the element so
-                // the click handler needs no lookup back into the manifest.
-                var _fbAudio = opt.feedbackAudioUrl ? ' data-feedback-audio="' + escapeHtml(opt.feedbackAudioUrl) + '"' : '';
-                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '"' + _fbAudio + ' role="button" tabindex="0" aria-pressed="false">';
-                html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
-                html += '<div class="cc5-dp-option-body">';
-                html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';
-                if (opt.feedback) {
-                    html += '<div class="cc5-dp-feedback" role="status" aria-live="polite">' +
-                        escapeHtml(fixGrammar(opt.feedback)) + '</div>';
-                }
-                html += '</div>';
-                html += '<span class="cc5-dp-result-icon" aria-hidden="true"></span>';
-                html += '<span class="cc5-sr-only cc5-dp-result-text"></span>';
-                html += '</div>';
-            });
-            html += '</div>';
-            html += '<div class="cc5-dp-try-again" style="display:none;">';
-            // v13.94.3: hard-coded English label AND aria-label; tryAgain already
-            // existed in translations.js, unused here.
-            html += '<button type="button" class="cc5-dp-try-again-btn" aria-label="' + escapeHtml(getLabel('tryAgain')) + '">';
-            html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>';
-            html += ' ' + escapeHtml(getLabel('tryAgain')) + '</button>';
-            html += '</div>';
+
+        // One at a time rather than all three stacked, for the same reason the start
+        // screen exists: three questions and twelve options is far below the fold, and a
+        // learner who can see question three while answering question one is being invited
+        // to skim. The counter tells them how many are left so it does not feel endless.
+        if (_questions.length > 1) {
+            // aria-atomic: the handler updates only the number inside, and a polite
+            // region without it announces just the changed node - a screen-reader user
+            // moving to question 2 hears "2", not "Question 2 of 3". Worse in the
+            // languages where the placeholders are reordered.
+            html += '<div class="cc5-quiz-counter" aria-live="polite" aria-atomic="true">'
+                 +  _lbl('questionXofY', {current: '<span class="cc5-quiz-q-idx">1</span>',
+                        total: _questions.length})
+                 +  '</div>';
         }
+        html += '<div class="cc5-quiz-questions" data-total="' + _questions.length
+             +  '" data-passed="0">';
+        _questions.forEach(function(q, qIdx) {
+            html += '<div class="cc5-quiz-question' + (qIdx === 0 ? ' cc5-active' : '')
+                 +  '" data-q="' + qIdx + '"' + (qIdx === 0 ? '' : ' hidden aria-hidden="true"') + '>';
+            html += '<p class="cc5-dp-question">' + escapeHtml(fixGrammar(q.question || '')) + '</p>';
+            var opts = shuffleOptions(q.options || []); // v12.33 FIX-DP-SHUFFLE
+            if (opts.length) {
+                html += '<div class="cc5-dp-options" data-answered="false">';
+                opts.forEach(function(opt, idx) {
+                    var letter = letters[idx] || String.fromCharCode(65 + idx);
+                    var isCorrect = !!(opt.correct || opt.isCorrect);
+                    // v13.86: correctness was conveyed by a background colour plus a CSS ::after
+                    // glyph on a permanently empty span, on a div with no aria-pressed, no
+                    // aria-disabled once locked, and feedback in no live region.
+                    // v13.93: URL of this option's feedback narration, pre-generated at build
+                    // time in the author's chosen Chirp 3 HD voice. Carried on the element so
+                    // the click handler needs no lookup back into the manifest.
+                    var _fbAudio = opt.feedbackAudioUrl ? ' data-feedback-audio="' + escapeHtml(opt.feedbackAudioUrl) + '"' : '';
+                    html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '"' + _fbAudio + ' role="button" tabindex="0" aria-pressed="false">';
+                    html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
+                    html += '<div class="cc5-dp-option-body">';
+                    html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';
+                    if (opt.feedback) {
+                        html += '<div class="cc5-dp-feedback" role="status" aria-live="polite">' +
+                            escapeHtml(fixGrammar(opt.feedback)) + '</div>';
+                    }
+                    html += '</div>';
+                    html += '<span class="cc5-dp-result-icon" aria-hidden="true"></span>';
+                    html += '<span class="cc5-sr-only cc5-dp-result-text"></span>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                // v15.4.6: NO Try Again in the challenge quiz.
+                //
+                // "You have a mix of activity completion styles... I would remove the Try
+                // Again from the MCQ." The three activities each had their own idea of what
+                // finishing means: Category Sort lets a learner through with 5 of 6 and
+                // scores them 5 of 6, Flip & Learn always passes once every card is turned,
+                // and the quiz refused to advance until the learner had guessed their way to
+                // the right answer. That last one is not an assessment - the answer is on
+                // screen - and it made the score ring meaningless, because everybody who got
+                // to the end had necessarily scored 100%.
+                //
+                // A question is now answered once. The learner always proceeds; the score
+                // records whether they were right. The gate moved to player5.js - see
+                // FIX-CC-QUIZ-GATE-INCONSISTENT.
+            }
+            // The between-questions button. Its own class, not .cc5-challenge-next-btn:
+            // that class means "leave this activity", and this one means "stay here, next
+            // question". Sharing it would put the panel-transition handler on a button
+            // that must not transition panels.
+            if (qIdx < _questions.length - 1) {
+                html += '<button type="button" class="cc5-quiz-next-q-btn" data-next-q="'
+                     +  (qIdx + 1) + '" disabled>';
+                html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
+                html += ' ' + escapeHtml(getLabel('nextQuestion')) + '</button>';
+            }
+            html += '</div>';
+        });
+        html += '</div>';
         if (totalActivities > 1) {
-            html += '<button type="button" class="cc5-challenge-next-btn" data-next="' + (quizIdx + 1) + '" disabled>';
+            // v15.3.18: cc5-quiz-next-activity is HIDDEN until it is enabled.
+            //
+            // It was rendered disabled and visible from question one, so a three-question
+            // quiz showed "Next Question" and "Next Activity" stacked together while two
+            // questions were still unanswered - the second one reading as the way out of
+            // an activity the learner has not done. The class it gains on unlock
+            // (cc5-enabled, added in the answer handler once every question has passed) is
+            // what brings it back, so the button appears exactly when pressing it is the
+            // right move.
+            html += '<button type="button" class="cc5-challenge-next-btn cc5-quiz-next-activity" data-next="' + (quizIdx + 1) + '" disabled>';
             html += '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>';
             // v13.94.3: hard-coded English button label.
             html += ' ' + escapeHtml(getLabel('nextActivity'));
@@ -1228,24 +1530,35 @@ define([], function () {
         // -- Activity 2: Flip Cards --------------------------------------------
         if (hasFlip) {
             html += '<div class="cc5-challenge-panel" data-panel="' + flipIdx + '">';
+            // v15.4.1: the activity number and the activity NAME are one pill.
+            //
+            // They were a pill and a separate heading sitting side by side - "a pill, but
+            // Category Sort is text - looks funny". They name the same thing, so they are
+            // one object. The <h3> stays as the wrapper so the panel keeps a real heading
+            // for a screen reader and for the document outline; it carries no visual style
+            // of its own, the pill inside it does.
             html += '<div class="cc5-panel-header">';
+            html += '<h3 class="cc5-panel-title-pill">';
             html += '<span class="cc5-panel-badge cc5-badge-flip">';
             html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
             // v13.94.3: hard-coded English panel badge.
-            html += ' ' + escapeHtml(_lbl('activityNumber', {number: flipIdx})) + '</span>';
+            html += ' ' + escapeHtml(_lbl('activityNumber', {number: flipIdx}))
+                 +  '<span class="cc5-panel-badge-sep" aria-hidden="true">&middot;</span>'
+                 +  escapeHtml(getLabel('flipAndLearn')) + '</span>';
+            html += '</h3>';
             html += '</div>';
             // v13.94.3: the whole Route 5 activity block was hard-coded English - title,
             // instruction, card face labels, progress text and buttons - so a learner on a
             // Japanese module hit a wall of English the moment the prose cards ended. The
             // instruction carries a count, so it is one parameterised key rather than
             // English fragments concatenated around a number.
-            html += '<h3 class="cc5-unified-title">' + escapeHtml(getLabel('flipAndLearn')) + '</h3>';
+
             html += '<p class="cc5-challenge-instruction">'
                  +  escapeHtml(_lbl('flipInstruction', {count: flipItems.length})) + '</p>';
             html += '<div class="cc5-flip-grid" data-total="' + flipItems.length + '" data-flipped="0">';
-            flipItems.forEach(function (item, idx) {
+            flipItems.forEach(function(item, idx) {
                 var flipIcon = resolveScenePartIcon(item.icon || '', item.front || '', item.back || '', idx);
-                html += '<div class="cc5-flip-card" data-flip-idx="' + idx + '" data-flipped="false" role="button" tabindex="0" style="animation-delay:' + (idx * 0.08) + 's">';
+                html += '<div class="cc5-flip-card" data-flip-idx="' + idx + '" data-flipped="false" data-explored="false" role="button" tabindex="0" style="animation-delay:' + (idx * 0.13) + 's">';
                 html += '<div class="cc5-flip-inner">';
                 html += '<div class="cc5-flip-front">';
                 html += '<div class="cc5-flip-front-icon">' + getIcon(flipIcon) + '</div>';
@@ -1300,16 +1613,21 @@ define([], function () {
             var posLabel = (sortLabels && sortLabels.positive) || getLabel('goodPractice');
             var negLabel = (sortLabels && sortLabels.negative) || getLabel('avoidLabel');
             html += '<div class="cc5-challenge-panel" data-panel="' + sortIdx + '">';
+            // v15.4.1: one pill - see the note on the flip panel.
             html += '<div class="cc5-panel-header">';
+            html += '<h3 class="cc5-panel-title-pill">';
             html += '<span class="cc5-panel-badge cc5-badge-sort">';
             html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="16" y1="3" x2="16" y2="21"/><polyline points="12 7 16 3 20 7"/><line x1="8" y1="21" x2="8" y2="3"/><polyline points="4 17 8 21 12 17"/></svg>';
             // v13.94.3: hard-coded English panel badge.
-            html += ' ' + escapeHtml(_lbl('activityNumber', {number: sortIdx})) + '</span>';
+            html += ' ' + escapeHtml(_lbl('activityNumber', {number: sortIdx}))
+                 +  '<span class="cc5-panel-badge-sep" aria-hidden="true">&middot;</span>'
+                 +  escapeHtml(getLabel('categorySort')) + '</span>';
+            html += '</h3>';
             html += '</div>';
             // v13.94.3: hard-coded English title and instruction. The instruction embeds
             // both category names mid-sentence, so it is one parameterised key - the
             // English word order it assumed does not survive translation.
-            html += '<h3 class="cc5-unified-title">' + escapeHtml(getLabel('categorySort')) + '</h3>';
+
             html += '<p class="cc5-challenge-instruction">'
                  +  _lbl('sortInstruction', {
                         positive: '<strong>' + escapeHtml(posLabel) + '</strong>',
@@ -1344,7 +1662,20 @@ define([], function () {
             html += '<div class="cc5-sort-item-badge">'
                  +  _lbl('itemXofY', {current: '<span class="cc5-sort-idx">1</span>', total: sortItems.length})
                  +  '</div>';
-            html += '<div class="cc5-sort-item-text"></div>';
+            // v15.3.18: the item is DRAGGABLE as well as tappable.
+            //
+            // The buttons stay - they are the keyboard and screen-reader path, and on a
+            // phone they are still the fastest way through six items - but the natural
+            // gesture for "put this in that column" is to drag it there, and the activity
+            // is called Category Sort. One pointer-event implementation covers mouse,
+            // touch and pen; there is no separate mobile path to keep in step.
+            //
+            // role/tabindex/aria-label make the same element a keyboard control: left and
+            // right arrows file it, so a keyboard user is not forced down to the buttons.
+            html += '<div class="cc5-sort-item-text cc5-sort-draggable" role="button" tabindex="0"'
+                 +  ' aria-label="' + escapeHtml(_lbl('sortItemAria',
+                        {positive: posLabel, negative: negLabel})) + '">';
+            html += '</div>';
             html += '<div class="cc5-sort-tap-btns">';
             html += '<button type="button" class="cc5-sort-tap cc5-sort-tap-good" data-tap="good">';
             html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -1367,7 +1698,7 @@ define([], function () {
 
             // Hidden data
             html += '<div class="cc5-sort-items-data" style="display:none;">';
-            sortItems.forEach(function (item, idx) {
+            sortItems.forEach(function(item, idx) {
                 html += '<div data-sort-item="' + idx + '" data-category="' + escapeHtml(item.category) + '">' + escapeHtml(item.text) + '</div>';
             });
             html += '</div>';
@@ -1508,6 +1839,21 @@ define([], function () {
     };
 
     /**
+     * v15.3.11: the tone cycle for content-driven subtopic cards.
+     *
+     * The four slot tones above are keyed by a FIXED card type, which only works while
+     * the route has fixed slots. A subtopic card has no type to key on - it is simply
+     * the nth subtopic of this topic - so its colour comes from its position.
+     *
+     * Ten, so a full ten-card topic never repeats a colour. Ordered so that adjacent
+     * cards contrast: in a two-column grid, positions 1 and 2 sit side by side and
+     * 1 and 3 sit above each other, so a simple light-to-dark ramp would put two near
+     * neighbours next to each other.
+     */
+    var SUBTOPIC_TONES = ['blue', 'violet', 'amber', 'green', 'teal',
+        'rose', 'indigo', 'orange', 'cyan', 'plum'];
+
+    /**
      * Clean paragraph strings from whatever shape the card carries.
      *
      * v13.91 shipped cards showing a literal backslash-n on screen, because the model
@@ -1530,13 +1876,13 @@ define([], function () {
             paras = fallback ? [fallback] : [];
         }
         var out = [];
-        paras.forEach(function (p) {
+        paras.forEach(function(p) {
             var t = typeof p === 'string' ? p : ((p && (p.text || p.paragraph || p.body)) || '');
             if (!t) { return; }
             t.replace(/\\r\\n|\\n|\\r/g, '\n')
              .replace(/<br\s*\/?>/gi, '\n')
              .split(/\n+/)
-             .forEach(function (part) {
+             .forEach(function(part) {
                 var c = part.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, '')
                             .replace(/\*\*(.+?)\*\*/g, '$1')
                             .replace(/\s{2,}/g, ' ')
@@ -1562,8 +1908,14 @@ define([], function () {
         var total = typeof opts.total === 'number' ? opts.total : 1;
         var isLast = index >= total - 1;
 
+        // v15.3.11: a `subtopic` card is content-driven - it carries its OWN heading and
+        // takes its colour and its number from its position in the topic. The fixed
+        // slots below keep the behaviour saved modules were built with.
+        var isSubtopic = (cardType === 'subtopic');
         var icon = TOPICSTEXT_ICONS[cardType] || 'book-open';
-        var tone = TOPICSTEXT_TONES[cardType] || 'blue';
+        var tone = isSubtopic
+            ? SUBTOPIC_TONES[index % SUBTOPIC_TONES.length]
+            : (TOPICSTEXT_TONES[cardType] || 'blue');
         // The heading is never taken from the card. See the block comment above.
         // v13.94.3: the heading was returned as a hard-coded English string, so a module
         // generated in another language rendered (and had TTS read) an English heading
@@ -1580,7 +1932,17 @@ define([], function () {
             'boundaries': 'proseKeyTakeaways'
         };
         // v13.94.3: dead fallback arms removed - getLabel() cannot return falsy.
-        var heading = getLabel(_headKeys[cardType] || 'proseOverview');
+        // v15.3.11: a subtopic card uses the heading the model actually wrote. The fixed
+        // slots keep the translated label, because their heading is the SLOT's name and
+        // taking it from the card would put an English string over translated prose -
+        // the v13.94.3 defect.
+        var heading = isSubtopic
+            ? String(section.title || section.heading || '').trim()
+            : getLabel(_headKeys[cardType] || 'proseOverview');
+        if (isSubtopic && !heading) {
+            // Never render a numbered card with no name - say which one is unnamed.
+            heading = getLabel('noContentYet');
+        }
 
         var cls = 'cc5-card cc5-prose-card cc5-prose-' + tone
                 + ' cc5-' + escapeHtml(cardType || 'prose') + '-card';
@@ -1590,47 +1952,36 @@ define([], function () {
         var html = '<div class="' + cls + '" data-prose-index="' + index + '"'
                  + ' data-prose-tone="' + tone + '"'
                  + (index > 0 ? ' aria-hidden="true"' : '') + '>';
+        // v15.3.11: subtopic cards are numbered - "1. Leadership Principles",
+        // "2. Leadership Styles". A number is the honest glyph for a sequence of
+        // subtopics: there is no icon that means "the third part of this topic", and
+        // guessing one from the heading is what produced shields everywhere else.
+        var badge = isSubtopic
+            ? '<span class="cc5-prose-icon cc5-prose-num">' + (index + 1) + '</span>'
+            : '<span class="cc5-prose-icon">' + getIcon(icon) + '</span>';
         html += '<div class="cc5-card-header cc5-prose-header">'
-             +  '<span class="cc5-prose-icon">' + getIcon(icon) + '</span>'
+             +  badge
              +  '<h4>' + escapeHtml(heading) + '</h4>'
              // v13.92: green pulsing speaker, top right. Shown ONLY while this card is
-             // the one being narrated - player5.js adds .cc5-prose-speaking. It is
-             // decorative; the audio state is already announced by the voiceover button.
-             +  '<span class="cc5-prose-vo-dot" aria-hidden="true">'
-             +  '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" '
-             +  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-             +  '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>'
-             +  '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>'
-             +  '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>'
-             +  '</span>'
+             // the one being narrated - player5.js adds .cc5-prose-speaking.
+             // v15.3.0: it is also the mute control now, and no longer aria-hidden.
+             // Same markup as every other route via renderVoiceoverDot().
+             +  renderVoiceoverDot(opts.voiceoverMuted)
              +  '</div>';
         html += '<div class="cc5-card-body cc5-prose-body">';
         if (!paras.length) {
             // Never render an empty shell - name the problem so the author sees which card.
             html += '<p class="cc5-prose-empty">' + escapeHtml(getLabel('noContentYet')) + '</p>';
         } else {
-            paras.forEach(function (p, pi) {
+            paras.forEach(function(p, pi) {
                 html += '<p class="cc5-prose-para" data-para-index="' + pi + '">'
                      +  escapeHtml(fixGrammar(p)) + '</p>';
             });
         }
         // The reveal control. Present on every card; the last card's button opens the
         // activity block when there is one, and is simply omitted when there is not.
-        if (!isLast) {
-            html += '<button type="button" class="cc5-prose-next-btn" data-prose-next="' + (index + 1) + '">'
-                 +  '<span>' + escapeHtml(getLabel('nextCard') || 'Next Card') + '</span>'
-                 +  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
-                 +  'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-                 +  '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
-                 +  '</button>';
-        } else if (opts.hasActivities) {
-            html += '<button type="button" class="cc5-prose-next-btn cc5-prose-final-btn" data-prose-next="activities">'
-                 +  '<span>' + escapeHtml(getLabel('startActivities') || 'Start Activities') + '</span>'
-                 +  '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
-                 +  'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-                 +  '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'
-                 +  '</button>';
-        }
+        // v15.3.0: one renderer, shared with every other route - see renderStepButton().
+        html += renderStepButton(index, isLast, !!opts.hasActivities);
         html += '</div></div>';
         return html;
     }
@@ -1638,8 +1989,11 @@ define([], function () {
     function renderRouteCard(section, seqOpts) {
         var cardType = section.cardType || '';
         switch (cardType) {
-            // -- v13.92 Topics and Text: four prose slots, one renderer ---------
-            // (the five v13.91 slot names still route here so saved modules render)
+            // -- Topics and Text: one prose renderer -----------------------------
+            // 'subtopic' (v15.3.11) is the content-driven card - its own heading,
+            // numbered and coloured by position. The nine names below it are the v13.92
+            // fixed slots and the v13.91 ones before them, kept so saved modules render.
+            case 'subtopic':
             case 'overview':
             case 'key-concepts':
             case 'examples-application':
@@ -1648,7 +2002,8 @@ define([], function () {
             case 'foundations':
             case 'mechanism':
             case 'in-practice':
-            case 'boundaries':          return renderProseSection(section, seqOpts);
+            case 'boundaries':
+                return renderProseSection(section, seqOpts);
             // -- v10.27 unified 7-card types (all routes) ----------------------
             case 'hook-scenario':       return renderHookScenario(section);
             case 'concept-explainer':   return renderConceptExplainer(section);
@@ -1715,7 +2070,7 @@ define([], function () {
         html += (getLabel('checkAllItems') || 'Tick each box to confirm you have completed these pre-start checks');
         html += '</p>';
         html += '<ul class="cc5-checklist-items">';
-        checklistItems.forEach(function (item, idx) {
+        checklistItems.forEach(function(item, idx) {
             var itemId   = 'cc5-checklist-' + Date.now() + '-' + idx;
             var itemText = escapeHtml(fixGrammar(typeof item === 'string' ? item : item.text || item.item || ''));
             html += '<li class="cc5-checklist-item cc5-checklist-interactive" data-checked="false">';
@@ -1763,7 +2118,7 @@ define([], function () {
 
         if (docActivity.questions && docActivity.questions.length > 0) {
             html += '<div class="cc5-docactivity-questions">';
-            docActivity.questions.forEach(function (q, idx) {
+            docActivity.questions.forEach(function(q, idx) {
                 html += '<div class="cc5-docactivity-question" data-question-index="' + idx + '">';
                 html += '<div class="cc5-question-number">Q' + (idx + 1) + '</div>';
                 html += '<div class="cc5-question-content">';
@@ -1774,8 +2129,8 @@ define([], function () {
                     // Only fall back to q.correctAnswer index when NO option has explicit flags.
                     // Prevents AI generating correctAnswer:0 (A) AND isCorrect:true on D from
                     // marking both A and D correct, causing inverted green/red highlight.
-                    var anyExplicitCorrect = q.options.some(function (o) { return o.isCorrect || o.correct; });
-                    q.options.forEach(function (opt, optIdx) {
+                    var anyExplicitCorrect = q.options.some(function(o) { return o.isCorrect || o.correct; });
+                    q.options.forEach(function(opt, optIdx) {
                         var isCorrect = anyExplicitCorrect
                             ? !!(opt.isCorrect || opt.correct)
                             : (q.correctAnswer === optIdx);
@@ -1863,11 +2218,141 @@ define([], function () {
             html += '</div>';
         }
 
+        // v15.4.4: the accent block is narrated, so it has to be findable.
+        //
+        // These cards are SECTION-level fields - keyTakeaway, proTip, keyInfo,
+        // expertInsight - and the narration folds them into the first narrated card's
+        // script (see _pushSectionLevelFields in cc-state.js). They render here, above the
+        // card grid and outside every `[data-vo-card]` element, so while the voice was
+        // reading the key takeaway the highlight sat on the scene-setting card below it:
+        // the learner was told to look at one thing and read another.
+        //
+        // The wrapper is what lets the player light this block for the clip that actually
+        // says these words. It is emitted only when there is something in it, so a section
+        // with no accent fields gains no empty div.
+        if (html) {
+            html = '<div class="cc5-accent-cards" data-vo-accent="1">' + html + '</div>';
+        }
+
+        return html;
+    }
+
+    // =======================================================================
+    // v15.3.0: ONE CARD AT A TIME - the shared chrome
+    //
+    // Topics-and-Text has revealed its cards one at a time since v13.92, and the
+    // owner asked for that on every route. The reveal, the gate, the narration
+    // seek and ~40 CSS rules already exist and are addressed through
+    // `[data-prose-index]`; what did NOT exist was any way for the other nine card
+    // renderers to emit the same chrome.
+    //
+    // Rather than edit nine renderers, the two pieces of chrome are built here and
+    // wrapped around whatever a renderer returns. The wrapper carries the index; the
+    // inner card is untouched, so every route keeps its own look.
+    //
+    // The class name says `prose` on a VET hook-scenario, which reads oddly. That is
+    // deliberate: revealProseCard(), applyProseGate(), seekProseNarrationToCard() and
+    // every CSS rule for the locked/ready/used button states already key off these
+    // names. Renaming them buys nothing and touches ~60 sites.
+    // =======================================================================
+
+    /**
+     * The voiceover dot: shows this card is being narrated, and mutes it.
+     *
+     * v15.3.0: was a decorative <span aria-hidden="true">. The owner asked for a mute
+     * toggle on this same icon - "it keeps playing but maybe they want it muted" - so
+     * it is now a real button. Muting sets audio.muted, NOT pause(): the timeline has
+     * to keep running or the reveal gate, which unlocks from audio progress, would
+     * strand a muted learner on card 1.
+     *
+     * @param {Boolean} muted Whether narration is currently muted for this learner.
+     * @return {String} HTML.
+     */
+    function renderVoiceoverDot(muted) {
+        var isMuted = !!muted;
+        var label = getLabel(isMuted ? 'unmuteVoiceover' : 'muteVoiceover');
+        var html = '<button type="button" class="cc5-prose-vo-dot cc5-vo-mute-btn'
+                 + (isMuted ? ' cc5-vo-muted' : '') + '"'
+                 + ' aria-pressed="' + (isMuted ? 'true' : 'false') + '"'
+                 + ' title="' + escapeHtml(label) + '"'
+                 + ' aria-label="' + escapeHtml(label) + '">';
+        html += '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" '
+             +  'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+        html += '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>';
+        // The two arcs are the "sound coming out" half and are hidden by CSS when muted;
+        // the cross is shown instead. Both are always in the DOM so the toggle is a class
+        // change, not a re-render - a re-render would drop focus off the button.
+        html += '<g class="cc5-vo-waves"><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>'
+             +  '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></g>';
+        html += '<g class="cc5-vo-cross"><line x1="23" y1="9" x2="17" y2="15"/>'
+             +  '<line x1="17" y1="9" x2="23" y2="15"/></g>';
+        html += '</svg></button>';
+        return html;
+    }
+
+    /**
+     * The "Next Card" control that sits at the foot of a stepped card.
+     *
+     * @param {Number}  index         0-based index of the card this button sits on.
+     * @param {Boolean} isLast        Whether this is the final card in the pack.
+     * @param {Boolean} hasActivities Whether an activity block follows the last card.
+     * @return {String} HTML, or '' when the last card has nothing to advance to.
+     */
+    function renderStepButton(index, isLast, hasActivities) {
+        // v15.4.1: the arrow points DOWN, because that is where the next card is.
+        //
+        // A rightward arrow says "forward through a sequence", which is true of the slide
+        // chevrons at the foot of the page and false here - a stepped card reveals the next
+        // one directly BELOW it and scrolls down to it. The same applies to the final
+        // button: the activity block is underneath the last card too.
+        var arrow = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" '
+                  + 'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                  + '<line x1="12" y1="5" x2="12" y2="19"/><polyline points="5 12 12 19 19 12"/></svg>';
+        if (!isLast) {
+            return '<button type="button" class="cc5-prose-next-btn" data-prose-next="' + (index + 1) + '">'
+                 + '<span>' + escapeHtml(getLabel('nextCard')) + '</span>' + arrow + '</button>';
+        }
+        if (hasActivities) {
+            return '<button type="button" class="cc5-prose-next-btn cc5-prose-final-btn" data-prose-next="activities">'
+                 + '<span>' + escapeHtml(getLabel('startActivities')) + '</span>' + arrow + '</button>';
+        }
+        return '';
+    }
+
+    /**
+     * Wrap an already-rendered route card in the stepping envelope.
+     *
+     * The wrapper is behaviour only - no background, no border, no padding - so the
+     * card inside keeps its own appearance on every route. Only the wrapper carries
+     * `data-prose-index`, which is what every reveal and gate selector matches on.
+     *
+     * @param {String}  cardHtml      The rendered card.
+     * @param {Object}  opts          {index, isLast, hasActivities, muted, showDot}
+     * @return {String} HTML.
+     */
+    function wrapSteppedCard(cardHtml, opts) {
+        var o = opts || {};
+        var index = parseInt(o.index, 10);
+        if (isNaN(index) || index < 0 || !cardHtml) { return cardHtml || ''; }
+        var cls = 'cc5-step-card';
+        if (index > 0) { cls += ' cc5-prose-hidden'; }
+        var html = '<div class="' + cls + '" data-prose-index="' + index + '"'
+                 + (index > 0 ? ' aria-hidden="true"' : '') + '>';
+        if (o.showDot) {
+            html += '<div class="cc5-step-vo-bar">' + renderVoiceoverDot(o.muted) + '</div>';
+        }
+        html += cardHtml;
+        html += renderStepButton(index, !!o.isLast, !!o.hasActivities);
+        html += '</div>';
         return html;
     }
 
     return {
         init:                      init,
+        // v15.3.0: the one-card-at-a-time chrome, shared by every route.
+        wrapSteppedCard:           wrapSteppedCard,
+        renderVoiceoverDot:        renderVoiceoverDot,
+        renderStepButton:          renderStepButton,
         // v13.94.3: the seven unified 7-card renderers and renderProseSection were
         // exported here with ZERO callers anywhere in amd/src - every one of them is
         // reached through renderRouteCard(), which dispatches on cardType internally.
@@ -1897,6 +2382,9 @@ define([], function () {
         renderPDScenarioCard:      renderPDScenarioCard,
         renderRouteCard:           renderRouteCard,
         renderDecisionChallenge:   renderDecisionChallenge,
+        // v15.3.13: exported so player5's completion check and the start screen the
+        // learner reads cannot disagree about what passing means.
+        CC_CHALLENGE_PASS_PCT:     CC_CHALLENGE_PASS_PCT,
         renderBeforeYouStartCard:  renderBeforeYouStartCard,
         renderDocActivity:         renderDocActivity,
         renderAccentCards:         renderAccentCards

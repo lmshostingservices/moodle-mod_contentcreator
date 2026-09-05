@@ -26,7 +26,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define([], function () {
+define([], function() {
     'use strict';
 
     /**
@@ -84,7 +84,7 @@ define([], function () {
      *                                    manifest.voiceSettings.language.
      * @returns {string} BCP-47 language code to send to the TTS API.
      */
-    var getEffectiveLang = function (activeLang, voiceLanguage) {
+    var getEffectiveLang = function(activeLang, voiceLanguage) {
         return (activeLang && activeLang.length > 0) ? activeLang : (voiceLanguage || 'en-AU');
     };
 
@@ -104,13 +104,45 @@ define([], function () {
      * @param {Object} section  A manifest section object.
      * @returns {boolean}
      */
-    var isSectionVoiceoverComplete = function (section) {
-        return section.slideType === 'activity' ||
-            section.voiceoverUrl === 'pregenerated' ||
+    var isSectionVoiceoverComplete = function(section) {
+        if (!section) { return false; }
+        if (section.slideType === 'activity') { return true; }
+        // v15.4.2: a card-narrated section is complete when its CARDS are.
+        //
+        // v15.4.0 moved the audio onto the cards and left this function looking only at
+        // `section.voiceoverUrl`, which a per-card section never has. So every per-card
+        // section failed this test, `manifest.voiceoversComplete` never became true, and
+        // the student gate in playVoiceover disabled the Play button on a slide whose
+        // audio was sitting right there on the cards. A card that contributes no
+        // narration - decision-point, or one with empty fields - carries no clip and is
+        // not evidence of anything, so it is not counted either way; a section where NO
+        // card carries a clip is not complete.
+        if (section.voiceoverPerCard === true || cardsCarryVoiceover(section)) {
+            return cardsCarryVoiceover(section);
+        }
+        return section.voiceoverUrl === 'pregenerated' ||
             (section.voiceoverStatus === 'complete' &&
              typeof section.voiceoverUrl === 'string' &&
              section.voiceoverUrl.startsWith('http'));
     };
+
+    /**
+     * Does at least one card in this section carry a usable clip?
+     *
+     * @param {Object} section A manifest section.
+     * @returns {boolean}
+     */
+    function cardsCarryVoiceover(section) {
+        var cards = (section && section.cards) || [];
+        for (var i = 0; i < cards.length; i++) {
+            var u = cards[i] && cards[i].voiceoverUrl;
+            if (typeof u === 'string' && (u === 'pregenerated'
+                    || u.indexOf('http') === 0 || u.indexOf('data:') === 0)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /**
      * Returns true when every section in the array has a ready voiceover.
@@ -118,7 +150,7 @@ define([], function () {
      * @param {Array} sections  Array of manifest section objects.
      * @returns {boolean}
      */
-    var allVoiceoversComplete = function (sections) {
+    var allVoiceoversComplete = function(sections) {
         return sections.every(isSectionVoiceoverComplete);
     };
 

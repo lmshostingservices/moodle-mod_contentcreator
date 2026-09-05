@@ -31,7 +31,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function () {
+define([], function() {
     'use strict';
 
     // Helper references populated by init()
@@ -84,7 +84,7 @@ define([], function () {
         // Decision points (interactive)
         if (activity.decisionPoints && activity.decisionPoints.length) {
             html += '<div class="cc5-decision-points" data-current-point="1" data-total-points="' + totalPoints + '">';
-            activity.decisionPoints.forEach(function (point, idx) {
+            activity.decisionPoints.forEach(function(point, idx) {
                 var isActive = idx === 0;
                 // v13.86: point.id is vendor JSON and was interpolated raw into both an
                 // attribute and a text node.
@@ -95,7 +95,7 @@ define([], function () {
                 html += '</div>';
                 html += '<p class="cc5-point-situation">' + escapeHtml(fixGrammar(point.situation)) + '</p>';
                 html += '<div class="cc5-options">';
-                point.options.forEach(function (opt, optIdx) {
+                point.options.forEach(function(opt, optIdx) {
                     // FIX-CC-QUIZ-INVERT: use explicit 'true'/'false' strings so the player5.js
                     // check (=== 'true') works correctly even when AI returns a numeric 1/0 or
                     // any other truthy/falsy value instead of a boolean.
@@ -201,7 +201,7 @@ define([], function () {
             html += '<div class="cc5-legend-item cc5-legend-inappropriate"><span class="cc5-legend-badge cc5-class-inappropriate">' + getLabel('notAppropriate') + '</span><span class="cc5-legend-desc">' + getLabel('notAppropriateDesc') + '</span></div>';
             html += '</div></div>';
 
-            activity.responses.forEach(function (resp) {
+            activity.responses.forEach(function(resp) {
                 var classLabel = resp.classification === 'best' ? getLabel('bestPractice') :
                                 (resp.classification === 'acceptable' ? getLabel('acceptable') : getLabel('notAppropriate'));
                 var classIcon = resp.classification === 'best' ? 'cc5-class-best' :
@@ -294,7 +294,7 @@ define([], function () {
                 2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>',
                 3: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>'
             };
-            activity.analysisQuestions.forEach(function (q) {
+            activity.analysisQuestions.forEach(function(q) {
                 html += '<div class="cc5-analysis-item">';
                 html += '<div class="cc5-question">';
                 html += '<span class="cc5-q-icon">' + (questionIcons[q.id] || questionIcons[1]) + '</span>';
@@ -392,7 +392,7 @@ define([], function () {
             var downArrowIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>';
             var dragIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>';
 
-            scrambledSteps.forEach(function (step, displayIndex) {
+            scrambledSteps.forEach(function(step, displayIndex) {
                 var stepTypeClass = 'cc5-step-' + (step.stepType || 'action');
                 html += '<div class="cc5-sequence-step ' + stepTypeClass + '" data-correct-position="' + step.correctPosition + '" draggable="true" tabindex="0">';
                 html += '<div class="cc5-step-drag-handle" title="' + getLabel('dragToReorder') + '">' + dragIcon + '</div>';
@@ -495,7 +495,7 @@ define([], function () {
             html += '<div class="cc5-decision-legend">';
             html += '<div class="cc5-legend-title">' + getLabel('yourOptions') + '</div>';
             html += '<div class="cc5-legend-items">';
-            activity.decisionOptions.forEach(function (opt) {
+            activity.decisionOptions.forEach(function(opt) {
                 html += '<div class="cc5-legend-item cc5-decision-' + opt.value + '">';
                 html += '<span class="cc5-legend-label">' + escapeHtml(fixGrammar(opt.label)) + '</span>';
                 html += '<span class="cc5-legend-desc">' + formatText(opt.description) + '</span>';
@@ -514,14 +514,14 @@ define([], function () {
                 document: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>'
             };
 
-            activity.situations.forEach(function (sit, sitIndex) {
+            activity.situations.forEach(function(sit, sitIndex) {
                 html += '<div class="cc5-situation-item" data-correct="' + sit.correctDecision + '" data-index="' + (sitIndex + 1) + '">';
                 html += '<div class="cc5-situation-header">';
                 html += '<span class="cc5-situation-number">' + (sitIndex + 1) + '</span>';
                 html += '<p class="cc5-situation-text">' + escapeHtml(fixGrammar(sit.situation)) + '</p>';
                 html += '</div>';
                 html += '<div class="cc5-situation-options">';
-                ['handle', 'clarify', 'escalate', 'document'].forEach(function (dec) {
+                ['handle', 'clarify', 'escalate', 'document'].forEach(function(dec) {
                     var isCorrect = dec === sit.correctDecision;
                     html += '<button type="button" class="cc5-decision-btn cc5-decision-' + dec + '" data-decision="' + dec + '" data-correct="' + isCorrect + '">';
                     html += decisionIcons[dec];
@@ -615,7 +615,7 @@ define([], function () {
         if (activity.reflectionPrompts && activity.reflectionPrompts.length) {
             html += '<div class="cc5-reflection-prompts" data-total="' + totalPrompts + '">';
 
-            activity.reflectionPrompts.forEach(function (prompt) {
+            activity.reflectionPrompts.forEach(function(prompt) {
                 var focusArea = prompt.focusArea || 'general';
                 var focusIcon = focusIcons[focusArea] || focusIcons.general;
 

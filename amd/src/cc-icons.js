@@ -42,7 +42,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function () {
+define([], function() {
     'use strict';
 
     // ===========================================================================
@@ -50,6 +50,13 @@ define([], function () {
     // Extended icon mapping  -  content-specific icons
     // ===========================================================================
     var ICONS = {
+        // v15.3.10: names the code was already calling for and ICONS did not have, so
+        // every one of them rendered as a shield. Found by auditing every getIcon() call
+        // site against the key list.
+        'arrow-right': '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
+        compass: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>',
+        globe: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+        upload: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
         shield: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
         glasses: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="15" r="4"/><circle cx="18" cy="15" r="4"/><path d="M14 15a2 2 0 0 0-4 0"/><path d="M2.5 13 5 7c.7-1.3 1.4-2 3-2"/><path d="M21.5 13 19 7c-.7-1.3-1.4-2-3-2"/></svg>',
         ear: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8.5a6.5 6.5 0 1 1 13 0c0 6-6 6-6 10a3.5 3.5 0 1 1-7 0"/><path d="M15 8.5a2.5 2.5 0 0 0-5 0v1a2 2 0 1 1 0 4"/></svg>',
@@ -301,15 +308,56 @@ define([], function () {
     // CARD-TYPE ICON STRATEGY (ChatGPT recommendation  -  card-aware fallbacks)
     // When semantic matching returns nothing, use card-appropriate icon pools
     // ===========================================================================
+    /**
+     * v15.3.10: SET ICONS PER CARD, BY PANEL POSITION. No content matching.
+     *
+     * What was here before tried to be clever and failed in three ways at once: the
+     * model was asked to choose an icon name, two routes were never told which names
+     * exist, and getIcon() turned every unknown name into a SHIELD. A learner saw four
+     * identical shields on a mental-model card and a shield next to the word "Result",
+     * which reads as "security" beside a sentence about consequences.
+     *
+     * The instruction from the author, after living with it: "I don't mind if you decide
+     * to have the same icons always - like 1,2,3,4 - because set icons like that at
+     * least mean something", and "no auto generation based on content, let's just have
+     * set icons for each card".
+     *
+     * So each pool below is ordered by the ROLE each panel plays on that card, which the
+     * prompts fix and the model cannot vary. Panel 1 of a hook is always the setting;
+     * panel 4 is always the question. A position therefore has a stable meaning, and an
+     * icon chosen for that position is right every time without anyone guessing from the
+     * text. Pools are as long as the card has panels, so nothing wraps and repeats.
+     *
+     * Applies to every route: these card types are shared by vet, workplace, general,
+     * pd and policy, and topicstext/university have their own fixed maps elsewhere.
+     */
     var CARD_ICON_STRATEGY = {
-        'hook-scenario':      ['map-pin', 'users', 'message-circle', 'flame'],
-        'concept-explainer':  ['lightbulb', 'message-circle', 'clipboard-check'],
-        'mental-model':       ['list-checks', 'clipboard-check', 'repeat'],
-        'applied-scenario':   ['briefcase', 'target', 'brain', 'check-circle'],
-        'mistakes':           ['alert-triangle', 'alert-circle', 'heartbeat'],
-        'competency-summary': ['check-circle', 'alert-circle'],
+        // 1 the setting -> 2 what is happening -> 3 who it lands on -> 4 the question
+        'hook-scenario':      ['map-pin', 'alert-circle', 'users', 'help-circle'],
+        // The SECOND scenario: 1 time has moved on -> 2 the task again -> 3 the
+        // complication the rule does not cover -> 4 what resolves it.
+        'applied-scenario':   ['clock', 'briefcase', 'alert-triangle', 'check-circle'],
+        // 1 the idea -> 2 how it works -> 3 what it rules out
+        'concept-explainer':  ['lightbulb', 'brain', 'circle-slash'],
+        // Every item on a "what to watch out for" card IS a caution, so they all carry
+        // the caution glyph. Repetition is correct here - it is a warning list, and a
+        // star (which the renderer used) reads as a highlight or a favourite.
+        'mistakes':           ['alert-triangle'],
+        'competency-summary': ['check-circle', 'x-circle'],
         'decision-point':     ['help-circle', 'brain']
     };
+
+    /**
+     * v15.3.10: card types whose items are a NUMBERED SEQUENCE.
+     *
+     * A mental-model card is a process - PDCA, GROW, 5 Whys, Diagnose-Test-Correct, or a
+     * plain topic-specific sequence. The prompt lets the model choose the framework, so
+     * no fixed icon set can be right for all of them, and matching on the step's wording
+     * is exactly the guesswork that produced shields. A number is right for every model
+     * ever chosen, and tells the learner the one thing the glyph should: which step this
+     * is and how far through they are.
+     */
+    var NUMBERED_STEP_CARDS = { 'mental-model': true, 'action-framework': true };
 
     // Unused (v13.95.5): kept for reference, underscored to satisfy no-unused-vars.
     var _SCENE_PART_TITLE_ICONS = [
@@ -413,18 +461,16 @@ define([], function () {
         usedIcons = usedIcons || new Set();
         var idx = partIndex || 0;
 
-        // 0. Explicitly stored icon  -  always honour first.
-        //    If the teacher chose this icon via the Edit Slide icon picker it must be
-        //    respected before any default selection logic runs.
+        // 0. A stored icon that really exists wins. After v15.3.10 the generator no
+        //    longer keeps the model's icon, so anything here was chosen deliberately by
+        //    a teacher in the Edit Slide picker and must be honoured.
         if (aiIcon && ICONS[aiIcon]) {
             usedIcons.add(aiIcon);
             return aiIcon;
         }
 
-        // 1. Card-type positional default  -  strict position lookup, no content analysis.
-        //    Part 0 always gets pool[0], part 1 always gets pool[1], etc. This gives
-        //    predictable, semantically appropriate icons regardless of the part's text
-        //    content. Only fires when no stored icon exists (AI-generated or new content).
+        // 1. The card's SET icon for this panel position. This is now the whole
+        //    behaviour for generated content - see CARD_ICON_STRATEGY.
         if (cardType && CARD_ICON_STRATEGY[cardType]) {
             var pool = CARD_ICON_STRATEGY[cardType];
             var resolved = pool[idx % pool.length];
@@ -432,36 +478,22 @@ define([], function () {
             return resolved;
         }
 
-        // 2. Semantic match  -  for card types with no defined pool (e.g. custom card types)
-        var semanticIcon = getContextualSlideIcon(partTitle || '', partText || '');
-        if (semanticIcon && !usedIcons.has(semanticIcon)) {
-            usedIcons.add(semanticIcon);
-            return semanticIcon;
-        }
+        // 2. A card type with no pool of its own. Position, not content: the old
+        //    build matched keywords here, which is how "Design Thinking" got a hazard
+        //    triangle and every unmatched panel got a shield.
+        var posIcon = SCENE_PART_POSITION_ICONS[idx % SCENE_PART_POSITION_ICONS.length];
+        usedIcons.add(posIcon);
+        return posIcon;
+    }
 
-        // 3. Position icons  -  scan for first unused
-        for (var j = 0; j < SCENE_PART_POSITION_ICONS.length; j++) {
-            var posIcon = SCENE_PART_POSITION_ICONS[(idx + j) % SCENE_PART_POSITION_ICONS.length];
-            if (!usedIcons.has(posIcon)) {
-                usedIcons.add(posIcon);
-                return posIcon;
-            }
-        }
-
-        // 4. Extended pool  -  last resort before absolute fallback
-        for (var k = 0; k < EXTENDED_ICON_POOL.length; k++) {
-            if (!usedIcons.has(EXTENDED_ICON_POOL[k])) {
-                usedIcons.add(EXTENDED_ICON_POOL[k]);
-                return EXTENDED_ICON_POOL[k];
-            }
-        }
-
-        // 5. Safety reset  -  if all pools exhausted (extreme edge case), clear and restart
-        if (usedIcons.size > 10) {
-            usedIcons.clear();
-        }
-
-        return 'map-pin';
+    /**
+     * v15.3.10: is this card's item list a numbered sequence rather than icons?
+     *
+     * @param {string} cardType The card type.
+     * @returns {boolean} True when items should render as 1, 2, 3...
+     */
+    function usesNumberedSteps(cardType) {
+        return !!(cardType && NUMBERED_STEP_CARDS[cardType]);
     }
 
     return {
@@ -470,6 +502,8 @@ define([], function () {
         CARD_ICON_STRATEGY: CARD_ICON_STRATEGY,
         CONTRAST_PAIRS: CONTRAST_PAIRS,
         getIcon: getIcon,
+        usesNumberedSteps: usesNumberedSteps,
+        NUMBERED_STEP_CARDS: NUMBERED_STEP_CARDS,
         hasIcon: hasIcon,
         getContextualSlideIcon: getContextualSlideIcon,
         resolveScenePartIcon: resolveScenePartIcon

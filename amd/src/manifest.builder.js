@@ -23,7 +23,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_contentcreator/cc-state'], function (Planner, Generator, CcState) {
+define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_contentcreator/cc-state'], function(Planner, Generator, CcState) {
     'use strict';
 
     // Gated diagnostics  -  silent in production, enabled by flipping the flag in cc-state.js.
@@ -43,7 +43,10 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
         const errors = [];
 
         if (!inputs.mode) {
-            errors.push('Mode is required (VET, Workplace, or University)');
+            // v15.4.6: the message named three routes when there are seven, and had said
+            // so since before four of them existed.
+            errors.push('Mode is required (VET, Workplace, University, Policy & Compliance, '
+                + 'General Learning or Topics and Text)');
         }
 
         // If topicPlan already exists with topics, skip strict validation
@@ -74,6 +77,31 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
                 errors.push('Workplace context is required');
             }
         }
+        // Policy & Compliance validation (v15.4.6)
+        //
+        // The route cannot run without the document - the whole contract is "teach what
+        // this document says and invent nothing" - and it cannot run without the title,
+        // because the title is what learners are told they are held to. Both are already
+        // gated in the wizard (updateGenerateTopicsButton and validateStep2, which were
+        // kept in step deliberately); this is the backstop for anything that reaches the
+        // manifest builder another way, and it was the one route with no branch here.
+        else if (inputs.mode === 'policy') {
+            if (!inputs.context) {
+                errors.push('Policy context is required');
+            } else {
+                const _src = inputs.context.priorityContent || inputs.context.referenceMaterial
+                    || inputs.context.documentText || '';
+                if (!String(_src).trim()) {
+                    errors.push('Policy & Compliance needs the uploaded document: it teaches '
+                        + 'what a document actually says, so it cannot generate without one.');
+                }
+                const _pt = (inputs.context.policyMeta && inputs.context.policyMeta.title) || '';
+                if (!String(_pt).trim()) {
+                    errors.push('The policy title is required. Learners are shown it as the '
+                        + 'document they are held to, so it must match the real title.');
+                }
+            }
+        }
         // University mode validation - criteria has outcomes array
         else if (inputs.mode === 'university') {
             if (!inputs.context?.courseName || inputs.context.courseName.trim() === '') {
@@ -90,10 +118,86 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
         };
     };
 
+    /**
+     * v15.3.7 FIX-CC-ACTIVITY-SETTINGS-DROPPED.
+     *
+     * Every settings object the wizard collects, and the default it takes when the
+     * author supplied none. ONE list, applied to both planning paths.
+     *
+     * It used to be two lists: an object literal in the topicPlan branch and a run of
+     * assignments in the Planner.plan() branch, each naming its fields by hand. A field
+     * added at one end of the pipeline (builder.js puts it in `inputs`) and read at the
+     * other (generator.js and player5.js read it off the manifest) is silently dropped
+     * unless somebody also remembers to add it to BOTH of these. Nothing errors: the
+     * property reads `undefined`, and every consumer here tests `x?.enabled !== false`,
+     * for which `undefined` means ENABLED.
+     *
+     * That has now happened twice. policyMeta was dropped from v15.3.0 to v15.3.6, so
+     * renderPolicyStrip() was dead code on every pack ever built. activitySettings was
+     * dropped from v11.11 - the entire life of the feature - so "include decision
+     * challenge activities" has never once been switchable: an author who unticked it
+     * was still charged for a decision-point card on every section, which player5.js
+     * then refused to render. They paid for content they were not shown.
+     *
+     * Adding a key here is now the only step, and test-route-dispatch.js asserts that
+     * every key in this table reaches the manifest.
+     */
+    const MANIFEST_SETTINGS = {
+        settings: function() { return { progressionMode: 'free', slideDuration: 10, topicNavMode: 'free' }; },
+        voiceSettings: function() { return { enabled: true, gender: 'female', language: 'en-AU' }; },
+        imageSettings: function() { return { enabled: false }; },
+        activitySettings: function() { return { enabled: true }; },
+        appearanceSettings: function() { return { headerColor: null }; },
+        // The Policy & Compliance identity strip - which document this course teaches,
+        // who owns it, when it was last reviewed, who to ask. Absent on every other route.
+        policyMeta: function() { return null; }
+    };
+
+    /**
+     * Assemble the planned manifest from the wizard's inputs.
+     *
+     * Extracted from build() in v15.3.7 so the assembly can be tested without running a
+     * generation: it is where two silent field-drop defects have lived, and neither was
+     * reachable from a test while it was buried inside an async function that calls the
+     * AI on its next line.
+     *
+     * @param {Object} inputs The wizard inputs.
+     * @returns {Object} The planned manifest, ready for Generator.generate().
+     */
+    const buildPlannedManifest = (inputs) => {
+        let planned;
+        if (inputs.topicPlan && inputs.topicPlan.topics && inputs.topicPlan.topics.length > 0) {
+            planned = {
+                version: '6.3.0',
+                locked: false,
+                createdAt: new Date().toISOString(),
+                mode: inputs.mode,
+                context: inputs.context,
+                topics: inputs.topicPlan.topics,
+                totalSections: inputs.topicPlan.topics.reduce(
+                    (sum, t) => sum + (t.subtopics?.length || t.sections?.length || 0), 0),
+                estimatedMinutes: inputs.duration || 10
+            };
+        } else {
+            planned = Planner.plan({
+                mode: inputs.mode,
+                context: inputs.context,
+                criteria: inputs.criteria,
+                duration: inputs.duration || 10
+            });
+        }
+        Object.keys(MANIFEST_SETTINGS).forEach(function(key) {
+            // `||` and not `??`: an author-supplied object is always truthy, so
+            // { enabled: false } survives, and only a missing or null input falls back.
+            planned[key] = inputs[key] || MANIFEST_SETTINGS[key]();
+        });
+        return planned;
+    };
+
     // v6.6.15: Options for build function
     // - regenerateFailedOnly: if true, only regenerate slides with generated:false
     // - existingManifest: the saved manifest with content to preserve
-    const build = async (inputs, cmid, callbacks, options = {}) => {
+    const build = async(inputs, cmid, callbacks, options = {}) => {
         const { onStatus, onProgress, onComplete, onError } = callbacks || {};
         const { regenerateFailedOnly = false, existingManifest = null } = options;
 
@@ -110,38 +214,8 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
             if (onStatus) onStatus(STATUS.PLANNING);
             ccLog('[ManifestBuilder]', 'Has topicPlan=' + !!(inputs.topicPlan?.topics?.length > 0) + ' | topics=' + (inputs.topicPlan?.topics?.length || 0));
 
-            let plannedManifest;
-            if (inputs.topicPlan && inputs.topicPlan.topics && inputs.topicPlan.topics.length > 0) {
-                plannedManifest = {
-                    version: '6.3.0',
-                    locked: false,
-                    createdAt: new Date().toISOString(),
-                    mode: inputs.mode,
-                    context: inputs.context,
-                    topics: inputs.topicPlan.topics,
-                    totalSections: inputs.topicPlan.topics.reduce((sum, t) => sum + (t.subtopics?.length || t.sections?.length || 0), 0),
-                    estimatedMinutes: inputs.duration || 10,
-                    settings: inputs.settings || { progressionMode: 'free', slideDuration: 10, topicNavMode: 'free' },
-                    voiceSettings: inputs.voiceSettings || { enabled: true, gender: 'female', language: 'en-AU' },
-                    imageSettings: inputs.imageSettings || { enabled: false }, // v7.5.13: FIX - Pass imageSettings to generator
-                    appearanceSettings: inputs.appearanceSettings || { headerColor: null }
-                };
-                // v7.5.13: Debug logging for imageSettings flow
-            } else {
-                plannedManifest = Planner.plan({
-                    mode: inputs.mode,
-                    context: inputs.context,
-                    criteria: inputs.criteria,
-                    duration: inputs.duration || 10
-                });
-                // Add settings and voiceSettings to Planner.plan() output (v6.3.0)
-                plannedManifest.settings = inputs.settings || { progressionMode: 'free', slideDuration: 10, topicNavMode: 'free' };
-                plannedManifest.voiceSettings = inputs.voiceSettings || { enabled: true, gender: 'female', language: 'en-AU' };
-                plannedManifest.imageSettings = inputs.imageSettings || { enabled: false }; // v7.5.13: FIX - Pass imageSettings to generator
-                plannedManifest.appearanceSettings = inputs.appearanceSettings || { headerColor: null };
-                // v7.5.13: Debug logging for imageSettings flow
-            }
-            
+            const plannedManifest = buildPlannedManifest(inputs);
+
 
             ccLog('[ManifestBuilder]', 'plannedManifest ready | topics=' + (plannedManifest.topics?.length || 0) + ' | sections=' + plannedManifest.totalSections);
             if (onStatus) onStatus(STATUS.GENERATING);
@@ -313,7 +387,20 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
         const optimized = JSON.parse(JSON.stringify(manifest)); // Deep clone
         
         // Strip debug/temporary fields that aren't needed for playback
-        const stripFields = ['_debug', '_temp', 'rawApiResponse', 'processingTime', 'retryCount'];
+        // v15.3.7: `_promptCache` added. It is a per-run memo of the assembled SYSTEM
+        // PROMPT, written onto context by generator.js so sections in one run do not
+        // rebuild a 30k-character string each. It was never meant to outlive the run -
+        // but generate() returns the planned manifest, so it was serialised into the
+        // saved manifest, and "Regenerate Failed" hands context straight back.
+        //
+        // Its key is mode_country_language, which does not change between releases, so
+        // the cache HITS: a pack built on 15.2.0 and regenerated after an upgrade to
+        // 15.3.7 is regenerated against the OLD system prompt stored in its own
+        // manifest, not the one that shipped. Every contract fix in 15.3.x - the policy
+        // fidelity rules especially - is silently reverted for that section. One policy
+        // cache entry measured 33,616 characters, written into every saved manifest.
+        const stripFields = ['_debug', '_temp', 'rawApiResponse', 'processingTime', 'retryCount',
+            '_promptCache'];
         
         const stripObject = (obj) => {
             if (!obj || typeof obj !== 'object') return;
@@ -379,6 +466,9 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
     return {
         STATUS: STATUS,
         build: build,
+        // v15.3.7: exported so the settings whitelist is testable without a generation.
+        buildPlannedManifest: buildPlannedManifest,
+        MANIFEST_SETTINGS: MANIFEST_SETTINGS,
         validateInputs: validateInputs,
         isLocked: isLocked,
         canRegenerate: canRegenerate,

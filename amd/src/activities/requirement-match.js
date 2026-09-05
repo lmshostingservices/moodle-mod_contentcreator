@@ -22,34 +22,34 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define(['jquery'], function ($) {
+define(['jquery'], function($) {
     'use strict';
 
     /**
      * Requirement Match Activity
      * Match situations to their corresponding requirements
      */
-    var RequirementMatch = function (container, config) {
+    var RequirementMatch = function(container, config) {
         this.container = $(container);
         this.config = config;
         this.pairs = config.pairs || [];
-        this.situations = this.shuffleArray(this.pairs.map(function (p) { return { id: p.id, text: p.situation }; }));
-        this.requirements = this.shuffleArray(this.pairs.map(function (p) { return { id: p.id, text: p.requirement }; }));
+        this.situations = this.shuffleArray(this.pairs.map(function(p) { return { id: p.id, text: p.situation }; }));
+        this.requirements = this.shuffleArray(this.pairs.map(function(p) { return { id: p.id, text: p.requirement }; }));
         this.selectedSituation = null;
         this.matches = {};
         this.submitted = false;
-        this.onComplete = config.onComplete || function () {};
+        this.onComplete = config.onComplete || function() {};
         
         this.init();
     };
 
     RequirementMatch.prototype = {
-        init: function () {
+        init: function() {
             this.render();
             this.bindEvents();
         },
 
-        shuffleArray: function (array) {
+        shuffleArray: function(array) {
             var shuffled = array.slice();
             for (var i = shuffled.length - 1; i > 0; i--) {
                 var j = Math.floor(Math.random() * (i + 1));
@@ -60,7 +60,7 @@ define(['jquery'], function ($) {
             return shuffled;
         },
 
-        render: function () {
+        render: function() {
             var self = this;
             var html = '<div class="cc5-activity cc5-requirement-match">';
             
@@ -76,7 +76,7 @@ define(['jquery'], function ($) {
             // Situations column
             html += '<div class="cc5-match-column cc5-situations-column">';
             html += '<h4 class="cc5-column-title">Situations</h4>';
-            this.situations.forEach(function (sit, index) {
+            this.situations.forEach(function(sit, index) {
                 html += '<div class="cc5-match-item cc5-situation" data-id="' + self.escapeHtml(sit.id) + '">';
                 html += '<span class="cc5-match-number">' + (index + 1) + '</span>';
                 html += '<span class="cc5-match-text">' + self.escapeHtml(sit.text) + '</span>';
@@ -88,7 +88,7 @@ define(['jquery'], function ($) {
             // Requirements column
             html += '<div class="cc5-match-column cc5-requirements-column">';
             html += '<h4 class="cc5-column-title">Requirements</h4>';
-            this.requirements.forEach(function (req, index) {
+            this.requirements.forEach(function(req, index) {
                 html += '<div class="cc5-match-item cc5-requirement" data-id="' + self.escapeHtml(req.id) + '">';
                 html += '<span class="cc5-match-letter">' + String.fromCharCode(65 + index) + '</span>';
                 html += '<span class="cc5-match-text">' + self.escapeHtml(req.text) + '</span>';
@@ -117,11 +117,11 @@ define(['jquery'], function ($) {
             this.container.html(html);
         },
 
-        bindEvents: function () {
+        bindEvents: function() {
             var self = this;
             
             // Situation selection
-            this.container.on('click', '.cc5-situation', function (e) {
+            this.container.on('click', '.cc5-situation', function(e) {
                 if (self.submitted) return;
                 
                 var $sit = $(this);
@@ -139,7 +139,7 @@ define(['jquery'], function ($) {
             });
             
             // Requirement selection
-            this.container.on('click', '.cc5-requirement', function (e) {
+            this.container.on('click', '.cc5-requirement', function(e) {
                 if (self.submitted || !self.selectedSituation) return;
                 
                 var $req = $(this);
@@ -157,13 +157,13 @@ define(['jquery'], function ($) {
             });
             
             // Submit
-            this.container.on('click', '.cc5-submit-btn', function (e) {
+            this.container.on('click', '.cc5-submit-btn', function(e) {
                 if (self.submitted) return;
                 self.submit();
             });
         },
 
-        match: function (sitId, reqId) {
+        match: function(sitId, reqId) {
             this.matches[sitId] = reqId;
             
             var $sit = this.container.find('.cc5-situation[data-id="' + sitId + '"]');
@@ -189,7 +189,7 @@ define(['jquery'], function ($) {
             this.updateProgress();
         },
 
-        unmatch: function (sitId) {
+        unmatch: function(sitId) {
             var reqId = this.matches[sitId];
             delete this.matches[sitId];
             
@@ -203,19 +203,19 @@ define(['jquery'], function ($) {
             this.updateProgress();
         },
 
-        updateProgress: function () {
+        updateProgress: function() {
             var count = Object.keys(this.matches).length;
             this.container.find('.cc5-match-count').text(count);
             this.container.find('.cc5-submit-btn').prop('disabled', count < this.pairs.length);
         },
 
-        submit: function () {
+        submit: function() {
             var self = this;
             this.submitted = true;
             
             var correctCount = 0;
             
-            this.container.find('.cc5-situation').each(function () {
+            this.container.find('.cc5-situation').each(function() {
                 var $sit = $(this);
                 var sitId = $sit.data('id');
                 var matchedReqId = self.matches[sitId];
@@ -231,7 +231,7 @@ define(['jquery'], function ($) {
                 }
             });
             
-            this.container.find('.cc5-requirement').each(function () {
+            this.container.find('.cc5-requirement').each(function() {
                 var $req = $(this);
                 var reqId = $req.data('id');
                 
@@ -267,12 +267,12 @@ define(['jquery'], function ($) {
             feedbackHtml += '</div>';
             
             this.container.find('.cc5-feedback-area').html(feedbackHtml).slideDown(200);
-            this.container.find('.cc5-submit-btn').text('Continue').off('click').on('click', function () {
+            this.container.find('.cc5-submit-btn').text('Continue').off('click').on('click', function() {
                 self.onComplete(allCorrect);
             });
         },
 
-        escapeHtml: function (str) {
+        escapeHtml: function(str) {
             if (!str) return '';
             var div = document.createElement('div');
             div.textContent = str;
@@ -281,7 +281,7 @@ define(['jquery'], function ($) {
     };
 
     return {
-        init: function (container, config) {
+        init: function(container, config) {
             return new RequirementMatch(container, config);
         }
     };

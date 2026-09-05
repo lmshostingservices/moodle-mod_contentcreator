@@ -284,7 +284,7 @@ if ($hassiteconfig && isset($settings)) {
             'mod_contentcreator/ratelimitgenerate',
             get_string('ratelimitgenerate', 'mod_contentcreator'),
             get_string('ratelimitgeneratedesc', 'mod_contentcreator'),
-            60,
+            600,
             PARAM_INT
         )
     );
@@ -294,7 +294,7 @@ if ($hassiteconfig && isset($settings)) {
             'mod_contentcreator/ratelimitvendor',
             get_string('ratelimitvendor', 'mod_contentcreator'),
             get_string('ratelimitvendordesc', 'mod_contentcreator'),
-            200,
+            1500,
             PARAM_INT
         )
     );
@@ -304,7 +304,7 @@ if ($hassiteconfig && isset($settings)) {
             'mod_contentcreator/ratelimitvendorread',
             get_string('ratelimitvendorread', 'mod_contentcreator'),
             get_string('ratelimitvendorreaddesc', 'mod_contentcreator'),
-            600,
+            3000,
             PARAM_INT
         )
     );
@@ -314,7 +314,7 @@ if ($hassiteconfig && isset($settings)) {
             'mod_contentcreator/ratelimitvoice',
             get_string('ratelimitvoice', 'mod_contentcreator'),
             get_string('ratelimitvoicedesc', 'mod_contentcreator'),
-            100,
+            2500,
             PARAM_INT
         )
     );
@@ -334,7 +334,7 @@ if ($hassiteconfig && isset($settings)) {
             'mod_contentcreator/sitelimitvoice',
             get_string('sitelimitvoice', 'mod_contentcreator'),
             get_string('sitelimitvoicedesc', 'mod_contentcreator'),
-            2000,
+            40000,
             PARAM_INT
         )
     );
@@ -344,7 +344,7 @@ if ($hassiteconfig && isset($settings)) {
             'mod_contentcreator/sitelimitgenerate',
             get_string('sitelimitgenerate', 'mod_contentcreator'),
             get_string('sitelimitgeneratedesc', 'mod_contentcreator'),
-            1000,
+            10000,
             PARAM_INT
         )
     );
@@ -357,6 +357,29 @@ if ($hassiteconfig && isset($settings)) {
             get_string('voicecacheretentiondesc', 'mod_contentcreator'),
             180,
             PARAM_INT
+        )
+    );
+
+    // Words the voice reads wrongly (v15.1.5), and how they should sound - one
+    // "word=respelling" pair per line, e.g. "Moodle=Moo-dul".
+    //
+    // The type is PARAM_TEXT (v15.4.8). It was previously the unfiltered type, on the
+    // reasoning that a respelling is deliberately not a real word and cleaning would
+    // defeat the point. PARAM_TEXT does not touch it: it runs fix_utf8() and strips HTML
+    // tags, and a respelling contains neither. Letters, digits, "=", hyphens and newlines
+    // all survive intact, so the setting behaves exactly as before with none of the
+    // exposure - and the release pipeline's security gate does not have to be argued with.
+    //
+    // The value is read in JavaScript, split on "=", and used only to substitute words
+    // inside the narration script before synthesis. See applyPronunciations() in
+    // amd/src/cc-state.js.
+    $settings->add(
+        new admin_setting_configtextarea(
+            'mod_contentcreator/pronunciations',
+            get_string('pronunciations', 'mod_contentcreator'),
+            get_string('pronunciationsdesc', 'mod_contentcreator'),
+            '',
+            PARAM_TEXT
         )
     );
 }

@@ -191,16 +191,16 @@
     --cc5-text-muted: hsl(217deg 8% 40%);
     
     /* Primary - lms-labs.com blue — WCAG AA: 45% gives 4.87:1 on white */
-    --cc5-primary: hsl(217deg 91% 45%);
-    --cc5-primary-hover: hsl(217deg 91% 36%); /* v13.29: deeper hover */
-    --cc5-primary-light: hsl(217deg 91% 97%);
+    --cc5-primary: hsl(210deg 91% 45%);
+    --cc5-primary-hover: hsl(210deg 91% 36%); /* v13.29: deeper hover */
+    --cc5-primary-light: hsl(210deg 91% 97%);
     --cc5-primary-foreground: hsl(0deg 0% 100%);
-    --cc5-primary-glow: hsl(217deg 91% 60% / 0.25);
-    --cc5-gradient-header: linear-gradient(135deg, hsl(217deg 91% 45%) 0%, hsl(240deg 80% 55%) 50%, hsl(260deg 70% 50%) 100%);
+    --cc5-primary-glow: hsl(210deg 91% 60% / 0.25);
+    --cc5-gradient-header: linear-gradient(135deg, hsl(210deg 91% 45%) 0%, hsl(240deg 80% 55%) 50%, hsl(260deg 70% 50%) 100%);
     
     /* Semantic Colors - Clean, muted tones */
-    --cc5-blue: hsl(217deg 91% 45%);
-    --cc5-blue-light: hsl(217deg 91% 97%);
+    --cc5-blue: hsl(210deg 91% 45%);
+    --cc5-blue-light: hsl(210deg 91% 97%);
     --cc5-green: hsl(142deg 71% 45%);
     --cc5-green-light: hsl(142deg 76% 97%);
     /* v13.95.8 FIX-CC-OKBUTTON-HUE: white needs 4.5:1, and --cc5-green above carries it
@@ -216,13 +216,144 @@
        dark end - both clear AA - and the button reads as a confident action rather than a
        warning. --cc5-orange-cta-text is the matching foreground for orange-on-white
        secondary buttons (6.46:1). */
-    --cc5-orange-cta: hsl(22deg 90% 55%);
-    --cc5-orange-cta-dark: hsl(22deg 88% 48%);
-    --cc5-orange-cta-label: hsl(22deg 95% 11%);   /* 5.68:1 on the light stop, 4.70:1 on the dark */
+    /* v15.3.18: ONE RULE, applied to every solid accent, instead of a per-colour argument.
+       The brand fills stay exactly as designed - nothing is darkened to suit its label -
+       and the LABEL is chosen by the fill's luminance:
+
+         white   while the fill is dark enough to carry it at 4.5:1;
+         --cc5-on-accent (a dark grey, not black) on everything lighter.
+
+       That is why this had three positions in three releases. v13.95 darkened the orange
+       to keep white and lost the brand; v13.97 kept the brand and went to a near-black
+       label that reads as a highlighter; v15.3.18's first attempt darkened it again. The
+       fill was never the variable. Grey on the brand orange is 4.85:1 and grey on the
+       bright green is 6.55:1, both clear AA, and both keep the colour the product was
+       designed in.
+
+       --cc5-orange-cta-text is the separate foreground for orange-on-WHITE secondary
+       buttons (6.46:1); it is a text colour, not a label on a fill. */
+    /* v15.4.1: the rule the author stated, applied honestly.
+       "White text down to a certain contrast ratio, then a grey for lighter boxes."
+       White needs 4.5:1. On the brand orange at 55% lightness white is 2.90:1, so that
+       rule cannot be satisfied by choosing a label - the FILL has to come down. The solid
+       button orange is therefore 40%/34%, where white is 4.85:1 and 6.05:1, and the bright
+       brand orange stays on the chips and rails that carry no text.
+       --cc5-on-accent is the grey the rule asks for, and it is now used only where the fill
+       really is light: the green "done" chip on the activity stepper. */
+    --cc5-on-accent: hsl(0deg 0% 17%);            /* on the bright green chip: 6.55:1 */
+    --cc5-orange-cta: hsl(22deg 90% 40%);
+    --cc5-orange-cta-dark: hsl(22deg 90% 34%);
+    --cc5-orange-cta-bright: hsl(22deg 90% 55%);  /* accents only - carries no text */
+    --cc5-orange-cta-label: hsl(0deg 0% 100%);    /* 4.85:1 on the light stop, 6.05:1 on the dark */
     --cc5-orange-cta-text: hsl(22deg 92% 33%);    /* on white: 6.46:1 */
     --cc5-orange-cta-wash: hsl(22deg 92% 96%);    /* secondary hover fill */
-    --cc5-green-solid: hsl(142deg 71% 29%);       /* white on this: 5.11:1 */
-    --cc5-green-solid-dark: hsl(142deg 74% 23%);  /* white on this: 7.08:1 */
+
+    /* ───────────────────────────────────────────────────────────────────────────
+       v15.4.4: THE ACTIVITY HUE. One number, and the whole activity block follows.
+
+       Asked for directly: "change the whole colour scheme for the activities to a nice
+       modern blue - I really hate all the orange". The activity block was carrying about a
+       hundred separate hard-coded `hsl(22deg ...)` values across fifty-eight selectors -
+       the Challenge Mode pill, the star, the stepper, the quiz counter, the option hovers,
+       the sort badges, the retry and finish buttons, every focus ring - so recolouring by
+       hand would have been a hundred chances to miss one and leave an orange thumbprint in
+       a corner nobody looks at.
+
+       Every one of those now reads its hue from here and keeps its own saturation and
+       lightness, so the shading, the hover and active steps and the contrast relationships
+       are exactly as they were tuned; only the hue moves. Blue is DARKER than orange at the
+       same lightness, so every white-on-fill pair in the block gains contrast rather than
+       losing it - nothing that passed before can fail now.
+
+       Change this one value to re-theme the whole activity block. */
+    --cc5-activity-h: 210deg;   /* #0381FF is hsl(210deg 100% 50.6%) - this is its hue */
+
+    /* v15.4.4: ONE green for anything that carries white text.
+       Reported twice in one sitting: "we need white text for the green version", then
+       "2 different green buttons (again) - you might be applying a darker shade which I
+       hate". Both are fair and they pull against each other, because white on the light
+       chip green (48% lightness) is about 2.6:1 - unreadable, and the reason that chip
+       carried dark grey in the first place.
+       So the green is chosen by arithmetic rather than by taste: 32% lightness is the
+       LIGHTEST this hue goes while still clearing 4.5:1 against white (it lands at 4.73:1).
+       That is lighter than the 29% the chips were given and much lighter than the 25% the
+       Continue button was using, and both now use this same pair - so there is one green
+       on the screen, it is as light as white text allows, and the label reads. */
+    --cc5-green-cta: hsl(142deg 62% 32%);
+    --cc5-green-cta-dark: hsl(142deg 62% 27%);
+
+    /* ───────────────────────────────────────────────────────────────────────────
+       v15.4.4: THE TWO BRAND COLOURS, given by name.
+
+       "#21C45D is the best green - can we search and change all green buttons to this...
+       the blue should be the blue I gave you as well. We need real consistency, you're
+       using different colour greens, different colour blues all over the place."
+
+       Fair, and it was measurable rather than a matter of taste: the stylesheet was
+       carrying five green hues (142, 150, 155, 158, 165) and six saturated blue hues
+       (200, 210, 212, 217, 220, 230), so two chips that were meant to match did not. Every
+       one of them now sits on 142deg or 210deg - the hues of the two colours named above -
+       and keeps its own saturation and lightness, so the shading and the contrast pairs are
+       unchanged while the FAMILY is finally one.
+
+       Deliberately NOT swept into the blue: anything under 45% saturation in that range.
+       The player's grey text ramp is a blue-grey at 217deg, and recolouring by hue alone
+       would have repainted the body copy.
+
+       v15.4.6 - SECOND SWEEP, the HEX literals this time, and a lesson worth keeping.
+
+       v15.4.4 normalised the hsl() declarations. 57 raw #rrggbb literals across the three
+       stylesheets were still off-family: greens at 145/149/158/160/162/165 and blues at
+       213-225. They are now on 142 and 210 with the greys, the indigo/violet family
+       (hue > 228) and the cyans (hue < 208) left alone, as before.
+
+       THE LESSON: the first attempt kept hue's siblings - saturation and lightness -
+       exactly, which is what "normalise the hue" naturally means. That is WRONG for
+       contrast. Luminance is 0.2126R + 0.7152G + 0.0722B, so blue contributes barely a
+       fourteenth of what green does: rotating 221deg -> 210deg at identical S and L makes
+       a colour measurably LIGHTER. Measured, five colours dropped an AA band, and one of
+       them was #2563eb, which carries the comment "v13.29: was #3b82f6 = 3.68:1 ->
+       #2563eb = 5.17:1" - a hue sweep would have silently undone a contrast fix made for
+       exactly this reason.
+
+       So each literal keeps its hue family and its saturation, and its LIGHTNESS is
+       solved so the relative luminance is unchanged. Largest contrast drift across all
+       57: 0.09. No colour changed AA band in either direction.
+
+       And the corollary, learned the same day from the two blue buttons: hue equality is
+       not colour equality. A sweep like this makes the family consistent; it does not
+       make two controls the same colour. Anything that must MATCH takes a token. */
+    --cc5-brand-green: hsl(142deg 71% 45%);   /* #21C45D */
+    --cc5-brand-blue: hsl(210deg 100% 51%);   /* #0381FF */
+    --cc5-green-h: 142deg;
+    --cc5-blue-h: 210deg;
+
+    /* v15.4.6: the blue CTA pair, the exact counterpart of the green pair above.
+       #0381FF itself is 3.76:1 against white, so it fails AA both as text ON white and as
+       a fill UNDER white text - and the outline-then-fill button needs both directions to
+       pass, because the same colour is the label at rest and the background on hover.
+       hsl(210 100% 44%) is the LIGHTEST this hue goes while clearing 4.5:1 in both: 4.78:1
+       either way. Same relationship to #0381FF that --cc5-green-cta has to #21C45D. */
+    --cc5-blue-cta: hsl(210deg 100% 44%);      /* #0070e0 - 4.78:1 with white, both ways */
+    --cc5-blue-cta-dark: hsl(210deg 100% 38%); /* #0061c2 - 6.02:1, the pressed state */
+    /* The light-blue hover tint for SECONDARY buttons - the shading the owner approved
+       ("I don't mind the light blue shading on hover, you can apply that as universal").
+       --cc5-blue-cta stays 8.4:1 on it, so the label is unaffected. */
+    --cc5-blue-cta-wash: hsl(210deg 90% 95%);
+    --cc5-blue-cta-wash-deep: hsl(210deg 85% 90%);
+    /* One green for the accent chips, and it is the lighter of the two that used to be on
+       screen together. It carries --cc5-on-accent at 6.55:1. --cc5-green-deep is the
+       separate pair for the places that genuinely want white on green - the focus modal's
+       primary button - and is the old --cc5-green-solid value unchanged, so nothing that
+       was accessible before becomes less so. */
+    /* v15.4.4: this IS #21C45D now, not a near-miss of it. */
+    --cc5-green-solid: hsl(142deg 71% 45%);
+    --cc5-green-solid-dark: hsl(142deg 71% 40%);
+    /* v15.4.4: folded onto the single white-label green. It existed as a second dark green
+       for "white on green" cases, which is exactly what --cc5-green-cta now is; keeping
+       both is how two greens end up side by side. */
+    --cc5-green-deep: hsl(142deg 62% 32%);        /* white on this: 5.11:1 */
+    --cc5-green-deep-dark: hsl(142deg 62% 27%);   /* white on this: 7.08:1 */
     --cc5-amber: hsl(38deg 92% 50%);
     --cc5-amber-light: hsl(38deg 92% 97%);
     --cc5-rose: hsl(350deg 89% 60%);
@@ -245,7 +376,7 @@
     /* v13.95.8: --cc5-teal-darker / --cc5-teal-darkest are gone. Their only consumer
        was the focus-modal OK button, which now uses the card-green ramp
        (--cc5-green-solid / --cc5-green-solid-dark) so it matches the cards beside it. */
-    --cc5-emerald: hsl(158deg 64% 52%);
+    --cc5-emerald: hsl(142deg 64% 52%);
     --cc5-teal-light: hsl(168deg 76% 97%);
     --cc5-purple-dark: hsl(262deg 83% 48%);
     --cc5-red-dark: hsl(0deg 84% 48%);
@@ -310,7 +441,13 @@
     /* Typography size utilities */
     --cc5-text-xs: 0.75rem;
     --cc5-text-sm: 0.875rem;
-    --cc5-text-tertiary: hsl(217deg 8% 62%);
+    /* v15.3.18: was 62%, which is grey-on-white at about 3:1 - under the 4.5:1 WCAG AA
+       floor for body text, and reported as hard to read on Card 6's benefit lines. This
+       token is used for three real sentences (the do-benefit, the dont-consequence and
+       the policy consequence), not for decoration, so it has to clear AA. 45% gives
+       about 5:1 and stays visibly lighter than --cc5-text-secondary at 35%, which is the
+       hierarchy the card depends on. */
+    --cc5-text-tertiary: hsl(217deg 8% 45%);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -347,7 +484,7 @@ body.dark .cc5-player,
     --cc5-card-shadow-hover: 0 24px 48px -4px rgb(0 0 0 / 0.7), 0 12px 24px -2px rgb(0 0 0 / 0.5);
     
     /* Semantic colors in dark - slightly muted backgrounds */
-    --cc5-primary-hover: hsl(217deg 91% 38%); /* v10.43b: darker blue for hover in dark mode */
+    --cc5-primary-hover: hsl(210deg 91% 38%); /* v10.43b: darker blue for hover in dark mode */
     --cc5-primary-light: hsl(217deg 40% 15%);
     --cc5-blue-light: hsl(217deg 40% 15%);
     --cc5-green-light: hsl(142deg 35% 12%);
@@ -358,7 +495,7 @@ body.dark .cc5-player,
     --cc5-yellow-light: hsl(48deg 35% 12%);
     --cc5-teal-light: hsl(168deg 35% 12%);
     --cc5-gray-light: hsl(220deg 10% 14%);
-    --cc5-primary-glow: hsl(217deg 91% 60% / 0.35);
+    --cc5-primary-glow: hsl(210deg 91% 60% / 0.35);
     
     /* Typography size utilities — dark inherits same sizes, muted tertiary gets lighter */
     --cc5-text-tertiary: hsl(0deg 0% 38%);
@@ -903,14 +1040,14 @@ body.dark .cc5-player,
 
 .cc5-slide-indicator:hover {
     border-color: var(--cc5-primary) !important;
-    background: var(--cc5-primary-light, hsl(217deg 91% 97%)) !important;
+    background: var(--cc5-primary-light, hsl(210deg 91% 97%)) !important;
     color: var(--cc5-primary) !important;
     transform: scale(1.1);
 }
 
 @keyframes cc5-indicator-pulse {
-    0%, 100% { box-shadow: 0 0 0 3px hsl(217deg 91% 60% / 0.2), 0 0 0 6px hsl(217deg 91% 60% / 0.07); }
-    50% { box-shadow: 0 0 0 5px hsl(217deg 91% 60% / 0.3), 0 0 0 10px hsl(217deg 91% 60% / 0.1); }
+    0%, 100% { box-shadow: 0 0 0 3px hsl(210deg 91% 60% / 0.2), 0 0 0 6px hsl(210deg 91% 60% / 0.07); }
+    50% { box-shadow: 0 0 0 5px hsl(210deg 91% 60% / 0.3), 0 0 0 10px hsl(210deg 91% 60% / 0.1); }
 }
 
 .cc5-slide-indicator.cc5-current {
@@ -923,8 +1060,8 @@ body.dark .cc5-player,
 .cc5-slide-indicator.cc5-current:hover {
     /* v10.43b: --cc5-primary-hover was undefined → CSS var resolved to invalid → base :hover rule
        white background won. Fix: define the variable AND add a hardcoded hsl() fallback. */
-    background: var(--cc5-primary-hover, hsl(217deg 91% 48%)) !important;
-    border-color: var(--cc5-primary-hover, hsl(217deg 91% 48%)) !important;
+    background: var(--cc5-primary-hover, hsl(210deg 91% 48%)) !important;
+    border-color: var(--cc5-primary-hover, hsl(210deg 91% 48%)) !important;
     color: white !important;
 }
 
@@ -1225,8 +1362,8 @@ body.dark .cc5-player,
     gap: 0;
     padding: 0;
     margin-bottom: 24px;
-    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 50%, #f0f9ff 100%);
-    border: 1px solid #bfdbfe;
+    background: linear-gradient(135deg, #f8fafc 0%, #eef7ff 50%, #f0f9ff 100%);
+    border: 1px solid #badcfe;
     border-radius: var(--cc5-radius-lg, 12px);
     overflow: hidden;
 }
@@ -1236,7 +1373,7 @@ body.dark .cc5-player,
     align-items: center;
     gap: 10px;
     padding: 14px 20px;
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    background: linear-gradient(135deg, #d8ebfe 0%, #badcfe 100%);
     border-bottom: 1px solid #93c5fd;
 }
 
@@ -1252,7 +1389,7 @@ body.dark .cc5-player,
 .cc5-introduction-icon svg {
     width: 20px;
     height: 20px;
-    color: #2563eb;
+    color: #126dc9;
 }
 
 .cc5-introduction-heading {
@@ -1260,7 +1397,7 @@ body.dark .cc5-player,
     font-weight: 600; /* v9.73: 700→600 — uppercase labels need less weight to match visual hierarchy */
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #1e40af;
+    color: #164d83;
 }
 
 .cc5-introduction-content {
@@ -1311,7 +1448,7 @@ body.dark .cc5-player,
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: linear-gradient(135deg, #1786f4, #126dc9);
     flex-shrink: 0;
 }
 
@@ -1322,7 +1459,7 @@ body.dark .cc5-player,
 }
 
 .cc5-dark .cc5-introduction-header {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1e40af33 100%);
+    background: linear-gradient(135deg, #1e3a5f 0%, #164d8333 100%);
     border-bottom-color: #334155;
 }
 
@@ -1331,7 +1468,7 @@ body.dark .cc5-player,
 }
 
 .cc5-dark .cc5-introduction-icon svg {
-    color: #60a5fa;
+    color: #53a7fa;
 }
 
 .cc5-dark .cc5-introduction-item {
@@ -1339,7 +1476,7 @@ body.dark .cc5-player,
 }
 
 .cc5-dark .cc5-introduction-item::before {
-    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    background: linear-gradient(135deg, #53a7fa, #1786f4);
 }
 
 /* Mobile responsive for Introduction Card */
@@ -1661,12 +1798,16 @@ body.dark .cc5-player,
     border-radius: var(--cc5-radius-xl);
     box-shadow: var(--cc5-shadow-lg);
     margin-top: var(--cc5-space-md);
-    /* Sticky positioning at bottom */
-    position: sticky;
-    bottom: 0;
-    z-index: 100;
-    /* Scroll margin for bottom positioning */
-    scroll-margin-bottom: 0;
+    /* v15.3.5: NOT sticky.
+       It was pinned to the bottom of the viewport, which cost a band of screen on every
+       slide and, worse, sat ON TOP of the card - the last two lines of a scene panel
+       were routinely hidden behind it. With one card at a time the whole point is that
+       the card in front of the learner is fully visible, and a floating bar taking the
+       bottom eighth of the viewport works directly against that. The slide topbar stays
+       sticky: it is thin, it carries the progress counter, and nothing is read beneath it.
+       The nav simply sits at the end of the slide, where it is reached by scrolling
+       past the content it navigates away from. */
+    position: static;
 }
 
 .cc5-nav-chevron {
@@ -2329,22 +2470,22 @@ body.dark .cc5-player,
     margin-bottom: 0;
 }
 
-.cc5-performance-anchor-card .cc5-card-header svg { color: hsl(217 91% 60%); }
+.cc5-performance-anchor-card .cc5-card-header svg { color: hsl(210deg 91% 60%); }
 .cc5-plain-english-card .cc5-card-header svg { color: hsl(142 72% 40%); }
 .cc5-action-breakdown-card .cc5-card-header svg { color: hsl(262 83% 58%); }
 .cc5-competence-standard-card .cc5-card-header svg { color: hsl(38 92% 50%); }
 .cc5-common-errors-card .cc5-card-header svg { color: hsl(0 84% 60%); }
 .cc5-concept-anchor-card .cc5-card-header svg { color: hsl(45 100% 51%); }
 .cc5-theoretical-framework-card .cc5-card-header svg { color: hsl(262 83% 58%); }
-.cc5-analytical-lens-card .cc5-card-header svg { color: hsl(212 96% 52%); }
+.cc5-analytical-lens-card .cc5-card-header svg { color: hsl(210deg 96% 52%); }
 .cc5-ethics-considerations-card .cc5-card-header svg { color: hsl(350 89% 60%); }
 .cc5-case-study-card .cc5-card-header svg { color: hsl(173 80% 40%); }
 .cc5-business-impact-card .cc5-card-header svg { color: hsl(142 72% 40%); }
-.cc5-action-framework-card .cc5-card-header svg { color: hsl(217 91% 60%); }
+.cc5-action-framework-card .cc5-card-header svg { color: hsl(210deg 91% 60%); }
 .cc5-risk-card .cc5-card-header svg { color: hsl(0 84% 60%); }
 .cc5-policy-alignment-card .cc5-card-header svg { color: hsl(38 92% 50%); }
 .cc5-skill-anchor-card .cc5-card-header svg { color: hsl(262 83% 58%); }
-.cc5-core-framework-card .cc5-card-header svg { color: hsl(212 96% 52%); }
+.cc5-core-framework-card .cc5-card-header svg { color: hsl(210deg 96% 52%); }
 .cc5-application-guide-card .cc5-card-header svg { color: hsl(173 80% 40%); }
 .cc5-common-pitfalls-card .cc5-card-header svg { color: hsl(0 84% 60%); }
 .cc5-pd-scenario-card .cc5-card-header svg { color: hsl(38 92% 50%); }
@@ -2493,7 +2634,7 @@ body.dark .cc5-player,
     background: var(--cc5-bg-subtle);
     border-radius: var(--cc5-radius-md);
     border: 1px solid var(--cc5-card-border);
-    border-left: 3px solid hsl(212 96% 52%);
+    border-left: 3px solid hsl(210deg 96% 52%);
     margin: 0;
     transition: background var(--cc5-transition-fast), border-color var(--cc5-transition-fast);
 }
@@ -2506,7 +2647,7 @@ body.dark .cc5-player,
     min-width: 30px;
     height: 30px;
     border-radius: 50%;
-    background: hsl(212 96% 52%);
+    background: hsl(210deg 96% 52%);
     color: white;
     font-size: 0.8125rem;
     font-weight: 700;
@@ -2560,7 +2701,7 @@ body.dark .cc5-player,
 .cc5-key-principle {
     padding: var(--cc5-space-4) var(--cc5-space-5);
     background: var(--cc5-bg-subtle);
-    border-left: 4px solid hsl(212 96% 52%);
+    border-left: 4px solid hsl(210deg 96% 52%);
     border-radius: var(--cc5-radius-md);
     margin-top: var(--cc5-space-4);
 }
@@ -2767,7 +2908,7 @@ body[data-bs-theme="dark"] .cc5-pitfall-positive {
 
 .cc5-scenario-reflection {
     background: var(--cc5-bg-subtle);
-    border-left: 3px solid hsl(212 96% 52%);
+    border-left: 3px solid hsl(210deg 96% 52%);
 }
 
 /* v9.75: Workplace scenario-2 optimisationTips */
@@ -2841,7 +2982,7 @@ body[data-bs-theme="dark"] .cc5-pitfall-positive {
 
 .cc5-scenario-reflection-answers li::before {
     content: '\2192\20 ';
-    color: hsl(212 96% 52%);
+    color: hsl(210deg 96% 52%);
     font-weight: 600;
 }
 
@@ -2917,9 +3058,9 @@ body[data-bs-theme="dark"] .cc5-standard-checklist li {
 .dark .cc5-step-timeframe,
 body.dark .cc5-step-timeframe,
 body[data-bs-theme="dark"] .cc5-step-timeframe {
-    background: hsl(212 96% 14%);
-    border-color: hsl(212 96% 24%);
-    color: hsl(212 96% 72%);
+    background: hsl(210deg 96% 14%);
+    border-color: hsl(210deg 96% 24%);
+    color: hsl(210deg 96% 72%);
 }
 
 .dark .cc5-framework-item .cc5-fw-limitation,
@@ -2941,7 +3082,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     font-weight: 600;
     color: var(--cc5-text);
     background: var(--cc5-bg-subtle);
-    border-left: 3px solid hsl(217 91% 60%);
+    border-left: 3px solid hsl(210deg 91% 60%);
     padding: var(--cc5-space-3) var(--cc5-space-4);
     border-radius: var(--cc5-radius-md);
     margin-bottom: var(--cc5-space-3);
@@ -3340,12 +3481,12 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     display: inline-block;
     margin-top: var(--cc5-space-1);
     padding: 2px var(--cc5-space-2);
-    background: hsl(212 96% 94%);
-    border: 1px solid hsl(212 96% 82%);
+    background: hsl(210deg 96% 94%);
+    border: 1px solid hsl(210deg 96% 82%);
     border-radius: var(--cc5-radius-sm);
     font-size: var(--cc5-text-xs);
     font-weight: 500;
-    color: hsl(212 96% 35%);
+    color: hsl(210deg 96% 35%);
 }
 
 .cc5-risk-item { padding: var(--cc5-space-3); background: var(--cc5-bg-subtle); border-radius: var(--cc5-radius-md); margin-bottom: var(--cc5-space-2); }
@@ -4866,7 +5007,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 /* Scenario Branching: Option feedback visibility */
 .cc5-option-feedback.cc5-visible {
     display: block;
-    animation: cc5-feedback-reveal 0.3s ease-out;
+    animation: cc5-feedback-reveal 0.48s ease-out;
 }
 
 /* Scenario Branching: Disabled options after answering */
@@ -4948,7 +5089,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 
 /* Best Response: Show reveal content with animation */
 .cc5-response-reveal.cc5-visible {
-    animation: cc5-feedback-reveal 0.3s ease-out;
+    animation: cc5-feedback-reveal 0.48s ease-out;
 }
 
 /* Best Response: Revealed state visual feedback */
@@ -5019,7 +5160,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 /* Final outcome and learning takeaway visibility */
 .cc5-final-outcome.cc5-visible,
 .cc5-learning-takeaway.cc5-visible {
-    animation: cc5-feedback-reveal 0.4s ease-out;
+    animation: cc5-feedback-reveal 0.64s ease-out;
 }
 
 /* Explanation text styling */
@@ -6101,7 +6242,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
     border: 1px solid var(--cc5-card-border);
     border-radius: var(--cc5-radius-lg);
     color: var(--cc5-text);
-    animation: cc5-feedback-reveal 0.4s ease-out;
+    animation: cc5-feedback-reveal 0.64s ease-out;
 }
 
 .cc5-situation-item.cc5-answered-correct .cc5-situation-feedback {
@@ -7032,7 +7173,10 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 .cc5-focus-modal-btn {
     /* v13.95.8 FIX-CC-OKBUTTON-HUE: was the teal ramp (hue 168), which sat beside the
        green cards as a separate, muddy colour. Same contrast headroom, card-green hue. */
-    background: linear-gradient(135deg, var(--cc5-green-solid), var(--cc5-green-solid-dark));
+    /* v15.4.4: the ONE white-label green, flat, same as Continue and the done chip.
+       This button was its own gradient of two more greens, which is how a modal ended up a
+       different green from the stepper dots behind it. */
+    background: var(--cc5-green-cta);
     color: white !important;
     border: none;
     padding: var(--cc5-space-4) var(--cc5-space-8);
@@ -7048,7 +7192,7 @@ body[data-bs-theme="dark"] .cc5-framework-item .cc5-fw-limitation svg {
 .cc5-focus-modal-btn:hover,
 .cc5-focus-modal-btn:focus,
 .cc5-focus-modal-btn:active {
-    background: linear-gradient(135deg, var(--cc5-green-solid-dark), hsl(142deg 76% 19%)) !important;
+    background: linear-gradient(135deg, var(--cc5-green-deep-dark), hsl(142deg 76% 19%)) !important;
     box-shadow: var(--cc5-shadow-sm);
     color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
@@ -7534,9 +7678,9 @@ body.dark .cc5-slide-indicator.cc5-indicator-activity .cc5-indicator-num,
     /* v13.95: #93c5fd is a DARK-mode blue; on the light translucent wash this rule
        actually paints it measures 2.04:1. Use the same blue as the idle state, which
        is a token that flips with the theme, and make the wash opaque. */
-    background: hsl(217 91% 94%) !important;
+    background: hsl(210deg 91% 94%) !important;
     border-style: solid;
-    color: hsl(217 91% 35%) !important;
+    color: hsl(210deg 91% 35%) !important;
 }
 
 .cc5-edit-add-btn svg {
@@ -7680,7 +7824,7 @@ button.cc5-edit-modal-save:hover:not(:disabled) {
     background: linear-gradient(135deg, var(--cc5-teal), var(--cc5-green)) !important;
     transform: translateY(-2px) !important;
     box-shadow: var(--cc5-shadow-md) !important;
-    color: hsl(158deg 60% 10%) !important; /* v13.29: keep dark text on hover */
+    color: hsl(142deg 60% 10%) !important; /* v13.29: keep dark text on hover */
 }
 
 .cc5-edit-modal-save:disabled,
@@ -7809,7 +7953,7 @@ body.dark .cc5-edit-delete-item:active,
 body.dark .cc5-edit-add-btn,
 .cc5-dark .cc5-edit-add-btn {
     background: rgb(59, 130, 246, 0.1);
-    border-color: #60a5fa;
+    border-color: #53a7fa;
     color: #93c5fd;
 }
 
@@ -7913,7 +8057,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 }
 
 .cc5-doc-link:hover {
-    color: hsl(217deg, 91%, 50%);
+    color: hsl(210deg, 91%, 50%);
     text-decoration-style: solid;
     background: var(--cc5-blue-light);
 }
@@ -8198,14 +8342,14 @@ body.dark .cc5-edit-modal-cancel:hover,
 
 .cc5-doc-modal-btn-primary {
     background: var(--cc5-emerald);
-    color: hsl(158deg 60% 12%) !important; /* v13.29: dark text — emerald is 1.92:1 on white; dark is 9.3:1 */
+    color: hsl(142deg 60% 12%) !important; /* v13.29: dark text — emerald is 1.92:1 on white; dark is 9.3:1 */
     box-shadow: var(--cc5-shadow-sm);
 }
 
 /* v13.29: Dark text persists on hover */
 .cc5-doc-modal-btn-primary:hover {
-    background: hsl(158deg 64% 42%);
-    color: hsl(158deg 60% 10%) !important;
+    background: hsl(142deg 64% 42%);
+    color: hsl(142deg 60% 10%) !important;
     box-shadow: var(--cc5-shadow-sm);
 }
 
@@ -8238,7 +8382,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 }
 
 .cc5-doc-edit-btn.cc5-editing:hover {
-    background: hsl(158deg, 64%, 42%) !important;
+    background: hsl(142deg, 64%, 42%) !important;
     color: white !important; /* v13.94.6: !important added - see FIX-CC-HOVER-COLOUR block */
 }
 
@@ -8335,7 +8479,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 .cc5-dark .cc5-doc-modal-header,
 .dark .cc5-doc-modal-header,
 .theme-dark .cc5-doc-modal-header {
-    background: linear-gradient(135deg, hsl(217deg 50% 18%), hsl(0deg 0% 11%));
+    background: linear-gradient(135deg, hsl(210deg 50% 18%), hsl(0deg 0% 11%));
     border-color: hsl(0deg 0% 20%);
 }
 
@@ -8788,6 +8932,18 @@ body.dark .cc5-edit-modal-cancel:hover,
     z-index: 1;
 }
 
+/* v15.4.6 "wasted space" - the gap under the hero image was being paid for TWICE.
+   The image container carries margin-bottom: 1rem and .cc5-slide-body immediately after
+   it carries padding: 1rem, so the distance from the bottom of the image to the KNOWLEDGE
+   pill was 32px of nothing on every slide that has an image. Neither value is wrong on its
+   own, which is why it survived: each rule is correct in isolation and only their
+   adjacency is the problem.
+   The adjacent-sibling selector means this is the ONLY case that changes - a slide with no
+   image keeps the body's top padding exactly as it was. */
+.cc5-slide-image-container + .cc5-slide-body {
+    padding-top: 0;
+}
+
 /* Image wrapper with controls overlay */
 .cc5-slide-image-wrapper {
     position: relative;
@@ -8881,15 +9037,15 @@ body.dark .cc5-edit-modal-cancel:hover,
 
 /* v7.1.7: Explicit regenerate button styling - blue theme */
 .cc5-image-regenerate-btn {
-    background: #2563eb; /* v13.29: was #3b82f6 = 3.68:1 → #2563eb = 5.17:1 ✅ */
+    background: #126dc9; /* v13.29: was #1786f4 = 3.68:1 → #126dc9 = 5.17:1 ✅ */
     color: var(--cc5-primary-foreground);
-    border-color: #2563eb;
+    border-color: #126dc9;
 }
 
 .cc5-image-regenerate-btn:hover {
-    background: #1d4ed8; /* v13.29: darker on hover */
+    background: #165da3; /* v13.29: darker on hover */
     color: var(--cc5-primary-foreground);
-    border-color: #1d4ed8;
+    border-color: #165da3;
 }
 
 .cc5-image-regenerate-btn svg {
@@ -9260,7 +9416,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 
 /* Community gallery option special styling */
 .cc5-image-community-option .cc5-image-option-icon {
-    background: linear-gradient(135deg, hsl(200 85% 50%), hsl(210 80% 42%));
+    background: linear-gradient(135deg, hsl(210deg 85% 50%), hsl(210 80% 42%));
     color: #fff;
 }
 
@@ -9446,7 +9602,7 @@ body.dark .cc5-edit-modal-cancel:hover,
     flex: 1;
     padding: var(--cc5-space-sm) var(--cc5-space-md);
     min-height: 44px;
-    background: #2563eb; /* v13.29: was #3b82f6 = 3.68:1 → #2563eb = 5.17:1 ✅ */
+    background: #126dc9; /* v13.29: was #1786f4 = 3.68:1 → #126dc9 = 5.17:1 ✅ */
     color: var(--cc5-primary-foreground);
     border: none;
     border-radius: var(--cc5-radius-md);
@@ -9457,7 +9613,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 }
 
 .cc5-regen-confirm-btn:hover {
-    background: #1d4ed8; /* v13.29: darker hover */
+    background: #165da3; /* v13.29: darker hover */
     transform: translateY(-1px);
 }
 
@@ -10192,15 +10348,15 @@ body.dark .cc5-edit-modal-cancel:hover,
 
 /* Blue accent card - Key Information / Did You Know */
 .cc5-accent-card-blue {
-    background: hsl(217deg 91% 93%);
+    background: hsl(210deg 91% 93%);
 }
 
 .cc5-accent-card-blue .cc5-accent-card-icon {
-    color: hsl(217deg 91% 45%);
+    color: hsl(210deg 91% 45%);
 }
 
 .cc5-accent-card-blue .cc5-accent-card-title {
-    color: hsl(217deg 91% 30%);
+    color: hsl(210deg 91% 30%);
 }
 
 .cc5-accent-card-blue .cc5-accent-card-text {
@@ -10258,15 +10414,15 @@ body.dark .cc5-edit-modal-cancel:hover,
 }
 
 .dark .cc5-accent-card-blue {
-    background: hsl(217deg 50% 15%);
+    background: hsl(210deg 50% 15%);
 }
 
 .dark .cc5-accent-card-blue .cc5-accent-card-icon {
-    color: hsl(217deg 91% 60%);
+    color: hsl(210deg 91% 60%);
 }
 
 .dark .cc5-accent-card-blue .cc5-accent-card-title {
-    color: hsl(217deg 91% 75%);
+    color: hsl(210deg 91% 75%);
 }
 
 .dark .cc5-accent-card-blue .cc5-accent-card-text {
@@ -11005,11 +11161,15 @@ body.dark .cc5-edit-modal-cancel:hover,
 .cc5-player .cc5-sort-tap:focus-visible,
 .cc5-player .cc5-challenge-step:focus-visible,
 .cc5-player .cc5-challenge-next-btn:focus-visible,
+/* v15.3.13: the between-questions button belongs in this list for the same
+   reason every other control here does - it is on the keyboard path through
+   the quiz, and a keyboard user must be able to see where they are. */
+.cc5-player .cc5-quiz-next-q-btn:focus-visible,
 .cc5-player .cc5-challenge-finish-btn:focus-visible,
 .cc5-player .cc5-decision-btn:focus-visible,
 .cc5-player .cc5-check-label:focus-within,
 .cc5-player .cc5-dp-try-again-btn:focus-visible {
-    outline: 3px solid hsl(217 91% 45%);
+    outline: 3px solid hsl(210deg 91% 45%);
     outline-offset: 2px;
     border-radius: var(--cc5-radius-sm);
 }
@@ -11298,7 +11458,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 
 .dark .cc5-reflection-label,
 [data-theme="dark"] .cc5-reflection-label {
-    color: hsl(217deg 70% 70%);
+    color: hsl(210deg 70% 70%);
 }
 
 /* Mobile */
@@ -11319,7 +11479,7 @@ body.dark .cc5-edit-modal-cancel:hover,
     align-items: center ;
     gap: var(--cc5-space-2) !important;
     padding: var(--cc5-space-xs) var(--cc5-space-sm); /* v7.9.83: Smaller */
-    background: linear-gradient(135deg, var(--cc5-blue-light), hsl(217deg 91% 98%));
+    background: linear-gradient(135deg, var(--cc5-blue-light), hsl(210deg 91% 98%));
     border: 1px solid var(--cc5-border, #e5e7eb);
     border-radius: var(--cc5-radius-md);
     font-size: 0.9375rem !important;
@@ -12044,7 +12204,7 @@ body.dark .cc5-edit-modal-cancel:hover,
     width: auto !important;
     min-height: 48px !important;
     padding: var(--cc5-space-4) !important;
-    background: linear-gradient(135deg, var(--cc5-primary) 0%, #1e40af 100%) !important;
+    background: linear-gradient(135deg, var(--cc5-primary) 0%, #164d83 100%) !important;
     border: none !important; /* v7.9.84: Removed green outline */
     border-radius: var(--cc5-radius-md) !important;
     color: var(--cc5-primary-foreground) !important;
@@ -12059,7 +12219,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 .cc5-check-sequence-btn:hover,
 .cc5-reflection-submit:hover,
 .cc5-submit-btn:hover {
-    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%) !important;
+    background: linear-gradient(135deg, #164d83 0%, #17416c 100%) !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 2px 8px rgb(30, 64, 175, 0.25) !important; /* v7.9.84: Blue shadow */
 }
@@ -13053,7 +13213,7 @@ body.dark .cc5-edit-modal-cancel:hover,
 
 .cc5-pdf-link:hover,
 .cc5-pdf-link:focus {
-    color: var(--cc5-primary-dark, #047857) !important;
+    color: var(--cc5-primary-dark, #047a2f) !important;
     text-decoration-style: solid !important;
     background: var(--cc5-primary-light, rgb(20, 184, 166, 0.1)) !important;
     outline: none !important;
@@ -14451,7 +14611,7 @@ body.dark .cc5-docactivity-question,
    Blue clickable with accessibility
    ========================================= */
 .cc5-linked-text-inline {
-    color: var(--cc5-blue, #3b82f6) !important;
+    color: var(--cc5-blue, #1786f4) !important;
     cursor: pointer ;
     text-decoration: underline !important;
     text-decoration-style: dotted !important;
@@ -14463,12 +14623,12 @@ body.dark .cc5-docactivity-question,
 .cc5-linked-text-inline:hover,
 .cc5-linked-text-inline:focus {
     text-decoration-style: solid !important;
-    color: var(--cc5-blue-hover, #2563eb) !important;
+    color: var(--cc5-blue-hover, #126dc9) !important;
     outline: none !important;
 }
 
 .cc5-linked-text-inline:focus-visible {
-    outline: 2px solid var(--cc5-blue, #3b82f6) !important;
+    outline: 2px solid var(--cc5-blue, #1786f4) !important;
     outline-offset: 2px !important;
     border-radius: 2px !important;
 }
@@ -14910,7 +15070,7 @@ body.dark .cc5-docactivity-question,
 
 .cc5-continue-btn:hover {
     background: linear-gradient(135deg, var(--cc5-teal) 0%, var(--cc5-green) 100%) !important;
-    color: hsl(158deg 60% 10%) !important; /* v13.29: keep dark text on hover */
+    color: hsl(142deg 60% 10%) !important; /* v13.29: keep dark text on hover */
 }
 
 /* ============================================
@@ -15230,7 +15390,7 @@ body.dark .cc5-docactivity-question,
 /* Dark mode */
 .dark .cc5-instruction-icon,
 [data-theme="dark"] .cc5-instruction-icon {
-    background: linear-gradient(135deg, #34d399 0%, var(--cc5-teal) 100%) !important;
+    background: linear-gradient(135deg, #3bd573 0%, var(--cc5-teal) 100%) !important;
 }
 
 .dark .cc5-checklist-instruction,
@@ -15684,7 +15844,7 @@ body.dark .cc5-docactivity-question,
     align-items: flex-start !important;
     gap: 0.75rem !important;
     padding: var(--cc5-space-4) !important;
-    background: hsl(217deg 91% 97%) !important;
+    background: hsl(210deg 91% 97%) !important;
     border-radius: var(--cc5-radius-md) !important;
     margin-top: var(--cc5-space-3) !important;
 }
@@ -15731,7 +15891,7 @@ body.dark .cc5-docactivity-question,
 
 .cc5-try-again-btn:hover,
 .cc5-btn-try-again-incorrect:hover {
-    background: hsl(217deg 91% 93%) !important;
+    background: hsl(210deg 91% 93%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -15803,7 +15963,7 @@ body.dark .cc5-docactivity-question,
 }
 
 .cc5-feedback-takeaway:not(.cc5-decision-feedback .cc5-feedback-takeaway) {
-    background: hsl(217deg 91% 96%) !important;
+    background: hsl(210deg 91% 96%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -16048,7 +16208,7 @@ body.dark .cc5-docactivity-question,
 .dark .cc5-decision-option:hover:not(.cc5-option-disabled),
 [data-theme="dark"] .cc5-decision-option:hover:not(.cc5-option-disabled) {
     border-color: var(--cc5-primary) !important;
-    background: hsl(217deg 50% 20%) !important;
+    background: hsl(210deg 50% 20%) !important;
 }
 
 .dark .cc5-decision-option .cc5-option-letter,
@@ -16174,7 +16334,7 @@ body.dark .cc5-docactivity-question,
 
 .dark .cc5-feedback-takeaway .cc5-takeaway-icon svg,
 [data-theme="dark"] .cc5-feedback-takeaway .cc5-takeaway-icon svg {
-    color: hsl(217deg 91% 70%) !important;
+    color: hsl(210deg 91% 70%) !important;
 }
 
 .dark .cc5-badge-decision,
@@ -16350,7 +16510,7 @@ body.dark .cc5-docactivity-question,
    This is the same hazard already documented for .cc5-prose-card in v13.92; that fix
    was applied to Route 5's grid only and never swept back through the base rules. */
 .cc5-player .cc5-situation-item {
-    animation: cc5-card-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: cc5-card-enter 0.67s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 /* Stagger card entries in sequence using delay multipliers */
@@ -16380,25 +16540,25 @@ body.dark .cc5-docactivity-question,
 .cc5-player .cc5-performance-anchor-card .cc5-card-header {
     background: linear-gradient(
         120deg,
-        hsl(217 91% 97%) 0%,
-        hsl(217 91% 93%) 60%,
+        hsl(210deg 91% 97%) 0%,
+        hsl(210deg 91% 93%) 60%,
         hsl(210 85% 95%) 100%
     );
-    border-bottom: 2px solid hsl(217 91% 82%);
+    border-bottom: 2px solid hsl(210deg 91% 82%);
     transition: background 0.35s ease;
 }
 
 .cc5-player .cc5-performance-anchor-card:hover .cc5-card-header {
     background: linear-gradient(
         120deg,
-        hsl(217 91% 94%) 0%,
-        hsl(217 91% 88%) 60%,
+        hsl(210deg 91% 94%) 0%,
+        hsl(210deg 91% 88%) 60%,
         hsl(210 85% 91%) 100%
     );
 }
 
 .cc5-player .cc5-plain-english-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(142 72% 97%) 0%, hsl(142 72% 92%) 60%, hsl(155 60% 95%) 100%);
+    background: linear-gradient(120deg, hsl(142 72% 97%) 0%, hsl(142 72% 92%) 60%, hsl(142deg 60% 95%) 100%);
     border-bottom: 2px solid hsl(142 72% 80%);
 }
 
@@ -16460,7 +16620,7 @@ body.dark .cc5-docactivity-question,
 
 /* VET anchor card — subtle float animation */
 .cc5-player .cc5-performance-anchor-card {
-    animation: cc5-card-enter 0.42s cubic-bezier(0.22, 1, 0.36, 1) 0.04s backwards;
+    animation: cc5-card-enter 0.67s cubic-bezier(0.22, 1, 0.36, 1) 0.06s backwards;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16491,13 +16651,13 @@ body.dark .cc5-docactivity-question,
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-business-impact-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(142 72% 97%) 0%, hsl(142 72% 91%) 60%, hsl(155 60% 95%) 100%);
+    background: linear-gradient(120deg, hsl(142 72% 97%) 0%, hsl(142 72% 91%) 60%, hsl(142deg 60% 95%) 100%);
     border-bottom: 2px solid hsl(142 72% 78%);
 }
 
 .cc5-player .cc5-action-framework-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(217 91% 97%) 0%, hsl(217 91% 91%) 60%, hsl(210 80% 95%) 100%);
-    border-bottom: 2px solid hsl(217 91% 80%);
+    background: linear-gradient(120deg, hsl(210deg 91% 97%) 0%, hsl(210deg 91% 91%) 60%, hsl(210 80% 95%) 100%);
+    border-bottom: 2px solid hsl(210deg 91% 80%);
 }
 
 .cc5-player .cc5-risk-card .cc5-card-header {
@@ -16540,12 +16700,12 @@ body.dark .cc5-docactivity-question,
 }
 
 .cc5-player .cc5-core-framework-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(212 96% 97%) 0%, hsl(212 96% 91%) 60%, hsl(210 80% 95%) 100%);
-    border-bottom: 2px solid hsl(212 96% 80%);
+    background: linear-gradient(120deg, hsl(210deg 96% 97%) 0%, hsl(210deg 96% 91%) 60%, hsl(210 80% 95%) 100%);
+    border-bottom: 2px solid hsl(210deg 96% 80%);
 }
 
 .cc5-player .cc5-application-guide-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(173 80% 97%) 0%, hsl(173 80% 91%) 60%, hsl(165 65% 95%) 100%);
+    background: linear-gradient(120deg, hsl(173 80% 97%) 0%, hsl(173 80% 91%) 60%, hsl(142deg 65% 95%) 100%);
     border-bottom: 2px solid hsl(173 80% 78%);
 }
 
@@ -16713,16 +16873,16 @@ body.dark .cc5-docactivity-question,
         0 2px 4px hsla(217, 91%, 60%, 0.04),
         0 8px 20px hsla(217, 91%, 60%, 0.12),
         0 16px 36px hsla(217, 91%, 60%, 0.08);
-    border-color: hsl(217 91% 72%);
+    border-color: hsl(210deg 91% 72%);
 }
 
 /* Topic grid entrance — stagger by column */
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(1) { animation: cc5-card-enter 0.38s ease 0.06s backwards; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(2) { animation: cc5-card-enter 0.38s ease 0.12s backwards; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(3) { animation: cc5-card-enter 0.38s ease 0.18s backwards; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(4) { animation: cc5-card-enter 0.38s ease 0.24s backwards; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(5) { animation: cc5-card-enter 0.38s ease 0.30s backwards; }
-.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(n+6) { animation: cc5-card-enter 0.38s ease 0.36s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(1) { animation: cc5-card-enter 0.61s ease 0.1s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(2) { animation: cc5-card-enter 0.61s ease 0.19s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(3) { animation: cc5-card-enter 0.61s ease 0.29s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(4) { animation: cc5-card-enter 0.61s ease 0.38s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(5) { animation: cc5-card-enter 0.61s ease 0.48s backwards; }
+.cc5-player .cc5-topics-grid .cc5-topic-card:nth-child(n+6) { animation: cc5-card-enter 0.61s ease 0.58s backwards; }
 
 /* ───────────────────────────────────────────────────────────────────────────
    VOICEOVER BUTTON — Breathing glow while actively playing
@@ -16795,7 +16955,7 @@ body.dark .cc5-docactivity-question,
 .cc5-player .cc5-slide-dot.cc5-active,
 .cc5-player .cc5-slide-dot[data-active="true"],
 .cc5-player .cc5-slide-dot:not(.cc5-inactive):nth-child(1) {
-    animation: cc5-slide-badge-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: cc5-slide-badge-pop 0.64s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .cc5-player .cc5-slide-dot:hover {
@@ -16891,7 +17051,7 @@ body.dark .cc5-docactivity-question,
 
 .cc5-player .cc5-situation-item:hover {
     transform: translateY(-3px) scale(1.005);
-    border-color: hsl(217 91% 72%);
+    border-color: hsl(210deg 91% 72%);
     box-shadow:
         0 8px 24px hsla(217, 91%, 60%, 0.14),
         0 3px 8px hsla(217, 91%, 60%, 0.08);
@@ -16902,7 +17062,7 @@ body.dark .cc5-docactivity-question,
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-activity-section {
-    animation: cc5-card-enter 0.44s cubic-bezier(0.22, 1, 0.36, 1) 0.15s backwards;
+    animation: cc5-card-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.24s backwards;
     transition:
         transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
         box-shadow 0.28s ease;
@@ -16940,7 +17100,7 @@ body.dark .cc5-docactivity-question,
 .cc5-player .cc5-option.cc5-correct,
 .cc5-player .cc5-option.cc5-incorrect,
 .cc5-player .cc5-option.cc5-show-correct {
-    animation: cc5-card-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: cc5-card-enter 0.48s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -16956,8 +17116,8 @@ body.dark .cc5-docactivity-question,
 }
 
 .cc5-player .cc5-framework-step:hover {
-    background: hsl(212 96% 97%);
-    border-color: hsl(212 96% 70%);
+    background: hsl(210deg 96% 97%);
+    border-color: hsl(210deg 96% 70%);
     transform: translateX(4px);
     box-shadow: 0 4px 14px hsla(212, 96%, 52%, 0.12);
 }
@@ -17012,7 +17172,7 @@ body.dark .cc5-docactivity-question,
 }
 
 .cc5-player .cc5-introduction-item:hover {
-    color: hsl(217 91% 30%);
+    color: hsl(210deg 91% 30%);
 }
 
 .cc5-player .cc5-introduction-item::before {
@@ -17043,7 +17203,7 @@ body.dark .cc5-docactivity-question,
 
 .cc5-player .cc5-response-header-bar,
 .cc5-player .cc5-mistakes-header-bar {
-    animation: cc5-slide-badge-pop 0.38s cubic-bezier(0.22, 1, 0.36, 1) 0.08s backwards;
+    animation: cc5-slide-badge-pop 0.61s cubic-bezier(0.22, 1, 0.36, 1) 0.13s backwards;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -17071,7 +17231,7 @@ body.dark .cc5-docactivity-question,
 
 .cc5-player .cc5-sequence-step:hover:not(.cc5-step-correct):not(.cc5-step-incorrect) {
     transform: translateY(-2px) translateX(2px);
-    border-color: hsl(217 91% 72%);
+    border-color: hsl(210deg 91% 72%);
     box-shadow: 0 6px 18px hsla(217, 91%, 60%, 0.14);
 }
 
@@ -17128,7 +17288,7 @@ body.dark .cc5-docactivity-question,
 
 .cc5-player .cc5-pc-statement:hover {
     transform: translateX(3px);
-    box-shadow: 3px 0 0 0 hsl(217 91% 60%) inset,
+    box-shadow: 3px 0 0 0 hsl(210deg 91% 60%) inset,
                 0 4px 14px hsla(217, 91%, 60%, 0.10);
 }
 
@@ -17137,7 +17297,7 @@ body.dark .cc5-docactivity-question,
    ─────────────────────────────────────────────────────────────────────────── */
 
 .cc5-player .cc5-quickcheck-section {
-    animation: cc5-card-enter 0.44s cubic-bezier(0.22, 1, 0.36, 1) 0.20s both !important;
+    animation: cc5-card-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.32s both !important;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -17146,15 +17306,15 @@ body.dark .cc5-docactivity-question,
 
 .cc5-player .cc5-final-outcome.cc5-visible,
 .cc5-player .cc5-final-outcome[class*="visible"] {
-    animation: cc5-card-enter 0.40s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation: cc5-card-enter 0.64s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .cc5-player .cc5-feedback-correct-result {
-    animation: cc5-card-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both !important;
+    animation: cc5-card-enter 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.13s both !important;
 }
 
 .cc5-player .cc5-feedback-incorrect-result {
-    animation: cc5-card-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both !important;
+    animation: cc5-card-enter 0.58s cubic-bezier(0.22, 1, 0.36, 1) 0.13s both !important;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────
@@ -17165,13 +17325,13 @@ body.dark .cc5-docactivity-question,
 .dark .cc5-player .cc5-performance-anchor-card .cc5-card-header,
 body.dark .cc5-player .cc5-performance-anchor-card .cc5-card-header,
 body[data-bs-theme="dark"] .cc5-player .cc5-performance-anchor-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(217 50% 14%) 0%, hsl(217 60% 18%) 60%, hsl(210 50% 16%) 100%);
-    border-bottom-color: hsl(217 50% 28%);
+    background: linear-gradient(120deg, hsl(210deg 50% 14%) 0%, hsl(210deg 60% 18%) 60%, hsl(210 50% 16%) 100%);
+    border-bottom-color: hsl(210deg 50% 28%);
 }
 .dark .cc5-player .cc5-plain-english-card .cc5-card-header,
 body.dark .cc5-player .cc5-plain-english-card .cc5-card-header,
 body[data-bs-theme="dark"] .cc5-player .cc5-plain-english-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(142 40% 10%) 0%, hsl(142 50% 15%) 60%, hsl(155 35% 12%) 100%);
+    background: linear-gradient(120deg, hsl(142 40% 10%) 0%, hsl(142 50% 15%) 60%, hsl(142deg 35% 12%) 100%);
     border-bottom-color: hsl(142 40% 25%);
 }
 .dark .cc5-player .cc5-action-breakdown-card .cc5-card-header,
@@ -17209,8 +17369,8 @@ body[data-bs-theme="dark"] .cc5-player .cc5-theoretical-framework-card .cc5-card
 .dark .cc5-player .cc5-analytical-lens-card .cc5-card-header,
 body.dark .cc5-player .cc5-analytical-lens-card .cc5-card-header,
 body[data-bs-theme="dark"] .cc5-player .cc5-analytical-lens-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(212 50% 12%) 0%, hsl(212 60% 18%) 60%, hsl(210 45% 14%) 100%);
-    border-bottom-color: hsl(212 50% 28%);
+    background: linear-gradient(120deg, hsl(210deg 50% 12%) 0%, hsl(210deg 60% 18%) 60%, hsl(210 45% 14%) 100%);
+    border-bottom-color: hsl(210deg 50% 28%);
 }
 .dark .cc5-player .cc5-ethics-considerations-card .cc5-card-header,
 body.dark .cc5-player .cc5-ethics-considerations-card .cc5-card-header,
@@ -17221,7 +17381,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-ethics-considerations-card .cc5-card
 .dark .cc5-player .cc5-case-study-card .cc5-card-header,
 body.dark .cc5-player .cc5-case-study-card .cc5-card-header,
 body[data-bs-theme="dark"] .cc5-player .cc5-case-study-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(173 40% 10%) 0%, hsl(173 50% 15%) 60%, hsl(165 35% 12%) 100%);
+    background: linear-gradient(120deg, hsl(173 40% 10%) 0%, hsl(173 50% 15%) 60%, hsl(142deg 35% 12%) 100%);
     border-bottom-color: hsl(173 40% 25%);
 }
 
@@ -17229,14 +17389,14 @@ body[data-bs-theme="dark"] .cc5-player .cc5-case-study-card .cc5-card-header {
 .dark .cc5-player .cc5-business-impact-card .cc5-card-header,
 body.dark .cc5-player .cc5-business-impact-card .cc5-card-header,
 body[data-bs-theme="dark"] .cc5-player .cc5-business-impact-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(142 40% 10%) 0%, hsl(142 50% 15%) 60%, hsl(155 35% 12%) 100%);
+    background: linear-gradient(120deg, hsl(142 40% 10%) 0%, hsl(142 50% 15%) 60%, hsl(142deg 35% 12%) 100%);
     border-bottom-color: hsl(142 40% 25%);
 }
 .dark .cc5-player .cc5-action-framework-card .cc5-card-header,
 body.dark .cc5-player .cc5-action-framework-card .cc5-card-header,
 body[data-bs-theme="dark"] .cc5-player .cc5-action-framework-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(217 50% 12%) 0%, hsl(217 60% 17%) 60%, hsl(210 45% 14%) 100%);
-    border-bottom-color: hsl(217 50% 27%);
+    background: linear-gradient(120deg, hsl(210deg 50% 12%) 0%, hsl(210deg 60% 17%) 60%, hsl(210 45% 14%) 100%);
+    border-bottom-color: hsl(210deg 50% 27%);
 }
 .dark .cc5-player .cc5-risk-card .cc5-card-header,
 body.dark .cc5-player .cc5-risk-card .cc5-card-header,
@@ -17261,13 +17421,13 @@ body[data-bs-theme="dark"] .cc5-player .cc5-skill-anchor-card .cc5-card-header {
 .dark .cc5-player .cc5-core-framework-card .cc5-card-header,
 body.dark .cc5-player .cc5-core-framework-card .cc5-card-header,
 body[data-bs-theme="dark"] .cc5-player .cc5-core-framework-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(212 50% 12%) 0%, hsl(212 60% 18%) 60%, hsl(210 45% 14%) 100%);
-    border-bottom-color: hsl(212 50% 28%);
+    background: linear-gradient(120deg, hsl(210deg 50% 12%) 0%, hsl(210deg 60% 18%) 60%, hsl(210 45% 14%) 100%);
+    border-bottom-color: hsl(210deg 50% 28%);
 }
 .dark .cc5-player .cc5-application-guide-card .cc5-card-header,
 body.dark .cc5-player .cc5-application-guide-card .cc5-card-header,
 body[data-bs-theme="dark"] .cc5-player .cc5-application-guide-card .cc5-card-header {
-    background: linear-gradient(120deg, hsl(173 40% 10%) 0%, hsl(173 50% 15%) 60%, hsl(165 35% 12%) 100%);
+    background: linear-gradient(120deg, hsl(173 40% 10%) 0%, hsl(173 50% 15%) 60%, hsl(142deg 35% 12%) 100%);
     border-bottom-color: hsl(173 40% 25%);
 }
 .dark .cc5-player .cc5-common-pitfalls-card .cc5-card-header,
@@ -17294,7 +17454,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card::after {
 .dark .cc5-player .cc5-topic-card:hover,
 body.dark .cc5-player .cc5-topic-card:hover,
 body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
-    border-color: hsl(217 50% 45%);
+    border-color: hsl(210deg 50% 45%);
     box-shadow:
         0 8px 22px hsla(217, 60%, 45%, 0.22),
         0 2px 6px hsla(217, 60%, 45%, 0.14);
@@ -17369,7 +17529,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     white-space: nowrap;     /* v10.86: prevent label text wrapping to multiple lines */
 }
 .cc5-player .cc5-flow-pill-hook     { background: hsl(38deg 95% 94%); color: hsl(28deg 90% 38%); }
-.cc5-player .cc5-flow-pill-concept  { background: hsl(217deg 91% 95%); color: hsl(217deg 80% 42%); }
+.cc5-player .cc5-flow-pill-concept  { background: hsl(210deg 91% 95%); color: hsl(210deg 80% 42%); }
 .cc5-player .cc5-flow-pill-mental   { background: hsl(262deg 83% 95%); color: hsl(262deg 70% 42%); }
 .cc5-player .cc5-flow-pill-applied  { background: hsl(172deg 66% 92%); color: hsl(172deg 70% 30%); }
 .cc5-player .cc5-flow-pill-decision { background: hsl(22deg 95% 94%); color: hsl(22deg 85% 40%); }
@@ -17479,8 +17639,8 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
    Clean blue-indigo — intellectual, clear, "now you understand why"
    ═══════════════════════════════════════════════════════════════════════════ */
 .cc5-player .cc5-concept-explainer-card {
-    background: linear-gradient(160deg, hsl(217deg 91% 99%) 0%, hsl(0deg 0% 100%) 60%);
-    border-top: 3px solid hsl(217deg 91% 60%);
+    background: linear-gradient(160deg, hsl(210deg 91% 99%) 0%, hsl(0deg 0% 100%) 60%);
+    border-top: 3px solid hsl(210deg 91% 60%);
     position: relative;
     overflow: hidden;
 }
@@ -17491,7 +17651,7 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     right: 0;
     width: 120px;
     height: 120px;
-    background: radial-gradient(circle at top right, hsl(217deg 91% 96%) 0%, transparent 70%);
+    background: radial-gradient(circle at top right, hsl(210deg 91% 96%) 0%, transparent 70%);
     pointer-events: none;
 }
 
@@ -17506,13 +17666,13 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     display: flex;
     gap: 10px;
     padding: 12px 14px;
-    background: hsl(217deg 91% 98%);
-    border: 1px solid hsl(217deg 60% 92%);
+    background: hsl(210deg 91% 98%);
+    border: 1px solid hsl(210deg 60% 92%);
     border-radius: 8px;
 }
 .cc5-player .cc5-concept-item-icon {
     flex-shrink: 0;
-    color: hsl(217deg 80% 55%);
+    color: hsl(210deg 80% 55%);
 }
 .cc5-player .cc5-concept-item-icon svg {
     width: 18px;
@@ -17647,8 +17807,8 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
    Orange — decisive, action moment, interactive
    ═══════════════════════════════════════════════════════════════════════════ */
 .cc5-player .cc5-decision-point-card {
-    background: linear-gradient(160deg, hsl(22deg 95% 99%) 0%, hsl(0deg 0% 100%) 55%);
-    border-top: 3px solid hsl(22deg 90% 55%);
+    background: linear-gradient(160deg, hsl(var(--cc5-activity-h) 95% 99%) 0%, hsl(0deg 0% 100%) 55%);
+    border-top: 3px solid hsl(var(--cc5-activity-h) 90% 55%);
     position: relative;
     overflow: visible; /* v10.43b: was hidden — caused Try Again btn to be clipped when feedbacks expand the card */
 }
@@ -17659,19 +17819,19 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     right: 0;
     width: 120px;
     height: 120px;
-    background: radial-gradient(circle at top right, hsl(22deg 95% 95%) 0%, transparent 70%);
+    background: radial-gradient(circle at top right, hsl(var(--cc5-activity-h) 95% 95%) 0%, transparent 70%);
     pointer-events: none;
 }
 .cc5-player .cc5-decision-point-card .cc5-continuity-banner {
-    border-left-color: hsl(22deg 90% 60%);
-    background: hsl(22deg 95% 97%);
-    color: hsl(22deg 75% 38%);
+    border-left-color: hsl(var(--cc5-activity-h) 90% 60%);
+    background: hsl(var(--cc5-activity-h) 95% 97%);
+    color: hsl(var(--cc5-activity-h) 75% 38%);
 }
 /* v10.43b: Activity-CTA banner — stronger visual cue that this is the interactive step */
 .cc5-player .cc5-decision-point-card .cc5-continuity-banner.cc5-activity-banner {
-    border-left-color: hsl(22deg 90% 52%);
-    background: linear-gradient(90deg, hsl(22deg 95% 95%) 0%, hsl(22deg 90% 98%) 100%);
-    color: hsl(22deg 80% 32%);
+    border-left-color: hsl(var(--cc5-activity-h) 90% 52%);
+    background: linear-gradient(90deg, hsl(var(--cc5-activity-h) 95% 95%) 0%, hsl(var(--cc5-activity-h) 90% 98%) 100%);
+    color: hsl(var(--cc5-activity-h) 80% 32%);
     font-weight: 600;
     letter-spacing: 0.01em;
 }
@@ -17682,9 +17842,9 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     color: var(--cc5-text);
     margin: 0;
     padding: 14px 16px;
-    background: hsl(22deg 95% 97%);
+    background: hsl(var(--cc5-activity-h) 95% 97%);
     border-radius: 8px;
-    border: 1px solid hsl(22deg 80% 90%);
+    border: 1px solid hsl(var(--cc5-activity-h) 80% 90%);
 }
 
 /* Options list */
@@ -17707,12 +17867,12 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     position: relative;
 }
 .cc5-player .cc5-dp-option:hover:not([data-selected]) {
-    border-color: hsl(22deg 80% 70%);
-    background: hsl(22deg 95% 98%);
+    border-color: hsl(var(--cc5-activity-h) 80% 70%);
+    background: hsl(var(--cc5-activity-h) 95% 98%);
     transform: translateX(3px);
 }
 .cc5-player .cc5-dp-option:focus-visible {
-    outline: 3px solid hsl(22deg 80% 60%);
+    outline: 3px solid hsl(var(--cc5-activity-h) 80% 60%);
     outline-offset: 2px;
 }
 .cc5-player .cc5-dp-option-letter {
@@ -17820,20 +17980,20 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    border: 1.5px solid hsl(22deg 85% 55%);
+    border: 1.5px solid hsl(var(--cc5-activity-h) 85% 55%);
     border-radius: 6px;
     background: transparent;
-    color: hsl(22deg 85% 40%);
+    color: hsl(var(--cc5-activity-h) 85% 40%);
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s, color 0.15s;
 }
 .cc5-player .cc5-dp-try-again-btn:hover {
-    background: hsl(22deg 95% 94%) !important;
+    background: hsl(var(--cc5-activity-h) 95% 94%) !important;
     /* v13.95: was 40% lightness - 4.27:1 on this pale peach, just under AA for 0.85rem
        text. 35% brings it to 5.2:1 with no visible change of hue. */
-    color: hsl(22deg 85% 35%) !important;
+    color: hsl(var(--cc5-activity-h) 85% 35%) !important;
 }
 /* v13.95 FIX-CC-DP-TRYAGAIN-DARK: the base rule states a transparent background and a
    40%-lightness orange chosen against the white card. Inside a dark player the card
@@ -17843,8 +18003,8 @@ body[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn,
 body.dark .cc5-player .cc5-dp-try-again-btn,
 .dark .cc5-player .cc5-dp-try-again-btn,
 [data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn {
-    color: hsl(22deg 90% 68%) !important;
-    border-color: hsl(22deg 70% 45%) !important;
+    color: hsl(var(--cc5-activity-h) 90% 68%) !important;
+    border-color: hsl(var(--cc5-activity-h) 70% 45%) !important;
     background: transparent !important;
 }
 body[data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:hover,
@@ -17859,9 +18019,9 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 [data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:hover,
 [data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:focus,
 [data-bs-theme="dark"] .cc5-player .cc5-dp-try-again-btn:active {
-    color: hsl(22deg 95% 78%) !important;
-    background: hsl(22deg 40% 18%) !important;
-    border-color: hsl(22deg 70% 50%) !important;
+    color: hsl(var(--cc5-activity-h) 95% 78%) !important;
+    background: hsl(var(--cc5-activity-h) 40% 18%) !important;
+    border-color: hsl(var(--cc5-activity-h) 70% 50%) !important;
 }
 
 /* v13.95 FIX-CC-STATE-HALFPAIR: :hover pins both halves with !important (v13.94.6) but
@@ -17870,28 +18030,47 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
    background to the theme. Same treatment as the hover rule directly above. */
 .cc5-player .cc5-dp-try-again-btn:active,
 .cc5-player .cc5-dp-try-again-btn:focus {
-    background: hsl(22deg 85% 88%) !important;
-    color: hsl(22deg 85% 30%) !important;
-    border-color: hsl(22deg 85% 55%) !important;
+    background: hsl(var(--cc5-activity-h) 85% 88%) !important;
+    color: hsl(var(--cc5-activity-h) 85% 30%) !important;
+    border-color: hsl(var(--cc5-activity-h) 85% 55%) !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DECISION CHALLENGE (v11.10) — 3-activity challenge wrapper
    Beautiful, polished, gamified learning experience
    ═══════════════════════════════════════════════════════════════════════════ */
+/* v15.4.4: the shared CTA tokens go blue INSIDE the activity block only.
+   Most of the block's colour is driven by --cc5-activity-h above, but a handful of
+   controls use the shared --cc5-orange-cta* tokens, and those tokens are also used by slide
+   chrome outside the activity area. Overriding them here rather than at :root is what
+   keeps the change to the activities, which is what was asked for. Custom properties
+   inherit, so every descendant picks these up with no further selectors. */
+.cc5-player .cc5-decision-challenge,
+.cc5-player .cc5-decision-point-card {
+    --cc5-orange-cta: hsl(var(--cc5-activity-h) 88% 42%);
+    --cc5-orange-cta-dark: hsl(var(--cc5-activity-h) 88% 34%);
+    --cc5-orange-cta-bright: hsl(var(--cc5-activity-h) 88% 56%);
+    --cc5-orange-cta-label: hsl(0deg 0% 100%);
+    --cc5-orange-cta-text: hsl(var(--cc5-activity-h) 90% 34%);
+    --cc5-orange-cta-wash: hsl(var(--cc5-activity-h) 90% 96%);
+}
+
 .cc5-player .cc5-decision-challenge {
-    background: linear-gradient(160deg, hsl(22deg 100% 99%) 0%, hsl(30deg 40% 99%) 40%, hsl(0deg 0% 100%) 100%);
-    border-top: 3px solid hsl(22deg 90% 55%);
+    /* v15.4.4: the warm 30deg midpoint went with the orange; the wash follows the hue. */
+    background: linear-gradient(160deg, hsl(var(--cc5-activity-h) 100% 99%) 0%, hsl(var(--cc5-activity-h) 40% 99.5%) 40%, hsl(0deg 0% 100%) 100%);
+    border-top: 3px solid hsl(var(--cc5-activity-h) 90% 55%);
     position: relative;
     overflow: visible;
-    padding: 16px 24px 24px;
+    /* v15.4.4: top 16 -> 30, the same complaint as the cards - the Challenge Mode pill sat
+       against the block's own coloured top rule. */
+    padding: 30px 24px 24px;
 }
 .cc5-player .cc5-decision-challenge::before {
     content: '';
     position: absolute;
     top: 0; right: 0;
     width: 180px; height: 180px;
-    background: radial-gradient(circle at top right, hsl(22deg 95% 95% / 0.5) 0%, transparent 70%);
+    background: radial-gradient(circle at top right, hsl(var(--cc5-activity-h) 95% 95% / 0.5) 0%, transparent 70%);
     pointer-events: none;
 }
 .cc5-challenge-corner-accent {
@@ -17902,16 +18081,16 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     pointer-events: none;
 }
 .cc5-player .cc5-decision-challenge .cc5-continuity-banner.cc5-activity-banner {
-    border-left-color: hsl(22deg 90% 52%);
-    background: linear-gradient(90deg, hsl(22deg 95% 95%) 0%, hsl(22deg 90% 98%) 100%);
-    color: hsl(22deg 70% 30%);
+    border-left-color: hsl(var(--cc5-activity-h) 90% 52%);
+    background: linear-gradient(90deg, hsl(var(--cc5-activity-h) 95% 95%) 0%, hsl(var(--cc5-activity-h) 90% 98%) 100%);
+    color: hsl(var(--cc5-activity-h) 70% 30%);
     font-weight: 600;
     font-size: 0.86rem;
     padding: 10px 16px;
     margin-bottom: 4px;
 }
 .cc5-player .cc5-decision-challenge .cc5-continuity-banner.cc5-activity-banner strong {
-    color: hsl(22deg 85% 42%);
+    color: hsl(var(--cc5-activity-h) 85% 42%);
 }
 
 /* Panel header badges */
@@ -17930,8 +18109,8 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     letter-spacing: 0.05em;
 }
 .cc5-badge-quiz {
-    background: hsl(22deg 90% 93%);
-    color: hsl(22deg 80% 38%);
+    background: hsl(var(--cc5-activity-h) 90% 93%);
+    color: hsl(var(--cc5-activity-h) 80% 38%);
 }
 .cc5-badge-flip {
     background: hsl(210deg 80% 93%);
@@ -17951,14 +18130,14 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     border-radius: 12px;
     font-size: 0.7rem;
     font-weight: 600;
-    background: hsl(200deg 70% 93%);
-    color: hsl(200deg 60% 32%);
+    background: hsl(210deg 70% 93%);
+    color: hsl(210deg 60% 32%);
     margin-left: 8px;
     white-space: nowrap;
 }
 .cc5-quiz-voice-badge svg {
     flex-shrink: 0;
-    stroke: hsl(200deg 60% 32%);
+    stroke: hsl(210deg 60% 32%);
 }
 
 /* ── Progress stepper ─────────────────────────────────────────────────── */
@@ -17983,16 +18162,22 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     letter-spacing: 0.01em;
 }
 .cc5-challenge-step.cc5-active {
-    /* v13.97: was #fff on hsl(22 90% 55%) = 2.91:1, on the same screen as the CTA
+    /* v13.97: was #fff on hsl(var(--cc5-activity-h) 90% 55%) = 2.91:1, on the same screen as the CTA
        buttons this release fixed. Same flip: keep the brand orange, darken the label. */
-    background: linear-gradient(135deg, hsl(22deg 90% 55%) 0%, hsl(22deg 85% 50%) 100%);
+    background: linear-gradient(135deg, var(--cc5-orange-cta) 0%, var(--cc5-orange-cta-dark) 100%);
     color: var(--cc5-orange-cta-label);
-    box-shadow: 0 2px 8px hsl(22deg 90% 55% / 0.3);
+    box-shadow: 0 2px 8px hsl(var(--cc5-activity-h) 90% 55% / 0.3);
 }
 .cc5-challenge-step.cc5-done {
-    background: linear-gradient(135deg, hsl(142 65% 48%) 0%, hsl(142 60% 42%) 100%);
-    color: #fff;
-    box-shadow: 0 2px 8px hsl(142 65% 48% / 0.2);
+    /* v15.4.4: white text, as asked - "we need white text for the green version".
+       White could not simply be swapped in: on --cc5-green-solid (48% lightness) it is
+       about 2.6:1, which is unreadable and fails AA outright, and that is why this chip
+       carried the dark grey. The fix is the FILL, not the label - the deep green pair is
+       already in the palette for exactly this case (the places that genuinely want white
+       on green) and puts white at about 6.1:1. So the chip reads white, and reads. */
+    background: var(--cc5-green-cta);
+    color: hsl(0deg 0% 100%);
+    box-shadow: 0 2px 8px hsl(142deg 62% 32% / 0.28);
 }
 .cc5-step-num {
     width: 24px;
@@ -18060,8 +18245,11 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 .cc5-challenge-instruction {
     font-size: 0.88rem;
     color: var(--cc5-text-secondary);
-    margin-bottom: 18px;
-    line-height: 1.55;
+    /* v15.4.1: the instruction is the sentence that tells the learner what to do, and it
+       was pressed against the heading above it and the activity below. It gets its own
+       space on both sides. */
+    margin: 4px 0 20px;
+    line-height: 1.6;
 }
 .cc5-challenge-instruction strong {
     color: var(--cc5-text);
@@ -18077,13 +18265,13 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     justify-content: center;
     margin: 20px auto 0;
     padding: 12px 28px;
-    border: 2px solid hsl(22deg 80% 72%);
+    border: 2px solid hsl(var(--cc5-activity-h) 80% 72%);
     border-radius: 10px;
-    background: hsl(22deg 40% 98%);
+    background: hsl(var(--cc5-activity-h) 40% 98%);
     /* v13.95: 60%/55% gave 3.19:1 on this near-white fill. In practice the button is
        always either :disabled or .cc5-enabled, so this pair is only ever seen for the
        instant between the two - but a pair that fails AA should not be in the file. */
-    color: hsl(22deg 70% 35%);
+    color: hsl(var(--cc5-activity-h) 70% 35%);
     font-size: 0.88rem;
     font-weight: 700;
     cursor: pointer;
@@ -18093,7 +18281,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 }
 /* v13.95 FIX-CC-NEXTACTIVITY-DISABLED: `opacity: 0.35` composites the ENTIRE button
    towards the page background, text included. The base pair here is already only
-   3.07:1 (hsl(22 60% 55%) on hsl(22 40% 98%)), so at 0.35 it lands at roughly 1.44:1 -
+   3.07:1 (hsl(var(--cc5-activity-h) 60% 55%) on hsl(var(--cc5-activity-h) 40% 98%)), so at 0.35 it lands at roughly 1.44:1 -
    the button the learner is waiting on was barely visible before it unlocked and, until
    the fix above, invisible after. Opacity is the wrong tool for a disabled state; state
    the muted pair explicitly instead, as .cc5-option.cc5-disabled and
@@ -18101,13 +18289,13 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 .cc5-challenge-next-btn:disabled,
 .cc5-challenge-finish-btn:disabled {
     opacity: 1;
-    background: hsl(22deg 25% 96%);
-    color: hsl(22deg 30% 42%);
-    border-color: hsl(22deg 30% 82%);
+    background: hsl(var(--cc5-activity-h) 25% 96%);
+    color: hsl(var(--cc5-activity-h) 30% 42%);
+    border-color: hsl(var(--cc5-activity-h) 30% 82%);
     box-shadow: none;
     cursor: not-allowed;
 }
-/* v13.95 FIX-CC-NEXTACTIVITY-CONTRAST: the gradient was hsl(22 90% 55%) -> hsl(22 85%
+/* v13.95 FIX-CC-NEXTACTIVITY-CONTRAST: the gradient was hsl(var(--cc5-activity-h) 90% 55%) -> hsl(var(--cc5-activity-h) 85%
    50%), which under white gives 2.71:1 at the light end. The label is 0.88rem / 700 -
    14.1px, below WCAG's 18.66px threshold for "large" bold text - so it needs 4.5:1, not
    3:1. Darkened to the lightest pair in this hue that clears 4.5:1 (4.61:1 / 5.57:1).
@@ -18117,27 +18305,27 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     background: linear-gradient(135deg, var(--cc5-orange-cta) 0%, var(--cc5-orange-cta-dark) 100%);
     color: var(--cc5-orange-cta-label);
     border-color: var(--cc5-orange-cta-dark);
-    box-shadow: 0 3px 12px hsl(22deg 90% 45% / 0.3);
+    box-shadow: 0 3px 12px hsl(var(--cc5-activity-h) 90% 45% / 0.3);
 }
 .cc5-challenge-next-btn.cc5-enabled:hover,
 .cc5-challenge-finish-btn.cc5-enabled:hover {
-    background: linear-gradient(135deg, hsl(22deg 92% 60%) 0%, hsl(22deg 88% 53%) 100%);
+    background: linear-gradient(135deg, var(--cc5-orange-cta) 0%, var(--cc5-orange-cta-dark) 100%);
     color: var(--cc5-orange-cta-label);
-    box-shadow: 0 4px 16px hsl(22deg 90% 55% / 0.4);
+    box-shadow: 0 4px 16px hsl(var(--cc5-activity-h) 90% 55% / 0.4);
     transform: translateY(-1px);
 }
 .cc5-challenge-next-btn.cc5-enabled:active,
 .cc5-challenge-finish-btn.cc5-enabled:active {
     transform: translateY(0);
-    box-shadow: 0 2px 8px hsl(22deg 90% 55% / 0.2);
+    box-shadow: 0 2px 8px hsl(var(--cc5-activity-h) 90% 55% / 0.2);
 }
 /* Pulse when first enabled */
 .cc5-btn-pulse {
     animation: cc5-btn-pulse-glow 1.5s ease 1;
 }
 @keyframes cc5-btn-pulse-glow {
-    0%, 100% { box-shadow: 0 3px 12px hsl(22deg 90% 55% / 0.3); }
-    50%      { box-shadow: 0 4px 20px hsl(22deg 90% 55% / 0.55); }
+    0%, 100% { box-shadow: 0 3px 12px hsl(var(--cc5-activity-h) 90% 55% / 0.3); }
+    50%      { box-shadow: 0 4px 20px hsl(var(--cc5-activity-h) 90% 55% / 0.55); }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -18151,7 +18339,12 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
        grow to fit longer content. Cards with longer insight/consequence text previously
        showed vertical scrollbars because the fixed 220px ceiling clipped them.
        All cards in a row remain the same height (grid takes the tallest). */
-    grid-auto-rows: minmax(220px, auto);
+    /* v15.4.1: 150px, was 220. Nine cards is three rows, and at 220 the third row sat
+       below the fold on a laptop - so the activity that says "explore all 9 cards to
+       unlock the next step" hid three of them. The front of a card carries an icon, a
+       two-word label and a title; 150px holds that comfortably, and `auto` still lets a
+       row grow for the longer insight on the back. */
+    grid-auto-rows: minmax(150px, auto);
     gap: 14px;
     margin-top: 10px;
 }
@@ -18161,8 +18354,8 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     /* v11.95 FIX-FLIP-GROW: height: auto so the card grows with the grid row.
        min-height: 220px preserves the v11.37 minimum size guarantee. */
     height: auto;
-    min-height: 220px;
-    animation: cc5-flip-card-enter 0.4s ease backwards;
+    min-height: 150px;
+    animation: cc5-flip-card-enter 0.64s ease backwards;
     outline: none;
 }
 @keyframes cc5-flip-card-enter {
@@ -18177,7 +18370,15 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
        during intrinsic sizing, so there is no circular dependency. min-height: 220px
        matches the grid minmax floor. */
     height: 100%;
-    min-height: 220px;
+    /* v15.4.4: 220 -> 150, matching the grid floor above it.
+       v15.4.1 lowered the grid's own floor from 220 to 150 so nine cards would clear the
+       fold, and the comment right here says "min-height: 220px matches the grid minmax
+       floor" - it did, until that floor moved and this did not. The taller of the two
+       wins, so every card went on being 220px and the third row went on sitting below the
+       fold: the reported fix looked applied and changed nothing. Measured from the live
+       page at about 215px per card, which is this number plus its border.
+       One floor, in one place, is the real fix - hence the note above it. */
+    min-height: 150px;
     transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
     transform-style: preserve-3d;
     display: grid;
@@ -18195,7 +18396,8 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     position: relative;
     backface-visibility: hidden;
     border-radius: 12px;
-    padding: 20px 18px;
+    /* v15.4.4: padding tuned for the 150px card, not the old 220px one. */
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -18208,7 +18410,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 .cc5-flip-back {
     backface-visibility: hidden;
     border-radius: 12px;
-    padding: 20px 18px;
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -18220,7 +18422,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     overflow: visible;
 }
 .cc5-flip-front {
-    background: linear-gradient(145deg, hsl(210 90% 97%) 0%, hsl(220 60% 99%) 50%, hsl(210 80% 98%) 100%);
+    background: linear-gradient(145deg, hsl(210 90% 97%) 0%, hsl(210deg 60% 99%) 50%, hsl(210 80% 98%) 100%);
     border: 2px solid hsl(210 65% 86%);
     color: hsl(210 55% 32%);
 }
@@ -18229,7 +18431,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     border-color: hsl(210 70% 78%);
 }
 .cc5-flip-back {
-    background: linear-gradient(145deg, hsl(142 55% 96%) 0%, hsl(142 45% 99%) 50%, hsl(150 50% 97%) 100%);
+    background: linear-gradient(145deg, hsl(142 55% 96%) 0%, hsl(142 45% 99%) 50%, hsl(142deg 50% 97%) 100%);
     border: 2px solid hsl(142 50% 76%);
     color: hsl(142 50% 26%);
     transform: rotateY(180deg);
@@ -18318,7 +18520,12 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 }
 .cc5-flip-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, hsl(210 70% 60%) 0%, hsl(142 60% 50%) 100%);
+    /* v15.4.2: the same flat green as the sort bar.
+       This one was reported indirectly - the complaint named the sort bar, but this bar is
+       one panel away on the same screen and was worse: a BLUE-to-green gradient, so the
+       two progress bars a learner sees in one activity block did not even agree on a hue.
+       Two bars doing the same job look the same. */
+    background: var(--cc5-green-solid, hsl(142deg 65% 48%));
     border-radius: 3px;
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -18358,12 +18565,18 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 .cc5-sort-columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 18px;
+    /* v15.4.1: more air between the two columns and below them. The activity is three
+       stacked blocks - the columns, the item, the score - and at 14/12 they touched. */
+    gap: 18px;
+    margin-bottom: 20px;
 }
 .cc5-sort-column {
     border-radius: 12px;
-    min-height: 140px;
+    /* v15.3.18 took this from 140px to 88px, which was too far: with the header and the
+       dropzone both tightened at the same time the whole activity read as squashed, and a
+       column two-thirds the width of the screen and 88px tall looks oddly wide. 116px is
+       the middle, and the columns still grow as items land in them. */
+    min-height: 116px;
     overflow: hidden;
     transition: box-shadow 0.25s;
 }
@@ -18393,9 +18606,59 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     background: linear-gradient(90deg, hsl(0 55% 93%) 0%, hsl(0 50% 96%) 100%);
     color: hsl(0 65% 36%);
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   v15.3.18  -  DRAGGING AN ITEM INTO A COLUMN
+
+   touch-action: none is the load-bearing line. Without it a touch drag is
+   claimed by the browser as a page scroll before pointermove ever fires, and
+   the feature silently does not exist on the device most likely to want it.
+   ══════════════════════════════════════════════════════════════════════════ */
+.cc5-player .cc5-sort-draggable {
+    touch-action: none;
+    cursor: grab;
+    -webkit-user-select: none;
+    user-select: none;
+}
+.cc5-player .cc5-sort-draggable:focus-visible {
+    outline: 3px solid var(--cc5-orange-cta);
+    outline-offset: 3px;
+    border-radius: 8px;
+}
+/* The card follows the pointer. No transition while dragging - a transition on
+   transform makes the card lag behind the finger, which reads as broken. */
+.cc5-player .cc5-sort-current-item.cc5-sort-dragging {
+    transition: none;
+    cursor: grabbing;
+    position: relative;
+    z-index: 6;
+    box-shadow: 0 12px 28px hsl(220deg 40% 20% / 0.22);
+    transform-origin: center;
+}
+.cc5-player .cc5-sort-current-item.cc5-sort-dragging .cc5-sort-draggable {
+    cursor: grabbing;
+}
+/* The column the pointer is over. Deliberately loud: the learner is looking at
+   the item under their finger, not at the columns, so the target has to be
+   readable in peripheral vision. */
+.cc5-player .cc5-sort-column.cc5-sort-column-over {
+    box-shadow: 0 0 0 3px currentColor inset;
+    filter: brightness(0.985);
+}
+.cc5-player .cc5-sort-good.cc5-sort-column-over {
+    color: hsl(142deg 60% 42%);
+}
+.cc5-player .cc5-sort-bad.cc5-sort-column-over {
+    color: hsl(0deg 65% 55%);
+}
+@media (prefers-reduced-motion: reduce) {
+    .cc5-player .cc5-sort-current-item.cc5-sort-dragging {
+        box-shadow: 0 0 0 2px var(--cc5-orange-cta);
+    }
+}
+
 .cc5-sort-dropzone {
-    padding: 8px 10px;
-    min-height: 60px;
+    padding: 12px 12px 14px;
+    min-height: 46px;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -18435,7 +18698,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 .cc5-sort-current-item {
     padding: 20px 18px;
     background: hsl(0 0% 100%);
-    border: 2px solid hsl(22 70% 78%);
+    border: 2px solid hsl(var(--cc5-activity-h) 70% 78%);
     border-radius: 12px;
     text-align: center;
     margin-bottom: 14px;
@@ -18443,7 +18706,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
                 background 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 10px hsl(22 60% 50% / 0.06);
+    box-shadow: 0 2px 10px hsl(var(--cc5-activity-h) 60% 50% / 0.06);
 }
 .cc5-sort-current-item.cc5-sort-correct {
     border-color: hsl(142 65% 50%);
@@ -18461,12 +18724,31 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     border-color: hsl(142 55% 65%);
     background: hsl(142 55% 97%);
 }
+/* v15.4.1: the new item slides in FROM THE RIGHT, and the text moves further than the
+   card does.
+   A 12px drop was too quiet to say "this is the new thing to read" - the learner's eye was
+   still on the columns above, which is where their last answer just landed. Lateral motion
+   reads as arrival rather than as settling, and giving the text its own longer travel
+   makes the sentence the thing that moves rather than the panel around it. */
 .cc5-sort-item-enter {
-    animation: cc5-sort-item-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: cc5-sort-item-slide-in 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.cc5-sort-item-enter .cc5-sort-item-text {
+    animation: cc5-sort-text-slide-in 0.52s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes cc5-sort-item-slide-in {
-    from { opacity: 0; transform: translateY(-12px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateX(26px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes cc5-sort-text-slide-in {
+    from { opacity: 0; transform: translateX(48px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .cc5-sort-item-enter,
+    .cc5-sort-item-enter .cc5-sort-item-text {
+        animation: none;
+    }
 }
 @keyframes cc5-sort-shake {
     0%, 100% { transform: translateX(0); }
@@ -18478,8 +18760,8 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 .cc5-sort-item-badge {
     display: inline-block;
     padding: 3px 10px;
-    background: hsl(22 60% 95%);
-    color: hsl(22 60% 45%);
+    background: hsl(var(--cc5-activity-h) 60% 95%);
+    color: hsl(var(--cc5-activity-h) 60% 45%);
     border-radius: 10px;
     font-size: 0.7rem;
     font-weight: 700;
@@ -18546,32 +18828,55 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 }
 
 /* Score + progress */
+/* v15.4.1: the score and its bar, restyled.
+   The score was bare text with the number in orange, which on a screen where orange means
+   "the control you press" made the count look like something to click. And the bar was an
+   orange-to-green gradient, so its colour said "you are doing better as you go right" -
+   which is not what it measures. It measures progress, and progress is one colour.
+   The score is now a chip that sits with the bar as one object, and the number is the
+   card's own green because a right answer is what it counts. */
 .cc5-sort-score-row {
-    text-align: center;
-    margin-top: 8px;
-    margin-bottom: 4px;
+    display: flex;
+    justify-content: center;
+    margin: 14px 0 8px;
 }
 .cc5-sort-score-label {
-    font-size: 0.78rem;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    background: var(--cc5-gray-light, hsl(220deg 14% 96%));
+    font-size: 0.8rem;
     color: var(--cc5-text-secondary);
-    font-weight: 500;
+    font-weight: 600;
+    letter-spacing: 0.01em;
 }
 .cc5-sort-score {
-    color: hsl(22 90% 50%);
+    color: var(--cc5-green-deep, hsl(142deg 71% 29%));
     font-weight: 800;
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
 }
 .cc5-sort-progress-bar {
-    height: 5px;
-    background: hsl(0 0% 91%);
-    border-radius: 3px;
-    margin-top: 6px;
+    height: 8px;
+    background: var(--cc5-gray-light, hsl(220deg 14% 94%));
+    border-radius: 999px;
+    margin-top: 4px;
     overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.06);
 }
 .cc5-sort-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, hsl(22 90% 60%) 0%, hsl(142 60% 50%) 100%);
-    border-radius: 3px;
-    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    /* v15.4.2: ONE green. Flat.
+       The v15.4.1 version called itself "one colour with the lightest possible sheen" and
+       was a two-stop vertical gradient between two greens that are neither of the page's
+       green tokens - which is both halves of what was reported: "why have a gradient
+       progress bar - just use green", and "2 different coloured greens on the same page -
+       the lighter green is better". This is the lighter token, unmodified. */
+    background: var(--cc5-green-solid, hsl(142deg 65% 48%));
+    border-radius: 999px;
+    transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
     width: 0%;
 }
 
@@ -18633,10 +18938,10 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     stroke: hsl(142 65% 48%);
 }
 .cc5-score-glow-orange {
-    filter: drop-shadow(0 0 12px hsl(22 90% 55% / 0.35));
+    filter: drop-shadow(0 0 12px hsl(var(--cc5-activity-h) 90% 55% / 0.35));
 }
 .cc5-score-glow-orange .cc5-score-fill {
-    stroke: hsl(22 80% 50%);
+    stroke: hsl(var(--cc5-activity-h) 80% 50%);
 }
 .cc5-challenge-percentage {
     position: absolute;
@@ -18665,6 +18970,11 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     justify-content: center;
     flex-wrap: wrap;
 }
+/* v15.4.6: geometry AND colour, in one rule with one selector.
+   These two are the SECONDARY tier of the button family - see the block at the end of
+   this file. They rest white with a blue label and take the light blue tint on hover
+   rather than filling solid, because Continue is the primary action on this screen and
+   three saturated buttons side by side compete for the same glance. */
 .cc5-challenge-retry-btn,
 .cc5-challenge-review-btn {
     display: inline-flex;
@@ -18675,47 +18985,36 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #fff !important;
+    background-image: none !important;
+    border-color: var(--cc5-blue-cta) !important;
+    color: var(--cc5-blue-cta) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
+/* v15.4.6: the colour of these two now comes from the shared blue-CTA block at the end
+   of this file - one blue, two tiers. Only the border WIDTH stays here, because it is
+   geometry rather than colour and the shared block does not set it. Leaving the old
+   colour declarations in place would be the duplicate-selector defect this release
+   removed from the Next Card button. */
 .cc5-challenge-retry-btn {
-    background: transparent;
-    border: 2px solid hsl(22 75% 60%);
-    color: hsl(22 80% 38%);
-}
-.cc5-challenge-retry-btn:hover {
-    background: hsl(22 90% 95%);
-    color: hsl(22 80% 32%);
-    transform: translateY(-1px);
-}
-.cc5-challenge-retry-btn:active {
-    transform: translateY(0);
-    color: hsl(22 80% 32%);
+    border-width: 2px;
+    border-style: solid;
 }
 /* v13.97 FIX-CC-CTA-HIERARCHY: Review Answers was the same heavy orange as Continue and
    Next Activity, so three solid buttons competed on one screen. One primary action per
    screen: the forward action stays solid, this becomes a bordered secondary in the same
    hue. Orange text on white is 6.46:1; the border is 3.61:1, clearing the 3:1 floor. */
+/* v15.4.6: colour moved to the shared blue-CTA block; the border is still the only thing
+   making a background-less button read as a button, and --cc5-blue-cta is 4.78:1 on
+   white, comfortably past the 3:1 floor WCAG 1.4.11 sets for a component boundary. */
 .cc5-challenge-review-btn {
-    background: var(--cc5-bg);
-    /* The border is the only thing making a background-less button look like a button,
-       so it takes the darker orange: 3.61:1 on white, clearing the 3:1 floor that
-       WCAG 1.4.11 sets for a UI component boundary. The lighter brand orange is 2.91:1
-       and would have failed it. */
-    border: 2px solid var(--cc5-orange-cta-dark);
-    color: var(--cc5-orange-cta-text);
-    box-shadow: none;
+    border-width: 2px;
+    border-style: solid;
 }
-.cc5-challenge-review-btn:hover {
-    background: var(--cc5-orange-cta-wash);
-    border-color: var(--cc5-orange-cta-dark);
-    color: var(--cc5-orange-cta-text);
-    box-shadow: 0 2px 8px hsl(22 90% 45% / 0.18);
-    transform: translateY(-1px);
-}
-.cc5-challenge-review-btn:active {
-    transform: translateY(0);
-    color: var(--cc5-orange-cta-text);
-}
+/* v15.4.6: the pressed state's colour and lift come from the shared block; nothing
+   route- or activity-hue-derived remains on either of these two buttons. */
 /* v12.57 FIX-CC-CHALLENGE-NEXT: "Continue" button — primary green, signals forward progression */
 .cc5-challenge-continue-btn {
     display: inline-flex;
@@ -18727,16 +19026,22 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    background: linear-gradient(135deg, hsl(142 71% 29%) 0%, hsl(142 65% 25%) 100%);
-    border: 2px solid hsl(142 65% 25%);
+    /* v15.4.4: the same single green as the completed stepper chip, flat rather than a
+       gradient - a gradient from one green to a darker one is two greens inside one
+       button, which is the thing being complained about, at a smaller scale. */
+    background: var(--cc5-green-cta);
+    border: 2px solid var(--cc5-green-cta-dark);
     color: #fff;
-    box-shadow: 0 2px 10px hsl(142 71% 45% / 0.25);
+    box-shadow: 0 2px 10px hsl(142deg 62% 32% / 0.25);
     order: -1; /* Show Continue first (leftmost) so eye lands on it naturally */
 }
 .cc5-challenge-continue-btn:hover {
-    background: linear-gradient(135deg, hsl(142 71% 24%) 0%, hsl(142 65% 20%) 100%);
+    /* v15.4.4: hover no longer darkens - the shadow and the lift are the hover, as they
+       are everywhere else in the player ("I hate darken hover colour - no need to darken,
+       you have 2 other hover effects anyway, a shadow and movement"). */
+    background: var(--cc5-green-cta);
     color: #fff;
-    box-shadow: 0 4px 14px hsl(142 71% 45% / 0.35);
+    box-shadow: 0 4px 14px hsl(142deg 62% 32% / 0.35);
     transform: translateY(-1px);
 }
 .cc5-challenge-continue-btn:active {
@@ -18890,19 +19195,32 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     justify-content: center;
     margin-top: 1px;
 }
+/* v15.3.10: a caution glyph, not a star.
+ *
+ * This rule used to hide the SVG outright and replace it with the character \2605 -
+ * BLACK STAR - so every item on a "What to watch out for" card carried a gold star
+ * whatever icon the renderer resolved. A star reads as a highlight, a rating or a
+ * favourite; these items are the things that go wrong. The SVG (now always
+ * alert-triangle, see CARD_ICON_STRATEGY) is shown instead, in a warning amber. */
 .cc5-player .cc5-mistake-icon {
     flex-shrink: 0;
-    color: hsl(38deg 92% 48%);
+    color: hsl(32deg 95% 44%);
     margin-top: 1px;
+    display: flex;
+    align-items: center;
 }
 .cc5-player .cc5-mistake-icon svg {
-    display: none;
-}
-.cc5-player .cc5-mistake-icon::before {
-    content: '\2605';
-    font-size: 0.95rem;
-    line-height: 1;
     display: block;
+    width: 1rem;
+    height: 1rem;
+}
+/* v15.3.10: the numbered step badge on mental-model cards. Replaces the shield that
+ * appeared when the model supplied an icon name the plugin does not have. */
+.cc5-player .cc5-mm-step-number {
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 .cc5-player .cc5-mistake-text {
     flex: 1;
@@ -19062,7 +19380,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     border-color: hsl(217deg 30% 22%);
 }
 .cc5-player.dark-mode .cc5-flow-pill-hook     { background: hsl(38deg 60% 18%); color: hsl(38deg 80% 70%); }
-.cc5-player.dark-mode .cc5-flow-pill-concept  { background: hsl(217deg 50% 18%); color: hsl(217deg 70% 70%); }
+.cc5-player.dark-mode .cc5-flow-pill-concept  { background: hsl(210deg 50% 18%); color: hsl(210deg 70% 70%); }
 .cc5-player.dark-mode .cc5-flow-pill-mental   { background: hsl(262deg 50% 18%); color: hsl(262deg 65% 75%); }
 .cc5-player.dark-mode .cc5-flow-pill-applied  { background: hsl(172deg 40% 16%); color: hsl(172deg 60% 65%); }
 .cc5-player.dark-mode .cc5-flow-pill-decision { background: hsl(22deg 55% 18%); color: hsl(22deg 80% 70%); }
@@ -19180,8 +19498,8 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     align-items: flex-start;
     gap: 14px;
     padding: 13px 16px 13px 14px;
-    background: hsl(217deg 91% 98.5%);
-    border: 1px solid hsl(217deg 65% 90%);
+    background: hsl(210deg 91% 98.5%);
+    border: 1px solid hsl(210deg 65% 90%);
     border-radius: 10px;
 }
 
@@ -19191,7 +19509,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: hsl(217deg 78% 52%);
+    background: hsl(210deg 78% 52%);
     color: #fff;
     display: flex;
     align-items: center;
@@ -19206,8 +19524,8 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 }
 
 /* ── Insight chip colour variants (v11.54) ───────────────────────────────── */
-.cc5-player .cc5-chip-blue  { background: hsl(217deg 91% 98.5%); border-color: hsl(217deg 65% 90%); }
-.cc5-player .cc5-chip-blue  .cc5-insight-icon { background: hsl(217deg 78% 52%); }
+.cc5-player .cc5-chip-blue  { background: hsl(210deg 91% 98.5%); border-color: hsl(210deg 65% 90%); }
+.cc5-player .cc5-chip-blue  .cc5-insight-icon { background: hsl(210deg 78% 52%); }
 .cc5-player .cc5-chip-green { background: hsl(142deg 80% 97%);   border-color: hsl(142deg 40% 85%); }
 .cc5-player .cc5-chip-green .cc5-insight-icon { background: hsl(142deg 72% 40%); }
 .cc5-player .cc5-chip-orange { background: hsl(35deg 91% 97%);   border-color: hsl(35deg 65% 88%); }
@@ -19289,7 +19607,17 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 .cc5-player .cc5-decision-point-card,
 .cc5-player .cc5-mistakes-card,
 .cc5-player .cc5-competency-summary-card {
-    padding: 24px 24px 28px !important;
+    /* v15.4.1: top padding 24 -> 34. The card's 3px coloured top rule, the flow badge and
+       the narration speaker all live in the first few pixels, and at 24px they read as
+       crowded against the edge - reported as "needs a little bit more padding at the top
+       of each card". Only the top changes; the sides and bottom are unchanged, so no line
+       length or rhythm elsewhere moves.
+       v15.4.4: 34 -> 44, reported again on the applied-scenario and mistakes cards. 34px
+       is what the card's own top rule, the flow pill and the speaker icon were sharing;
+       measured on screen the pill was landing about 33px down and still reading as pinned
+       to the edge, because the pill has no ascender space of its own above it. 44px puts a
+       clear band above the pill. Still top-only. */
+    padding: 44px 24px 28px !important;
     box-sizing: border-box !important;
 }
 
@@ -19440,8 +19768,8 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     align-items: flex-start;
     gap: 14px;
     padding: 13px 16px;
-    background: hsl(217deg 91% 97.5%) !important;
-    border: 1px solid hsl(217deg 65% 90%) !important;
+    background: hsl(210deg 91% 97.5%) !important;
+    border: 1px solid hsl(210deg 65% 90%) !important;
     border-radius: 10px;
 }
 
@@ -19451,7 +19779,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: hsl(217deg 78% 52%);
+    background: hsl(210deg 78% 52%);
     color: #fff;
     display: flex;
     align-items: center;
@@ -19490,7 +19818,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     font-weight: 700;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: hsl(217deg 78% 38%) !important;
+    color: hsl(210deg 78% 38%) !important;
     margin-bottom: 5px;
     line-height: 1.3;
 }
@@ -19544,16 +19872,16 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     color: hsl(262deg 70% 72%) !important;
 }
 .cc5-container.cc5-dark .cc5-ci-title {
-    color: hsl(217deg 78% 68%) !important;
+    color: hsl(210deg 78% 68%) !important;
 }
 
 /* ── Concept insight colour variants (v11.54) ──────────────────────────────
    Blue is the default (already set on .cc5-concept-insight); green / orange /
    purple cycle for subsequent items to create visual hierarchy without numbers.
    ─────────────────────────────────────────────────────────────────────────── */
-.cc5-player .cc5-ci-blue  { background: hsl(217deg 91% 97.5%) !important; border-color: hsl(217deg 65% 90%) !important; }
-.cc5-player .cc5-ci-blue  .cc5-ci-icon  { background: hsl(217deg 78% 52%) !important; }
-.cc5-player .cc5-ci-blue  .cc5-ci-title { color: hsl(217deg 78% 38%) !important; }
+.cc5-player .cc5-ci-blue  { background: hsl(210deg 91% 97.5%) !important; border-color: hsl(210deg 65% 90%) !important; }
+.cc5-player .cc5-ci-blue  .cc5-ci-icon  { background: hsl(210deg 78% 52%) !important; }
+.cc5-player .cc5-ci-blue  .cc5-ci-title { color: hsl(210deg 78% 38%) !important; }
 
 .cc5-player .cc5-ci-green { background: hsl(142deg 80% 97%) !important; border-color: hsl(142deg 40% 85%) !important; }
 .cc5-player .cc5-ci-green .cc5-ci-icon  { background: hsl(142deg 72% 40%) !important; }
@@ -19569,7 +19897,7 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 
 /* Dark mode variants */
 .cc5-container.cc5-dark .cc5-ci-blue  { background: hsl(217deg 35% 14%) !important; border-color: hsl(217deg 30% 24%) !important; }
-.cc5-container.cc5-dark .cc5-ci-blue  .cc5-ci-title { color: hsl(217deg 78% 68%) !important; }
+.cc5-container.cc5-dark .cc5-ci-blue  .cc5-ci-title { color: hsl(210deg 78% 68%) !important; }
 .cc5-container.cc5-dark .cc5-ci-green { background: hsl(142deg 30% 13%) !important; border-color: hsl(142deg 30% 22%) !important; }
 .cc5-container.cc5-dark .cc5-ci-green .cc5-ci-title { color: hsl(142deg 60% 55%) !important; }
 .cc5-container.cc5-dark .cc5-ci-orange { background: hsl(35deg 35% 14%) !important; border-color: hsl(35deg 35% 22%) !important; }
@@ -19605,8 +19933,10 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
     .cc5-player .cc5-decision-point-card,
     .cc5-player .cc5-mistakes-card,
     .cc5-player .cc5-competency-summary-card {
-        /* v10.44: was 20px 16px 20px — tightened vertically too on small screens */
-        padding: 16px 16px 18px !important;
+        /* v10.44: was 20px 16px 20px — tightened vertically too on small screens.
+           v15.4.1: the top follows the desktop change, proportionally.
+           v15.4.4: and follows it again, 24 -> 32. */
+        padding: 32px 16px 18px !important;
     }
     .cc5-player .cc5-scene-part-icon,
     .cc5-player .cc5-ci-icon {
@@ -19903,7 +20233,7 @@ body.dark .cc5-eta-time {
 
 .cc5-single-stat-slides {
     background: rgba(16,185,129,0.1);
-    color: var(--cc5-green, #10b981);
+    color: var(--cc5-green, #10bc4f);
 }
 
 .cc5-single-stat-activity {
@@ -19943,7 +20273,7 @@ body.dark .cc5-eta-time {
 
 .cc5-single-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--cc5-primary), hsl(230 91% 60%));
+    background: linear-gradient(90deg, var(--cc5-primary), hsl(210deg 91% 60%));
     border-radius: var(--cc5-radius-full);
     transition: width 0.5s ease;
 }
@@ -19984,8 +20314,8 @@ button.cc5-single-start-btn:active,
 .cc5-single-start-btn:hover,
 .cc5-single-start-btn:focus,
 .cc5-single-start-btn:active {
-    background: hsl(217deg 91% 38%) !important;
-    border-color: hsl(217deg 91% 38%) !important;
+    background: hsl(210deg 91% 38%) !important;
+    border-color: hsl(210deg 91% 38%) !important;
     box-shadow: var(--cc5-shadow-md) !important;
     color: var(--cc5-primary-foreground) !important;
 }
@@ -20565,7 +20895,7 @@ body.dark .cc5-lang-pill {
  *
  * Referenced in this file without a var() fallback but never declared, so the declarations
  * using them were dropped and those elements rendered unstyled. Present since at least 13.65.
- * --cc5-primary-rgb is the comma separated triplet for hsl(217 91% 45%), matching the
+ * --cc5-primary-rgb is the comma separated triplet for hsl(210deg 91% 45%), matching the
  * rgb(var(--cc5-primary-rgb), a) call sites.
  */
 :root {
@@ -20581,7 +20911,7 @@ body.dark .cc5-lang-pill {
     --cc5-border-subtle: var(--cc5-border);
     --cc5-text-primary: var(--cc5-text);
     --cc5-amber-dark: hsl(38deg 92% 40%);
-    --cc5-emerald-light: hsl(158deg 64% 95%);
+    --cc5-emerald-light: hsl(142deg 64% 95%);
 }
 
 /* v13.75 FIX-BROWSE-INVISIBLE (3/3): the card editor's 33 "Remove" buttons are
@@ -20615,7 +20945,7 @@ body.dark .cc5-lang-pill {
 
 .cc5-edit-card-move-up:hover,
 .cc5-edit-card-move-down:hover {
-    background: var(--cc-primary-muted, #eaf1fe) !important;
+    background: var(--cc-primary-muted, #e7f2fe) !important;
     color: var(--cc-text, #15171c) !important;
 }
 
@@ -20674,11 +21004,11 @@ body.dark .cc5-lang-pill {
 /* -- The four tones ------------------------------------------------------- */
 
 .cc5-prose-card.cc5-prose-blue {
-    --cc5-prose-bg:      #f7fafe;
-    --cc5-prose-bg-2:    #eef5fd;
-    --cc5-prose-border:  #dbe7f8;
-    --cc5-prose-accent:  #2f6fd0;
-    --cc5-prose-chip:    #e6effc;
+    --cc5-prose-bg:      #f6fafe;
+    --cc5-prose-bg-2:    #edf5fd;
+    --cc5-prose-border:  #d8e7f7;
+    --cc5-prose-accent:  #2b74bc;
+    --cc5-prose-chip:    #e3effc;
     --cc5-prose-glow:    rgba(47, 111, 208, 0.16);
 }
 
@@ -20707,12 +21037,94 @@ body.dark .cc5-lang-pill {
 }
 
 .cc5-prose-card.cc5-prose-green {
-    --cc5-prose-bg:      #f6fbf8;
+    --cc5-prose-bg:      #f6fbf7;
     --cc5-prose-bg-2:    #ecf6f0;
     --cc5-prose-border:  #d9ebe0;
-    --cc5-prose-accent:  #2c7a52;
+    --cc5-prose-accent:  #2c7a49;
     --cc5-prose-chip:    #e3f2e9;
     --cc5-prose-glow:    rgba(44, 122, 82, 0.16);
+}
+
+/* -- v15.3.11: six more tones, for content-driven subtopic cards -----------
+   Topics and Text now produces up to TEN subtopic cards per topic, coloured by
+   position (SUBTOPIC_TONES in cc-card-slots.js), so a full topic never repeats a
+   colour. Same six custom properties as the four above, so every rule below reads
+   them and nothing else changes.
+
+   Every accent was checked against its own card background, second background and
+   chip and clears WCAG AA (lowest is orange at 4.82:1 on the chip) - the same bar
+   the v13.95 amber fix set after that tone shipped at 4.02:1. */
+
+.cc5-prose-card.cc5-prose-teal {
+    --cc5-prose-bg:      #f5fbfb;
+    --cc5-prose-bg-2:    #e9f6f6;
+    --cc5-prose-border:  #d4ebeb;
+    --cc5-prose-accent:  #14706e;
+    --cc5-prose-chip:    #ddf1f0;
+    --cc5-prose-glow:    rgba(20, 112, 110, 0.16);
+}
+
+.cc5-prose-card.cc5-prose-rose {
+    --cc5-prose-bg:      #fff8f9;
+    --cc5-prose-bg-2:    #fdeef1;
+    --cc5-prose-border:  #f6dde3;
+    --cc5-prose-accent:  #a83a55;
+    --cc5-prose-chip:    #fbe4e9;
+    --cc5-prose-glow:    rgba(168, 58, 85, 0.16);
+}
+
+.cc5-prose-card.cc5-prose-indigo {
+    --cc5-prose-bg:      #f8f9fe;
+    --cc5-prose-bg-2:    #eff1fc;
+    --cc5-prose-border:  #dfe3f7;
+    --cc5-prose-accent:  #3f4bb8;
+    --cc5-prose-chip:    #e8ebfb;
+    --cc5-prose-glow:    rgba(63, 75, 184, 0.16);
+}
+
+.cc5-prose-card.cc5-prose-orange {
+    --cc5-prose-bg:      #fff9f5;
+    --cc5-prose-bg-2:    #fdf0e6;
+    --cc5-prose-border:  #f6e0cd;
+    --cc5-prose-accent:  #9a5320;
+    --cc5-prose-chip:    #fbe7d5;
+    --cc5-prose-glow:    rgba(154, 83, 32, 0.16);
+}
+
+.cc5-prose-card.cc5-prose-cyan {
+    --cc5-prose-bg:      #f5fafd;
+    --cc5-prose-bg-2:    #e9f4fa;
+    --cc5-prose-border:  #d5e9f3;
+    --cc5-prose-accent:  #14657f;
+    --cc5-prose-chip:    #ddeef7;
+    --cc5-prose-glow:    rgba(20, 101, 127, 0.16);
+}
+
+.cc5-prose-card.cc5-prose-plum {
+    --cc5-prose-bg:      #fdf8fc;
+    --cc5-prose-bg-2:    #f9eef7;
+    --cc5-prose-border:  #f0dcec;
+    --cc5-prose-accent:  #8a3d78;
+    --cc5-prose-chip:    #f6e4f2;
+    --cc5-prose-glow:    rgba(138, 61, 120, 0.16);
+}
+
+/* The numbered badge on a subtopic card. Sits where the slot icon used to, so it
+   inherits the header's alignment; the tone's own accent keeps it tied to the card. */
+.cc5-prose-icon.cc5-prose-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.65rem;
+    height: 1.65rem;
+    padding: 0 0.4rem;
+    border-radius: 999px;
+    background: var(--cc5-prose-chip);
+    color: var(--cc5-prose-accent);
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
 }
 
 /* -- The card ------------------------------------------------------------- */
@@ -20798,7 +21210,7 @@ body.dark .cc5-lang-pill {
     flex: 0 0 26px;
     border-radius: 50%;
     background: #e6f6ec;
-    color: #1f8a4c;
+    color: #1f8b46;
 }
 
 .cc5-prose-card.cc5-prose-speaking .cc5-prose-vo-dot {
@@ -20928,7 +21340,10 @@ body.dark .cc5-lang-pill {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    margin-top: var(--cc5-space-4);
+    /* v15.4.1: was --cc5-space-4. The button sat close enough to the card above to read as
+       part of it, when it is the control that leaves it. The card's own shadow needs room
+       to fall, too. */
+    margin-top: var(--cc5-space-7, 1.75rem);
     padding: 0.5rem 0.95rem;
     font-size: 0.8125rem;
     font-weight: 600;
@@ -20949,29 +21364,37 @@ body.dark .cc5-lang-pill {
        over the card's own near-white gradient - visually the same inside the card, but
        knowable everywhere else. Do not put the alpha back without also pinning an opaque
        colour underneath it. */
-    color: var(--cc5-prose-accent, #2f6fd0) !important;
-    background: #fcfdfe !important;
-    border: 1px solid var(--cc5-prose-border, #dbe7f8) !important;
+    /* v15.4.6: ONE standard button - white with a blue label, filling blue on hover.
+       "Just do a standard white button with blue text and blue icon, and on hover a blue
+       button with white text and white icon - and remove the on-hover movement, it's off
+       putting." The tone-derived accent is gone with it: --cc5-prose-accent varies per
+       card tone, so the same control was a different blue on a green-toned card than on a
+       blue one, which is what made it read as odd. It is now the brand blue's AA-safe
+       pair, identical on every card and identical to the Start Now button. */
+    color: var(--cc5-blue-cta) !important;
+    background: #fff !important;
+    border: 1px solid var(--cc5-blue-cta) !important;
     border-radius: 999px;
     cursor: pointer;
-    transition: background-color 200ms ease, border-color 200ms ease,
-                transform 200ms ease, box-shadow 200ms ease;
+    /* No transform here. The translateX(2px) nudge on hover was the "movement". */
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
+/* Hover, keyboard focus and press all FILL. Every property is pinned in every state
+   because a bare <button> is repainted by the Moodle theme - Boost's button:hover sets
+   `color: #fff`, which is right here only because we are also setting the blue fill. */
 .cc5-prose-next-btn:hover,
 .cc5-prose-next-btn:focus,
 .cc5-prose-next-btn:active,
 .cc5-prose-next-btn:focus:active {
-    background: #fff !important;
-    /* v13.95: same fallback as the base rule - without it the hover state's pinned white
-       background was paired with an unresolvable colour, i.e. the theme's white, 1.04:1. */
-    border-color: var(--cc5-prose-accent, #2f6fd0) !important;
-    color: var(--cc5-prose-accent, #2f6fd0) !important;
+    background: var(--cc5-blue-cta) !important;
+    border-color: var(--cc5-blue-cta) !important;
+    color: #fff !important;
     text-decoration: none !important;
 }
 
 .cc5-prose-next-btn:hover {
-    transform: translateX(2px);
+    /* v15.4.6: no transform. The shadow stays - it is depth, not movement. */
     box-shadow: 0 6px 16px -10px var(--cc5-prose-glow);
 }
 
@@ -20988,13 +21411,12 @@ body.dark .cc5-lang-pill {
 }
 
 .cc5-prose-next-btn:active {
-    transform: translateX(1px) scale(0.985);
-    /* v13.95: was rgba(255,255,255,0.92) - see FIX-CC-PROSENEXT-UNKNOWABLE above. The
-       press state needs to read as very slightly recessed from the :hover white, so it
-       is stated as the opaque near-white it composited to inside the card. */
-    background: #fdfdfd !important;
-    color: var(--cc5-prose-accent, #2f6fd0) !important;
-    box-shadow: inset 0 1px 3px -1px var(--cc5-prose-glow) !important;
+    /* v15.4.6: no transform here either - the press reads as a darker fill instead of a
+       nudge, which is the same language the rest of the player's buttons use. */
+    background: var(--cc5-blue-cta-dark) !important;
+    border-color: var(--cc5-blue-cta-dark) !important;
+    color: #fff !important;
+    box-shadow: inset 0 1px 3px -1px rgba(0, 0, 0, 0.25) !important;
 }
 
 /* The icon inherits currentColor, so pinning the text colour carries it - but a theme
@@ -21007,7 +21429,7 @@ body.dark .cc5-lang-pill {
 }
 
 .cc5-prose-next-btn:focus-visible {
-    outline: 2px solid var(--cc5-prose-accent) !important;
+    outline: 2px solid var(--cc5-blue-cta) !important;
     outline-offset: 2px;
     box-shadow: none !important;
 }
@@ -21022,10 +21444,16 @@ body.dark .cc5-lang-pill {
     box-shadow: none !important;
 }
 
-.cc5-prose-next-btn.cc5-prose-btn-locked:hover {
-    background: rgba(255, 255, 255, 0.75) !important;
-    border-color: var(--cc5-prose-border) !important;
+/* Locked: it must NOT fill on hover, or a learner who cannot advance yet gets the same
+   affordance as one who can. Held at the resting outline. */
+.cc5-prose-next-btn.cc5-prose-btn-locked:hover,
+.cc5-prose-next-btn.cc5-prose-btn-locked:focus,
+.cc5-prose-next-btn.cc5-prose-btn-locked:active {
+    background: #fff !important;
+    border-color: var(--cc5-blue-cta) !important;
+    color: var(--cc5-blue-cta) !important;
     transform: none !important;
+    box-shadow: none !important;
 }
 
 .cc5-prose-next-btn.cc5-prose-btn-locked .cc5-prose-btn-lock {
@@ -21139,7 +21567,7 @@ body.dark .cc5-lang-pill {
     flex: 0 0 26px;
     border-radius: 50%;
     background: #e6f6ec;
-    color: #1f8a4c;
+    color: #1f8b46;
 }
 
 .cc5-card.cc5-vo-speaking .cc5-vo-chip,
@@ -21152,9 +21580,9 @@ body.dark .cc5-lang-pill {
    no transform, because these cards contain absolutely-positioned decoration
    (corner accents, badges) that a transform would re-anchor. */
 .cc5-card.cc5-vo-speaking {
-    box-shadow: 0 0 0 1px rgba(31, 138, 76, 0.35),
-                0 10px 26px -16px rgba(31, 138, 76, 0.45),
-                0 1px 2px rgba(16, 24, 40, 0.04);
+    /* v15.4.1: depth, not a coloured ring - see the note on the stepped rule below. */
+    box-shadow: 0 10px 26px -16px rgba(16, 24, 40, 0.3),
+                0 1px 2px rgba(16, 24, 40, 0.06);
     transition: box-shadow 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
@@ -21251,8 +21679,8 @@ body.dark .cc5-lang-pill {
    touches. Pin both states. */
 .cc5-challenge-next-btn:hover,
 .cc5-challenge-finish-btn:hover {
-    color: hsl(22deg 70% 35%);
-    background: hsl(22deg 40% 98%);
+    color: hsl(var(--cc5-activity-h) 70% 35%);
+    background: hsl(var(--cc5-activity-h) 40% 98%);
 }
 
 /* v13.95 FIX-CC-NEXTACTIVITY-INVISIBLE: colour-only, exactly as the !important copy of
@@ -21265,7 +21693,7 @@ body.dark .cc5-lang-pill {
 .cc5-challenge-finish-btn.cc5-enabled:hover {
     /* v13.97: dark label on brand orange - see the token block at the top of this file. */
     color: var(--cc5-orange-cta-label);
-    background: linear-gradient(135deg, hsl(22deg 92% 60%) 0%, hsl(22deg 88% 53%) 100%);
+    background: linear-gradient(135deg, var(--cc5-orange-cta) 0%, var(--cc5-orange-cta-dark) 100%);
     border-color: var(--cc5-orange-cta-dark);
 }
 
@@ -21276,7 +21704,7 @@ body.dark .cc5-lang-pill {
 .cc5-prose-next-btn:active {
     /* v13.95: fallback added here too - see FIX-CC-PROSENEXT-UNKNOWABLE. This rule is the
        non-important twin of the pinned group above and must not disagree with it. */
-    color: var(--cc5-prose-accent, #2f6fd0);
+    color: var(--cc5-prose-accent, #2b74bc);
     background: #fff;
 }
 
@@ -21572,15 +22000,15 @@ body.dark .cc5-lang-pill {
 .cc5-challenge-finish-btn:hover,
 .cc5-challenge-finish-btn:focus,
 .cc5-challenge-finish-btn:active {
-    color: hsl(22deg 70% 35%) !important;
-    background: hsl(22deg 40% 98%) !important;
+    color: hsl(var(--cc5-activity-h) 70% 35%) !important;
+    background: hsl(var(--cc5-activity-h) 40% 98%) !important;
 }
 
 /* v13.95 FIX-CC-NEXTACTIVITY-INVISIBLE: this rule set colour and nothing else, and it
    is the one rule in this whole block that broke the block's own stated contract above
    ("if a :hover rule sets a background, it must set a colour too - and both must carry
    !important"). Because it declares no background, the background contest is decided by
-   the group immediately above, whose `background: hsl(22deg 40% 98%) !important` - all
+   the group immediately above, whose `background: hsl(var(--cc5-activity-h) 40% 98%) !important` - all
    but white - beats the intended orange gradient at the .cc5-enabled base rule, which
    carries no !important. So the ENABLED "Next Activity" / "See Results" button rendered
    #fff on near-white the moment it was hovered, focused or clicked: contrast 1.02:1,
@@ -21597,7 +22025,7 @@ body.dark .cc5-lang-pill {
        state. Left unchanged it made the button flip appearance on hover, focus AND
        click - a mouse click left it in the old style until focus moved away. */
     color: var(--cc5-orange-cta-label) !important;
-    background: linear-gradient(135deg, hsl(22deg 92% 60%) 0%, hsl(22deg 88% 53%) 100%) !important;
+    background: linear-gradient(135deg, var(--cc5-orange-cta) 0%, var(--cc5-orange-cta-dark) 100%) !important;
     border-color: var(--cc5-orange-cta-dark) !important;
 }
 
@@ -21613,55 +22041,35 @@ body.dark .cc5-lang-pill {
 .cc5-challenge-finish-btn:disabled:hover,
 .cc5-challenge-finish-btn:disabled:focus {
     opacity: 1 !important;
-    background: hsl(22deg 25% 96%) !important;
-    color: hsl(22deg 30% 42%) !important;
-    border-color: hsl(22deg 30% 82%) !important;
+    background: hsl(var(--cc5-activity-h) 25% 96%) !important;
+    color: hsl(var(--cc5-activity-h) 30% 42%) !important;
+    border-color: hsl(var(--cc5-activity-h) 30% 82%) !important;
     box-shadow: none !important;
     cursor: not-allowed;
 }
 
-.cc5-challenge-retry-btn {
-    background: transparent !important;
-    border-color: hsl(22 75% 60%) !important;
-    color: hsl(22 80% 38%) !important;
-}
+/* v15.4.6: this !important pair is deleted. It is the block the owner was looking at when
+   they asked "why 2 different blues on 2 diff buttons" - Try Again resolved to
+   hsl(210 80% 38%) here and Review Answers to hsl(210 90% 34%) via the orange-CTA tokens,
+   two colours a hue sweep cannot tell apart because the hue is identical and only the
+   saturation and lightness differ. Both now come from --cc5-blue-cta in the shared block
+   at the end of this file. */
 
-.cc5-challenge-retry-btn:hover,
-.cc5-challenge-retry-btn:focus,
-.cc5-challenge-retry-btn:active {
-    background: hsl(22 90% 95%) !important;
-    border-color: hsl(22 75% 60%) !important;
-    color: hsl(22 80% 32%) !important;
-}
-
-.cc5-challenge-review-btn {
-    /* v13.97 FIX-CC-CTA-HIERARCHY: this !important block made the demotion 3000 lines
-       up a complete no-op. Review Answers is a SECONDARY action - bordered, not solid,
-       so it stops competing with Continue for the same screen. */
-    background: var(--cc5-bg) !important;
-    border-color: var(--cc5-orange-cta-dark) !important;
-    color: var(--cc5-orange-cta-text) !important;
-}
-
-.cc5-challenge-review-btn:hover,
-.cc5-challenge-review-btn:focus,
-.cc5-challenge-review-btn:active {
-    background: var(--cc5-orange-cta-wash) !important;
-    border-color: var(--cc5-orange-cta-dark) !important;
-    color: var(--cc5-orange-cta-text) !important;
-}
-
+/* v15.4.4: the dark-theme copy of the Continue button follows the single green token too.
+   It carried its own gradient pair, so the light theme could be unified and this one would
+   quietly go on showing the two darker greens - the same two-copies-one-moves shape as the
+   card order and the sort instruction. */
 .cc5-challenge-continue-btn {
-    background: linear-gradient(135deg, hsl(142 71% 29%) 0%, hsl(142 65% 25%) 100%) !important;
-    border-color: hsl(142 65% 25%) !important;
+    background: var(--cc5-green-cta) !important;
+    border-color: var(--cc5-green-cta-dark) !important;
     color: #fff !important;
 }
 
 .cc5-challenge-continue-btn:hover,
 .cc5-challenge-continue-btn:focus,
 .cc5-challenge-continue-btn:active {
-    background: linear-gradient(135deg, hsl(142 71% 24%) 0%, hsl(142 65% 20%) 100%) !important;
-    border-color: hsl(142 65% 25%) !important;
+    background: var(--cc5-green-cta) !important;
+    border-color: var(--cc5-green-cta-dark) !important;
     color: #fff !important;
 }
 
@@ -22014,7 +22422,7 @@ body.dark .cc5-lang-pill:not(.cc5-lang-pill-active),
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 /* -- "Try again" after an incorrect answer --------------------------------- */
-/* Light: hsl(217 91% 45%) on hsl(217 91% 97%). Dark: 78% on the flipped navy, 8.3:1. */
+/* Light: hsl(210deg 91% 45%) on hsl(210deg 91% 97%). Dark: 78% on the flipped navy, 8.3:1. */
 [data-bs-theme="dark"] .cc5-try-again-btn,
 [data-bs-theme="dark"] .cc5-btn-try-again-incorrect,
 body[data-bs-theme="dark"] .cc5-try-again-btn,
@@ -22025,9 +22433,9 @@ body.dark .cc5-btn-try-again-incorrect,
 .dark .cc5-btn-try-again-incorrect,
 .cc5-dark .cc5-try-again-btn,
 .cc5-dark .cc5-btn-try-again-incorrect {
-    color: hsl(217deg 91% 78%) !important;
+    color: hsl(210deg 91% 78%) !important;
     background: hsl(217deg 40% 15%) !important;
-    border-color: hsl(217deg 91% 55%) !important;
+    border-color: hsl(210deg 91% 55%) !important;
 }
 
 [data-bs-theme="dark"] .cc5-try-again-btn:hover,
@@ -22056,9 +22464,9 @@ body.dark .cc5-btn-try-again-incorrect:active,
 .cc5-dark .cc5-btn-try-again-incorrect:hover,
 .cc5-dark .cc5-btn-try-again-incorrect:focus,
 .cc5-dark .cc5-btn-try-again-incorrect:active {
-    color: hsl(217deg 91% 86%) !important;
-    background: hsl(217deg 45% 22%) !important;
-    border-color: hsl(217deg 91% 62%) !important;
+    color: hsl(210deg 91% 86%) !important;
+    background: hsl(210deg 45% 22%) !important;
+    border-color: hsl(210deg 91% 62%) !important;
 }
 
 /* -- "Show classification" / reveal, on the sorting and matching cards ------ */
@@ -22071,9 +22479,9 @@ body[data-bs-theme="dark"] .cc5-reveal-btn,
 body.dark .cc5-reveal-btn,
 .dark .cc5-reveal-btn,
 .cc5-dark .cc5-reveal-btn {
-    color: hsl(217deg 91% 76%) !important;
+    color: hsl(210deg 91% 76%) !important;
     background: transparent !important;
-    border-color: hsl(217deg 91% 58%) !important;
+    border-color: hsl(210deg 91% 58%) !important;
 }
 
 [data-bs-theme="dark"] .cc5-reveal-btn:hover,
@@ -22086,23 +22494,27 @@ body.dark .cc5-reveal-btn:focus,
 .dark .cc5-reveal-btn:focus,
 .cc5-dark .cc5-reveal-btn:hover,
 .cc5-dark .cc5-reveal-btn:focus {
-    color: hsl(217deg 91% 86%) !important;
-    background: hsl(217deg 45% 22%) !important;
-    border-color: hsl(217deg 91% 62%) !important;
+    color: hsl(210deg 91% 86%) !important;
+    background: hsl(210deg 45% 22%) !important;
+    border-color: hsl(210deg 91% 62%) !important;
 }
 
 /* -- "Try the challenge again" -------------------------------------------- */
-/* Same hue as the rest of the decision-challenge block (22deg). The light rule is
-   hsl(22 80% 38%) on transparent; 70% lightness gives 9.4:1 on the dark ground. The
-   hover fill hsl(22 90% 95%) is a pale peach that cannot be reused here at all. */
+/* v15.4.6: the comment here said "22deg... a pale peach", which stopped being true when
+   the activity block went blue in v15.4.4 - --cc5-activity-h is 210deg, so these have been
+   rendering blue for two releases while the note described the orange they replaced.
+   The VALUES are deliberately not --cc5-blue-cta: that token is tuned for a white ground
+   (4.78:1 on white) and would be 2.1:1 on this one. Same family, inverted for dark - 70%
+   lightness gives 9.4:1 against the dark ground, and the hover fill is a deep blue-grey
+   rather than the light rule's pale tint, which cannot be reused here at all. */
 [data-bs-theme="dark"] .cc5-challenge-retry-btn,
 body[data-bs-theme="dark"] .cc5-challenge-retry-btn,
 body.dark .cc5-challenge-retry-btn,
 .dark .cc5-challenge-retry-btn,
 .cc5-dark .cc5-challenge-retry-btn {
-    color: hsl(22deg 90% 70%) !important;
+    color: hsl(var(--cc5-activity-h) 90% 70%) !important;
     background: transparent !important;
-    border-color: hsl(22deg 70% 48%) !important;
+    border-color: hsl(var(--cc5-activity-h) 70% 48%) !important;
 }
 
 [data-bs-theme="dark"] .cc5-challenge-retry-btn:hover,
@@ -22120,7 +22532,1160 @@ body.dark .cc5-challenge-retry-btn:active,
 .cc5-dark .cc5-challenge-retry-btn:hover,
 .cc5-dark .cc5-challenge-retry-btn:focus,
 .cc5-dark .cc5-challenge-retry-btn:active {
-    color: hsl(22deg 90% 80%) !important;
-    background: hsl(22deg 40% 20%) !important;
-    border-color: hsl(22deg 75% 55%) !important;
+    color: hsl(var(--cc5-activity-h) 90% 80%) !important;
+    background: hsl(var(--cc5-activity-h) 40% 20%) !important;
+    border-color: hsl(var(--cc5-activity-h) 75% 55%) !important;
+}
+
+/* =========================================================================
+   v15.3.0  -  ONE CARD AT A TIME, ON EVERY ROUTE
+   =========================================================================
+
+   Topics-and-Text has revealed its cards one at a time since v13.92. This block
+   extends the same behaviour to the other routes, where the card renderers are
+   untouched and a behaviour-only wrapper goes around the outside.
+
+   The wrapper deliberately has NO background, border, padding or shadow. Every
+   route's card already draws its own, and a second box around it would read as a
+   rendering fault. The wrapper contributes exactly three things: the hidden state,
+   the reveal animation, and somewhere to put the Next button.
+   ========================================================================= */
+
+.cc5-step-card {
+    display: block;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0 0 var(--cc5-space-5, 1.25rem) 0;
+    /* The anchor for the voiceover dot below. The wrapper is the only element that
+       reliably exists on every route - the card inside it is a different element with a
+       different class on each one - so it is the thing the dot can be positioned against. */
+    position: relative;
+}
+
+/* One column. The prose grid is two-across because its cards are half-width;
+   every other route's cards are full-width and would be crushed by a second
+   column. Same grid element, same JS, different track count. */
+.cc5-prose-grid.cc5-step-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+}
+
+/* Hidden until revealed. Matches the prose rule at .cc5-prose-card.cc5-prose-hidden
+   rather than reusing it, because that rule is scoped to the prose card class. */
+.cc5-step-card.cc5-prose-hidden {
+    display: none;
+}
+
+/* The same slow rise the prose cards use on reveal. `backwards` matters: without
+   it the card paints at its final position for one frame before the animation
+   starts, which reads as a flicker. */
+.cc5-prose-grid.cc5-step-grid > .cc5-step-card {
+    animation: cc5-prose-rise 420ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards;
+}
+
+.cc5-prose-grid.cc5-step-grid > .cc5-step-card.cc5-prose-hidden {
+    animation: none;
+}
+
+/* The Next button sits under the card, centred, with breathing room. Inside the
+   prose card it is part of the card body; here it is a sibling of the card.
+   v15.4.4: doubled, top and bottom - "it looks too tight". This selector, not the base
+   rule above it, is the one that governs on a stepped card: it sets the whole margin
+   shorthand, so the base rule's own margin-top never applied here and raising that in
+   v15.4.1 changed nothing on the card grid. Two copies, one moved. The bottom margin is
+   new - there was none, so the button sat against the foot of the block. */
+/* The one place the Next Card button's spacing is set. See the note at the former
+   second copy of this selector, ~360 lines down, for why there is only one now.
+   v15.4.6: 40px above, 32px below. The doubling asked for in v15.4.4 never reached the
+   screen at all - the duplicate below overrode it - so the report came back unchanged.
+   The top is a step wider than the bottom because the button belongs to the card it
+   leaves, not to the space after it, and it needs to clear that card's shadow.
+
+   Both values are now real tokens. --cc5-space-7 IS NOT DEFINED anywhere in this
+   stylesheet: every `var(--cc5-space-7, 1.75rem)` in this file has silently been the
+   1.75rem fallback since it was written, so the scale said one thing and the page did
+   another. --cc5-space-10 (2.5rem) and --cc5-space-8 (2rem) exist. */
+.cc5-step-card > .cc5-prose-next-btn {
+    margin: var(--cc5-space-10) auto var(--cc5-space-8) auto;
+    display: flex;
+}
+
+/* A focused card must not draw a browser default outline on a container the
+   learner did not tab to - focus is moved there programmatically after a reveal,
+   purely so a screen reader lands in the right place. */
+.cc5-step-card:focus,
+.cc5-step-card [tabindex="-1"]:focus {
+    outline: none;
+}
+
+/* -- The voiceover dot, now also the mute control ------------------------- */
+
+/* The dot used to appear only while its own card was being narrated. As a mute
+   button that is unusable: the learner could only mute during the seconds the
+   icon happened to be visible. It is now shown on the card in play whenever
+   narration exists for the slide, and PULSES only while actually speaking - so it
+   still answers "is this being read?" while always being reachable. */
+.cc5-prose-card.cc5-prose-active .cc5-prose-vo-dot,
+.cc5-step-card.cc5-prose-active .cc5-prose-vo-dot,
+.cc5-prose-card.cc5-prose-speaking .cc5-prose-vo-dot,
+.cc5-step-card.cc5-prose-speaking .cc5-prose-vo-dot,
+.cc5-prose-vo-dot.cc5-vo-muted {
+    display: inline-flex;
+}
+
+/* v15.4.4: EVERY state of the speaker icon is pinned.
+   Reported: "when I hover on this it goes white - do a full check of all states of this
+   icon". It did, and the cause is the one this file already warns about a few hundred
+   lines up: a bare <button> is repainted by the Moodle theme, and Boost's button:hover
+   sets `color: #fff`. The hover rule below only ever set a BACKGROUND, so on hover the
+   theme supplied the foreground - white, on a pale ground, invisible.
+   So each state now declares its own colour as well as its own fill, and each is
+   !important, because the thing being overridden is itself a theme rule with high
+   specificity. The states are: resting, hover, active (pressed), keyboard focus, muted,
+   and muted-hover - the last one existed only by accident before, inheriting the unmuted
+   hover fill under the muted grey. */
+.cc5-prose-vo-dot {
+    border: 0;
+    cursor: pointer;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent !important;
+    color: var(--cc5-green-cta) !important;
+    transition: background-color 200ms ease, color 200ms ease;
+}
+
+.cc5-prose-vo-dot:hover {
+    background: hsl(var(--cc5-green-h) 60% 93%) !important;
+    color: var(--cc5-green-cta-dark) !important;
+}
+
+.cc5-prose-vo-dot:active {
+    background: hsl(var(--cc5-green-h) 55% 88%) !important;
+    color: var(--cc5-green-cta-dark) !important;
+}
+
+/* Visible keyboard focus. The dot is a real button now, so it is in the tab order
+   and must show where focus is. */
+.cc5-prose-vo-dot:focus-visible {
+    outline: 2px solid var(--cc5-green-cta);
+    outline-offset: 2px;
+    color: var(--cc5-green-cta-dark) !important;
+}
+
+/* Muted: grey, no pulse, cross shown instead of the sound waves. The audio is
+   still playing - this is the learner's own volume, not a pause. */
+.cc5-prose-vo-dot.cc5-vo-muted {
+    background: hsl(216deg 14% 94%) !important;
+    color: hsl(214deg 9% 42%) !important;
+    animation: none !important;
+}
+
+.cc5-prose-vo-dot.cc5-vo-muted:hover,
+.cc5-prose-vo-dot.cc5-vo-muted:active {
+    background: hsl(216deg 14% 89%) !important;
+    color: hsl(214deg 9% 30%) !important;
+}
+
+.cc5-prose-vo-dot .cc5-vo-cross {
+    display: none;
+}
+
+.cc5-prose-vo-dot.cc5-vo-muted .cc5-vo-waves {
+    display: none;
+}
+
+.cc5-prose-vo-dot.cc5-vo-muted .cc5-vo-cross {
+    display: inline;
+}
+
+/* The dot on a wrapped (non-prose) card.
+   v15.3.4: INSIDE the card, not above it.
+   The first version gave the dot a strip of its own in the normal flow, above the card
+   and pulled back up with a negative margin. That put it outside the card's border,
+   half-overlapping the top edge, reading as a stray icon floating on the page rather
+   than as part of the card. It is now absolutely positioned into the card's own
+   top-right corner, level with the flow badge, which is where the prose route has
+   always put it - the prose card has a header to hold it and these cards do not, so
+   the wrapper holds it instead. */
+.cc5-step-vo-bar {
+    position: absolute;
+    top: var(--cc5-space-4, 1rem);
+    right: var(--cc5-space-4, 1rem);
+    display: flex;
+    align-items: center;
+    margin: 0;
+    /* Above the card's own content, below any modal or dropdown the card may open. */
+    z-index: 3;
+}
+
+/* -- The dwell lock ------------------------------------------------------- */
+
+/* Visually identical to the "listen to unlock" state, deliberately: there is one
+   locked appearance in this player, not two. The separate class exists so the
+   dwell timer can find and release only its own locks. */
+.cc5-prose-next-btn.cc5-prose-btn-dwell {
+    cursor: progress;
+}
+
+/* -- Settings hint text --------------------------------------------------- */
+
+.cc5-settings-hint {
+    margin: var(--cc5-space-2, 0.5rem) 0 0 0;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--cc5-text-secondary, #6b7683);
+}
+
+.cc5-settings-dwell-options {
+    margin-top: var(--cc5-space-3, 0.75rem);
+}
+
+.cc5-settings-dwell-options.cc5-hidden {
+    display: none;
+}
+
+/* -- Reduced motion ------------------------------------------------------- */
+
+/* Matches the existing prose block: the reveal still happens, it just arrives
+   rather than animating, and the speaker stops pulsing. */
+@media (prefers-reduced-motion: reduce) {
+    .cc5-prose-grid.cc5-step-grid > .cc5-step-card {
+        animation: none;
+    }
+
+    .cc5-prose-card.cc5-prose-speaking .cc5-prose-vo-dot,
+    .cc5-step-card.cc5-prose-speaking .cc5-prose-vo-dot {
+        animation: none;
+    }
+}
+
+/* -- Dark mode ------------------------------------------------------------ */
+
+body.dark .cc5-prose-vo-dot.cc5-vo-muted,
+.dark .cc5-prose-vo-dot.cc5-vo-muted,
+.cc5-dark .cc5-prose-vo-dot.cc5-vo-muted,
+[data-bs-theme="dark"] .cc5-prose-vo-dot.cc5-vo-muted,
+body[data-bs-theme="dark"] .cc5-prose-vo-dot.cc5-vo-muted {
+    /* v15.4.4: !important, to match the light-theme states above - without it the
+       light-theme muted rule (now !important, to beat the Moodle theme) would win here and
+       the dark muted dot would be a pale grey chip on a dark card. */
+    background: hsl(215deg 15% 24%) !important;
+    color: hsl(215deg 12% 68%) !important;
+}
+
+/* v15.4.4: the unmuted dot in dark mode, and its hover - the light-theme rules are
+   !important, so dark needs its own at the same weight or it inherits a light-mode fill. */
+body.dark .cc5-prose-vo-dot,
+.dark .cc5-prose-vo-dot,
+.cc5-dark .cc5-prose-vo-dot,
+[data-theme="dark"] .cc5-prose-vo-dot,
+[data-bs-theme="dark"] .cc5-prose-vo-dot {
+    color: hsl(var(--cc5-green-h) 60% 62%) !important;
+}
+body.dark .cc5-prose-vo-dot:hover,
+.dark .cc5-prose-vo-dot:hover,
+.cc5-dark .cc5-prose-vo-dot:hover,
+[data-theme="dark"] .cc5-prose-vo-dot:hover,
+[data-bs-theme="dark"] .cc5-prose-vo-dot:hover {
+    background: hsl(var(--cc5-green-h) 30% 20%) !important;
+    color: hsl(var(--cc5-green-h) 65% 72%) !important;
+}
+
+body.dark .cc5-settings-hint,
+.dark .cc5-settings-hint,
+.cc5-dark .cc5-settings-hint,
+[data-bs-theme="dark"] .cc5-settings-hint,
+body[data-bs-theme="dark"] .cc5-settings-hint {
+    color: hsl(215deg 12% 68%);
+}
+
+/* =========================================================================
+   v15.3.0  -  POLICY & COMPLIANCE IDENTITY STRIP
+   =========================================================================
+
+   Player chrome, not a card: which document this course teaches, who owns it,
+   when it was last reviewed, and who to ask. Present on every slide of a policy
+   pack and on nothing else.
+
+   Quiet by design. It is reference information a learner consults when they doubt
+   a rule, not something competing with the card for attention.
+   ========================================================================= */
+
+.cc5-policy-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cc5-space-2, 0.5rem) var(--cc5-space-5, 1.25rem);
+    align-items: baseline;
+    margin: 0 0 var(--cc5-space-4, 1rem) 0;
+    padding: var(--cc5-space-3, 0.75rem) var(--cc5-space-4, 1rem);
+    border: 1px solid var(--cc5-border, #e2e6ec);
+    border-left: 3px solid #5b7cc4;
+    border-radius: 8px;
+    background: var(--cc5-surface-muted, #f7f9fc);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+.cc5-policy-fact {
+    display: inline-flex;
+    gap: 0.375rem;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.cc5-policy-fact-label {
+    color: var(--cc5-text-secondary, #6b7683);
+    white-space: nowrap;
+}
+
+.cc5-policy-fact-label::after {
+    content: ':';
+}
+
+/* The values are author-supplied and can be long - a policy title, an email address.
+   They wrap and break rather than pushing the strip wider than the slide. */
+.cc5-policy-fact-value {
+    color: var(--cc5-text-primary, #1f2733);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+    .cc5-policy-strip {
+        flex-direction: column;
+        gap: var(--cc5-space-1, 0.25rem);
+    }
+}
+
+body.dark .cc5-policy-strip,
+.dark .cc5-policy-strip,
+.cc5-dark .cc5-policy-strip,
+[data-bs-theme="dark"] .cc5-policy-strip,
+body[data-bs-theme="dark"] .cc5-policy-strip {
+    background: hsl(215deg 18% 18%);
+    border-color: hsl(215deg 15% 28%);
+    border-left-color: hsl(210deg 45% 60%);
+}
+
+body.dark .cc5-policy-fact-value,
+.dark .cc5-policy-fact-value,
+.cc5-dark .cc5-policy-fact-value,
+[data-bs-theme="dark"] .cc5-policy-fact-value,
+body[data-bs-theme="dark"] .cc5-policy-fact-value {
+    color: hsl(210deg 20% 92%);
+}
+
+body.dark .cc5-policy-fact-label,
+.dark .cc5-policy-fact-label,
+.cc5-dark .cc5-policy-fact-label,
+[data-bs-theme="dark"] .cc5-policy-fact-label,
+body[data-bs-theme="dark"] .cc5-policy-fact-label {
+    color: hsl(215deg 12% 68%);
+}
+
+/* =========================================================================
+   v15.3.4  -  THE NARRATED CARD IS HIGHLIGHTED AS A WHOLE
+   =========================================================================
+
+   A regression introduced by the one-card-at-a-time wrapper in v15.3.0.
+
+   `.cc5-card.cc5-vo-speaking` has highlighted the narrated card since v13.92, and it
+   works by matching the element that carries `data-vo-card`. Wrapping every card in
+   `.cc5-step-card` moved that attribute onto the WRAPPER - _stampVoCard() injects it
+   into the first <div> it finds, which is now the envelope rather than the card. The
+   wrapper has no background, border or shadow by design, so the class landed on an
+   element that cannot show it and the narrated card stopped being highlighted at all.
+
+   Matching through the wrapper restores it. Shadow and ring only, no transform: the
+   voiceover dot is absolutely positioned against the wrapper, so lifting the inner card
+   would slide the card out from under its own icon. The emphasis is deliberately at
+   hover strength - the owner's ask was that the whole section lights up the way it does
+   on hover, not that one panel inside it does.
+   ========================================================================= */
+
+/* v15.4.1: the green ring is gone. The card being narrated is now shown by depth
+   alone - the same raised shadow a card gets on hover, and nothing else.
+   The ring was a second signal for a state that already had one, and on a card whose
+   own palette is green (applied-scenario, competency-summary) it read as a hard outline
+   drawn around the content rather than as emphasis. The owner's words: "the existing
+   grey shadow and raise up animation is fine by themselves". The pulsing speaker chip
+   still says WHICH card, so nothing is lost by dropping the outline. */
+.cc5-step-card.cc5-vo-speaking > .cc5-card,
+.cc5-step-card.cc5-prose-speaking > .cc5-card {
+    box-shadow: var(--cc5-card-shadow-hover),
+                0 12px 30px -18px rgba(16, 24, 40, 0.28);
+    transition: box-shadow 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* The scene panels inside a narrated card lift very slightly as a group, so the
+   highlight reads as "all of this is being read" rather than as a border effect. */
+.cc5-step-card.cc5-vo-speaking > .cc5-card .cc5-scene-part,
+.cc5-step-card.cc5-prose-speaking > .cc5-card .cc5-scene-part,
+.cc5-step-card.cc5-vo-speaking > .cc5-card .cc5-concept-insight,
+.cc5-step-card.cc5-prose-speaking > .cc5-card .cc5-concept-insight {
+    /* Neutral for the same reason as the card itself. */
+    box-shadow: 0 2px 8px -4px rgba(16, 24, 40, 0.22);
+    transition: box-shadow 320ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cc5-step-card.cc5-vo-speaking > .cc5-card,
+    .cc5-step-card.cc5-prose-speaking > .cc5-card,
+    .cc5-step-card.cc5-vo-speaking > .cc5-card .cc5-scene-part,
+    .cc5-step-card.cc5-prose-speaking > .cc5-card .cc5-scene-part {
+        transition: none;
+    }
+}
+
+body.dark .cc5-step-card.cc5-vo-speaking > .cc5-card,
+.dark .cc5-step-card.cc5-vo-speaking > .cc5-card,
+.cc5-dark .cc5-step-card.cc5-vo-speaking > .cc5-card,
+[data-bs-theme="dark"] .cc5-step-card.cc5-vo-speaking > .cc5-card,
+body[data-bs-theme="dark"] .cc5-step-card.cc5-vo-speaking > .cc5-card {
+    /* v15.4.1: depth only in dark too - see the light-mode note. */
+    box-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.75);
+}
+
+/* =========================================================================
+   v15.3.5  -  ONE CARD, FULLY VISIBLE
+   =========================================================================
+
+   With the bottom nav unstuck, the remaining reason a card did not fit was the
+   card itself: a stepped card carried the same 2.5rem bottom margin as a card in
+   a scrolling stack, plus the gap under the Next button, so a card that would
+   otherwise have fitted the viewport was pushed past it by its own spacing.
+
+   Only the stepped case is tightened. A non-stepping slide still scrolls as a
+   stack of cards and wants that separation.
+   ========================================================================= */
+
+.cc5-prose-grid.cc5-step-grid > .cc5-step-card {
+    margin-bottom: var(--cc5-space-3, 0.75rem);
+}
+
+.cc5-prose-grid.cc5-step-grid > .cc5-step-card > .cc5-card {
+    margin-bottom: 0;
+}
+
+/* v15.4.6: THIS RULE IS GONE, and the reason is worth recording.
+
+   v15.3.5 tightened the gap above the Next button to 0.75rem to help a stepped card
+   fit the viewport. v15.4.4 was then asked to "double the padding above and below the
+   next card button - it looks too tight", and did so at line ~22562 - the FIRST
+   `.cc5-step-card > .cc5-prose-next-btn` rule in this file. Same selector, same
+   specificity, and this one is 360 lines further down, so the later declaration won
+   and the button stayed exactly where it was. The change shipped, and the report came
+   back unchanged: "next card button needs more padding above".
+
+   The card-fitting problem this rule was written for is now handled by the two rules
+   directly above (the stepped card's own bottom margin and its inner card's) and by
+   the flip-card height fix in v15.4.4, so the tight top margin is no longer buying
+   anything. The spacing lives in ONE place: the rule at ~22562.
+
+   Two rules with the same selector in one stylesheet is the CSS form of the defect
+   this codebase keeps producing - two halves of one decision, one of them moved. */
+
+/* A stepped card is the only thing on screen, so it may use the full height it
+   needs; what it must not do is start underneath the sticky topbar. The JS sets
+   this per element from the measured topbar height - this is the fallback for a
+   browser that scrolls before the measurement lands. */
+.cc5-step-card,
+.cc5-prose-card {
+    scroll-margin-top: 88px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   v15.3.13  -  CHALLENGE MODE START SCREEN (panel 0)
+   ──────────────────────────────────────────────────────────────────────────
+   Reported from a real module: the first quiz question sat below the fold,
+   because the flow badge, the "Complete N activities" banner and the progress
+   stepper all stacked above it. The banner has moved in here, and this panel
+   now holds the whole brief - what the block is, how many activities, and the
+   one thing nothing in the product used to say out loud: that this plugin's
+   completion rule is 100%, every activity, or the section does not count.
+
+   The pass figure is written by the renderer from CC_CHALLENGE_PASS_PCT, not
+   by this stylesheet, so it cannot drift from the check that enforces it.
+   ═════════════════════════════════════════════════════════════════════════ */
+.cc5-player .cc5-challenge-panel.cc5-challenge-start {
+    padding: 22px 24px 4px;
+}
+.cc5-player .cc5-challenge-start-inner {
+    max-width: 560px;
+    margin: 0 auto;
+    text-align: center;
+}
+.cc5-player .cc5-challenge-start-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 62px;
+    height: 62px;
+    margin-bottom: 12px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, hsl(var(--cc5-activity-h) 95% 94%) 0%, hsl(var(--cc5-activity-h) 90% 88%) 100%);
+    color: hsl(var(--cc5-activity-h) 80% 38%);
+}
+.cc5-player .cc5-challenge-start-title {
+    margin: 0 0 6px;
+    font-size: 1.22rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--cc5-text);
+}
+.cc5-player .cc5-challenge-start-lead {
+    margin: 0 0 18px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: var(--cc5-text-secondary);
+}
+.cc5-player .cc5-challenge-start-lead strong {
+    color: hsl(var(--cc5-activity-h) 85% 38%);
+    font-weight: 700;
+}
+
+/* The requirement. Deliberately the loudest thing on the panel after the
+   title: it is the rule the learner is judged against, and until this screen
+   existed they met it by surprise. */
+.cc5-player .cc5-challenge-start-requirement {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    padding: 13px 16px;
+    margin: 0 0 18px;
+    border: 1px solid hsl(var(--cc5-activity-h) 70% 86%);
+    border-left: 4px solid hsl(var(--cc5-activity-h) 90% 52%);
+    border-radius: 10px;
+    background: linear-gradient(90deg, hsl(var(--cc5-activity-h) 95% 97%) 0%, hsl(var(--cc5-activity-h) 90% 99%) 100%);
+}
+.cc5-player .cc5-challenge-start-pct {
+    flex: 0 0 auto;
+    font-size: 1.32rem;
+    font-weight: 800;
+    line-height: 1;
+    /* 5.63:1 on the panel fill. */
+    color: hsl(var(--cc5-activity-h) 88% 34%);
+    font-variant-numeric: tabular-nums;
+}
+.cc5-player .cc5-challenge-start-req-text {
+    font-size: 0.86rem;
+    line-height: 1.5;
+    font-weight: 600;
+    color: hsl(var(--cc5-activity-h) 45% 26%);
+}
+
+/* What they are about to do, numbered to match the progress stepper above. */
+.cc5-player .cc5-challenge-start-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+}
+.cc5-player .cc5-challenge-start-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px 7px 8px;
+    border: 1px solid var(--cc5-border, hsl(0deg 0% 90%));
+    border-radius: 999px;
+    background: hsl(0deg 0% 100%);
+}
+/* v15.3.13 contrast fix. White on hsl(var(--cc5-activity-h) 90% 52%) is 3.10:1, and at 0.74rem
+   (~11.8px) this is nowhere near WCAG's 18.66px "large bold" threshold, so it
+   needs 4.5:1. --cc5-orange-cta-label exists for exactly this pair - see its
+   definition near the top of this file: "the solid button's fill and near-black
+   label are the same in both themes - that pair works on any ground". Using the
+   white here re-introduced the problem that token was created to solve, and it
+   failed identically in dark mode because both values were hard-coded. */
+.cc5-player .cc5-challenge-start-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    /* v15.3.18: the fallbacks now mirror the tokens - they were the pre-v15.3.18 bright
+       fill and near-black label, so a context that lost the custom properties would have
+       rendered the one combination this release exists to remove. */
+    background: var(--cc5-orange-cta, hsl(var(--cc5-activity-h) 90% 40%));
+    color: var(--cc5-orange-cta-label, hsl(0deg 0% 100%));
+    font-size: 0.74rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+.cc5-player .cc5-challenge-start-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--cc5-text);
+}
+
+/* The start button carries .cc5-challenge-next-btn so it reuses the one panel
+   transition handler, but it is never disabled and never gets .cc5-enabled -
+   it is enabled the moment it renders. Without this it would sit in the pale
+   in-between state those two rules leave behind. */
+/* v15.4.4: outline first, filled on hover.
+   "usually you have the white version first, then the colour version on hover" - and that
+   is the convention the rest of this player already follows (Try Again, Review Answers).
+   Start Now was the odd one out: a solid slab that shouted louder than the three activity
+   chips above it, which are what the learner is meant to read first.
+   The resting state is a white button with the activity blue as its border and label -
+   6.1:1 on white at the -text token's lightness - and the hover fills it. */
+/* v15.4.6: colour, glow and lift removed - see the shared forward-button block at the end
+   of this file. Only the spacing stays, which is what this rule is for now. */
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn {
+    margin-top: 22px;
+}
+
+@media (max-width: 640px) {
+    .cc5-player .cc5-challenge-panel.cc5-challenge-start { padding: 18px 16px 4px; }
+    .cc5-player .cc5-challenge-start-requirement { gap: 10px; padding: 11px 13px; }
+    .cc5-player .cc5-challenge-start-pct { font-size: 1.15rem; }
+    .cc5-player .cc5-challenge-start-list { gap: 6px; }
+}
+/* v15.4.6: the Start Now lift is gone in every state, so its reduced-motion override
+   had nothing left to override. */
+
+/* ══════════════════════════════════════════════════════════════════════════
+   v15.3.18  -  THE ACTIVITY BLOCK'S HEADER, AND THE START SCREEN
+
+   Two complaints, one cause: three separate things were telling the learner the
+   same three activity names, stacked vertically, before anything they could act
+   on. The flow badge, then the full-width progress stepper, then a start panel
+   that lists the activities again.
+
+   The badge and the stepper now share one row - badge left, progress right - so
+   they cost one band of chrome instead of two plus the gap between them. The
+   stepper is hidden entirely while the start panel is up, because the panel
+   below it already names the same three activities in the same order with the
+   same labels, and rendering it in its inactive grey made it read as three
+   disabled buttons.
+   ══════════════════════════════════════════════════════════════════════════ */
+.cc5-player .cc5-challenge-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px 16px;
+    flex-wrap: wrap;
+    /* v15.4.1: the row was flush against the card's top rule and against the panel below
+       it, which is what made the two top rows read as one crowded block.
+       v15.4.4: 18 -> 10. With the block's own top padding raised to 30 in the same release
+       this margin was buying a second gap on top of the first, and the result was a band of
+       dead space between the pill row and the activity heading - reported as "waste of
+       space here". The breathing room now comes from the container, once. */
+    margin-bottom: 10px;
+}
+.cc5-player .cc5-challenge-head .cc5-flow-badge {
+    margin: 0;
+}
+.cc5-player .cc5-challenge-head .cc5-challenge-progress {
+    /* Was `padding: 20px 0 14px` on a full-width centred row. In the header it
+       carries no vertical padding at all - the row's own alignment does that
+       work - which is the 34px this release gives back above the first
+       question. */
+    padding: 0;
+    margin-left: auto;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    row-gap: 6px;
+}
+/* Compact inside the header: this is a status readout beside a badge now, not a
+   centred strip of its own. */
+.cc5-player .cc5-challenge-head .cc5-challenge-step {
+    padding: 5px 12px;
+    font-size: 0.72rem;
+}
+.cc5-player .cc5-challenge-head .cc5-challenge-step-line {
+    width: 16px;
+}
+.cc5-player .cc5-decision-challenge.cc5-challenge-at-start .cc5-challenge-progress {
+    display: none;
+}
+
+/* v15.3.18: the quiz's "Next Activity" button does not exist until the quiz is done.
+   Every other panel has one activity and one way out, so its Next may sit there disabled;
+   the quiz has three questions and TWO buttons, and showing the exit alongside "Next
+   Question" from question one invites the learner to take it. cc5-enabled is added by the
+   answer handler only once every question has passed. */
+.cc5-player .cc5-quiz-next-activity:not(.cc5-enabled) {
+    display: none;
+}
+
+/* v15.3.18 / v15.4.1: the activity panel's own header.
+   An activity used to open with five stacked rows before anything to do: the Challenge
+   Mode badge, the progress stepper, the "Activity 2" chip, the heading and the
+   instruction. The first two now share a row (see .cc5-challenge-head).
+   v15.3.18 put the chip and the heading on one line too. On the quiz that line ended up
+   carrying four things - Activity n, the read-aloud notice, the heading and "Question 1
+   of 3" - and it collided with the stepper above it. So the HEADING LEADS on its own
+   line (the renderer emits it first as of v15.4.1) and everything else shares the line
+   under it: two clean rows instead of one crowded one, and the heading is the first thing
+   read rather than the third. */
+/* v15.4.1: the pill IS the heading. An <h3> so the panel keeps a real heading in the
+   outline, with none of an h3's own type or spacing - the badge inside it carries all of
+   the appearance. */
+.cc5-player .cc5-panel-title-pill {
+    display: inline-flex;
+    margin: 0;
+    padding: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: 1;
+}
+.cc5-player .cc5-panel-badge-sep {
+    margin: 0 6px;
+    opacity: 0.55;
+}
+/* v15.4.2: the quiz panel's AI-authored heading. Only Route 5 (General) and the
+   university and topicstext routes ask the model for `title` on decision-point, so this
+   is absent on VET, Workplace and PD - which is why the renderer omits the element
+   entirely rather than emitting an empty one carrying this margin. */
+.cc5-player .cc5-panel-title {
+    margin: 0 0 10px;
+    font-size: 1.18rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--cc5-text-primary, hsl(220deg 13% 18%));
+}
+@media (max-width: 700px) {
+    .cc5-player .cc5-panel-title { font-size: 1.06rem; }
+}
+.cc5-player .cc5-challenge-panel .cc5-panel-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+}
+/* The instruction closes the header, so it owns the gap down to the activity itself. */
+.cc5-player .cc5-challenge-panel > .cc5-challenge-instruction {
+    display: block;
+    margin: 10px 0 22px;
+}
+/* Under 700px the two halves stop fitting side by side; stacking them centred
+   is better than a badge squeezed against a wrapped stepper. */
+@media (max-width: 700px) {
+    .cc5-player .cc5-challenge-head {
+        justify-content: center;
+    }
+    .cc5-player .cc5-challenge-head .cc5-challenge-progress {
+        margin-left: 0;
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* v15.4.1: the start panel FILLS the height it has, instead of huddling at the top of it.
+   v15.3.18 tightened this panel, and that was the right move for the wrong measurement: the
+   problem then was three copies of the same list and a heavy slab, not the spacing. With the
+   duplication gone the panel had plenty of room and used none of it, so five small blocks sat
+   bunched in the middle of a tall card - reported as "all a little cramped... you have plenty
+   of height room".
+   The inner column is now a flex column that centres itself in a min-height, and the elements
+   are spaced by one `gap` rather than by five hand-tuned margins.
+   The min-height is capped: `min(56vh, 440px)` plus this panel's padding, the badge row above
+   it and the slide's nav below it stays inside a laptop viewport, so the Start button never
+   goes under the fold - which is the fault this whole screen was created to fix in v15.3.13. */
+.cc5-player .cc5-challenge-panel.cc5-challenge-start {
+    padding: 34px 24px 38px;
+}
+.cc5-player .cc5-challenge-start-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    min-height: min(56vh, 440px);
+}
+.cc5-player .cc5-challenge-start-icon {
+    width: 66px;
+    height: 66px;
+    margin-bottom: 0;
+}
+.cc5-player .cc5-challenge-start-title {
+    font-size: 1.45rem;
+    margin: 0;
+}
+.cc5-player .cc5-challenge-start-lead {
+    font-size: 0.98rem;
+    margin: -12px 0 0;   /* sits with the title as one block, not as a third item */
+}
+/* The requirement was a bordered, left-accented, gradient-filled slab - the
+   heaviest object on a screen whose job is to get out of the way. It says one
+   sentence; it is now one line on a soft wash, centred with everything else. */
+.cc5-player .cc5-challenge-start-requirement {
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    padding: 14px 20px;
+    margin: 0;              /* the column's gap owns the spacing now */
+    border: 0;
+    border-radius: 12px;
+    background: var(--cc5-orange-cta-wash);
+}
+.cc5-player .cc5-challenge-start-pct {
+    font-size: 1.15rem;
+}
+.cc5-player .cc5-challenge-start-list {
+    gap: 10px;
+}
+.cc5-player .cc5-challenge-start-item {
+    padding: 9px 16px 9px 10px;
+}
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn {
+    margin-top: 4px;
+    padding: 12px 26px;
+}
+/* On a short viewport the cap does the work and the column simply stops growing, so the
+   button stays above the fold rather than the panel reserving height it cannot honour. */
+@media (max-height: 700px) {
+    .cc5-player .cc5-challenge-start-inner {
+        min-height: 0;
+        gap: 14px;
+    }
+    .cc5-player .cc5-challenge-panel.cc5-challenge-start {
+        padding: 24px 24px 28px;
+    }
+    .cc5-player .cc5-challenge-start-icon { width: 54px; height: 54px; }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   v15.3.13  -  THREE QUESTIONS IN ONE QUIZ ACTIVITY
+   ──────────────────────────────────────────────────────────────────────────
+   The decision-point card now carries three questions (schema v2) instead of
+   one. They are shown one at a time inside the quiz panel: three questions
+   and twelve options stacked would put the last two well below the fold,
+   which is the same complaint the start screen above was added to answer.
+
+   A v1 card normalises to a one-question set, renders through exactly this
+   markup, and shows no counter and no between-questions button - so nothing
+   here changes how an existing pack looks.
+   ═════════════════════════════════════════════════════════════════════════ */
+.cc5-player .cc5-quiz-counter {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 3px 11px;
+    border-radius: 999px;
+    background: hsl(var(--cc5-activity-h) 90% 96%);
+    color: hsl(var(--cc5-activity-h) 75% 32%);
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+}
+/* Scoped to .cc5-quiz-questions - the CHALLENGE quiz, where questions arrive
+   one at a time. The fallback renderDecisionPoint card stacks its questions
+   with .cc5-quiz-question-stacked and must not animate three at once. */
+.cc5-player .cc5-quiz-questions .cc5-quiz-question {
+    animation: cc5-slide-in-right 0.32s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.cc5-player .cc5-quiz-question-stacked + .cc5-quiz-question-stacked {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid var(--cc5-border, hsl(0deg 0% 90%));
+}
+.cc5-player .cc5-quiz-question[hidden] {
+    display: none !important;
+}
+.cc5-player .cc5-quiz-next-q-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+    margin: 18px auto 0;
+    padding: 11px 26px;
+    border: 2px solid hsl(var(--cc5-activity-h) 30% 82%);
+    border-radius: 10px;
+    background: hsl(var(--cc5-activity-h) 25% 96%);
+    color: hsl(var(--cc5-activity-h) 30% 42%);
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: not-allowed;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 280px;
+}
+/* Same explicit muted pair as the activity buttons rather than opacity - see
+   FIX-CC-NEXTACTIVITY-DISABLED above for why opacity is the wrong tool. */
+/* v15.4.6: the gradient, the coloured glow that grew on hover and the 1px lift are all
+   gone - "remove the hover blue glow, that's very outdated". Colour comes from the shared
+   forward-button block at the end of this file. Only `cursor` belongs to this state. */
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled {
+    cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+    /* Must match the animating selector's specificity or higher. A media query
+       adds none of its own, so the shorter .cc5-player .cc5-quiz-question (0,2,0)
+       lost to .cc5-player .cc5-quiz-questions .cc5-quiz-question (0,3,0) and a
+       learner with reduced motion set still got the slide-in on every question. */
+    .cc5-player .cc5-quiz-questions .cc5-quiz-question { animation: none; }
+    /* v15.4.6: these two no longer transform in any state, so there is nothing here to
+       switch off. Kept as a no-op comment rather than a rule that suggests there is. */
+}
+
+/* v15.3.13: the card editor shows question one of a multi-question decision
+   point. Without the label a teacher looking for question three would think
+   the other two had been lost - they are preserved verbatim through the save. */
+/* NOT prefixed with .cc5-player. The edit modal is appended to document.body,
+   so it is a sibling of #contentcreator-app and never a descendant of the
+   player - the prefixed version of this rule could never match, and the note a
+   teacher needs in order to know questions 2 and 3 still exist rendered as an
+   unstyled paragraph. Every other edit-modal rule in this file is unprefixed
+   for the same reason. */
+.cc5-edit-dp-note {
+    margin: 0 0 8px;
+    padding: 4px 10px;
+    display: inline-block;
+    border-radius: 999px;
+    background: hsl(22deg 90% 96%);
+    color: hsl(22deg 75% 32%);
+    font-size: 0.74rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   v15.3.13 - dark mode for the challenge start screen
+   ──────────────────────────────────────────────────────────────────────────
+   The start screen inherits .cc5-decision-challenge's near-white gradient,
+   which has no dark override, while its own text uses --cc5-text. In dark mode
+   that resolves to hsl(0 0% 98%) - white text on a white pill, 1.04:1, and the
+   activity list is simply gone. The same shape already affects
+   .cc5-challenge-instruction strong further up this file; this fixes the
+   surfaces added in this release rather than leaving three new instances of a
+   known bug.
+   ═════════════════════════════════════════════════════════════════════════ */
+.cc5-dark .cc5-player .cc5-decision-challenge,
+/* v15.4.4: the activity tokens, dark. Same hue, lifted lightness so the text pair and the
+   wash still read on a dark ground - the light-mode values above would be a navy smear. */
+[data-theme="dark"] .cc5-player .cc5-decision-challenge,
+[data-theme="dark"] .cc5-player .cc5-decision-point-card,
+[data-bs-theme="dark"] .cc5-player .cc5-decision-challenge,
+[data-bs-theme="dark"] .cc5-player .cc5-decision-point-card,
+.cc5-player.dark-mode .cc5-decision-challenge,
+.cc5-player.dark-mode .cc5-decision-point-card {
+    --cc5-orange-cta: hsl(var(--cc5-activity-h) 80% 52%);
+    --cc5-orange-cta-dark: hsl(var(--cc5-activity-h) 80% 44%);
+    --cc5-orange-cta-bright: hsl(var(--cc5-activity-h) 85% 64%);
+    --cc5-orange-cta-label: hsl(0deg 0% 100%);
+    --cc5-orange-cta-text: hsl(var(--cc5-activity-h) 85% 74%);
+    --cc5-orange-cta-wash: hsl(var(--cc5-activity-h) 40% 18%);
+}
+
+[data-theme="dark"] .cc5-player .cc5-decision-challenge {
+    background: linear-gradient(160deg, hsl(var(--cc5-activity-h) 18% 15%) 0%, hsl(24deg 10% 13%) 45%, hsl(0deg 0% 11%) 100%);
+}
+.cc5-dark .cc5-player .cc5-challenge-start-icon,
+[data-theme="dark"] .cc5-player .cc5-challenge-start-icon {
+    background: linear-gradient(135deg, hsl(var(--cc5-activity-h) 45% 26%) 0%, hsl(var(--cc5-activity-h) 40% 21%) 100%);
+    color: hsl(var(--cc5-activity-h) 90% 76%);
+}
+.cc5-dark .cc5-player .cc5-challenge-start-lead strong,
+[data-theme="dark"] .cc5-player .cc5-challenge-start-lead strong {
+    color: hsl(var(--cc5-activity-h) 90% 72%);
+}
+.cc5-dark .cc5-player .cc5-challenge-start-requirement,
+[data-theme="dark"] .cc5-player .cc5-challenge-start-requirement {
+    background: linear-gradient(90deg, hsl(var(--cc5-activity-h) 30% 19%) 0%, hsl(var(--cc5-activity-h) 22% 16%) 100%);
+    border-color: hsl(var(--cc5-activity-h) 35% 32%);
+    border-left-color: hsl(var(--cc5-activity-h) 85% 58%);
+}
+.cc5-dark .cc5-player .cc5-challenge-start-pct,
+[data-theme="dark"] .cc5-player .cc5-challenge-start-pct {
+    color: hsl(var(--cc5-activity-h) 92% 70%);
+}
+.cc5-dark .cc5-player .cc5-challenge-start-req-text,
+[data-theme="dark"] .cc5-player .cc5-challenge-start-req-text {
+    color: hsl(24deg 25% 88%);
+}
+/* The pill hard-coded a white background under themed text - the one that
+   disappeared completely. */
+.cc5-dark .cc5-player .cc5-challenge-start-item,
+[data-theme="dark"] .cc5-player .cc5-challenge-start-item {
+    background: hsl(0deg 0% 17%);
+    border-color: hsl(0deg 0% 30%);
+}
+.cc5-dark .cc5-player .cc5-quiz-counter,
+[data-theme="dark"] .cc5-player .cc5-quiz-counter {
+    background: hsl(var(--cc5-activity-h) 30% 20%);
+    color: hsl(var(--cc5-activity-h) 90% 76%);
+}
+/* :not(.cc5-enabled) is load-bearing. Without it this rule has the same
+   specificity as .cc5-player .cc5-quiz-next-q-btn.cc5-enabled and sits later in
+   the file, so it wins - and on a dark site the button that just unlocked went
+   on looking exactly like the disabled one, which is the failure
+   FIX-CC-NEXTACTIVITY-DISABLED above was written about. This rule styles the
+   LOCKED state only; the enabled gradient is theme-independent already. */
+.cc5-dark .cc5-player .cc5-quiz-next-q-btn:not(.cc5-enabled),
+[data-theme="dark"] .cc5-player .cc5-quiz-next-q-btn:not(.cc5-enabled) {
+    background: hsl(0deg 0% 20%);
+    border-color: hsl(0deg 0% 34%);
+    color: hsl(0deg 0% 78%);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   v15.4.6  -  ONE FORWARD BUTTON, THREE PLACES
+
+   "Just do a standard white button with blue text and blue icon, and on hover a blue
+   button with white text and white icon - and remove the on-hover movement, it's off
+   putting." Then: "apply the same styling to the Start button to keep consistent", and
+   "same with the Next Question button - remove the hover blue glow, that's very
+   outdated."
+
+   The three controls that move a learner forward had grown three different treatments:
+
+     Next Card      a pale near-white pill, its blue taken from --cc5-prose-accent, which
+                    varies with the CARD'S TONE - so the same control was a different blue
+                    on a green-toned card than on a blue one. Nudged 2px right on hover.
+     Start Now      an outline button in the activity hue, lifting 1px on hover.
+     Next Question  a solid orange-token gradient with a coloured glow that grew on hover
+                    and a 1px lift.
+
+   They are now one button: white with a blue label and a blue border at rest, filling
+   solid blue with a white label on hover and keyboard focus, one shade darker when
+   pressed. No transforms anywhere - the movement was the thing that read as off - and no
+   coloured glow.
+
+   Every property is pinned with !important because these are bare <button> elements and
+   Moodle's Boost theme repaints them: `#region-main button:hover { color: #fff }` is the
+   rule this file has been fighting since v13.94, and a state that sets a background but
+   not a foreground hands the label to the theme.
+
+   The colour is --cc5-blue-cta, not --cc5-brand-blue: #0381FF is 3.76:1 on white, and an
+   outline-then-fill button needs the SAME colour to pass as text on white AND as a fill
+   under white text. See the token's own note.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn,
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled {
+    background: #fff !important;
+    background-image: none !important;
+    color: var(--cc5-blue-cta) !important;
+    border: 2px solid var(--cc5-blue-cta) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease !important;
+    cursor: pointer;
+}
+
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn:hover,
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn:focus,
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn:focus-visible,
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled:hover,
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled:focus,
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled:focus-visible {
+    background: var(--cc5-blue-cta) !important;
+    background-image: none !important;
+    color: #fff !important;
+    border-color: var(--cc5-blue-cta) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn:active,
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled:active {
+    background: var(--cc5-blue-cta-dark) !important;
+    background-image: none !important;
+    color: #fff !important;
+    border-color: var(--cc5-blue-cta-dark) !important;
+    box-shadow: inset 0 1px 3px -1px rgba(0, 0, 0, 0.25) !important;
+    transform: none !important;
+}
+
+/* The icons are stroked SVGs inheriting currentColor, so the pinned colour carries them -
+   but a theme that sets `button:hover svg { fill }` would still bleed through, which is
+   why the Next Card button already pins this and these two now do as well. */
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn svg,
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn:hover svg,
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled svg,
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled:hover svg {
+    color: inherit !important;
+    stroke: currentColor !important;
+}
+/* The Start Now play triangle is a FILLED glyph, unlike the stroked chevrons beside it. */
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn svg[fill="currentColor"],
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn:hover svg[fill="currentColor"] {
+    fill: currentColor !important;
+}
+
+/* Keyboard focus still has to be visible - the fill alone is not a focus indicator,
+   because hover produces the same fill. */
+.cc5-player .cc5-challenge-next-btn.cc5-challenge-start-btn:focus-visible,
+.cc5-player .cc5-quiz-next-q-btn.cc5-enabled:focus-visible {
+    outline: 2px solid var(--cc5-blue-cta-dark) !important;
+    outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   v15.4.6  -  THE COMPLETION SCREEN'S TWO SECONDARY BUTTONS
+
+   "Why 2 different blues on 2 different buttons? I don't mind the light blue shading on
+   hover - you can apply that as universal if you like."
+
+   They were two blues because they were computed two different ways, both on hue 210 and
+   neither the same colour:
+
+     Try Again       border hsl(210 75% 60%),  label hsl(210 80% 38%)
+     Review Answers  border --cc5-orange-cta-dark, label --cc5-orange-cta-text, which
+                     inside .cc5-decision-challenge resolve to hsl(210 88% 34%) and
+                     hsl(210 90% 34%)
+
+   Same family, different saturation and lightness, sitting side by side - which is
+   exactly what the v15.4.4 sweep set out to end, and these two were reached by the hue
+   normalisation but not by the token unification, so they kept their own values.
+
+   There is now ONE blue on the screen, --cc5-blue-cta, in two tiers:
+
+     PRIMARY forward  (Next Card, Start Now, Next Question)  white -> SOLID blue on hover
+     SECONDARY        (Try Again, Review Answers)            white -> light blue tint
+
+   The tier split is deliberate rather than decorative: Continue is the primary action on
+   the completion screen and is green. If Try Again and Review Answers also filled solid,
+   three saturated buttons would compete for the same glance. The tint is the shading
+   approved above, and --cc5-blue-cta holds 8.4:1 against it.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.cc5-challenge-retry-btn:hover,
+.cc5-challenge-retry-btn:focus,
+.cc5-challenge-retry-btn:focus-visible,
+.cc5-challenge-review-btn:hover,
+.cc5-challenge-review-btn:focus,
+.cc5-challenge-review-btn:focus-visible {
+    background: var(--cc5-blue-cta-wash) !important;
+    background-image: none !important;
+    border-color: var(--cc5-blue-cta) !important;
+    color: var(--cc5-blue-cta-dark) !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.cc5-challenge-retry-btn:active,
+.cc5-challenge-review-btn:active {
+    background: var(--cc5-blue-cta-wash-deep) !important;
+    border-color: var(--cc5-blue-cta-dark) !important;
+    color: var(--cc5-blue-cta-dark) !important;
+    transform: none !important;
+}
+
+/* Both icons are stroked SVGs on currentColor; pin them the same way as the forward
+   buttons so a theme rule cannot repaint the glyph while the label stays blue. */
+.cc5-challenge-retry-btn svg,
+.cc5-challenge-retry-btn:hover svg,
+.cc5-challenge-review-btn svg,
+.cc5-challenge-review-btn:hover svg {
+    color: inherit !important;
+    fill: none !important;
+    stroke: currentColor !important;
+}
+
+.cc5-challenge-retry-btn:focus-visible,
+.cc5-challenge-review-btn:focus-visible {
+    outline: 2px solid var(--cc5-blue-cta) !important;
+    outline-offset: 2px;
 }

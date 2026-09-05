@@ -23,7 +23,7 @@
  * @copyright  2025 AI Grader
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define([], function () {
+define([], function() {
     /**
      * v13.77 FIX-OBJECT-TEXT: entries in the card content arrays arrive as EITHER
      * plain strings or objects, depending on what the vendor API returns for that
@@ -34,7 +34,7 @@ define([], function () {
      * @param {*} entry A string, or an object such as {title, text} / {error, consequence}.
      * @return {String} Readable text for the entry, or an empty string.
      */
-    var ccEntryText = function (entry) {
+    var ccEntryText = function(entry) {
         if (entry === null || entry === undefined) { return ''; }
         if (typeof entry === 'string') { return entry; }
         if (typeof entry !== 'object') { return String(entry); }
@@ -54,9 +54,9 @@ define([], function () {
      * @param {Array} arr The array to flatten; anything non-array yields [].
      * @return {Array} Array of readable strings.
      */
-    var ccTextList = function (arr) {
+    var ccTextList = function(arr) {
         if (!Array.isArray(arr)) { return []; }
-        return arr.map(ccEntryText).filter(function (s) { return s; });
+        return arr.map(ccEntryText).filter(function(s) { return s; });
     };
 
     'use strict';
@@ -194,7 +194,7 @@ function initPlayer(manifest) {
     }
 
     function renderContent(c) {
-        var paras = (c.paragraphs || []).map(function (p) {
+        var paras = (c.paragraphs || []).map(function(p) {
             return '<p class="cc-para">' + esc(p) + '</p>';
         }).join('');
         return '<div class="cc-slide-header cc-hdr-content">' +
@@ -216,7 +216,7 @@ function initPlayer(manifest) {
     }
 
     function renderSummary(c) {
-        var items = (c.keyTakeaways || []).map(function (t) {
+        var items = (c.keyTakeaways || []).map(function(t) {
             return '<div class="cc-takeaway">' +
                 '<div class="cc-tick"></div>' +
                 '<span class="cc-takeaway-text">' + esc(t) + '</span>' +
@@ -235,7 +235,7 @@ function initPlayer(manifest) {
         var resp = responses[slide.id];
         var answered = resp !== undefined;
 
-        var optHtml = opts.map(function (opt, i) {
+        var optHtml = opts.map(function(opt, i) {
             var letter = String.fromCharCode(65 + i);
             var isSelected = resp && resp.selected === i;
             var cls = 'cc-opt';
@@ -292,11 +292,11 @@ function initPlayer(manifest) {
         var prevBtn = document.getElementById('btn-prev');
         var nextBtn = document.getElementById('btn-next');
 
-        prevBtn && prevBtn.addEventListener('click', function () {
+        prevBtn && prevBtn.addEventListener('click', function() {
             if (currentSlide > 0) { currentSlide--; render(); }
         });
 
-        nextBtn && nextBtn.addEventListener('click', function () {
+        nextBtn && nextBtn.addEventListener('click', function() {
             if (!isComplete(slide)) return;
             if (currentSlide === manifest.slides.length - 1) {
                 if (!completed) { completed = true; setComplete(); }
@@ -308,8 +308,8 @@ function initPlayer(manifest) {
         });
 
         if (slide.type === 'activity') {
-            container.querySelectorAll('.cc-opt:not([disabled])').forEach(function (btn) {
-                btn.addEventListener('click', function () {
+            container.querySelectorAll('.cc-opt:not([disabled])').forEach(function(btn) {
+                btn.addEventListener('click', function() {
                     var optIdx = parseInt(btn.dataset.option, 10);
                     var isCorrect = btn.dataset.correct === 'true';
                     responses[slide.id] = { selected: optIdx, isCorrect: isCorrect };
@@ -527,21 +527,21 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
             if (obj.consequence) paras.push(obj.consequence);
 
             if (obj.sceneParts && obj.sceneParts.length) {
-                obj.sceneParts.forEach(function (part) {
+                obj.sceneParts.forEach(function(part) {
                     if (!part) return;
                     var t = part.text || part.content || part.description || '';
                     if (t) paras.push(t);
                 });
             }
             if (obj.conceptInsights && obj.conceptInsights.length) {
-                obj.conceptInsights.forEach(function (insight) {
+                obj.conceptInsights.forEach(function(insight) {
                     if (!insight) return;
                     var t = insight.text || insight.content || insight.description || '';
                     if (t) paras.push(t);
                 });
             }
             if (obj.steps && obj.steps.length && (obj.cardType === 'mental-model' || obj.cardType === 'action-framework')) {
-                obj.steps.forEach(function (s) {
+                obj.steps.forEach(function(s) {
                     if (!s) return;
                     var heading = s.step || s.action || s.title || '';
                     var detail  = s.detail || s.description || s.explanation || '';
@@ -551,7 +551,7 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                 });
             }
             if (obj.items && obj.items.length) {
-                obj.items.forEach(function (item) {
+                obj.items.forEach(function(item) {
                     if (!item) return;
                     if (typeof item === 'string') { paras.push(item); return; }
                     var m = item.mistake || item.error || item.pitfall || '';
@@ -561,7 +561,7 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                 });
             }
             if (obj.goodItems && obj.goodItems.length) {
-                var goodTexts = obj.goodItems.map(function (item) {
+                var goodTexts = obj.goodItems.map(function(item) {
                     // v13.95.8: carry the benefit into the export, matching the
                     // consequence on badItems below.
                     if (typeof item === 'string') { return item; }
@@ -571,7 +571,7 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                 if (goodTexts.length) paras.push(goodTexts.join(' \u2022 '));
             }
             if (obj.badItems && obj.badItems.length) {
-                var badTexts = obj.badItems.map(function (item) {
+                var badTexts = obj.badItems.map(function(item) {
                     if (typeof item === 'string') { return item; }
                     var _t = item.text || '';
                     return item.consequence ? (_t + '. ' + item.consequence) : _t;
@@ -586,9 +586,36 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
         // Detect if an obj is a quiz/activity card that should become an activity slide
         const isActivityCard = (obj) => {
             if (!obj.options || !Array.isArray(obj.options) || obj.options.length < 2) return false;
-            return obj.options.some(function (o) {
-                return o && (o.isCorrect === true || o.isBest === true);
+            return obj.options.some(function(o) {
+                return o && (o.isCorrect === true || o.isBest === true || o.correct === true);
             });
+        };
+
+        /**
+         * v15.3.13: every question on a decision-point, not just the first.
+         *
+         * A decision-point can now carry three questions (schema v2). normalizeCardSchema
+         * keeps `question` and `options` pointing at question ONE so that everything
+         * written before this release keeps working - which means an exporter that reads
+         * only those two fields silently drops two thirds of the quiz. The learner sees
+         * three questions in the plugin and one in the SCORM package built from the same
+         * pack, which is the kind of difference nobody notices until a client does.
+         *
+         * @param {Object} obj A card or section.
+         * @returns {Array} One entry per question, each shaped like a v1 card.
+         */
+        const activityQuestionsOf = (obj) => {
+            if (Array.isArray(obj.questions) && obj.questions.length) {
+                return obj.questions.map(function(q) {
+                    return {
+                        cardType: obj.cardType,
+                        heading: q.question || obj.heading || '',
+                        question: q.question || '',
+                        options: q.options || []
+                    };
+                });
+            }
+            return [obj];
         };
 
         const buildActivitySlide = (id, obj) => {
@@ -598,10 +625,17 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                 meta: { activityType: obj.cardType || 'knowledge-check' },
                 content: {
                     stem: obj.heading || obj.question || obj.stem || 'Select the best answer:',
-                    options: (obj.options || []).map(function (o) {
+                    options: (obj.options || []).map(function(o) {
                         return {
                             text: o.text || o.label || '',
-                            isCorrect: !!(o.isCorrect || o.isBest),
+                            // v15.3.13: `correct` added. normalizeCardSchema has written
+                            // decision-point options as {text, feedback, correct} since
+                            // v10.43 - isCorrect and isBest are the pre-normalisation
+                            // spellings - so an exported quiz built from a normalised pack
+                            // marked no option as right, and every learner answer scored
+                            // as wrong. Same spelling added to isActivityCard above, which
+                            // was rejecting those cards as activities in the first place.
+                            isCorrect: !!(o.isCorrect || o.isBest || o.correct),
                             feedback: o.feedback || o.explanation || ''
                         };
                     }),
@@ -621,6 +655,36 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
             }
         });
 
+        // v15.4.6: the Policy & Compliance identity slide.
+        //
+        // The player shows which document the course teaches, who owns it, when it was
+        // last reviewed and who to ask, on every slide - it is the one piece of chrome a
+        // compliance learner is entitled to, and the reason the route collects those four
+        // fields. A SCORM package exported to another LMS carried none of it: staff would
+        // be attested against rules with no record of the source document or its review
+        // date. There is no chrome in a SCORM package to hang a strip on, so it becomes
+        // the second slide, immediately after the cover. Empty on every other route.
+        if (manifest.policyMeta && typeof manifest.policyMeta === 'object'
+                && (!manifest.mode || manifest.mode === 'policy')) {
+            const pm = manifest.policyMeta;
+            const facts = [
+                ['Full policy', pm.title || pm.sourceFilename],
+                ['Owner', pm.owner],
+                ['Last reviewed', pm.reviewed],
+                ['Questions', pm.contact]
+            ].filter(function(f) { return String(f[1] || '').trim(); });
+            if (facts.length) {
+                slides.push({
+                    id: 'slide-policy-identity',
+                    type: 'content',
+                    content: {
+                        headline: 'About this policy',
+                        paragraphs: facts.map(function(f) { return f[0] + ': ' + f[1]; })
+                    }
+                });
+            }
+        }
+
         const topics = manifest.topics || [];
         topics.forEach((topic, ti) => {
             if (topics.length > 1) {
@@ -637,7 +701,13 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                     section.cards.forEach((card, ci) => {
                         var slideId = 'slide-' + ti + '-' + si + '-' + ci;
                         if (isActivityCard(card)) {
-                            slides.push(buildActivitySlide(slideId, card));
+                            // v15.3.13: one slide per question. Suffixed so the ids stay
+                            // unique - responses[] is keyed on slide id, and two slides
+                            // sharing one would score as a single question.
+                            activityQuestionsOf(card).forEach(function(q, qi) {
+                                slides.push(buildActivitySlide(
+                                    slideId + (qi ? '-q' + qi : ''), q));
+                            });
                         } else {
                             slides.push({
                                 id: slideId,
@@ -652,7 +722,10 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
                 } else {
                     var slideId = 'slide-' + ti + '-' + si;
                     if (isActivityCard(section)) {
-                        slides.push(buildActivitySlide(slideId, section));
+                        activityQuestionsOf(section).forEach(function(q, qi) {
+                            slides.push(buildActivitySlide(
+                                slideId + (qi ? '-q' + qi : ''), q));
+                        });
                     } else {
                         slides.push({
                             id: slideId,
@@ -708,6 +781,11 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neu
 
     return {
         exportSCORM: exportSCORM,
+        // v15.4.6: exported so the slide list a package will contain can be asserted
+        // directly. Everything below exportSCORM writes files; this is the only step that
+        // decides what a learner in another LMS actually sees, and it was previously
+        // reachable only by generating a whole package.
+        flattenManifest: flattenManifest,
         getStyles: getStyles,
         generatePlayerScript: generatePlayerScript
     };

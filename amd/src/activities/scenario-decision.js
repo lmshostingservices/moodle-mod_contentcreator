@@ -22,7 +22,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define(['jquery'], function ($) {
+define(['jquery'], function($) {
     'use strict';
 
     /**
@@ -30,7 +30,7 @@ define(['jquery'], function ($) {
      * Presents workplace scenarios with multiple choice options
      * User must select the best course of action
      */
-    var ScenarioDecision = function (container, config) {
+    var ScenarioDecision = function(container, config) {
         this.container = $(container);
         this.config = config;
         this.scenario = config.scenario || {};
@@ -39,18 +39,18 @@ define(['jquery'], function ($) {
         this.explanation = config.explanation || '';
         this.selectedIndex = null;
         this.submitted = false;
-        this.onComplete = config.onComplete || function () {};
+        this.onComplete = config.onComplete || function() {};
         
         this.init();
     };
 
     ScenarioDecision.prototype = {
-        init: function () {
+        init: function() {
             this.render();
             this.bindEvents();
         },
 
-        render: function () {
+        render: function() {
             var self = this;
             var html = '<div class="cc5-activity cc5-scenario-decision">';
             
@@ -68,7 +68,7 @@ define(['jquery'], function ($) {
             
             // Options
             html += '<div class="cc5-options-list">';
-            this.options.forEach(function (option, index) {
+            this.options.forEach(function(option, index) {
                 html += '<button class="cc5-option-btn" data-index="' + index + '">';
                 html += '<span class="cc5-option-letter">' + String.fromCharCode(65 + index) + '</span>';
                 html += '<span class="cc5-option-text">' + self.escapeHtml(option.text) + '</span>';
@@ -90,11 +90,11 @@ define(['jquery'], function ($) {
             this.container.html(html);
         },
 
-        bindEvents: function () {
+        bindEvents: function() {
             var self = this;
             
             // Option selection
-            this.container.on('click', '.cc5-option-btn', function (e) {
+            this.container.on('click', '.cc5-option-btn', function(e) {
                 if (self.submitted) return;
                 
                 var $btn = $(this);
@@ -108,20 +108,20 @@ define(['jquery'], function ($) {
             });
             
             // Submit
-            this.container.on('click', '.cc5-submit-btn', function (e) {
+            this.container.on('click', '.cc5-submit-btn', function(e) {
                 if (self.submitted || self.selectedIndex === null) return;
                 self.submit();
             });
         },
 
-        submit: function () {
+        submit: function() {
             var self = this;
             this.submitted = true;
             
             var isCorrect = this.selectedIndex === this.correctIndex;
             
             // Mark options
-            this.container.find('.cc5-option-btn').each(function (index) {
+            this.container.find('.cc5-option-btn').each(function(index) {
                 var $btn = $(this);
                 $btn.prop('disabled', true);
                 
@@ -152,12 +152,12 @@ define(['jquery'], function ($) {
             feedbackHtml += '</div>';
             
             this.container.find('.cc5-feedback-area').html(feedbackHtml).slideDown(200);
-            this.container.find('.cc5-submit-btn').text('Continue').off('click').on('click', function () {
+            this.container.find('.cc5-submit-btn').text('Continue').off('click').on('click', function() {
                 self.onComplete(isCorrect);
             });
         },
 
-        escapeHtml: function (str) {
+        escapeHtml: function(str) {
             if (!str) return '';
             var div = document.createElement('div');
             div.textContent = str;
@@ -166,7 +166,7 @@ define(['jquery'], function ($) {
     };
 
     return {
-        init: function (container, config) {
+        init: function(container, config) {
             return new ScenarioDecision(container, config);
         }
     };

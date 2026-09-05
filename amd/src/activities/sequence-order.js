@@ -22,33 +22,33 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define(['jquery'], function ($) {
+define(['jquery'], function($) {
     'use strict';
 
     /**
      * Sequence Order Activity
      * Drag-and-drop to arrange steps in correct sequence
      */
-    var SequenceOrder = function (container, config) {
+    var SequenceOrder = function(container, config) {
         this.container = $(container);
         this.config = config;
         this.title = config.title || 'Arrange the steps in order';
         this.steps = this.shuffleArray(config.steps || []);
-        this.correctOrder = config.correctOrder || config.steps.map(function (s) { return s.id; });
+        this.correctOrder = config.correctOrder || config.steps.map(function(s) { return s.id; });
         this.submitted = false;
-        this.onComplete = config.onComplete || function () {};
+        this.onComplete = config.onComplete || function() {};
         
         this.init();
     };
 
     SequenceOrder.prototype = {
-        init: function () {
+        init: function() {
             this.render();
             this.bindEvents();
             this.initDragDrop();
         },
 
-        shuffleArray: function (array) {
+        shuffleArray: function(array) {
             var shuffled = array.slice();
             for (var i = shuffled.length - 1; i > 0; i--) {
                 var j = Math.floor(Math.random() * (i + 1));
@@ -59,7 +59,7 @@ define(['jquery'], function ($) {
             return shuffled;
         },
 
-        render: function () {
+        render: function() {
             var self = this;
             var html = '<div class="cc5-activity cc5-sequence-order">';
             
@@ -71,7 +71,7 @@ define(['jquery'], function ($) {
             
             // Steps list
             html += '<div class="cc5-steps-list">';
-            this.steps.forEach(function (step, index) {
+            this.steps.forEach(function(step, index) {
                 html += '<div class="cc5-step-item" data-id="' + self.escapeHtml(step.id) + '" draggable="true">';
                 html += '<div class="cc5-step-handle">';
                 html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
@@ -96,30 +96,30 @@ define(['jquery'], function ($) {
             this.container.html(html);
         },
 
-        bindEvents: function () {
+        bindEvents: function() {
             var self = this;
             
-            this.container.on('click', '.cc5-submit-btn', function (e) {
+            this.container.on('click', '.cc5-submit-btn', function(e) {
                 if (self.submitted) return;
                 self.submit();
             });
         },
 
-        initDragDrop: function () {
+        initDragDrop: function() {
             var self = this;
             var $list = this.container.find('.cc5-steps-list');
             
-            $list.on('dragstart', '.cc5-step-item', function (e) {
+            $list.on('dragstart', '.cc5-step-item', function(e) {
                 $(this).addClass('dragging');
                 e.originalEvent.dataTransfer.effectAllowed = 'move';
             });
             
-            $list.on('dragend', '.cc5-step-item', function (e) {
+            $list.on('dragend', '.cc5-step-item', function(e) {
                 $(this).removeClass('dragging');
                 self.updateNumbers();
             });
             
-            $list.on('dragover', function (e) {
+            $list.on('dragover', function(e) {
                 e.preventDefault();
                 var $afterElement = self.getDragAfterElement($list[0], e.originalEvent.clientY);
                 var $dragging = $list.find('.dragging');
@@ -132,12 +132,12 @@ define(['jquery'], function ($) {
             });
             
             // Touch support
-            $list.on('touchstart', '.cc5-step-handle', function (e) {
+            $list.on('touchstart', '.cc5-step-handle', function(e) {
                 var $item = $(this).closest('.cc5-step-item');
                 $item.addClass('touch-dragging');
             });
             
-            $list.on('touchmove', function (e) {
+            $list.on('touchmove', function(e) {
                 var $dragging = $list.find('.touch-dragging');
                 if ($dragging.length === 0) return;
                 
@@ -152,18 +152,18 @@ define(['jquery'], function ($) {
                 }
             });
             
-            $list.on('touchend', '.cc5-step-item', function (e) {
+            $list.on('touchend', '.cc5-step-item', function(e) {
                 $(this).removeClass('touch-dragging');
                 self.updateNumbers();
             });
         },
 
-        getDragAfterElement: function (container, y) {
+        getDragAfterElement: function(container, y) {
             var $items = $(container).find('.cc5-step-item:not(.dragging):not(.touch-dragging)');
             var result = null;
             var closestOffset = Number.NEGATIVE_INFINITY;
             
-            $items.each(function () {
+            $items.each(function() {
                 var box = this.getBoundingClientRect();
                 var offset = y - box.top - box.height / 2;
                 
@@ -176,23 +176,23 @@ define(['jquery'], function ($) {
             return result ? $(result) : $();
         },
 
-        updateNumbers: function () {
-            this.container.find('.cc5-step-item').each(function (index) {
+        updateNumbers: function() {
+            this.container.find('.cc5-step-item').each(function(index) {
                 $(this).find('.cc5-step-number').text(index + 1);
             });
         },
 
-        submit: function () {
+        submit: function() {
             var self = this;
             this.submitted = true;
             
             var currentOrder = [];
-            this.container.find('.cc5-step-item').each(function () {
+            this.container.find('.cc5-step-item').each(function() {
                 currentOrder.push($(this).data('id'));
             });
             
             var correctCount = 0;
-            this.container.find('.cc5-step-item').each(function (index) {
+            this.container.find('.cc5-step-item').each(function(index) {
                 var $item = $(this);
                 var itemId = $item.data('id');
                 var isCorrect = itemId === self.correctOrder[index];
@@ -228,7 +228,7 @@ define(['jquery'], function ($) {
                 feedbackHtml += '<div class="cc5-correct-order-detail">';
                 feedbackHtml += '<p class="cc5-correct-order-label"><strong>Correct order:</strong></p>';
                 feedbackHtml += '<ol class="cc5-correct-order-list">';
-                self.correctOrder.forEach(function (id) {
+                self.correctOrder.forEach(function(id) {
                     var step = null;
                     for (var si = 0; si < self.steps.length; si++) {
                         if (self.steps[si].id === id) { step = self.steps[si]; break; }
@@ -241,12 +241,12 @@ define(['jquery'], function ($) {
             feedbackHtml += '</div>';
             
             this.container.find('.cc5-feedback-area').html(feedbackHtml).slideDown(200);
-            this.container.find('.cc5-submit-btn').text('Continue').off('click').on('click', function () {
+            this.container.find('.cc5-submit-btn').text('Continue').off('click').on('click', function() {
                 self.onComplete(allCorrect);
             });
         },
 
-        escapeHtml: function (str) {
+        escapeHtml: function(str) {
             if (!str) return '';
             var div = document.createElement('div');
             div.textContent = str;
@@ -255,7 +255,7 @@ define(['jquery'], function ($) {
     };
 
     return {
-        init: function (container, config) {
+        init: function(container, config) {
             return new SequenceOrder(container, config);
         }
     };
