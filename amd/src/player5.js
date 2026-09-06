@@ -4749,6 +4749,63 @@ define([
                                 if (front && back) _flipItems.push({ front: front, back: back });
                             });
                         }
+                        // v15.4.12: University's other two term-and-definition carriers.
+                        //
+                        // The route was reaching THREE flip cards against a deck of nine,
+                        // because `concept-anchor` was treated as its only source. It is
+                        // not - it is only the one that happens to use the field NAME
+                        // `keyTerms`. Two other cards on this route carry a short label and
+                        // the paragraph that explains it, which is what a flip card is:
+                        //
+                        //   ethics-considerations  considerations[5]{dimension, description}
+                        //     "Privacy" on the front, what privacy requires on the back.
+                        //     A 1-3 word dimension against a 34-46 word description is
+                        //     exactly the shape this activity wants.
+                        //
+                        //   theoretical-framework  frameworks[2-3]{name, principle}
+                        //     The framework's name against the mechanism it claims. This is
+                        //     how the material would be revised anyway. `limitation` is
+                        //     deliberately NOT used: "what a supporter would concede" is a
+                        //     caveat on the principle, not a definition of the name, and a
+                        //     flip card whose back contradicts its front teaches the wrong
+                        //     thing.
+                        //
+                        // Both fields already arrive and already survive normalisation -
+                        // verified against the real normaliser, not assumed. Nothing on the
+                        // server or in the card contract changes; this list was simply
+                        // never told about them. Same defect shape, and the same fix, as
+                        // v15.3.14 (subtopic) and v15.4.2 (concept-anchor) - which is why
+                        // test-activity-block-all-routes.js now asserts the DECK SIZE per
+                        // route rather than merely that a deck exists.
+                        // Both readers take STRINGS only. These fields are read straight
+                        // out of saved manifests going back to v13, where an item can be a
+                        // bare string or carry a nested object, and String({}) is
+                        // "[object Object]" - which is truthy, so an unguarded read would
+                        // put that on the face of a flip card rather than skipping it.
+                        var _flipStr = function(v) {
+                            return (typeof v === 'string') ? v.trim() : '';
+                        };
+                        if (c.cardType === 'ethics-considerations' && c.considerations
+                            && c.considerations.length) {
+                            c.considerations.forEach(function(ec) {
+                                if (!ec || typeof ec !== 'object') { return; }
+                                var front = _flipStr(ec.dimension) || _flipStr(ec.title)
+                                         || _flipStr(ec.term);
+                                var body  = _flipStr(ec.description) || _flipStr(ec.text);
+                                var back  = body ? _flipBack(body) : '';
+                                if (front && back) _flipItems.push({ front: front, back: back });
+                            });
+                        }
+                        if (c.cardType === 'theoretical-framework' && c.frameworks
+                            && c.frameworks.length) {
+                            c.frameworks.forEach(function(fw) {
+                                if (!fw || typeof fw !== 'object') { return; }
+                                var front = _flipStr(fw.name) || _flipStr(fw.title);
+                                var body  = _flipStr(fw.principle) || _flipStr(fw.text);
+                                var back  = body ? _flipBack(body) : '';
+                                if (front && back) _flipItems.push({ front: front, back: back });
+                            });
+                        }
                         // v15.3.14: 'decision-point' added for the same reason. On
                         // Topics-and-Text the good/bad contrast lives on the decision-point
                         // card, not on a summary card - that route has no

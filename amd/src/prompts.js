@@ -986,7 +986,22 @@ Generate ALL content in ${languageName}. This is NON-NEGOTIABLE
         'overview': { 'paragraphs[]': 2 },
         'key-concepts': { 'paragraphs[]': 2, 'keyTerms[].definition': 3 },
         'examples-application': { 'paragraphs[]': 2 },
-        'key-takeaways': { 'paragraphs[]': 2, 'goodItems[].text': 3, 'badItems[].text': 3 }
+        'key-takeaways': { 'paragraphs[]': 2, 'goodItems[].text': 3, 'badItems[].text': 3 },
+        // v15.4.11: Topics and Text's subtopic card, whose keyTerms ARE that route's Flip
+        // and Learn deck.
+        //
+        // The prompt asked each subtopic card for exactly one key term, and the deck holds
+        // nine. A topic broken into the route's minimum of three subtopics therefore
+        // produced a three-card deck - a third of an activity - and a pack that omitted
+        // the field produced none at all, silently. Three per card fills the deck at the
+        // minimum subtopic count and is capped at nine above it.
+        //
+        // Listed here rather than only in the prompt so itemCountIssues() measures the
+        // shortfall the same way it does for every other card type: a card that comes back
+        // with two of the three joins the repair queue instead of quietly shipping a deck
+        // one card short. The prompt and this table must agree - test-field-ranges asserts
+        // it, and this route is the one where they had never been made to.
+        'subtopic': { 'paragraphs[]': 2, 'keyTerms[].definition': 3 }
     };
 
     /**
@@ -2593,21 +2608,30 @@ exactly one "decision-point" card at the end.
 
 FIELDS: Return every field exactly as specified. Do not rename, omit, add or reorder fields.
 
-1-N. subtopic  -  heading, paragraphs[2]
+1-N. subtopic  -  heading, paragraphs[2], keyTerms[3]
    heading: the subtopic's own heading, 2-6 words, in title case. This is what the learner
    sees at the top of the card, numbered by the platform - "1. Leadership Principles",
    "2. Leadership Styles". Name the actual subject of THIS card. Never a generic label
    ("Introduction", "Overview", "Part Two", "Conclusion"), never the course or topic name
    repeated, and never the same heading twice in one topic.
    paragraphs: EXACTLY 2 separate strings. Each paragraph 58-70 words.
-   keyTerms: exactly 1 - {term(1-4 words), definition(12-25 words)}. The one term from THIS
-   subtopic a learner must be able to define afterwards, defined without using the term
-   itself. These become the Flip and Learn cards, so the definition must stand alone
-   without the paragraph beside it.
+   keyTerms: exactly 3 - {term(1-4 words), definition(12-25 words)}. The three terms from
+   THIS subtopic a learner must be able to define afterwards, each defined without using
+   the term itself. These become the Flip and Learn cards, so a definition must stand alone
+   without the paragraph beside it. REQUIRED on every subtopic card - a card without them
+   costs the learner the Flip and Learn activity while still looking complete.
+   Three per card, not one: the deck holds nine cards, and a topic broken into the minimum
+   of three subtopics must still fill it. Take the three terms this subtopic actually
+   introduces - do not repeat a term already defined on an earlier card, and do not pad
+   with a word the paragraphs never use.
 
-LAST. decision-point  -  title, question, options[4]{text(10-16 words), correct, feedback}
+LAST. decision-point  -  title, question, options[4]{text(10-16 words), correct, feedback},
+      goodItems[3], badItems[3]
    One multiple-choice question testing understanding of the subtopics above, not recall of
    a phrase.
+   EVERY FIELD ON THIS LINE IS REQUIRED. goodItems and badItems are not optional extras:
+   they are the Category Sort activity, and a card that omits them costs the learner a whole
+   activity while still looking complete.
    title: 3-7 words naming what is being checked. No topic name repeated verbatim.
    question: 15-30 words, answerable only by someone who understood the article.
    options: exactly 4. Exactly ONE has correct: true.

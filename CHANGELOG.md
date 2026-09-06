@@ -1,5 +1,342 @@
 # Changelog
 
+## 15.4.14 - 2026-09-06
+
+**A second audit pass, run before testing. Three more defects, one of which cost the learner
+a whole slide.**
+
+### 1. A single bad array element took down an entire University slide
+
+`renderTheoreticalFramework` read `fw.name` with no guard, and `renderEthicsConsiderations`
+tested `typeof c === 'object'` - which is **true for `null`** - and then read `c.dimension`.
+Either way one malformed element threw, the exception reached `renderSlideContent`'s catch,
+and the learner got the fallback panel instead of the card, losing **every other framework
+and consideration on that slide** over one bad row.
+
+A field holding an object rather than a string was the other half: it rendered as the literal
+text `[object Object]` on the card.
+
+Both readers now skip a malformed element and keep the rest. One bad row costs its own row.
+Found by feeding the renderer the shapes saved manifests actually contain - nulls, bare
+strings, nested objects - rather than the tidy fixtures a test usually gets.
+
+### 2. A half-full flip deck was measured and then dropped
+
+v15.4.12 raised the Topics-and-Text ask from one key term per subtopic to three, because the
+deck holds nine and three subtopics times one is a third of an activity. The caveat given at
+the time was that if the vendor's strict schema caps that array, `activityFieldIssues()`
+would report the shortfall.
+
+**It would not have.** That detector measures at the RENDERER's floor - two flip items -
+because its job is "can the activity be built at all", and three items clears it. It is
+silent, correctly. `itemCountIssues()` did catch it, per card - and its repairable pattern
+was scoped to `sceneParts|conceptInsights|steps|items`, so `keyTerms` was not in it and all
+three findings were dropped.
+
+So the exact failure that caveat described would have happened in silence. `keyTerms` is now
+in that pattern: it renders as a visible grid AND it is the entire Flip and Learn deck on two
+routes, so a card short of its count is a hole the learner sees twice.
+
+**This is the third instance of the same routing trap in one release** - after
+`activityFieldIssues` itself and `keyTakeawayIssues`. The rule is now written down where it
+belongs, in `CC_REPAIRABLE`: *a check nothing acts on is not a check.* Every new `softIssues`
+producer needs a `CC_REPAIRABLE` or `CC_REVIEW_ONLY` entry and a test asserting the pairing.
+
+### 3. The University flip harvest took the same malformed shapes
+
+Hardened alongside the renderers, for the same reason: it reads saved manifests going back to
+v13, and `String({})` is `"[object Object]"` - truthy, so an unguarded read puts that on the
+face of a flip card.
+
+### Also swept, and clean
+
+- **No mutation residue** in any source file from this session's own mutation testing, and
+  the packaged tree is byte-identical to source.
+- **Every soft-issue producer audited for routing.** On a deliberately poor pack, 27 of 44
+  findings are inert - and all but the three fixed above are **word-length** issues, which
+  `CC_REPAIRABLE` excludes deliberately: v13.98.3 records that repairing length fired on
+  essentially every section of four routes. That exclusion is a documented trade-off and was
+  left alone. One observation for later: `depthIssues`'s section-level verdicts
+  ("THE PACK IS WRITTEN SHORT", "THE WHOLE SECTION IS TOO THIN") carry a comment saying they
+  are reported first "so it survives the top-five slice" - which only makes sense if they
+  reach the slice, and they do not. Worth a decision, not a silent change.
+- All 101 checks in the all-routes audit pass; every new guard in this release and the last
+  has been mutation-proven.
+
+## 15.4.13 - 2026-09-06
+
+**A self-audit of v15.4.11 and v15.4.12. Two live defects, one of them mine and one of them
+billable.**
+
+Asked to check my own work. Both findings came from reading the previous release against its
+own claims, not from any test — which is why both are now guarded and both guards have been
+mutation-proven.
+
+### 1. v15.4.11's new check was completely inert. Mine.
+
+`activityFieldIssues()` was added to stop Topics and Text losing Flip and Learn and Category
+Sort in silence. It was correct, it was wired in, and **nothing acted on a single thing it
+found.**
+
+`softIssues` is not the repair queue. The repair queue is the subset of `softIssues` matching
+`CC_REPAIRABLE`, and the same filter feeds `needsReview`. Neither of the two new strings
+matched any pattern in that list, so the check ran, correctly found the missing `keyTerms`,
+and had its finding thrown away three times over: not repaired, not flagged, not shown.
+
+The v15.4.11 changelog stated the opposite — that the model would be asked again and the
+section would appear in "N sections need attention". That entry has been corrected in place.
+
+This is precisely the trap documented sixteen lines above the fix, in `CC_REPAIRABLE`'s own
+v15.3.7 comment, which records the same filter silently discarding the Policy route's
+fabricated-obligation checks for two releases. It was read, quoted in a changelog, and then
+walked into.
+
+**Fixed:** one pattern, `/activity cannot be built/`, scoped to that exact sentence so it
+cannot drag unrelated issues into a paid repair.
+
+### 2. Every Topics-and-Text section bought a repair call it could never pass. Not mine, but live.
+
+`keyTakeawayIssues()` read card 1 of **every** route unconditionally, and `/keyTakeaway/` is
+in `CC_REPAIRABLE`.
+
+Six routes ask their first card for that field — VET, Workplace, General, Policy, PD and
+University all name it in their prompts. **Topics and Text does not mention it anywhere:**
+its subtopic card is heading, paragraphs and keyTerms, and the vendor's published required
+fields for it are `cardType`, `heading`, `paragraphs`.
+
+So on that one route the issue fired on every section, for a field the prompt never asked
+for — and being repairable, it did not merely add noise. It **spent a paid repair call on
+every Topics-and-Text section**, demanding a field the strict schema very likely cannot emit.
+A repair that cannot succeed, bought every time. Same shape as v13.98.2's repair that fired
+on every section and took a release to undo.
+
+**Fixed:** the check now takes the route and returns early on `topicstext`. The guard asserts
+both halves — that it is silent there, and that it still fires on all six routes that do ask
+for the field, because silencing it globally would be a worse bug than the one being fixed.
+
+### Also checked, and clean
+
+- **The `CC_EXPECTED_ITEMS` entry v15.4.11 added for `subtopic`** moves that card's derived
+  word range from 72-101 to 154-221. The old range was wrong — a card written exactly to
+  spec measures 159-222, so **every** Topics-and-Text card was being measured against a
+  ceiling it could not help but exceed and a floor of 68 that caught nothing. The new floor
+  (`min × 0.95` = 146) passes a to-spec card and catches a thin one. Nothing flags
+  over-length, so the one-word overshoot at the extreme top of every field range is a label,
+  not a fault.
+- **The `[CC QUIZ]` diagnostic fires**, verified by running a real Topics-and-Text pack
+  through `validateCards` rather than trusting that it compiled.
+- **The Category Sort alias.** The audit fixture was writing `goodItems`/`badItems` directly
+  while the prompts ask for `standardItems`/`errorItems`. Corrected in v15.4.12; re-confirmed
+  here that all five fixed routes still reach 6 sort items through the real alias.
+
+## 15.4.12 - 2026-09-06
+
+**University's flip deck was a third full, and the fix needed nothing from the server.**
+
+v15.4.11's audit measured University at 3 flip cards against a deck of 9, and recorded it as
+a vendor problem: `concept-anchor` carries `keyTerms[3]` and raising that count unilaterally
+is the live-contract mismatch that caused the General outage. That reasoning was right about
+`concept-anchor` and wrong about the conclusion. `concept-anchor` is not the route's only
+source of flip pairs - **it is only the card that happens to use the field name `keyTerms`.**
+
+Two other University cards already carry a short label and the passage that explains it:
+
+| card | field | flip pair | count |
+|---|---|---|---|
+| `concept-anchor` | `keyTerms[3]{term, definition}` | already harvested | 3 |
+| `ethics-considerations` | `considerations[5]{dimension, description}` | dimension → description | 5 |
+| `theoretical-framework` | `frameworks[2-3]{name, principle}` | name → principle | 2-3 |
+
+Ten or eleven items, capped to nine. Both fields were verified to arrive and to survive
+`normalizeCardSchema` with those names intact - run against the real normaliser, not assumed.
+**No vendor change, no contract change, no card-count change.** The harvester simply had
+never been told those card types carry pairs, which is the same defect that cost this route
+its whole activity block until v15.4.2 and cost Topics and Text its own until v15.3.14.
+
+`limitation` is deliberately not used as a flip back. "What a supporter of the framework
+would concede" is a caveat on the principle, not a definition of the name, and a flip card
+whose back contradicts its front teaches the wrong thing.
+
+### University still has no Category Sort, and that is the right answer
+
+Its decision-point does carry `standardItems`/`errorItems` - which on every other route
+alias to `goodItems`/`badItems` and feed the sort. On a decision-point they do not: they are
+the one defensible answer and the three plausible wrong ones, and the v1 reassembly consumes
+them into the four MCQ options. Confirmed by running the real normaliser rather than reading
+the harvester.
+
+Nothing else in the contract is a good/bad contrast. `analytical-lens` carries positions, the
+case studies carry cases, `ethics-considerations` carries considerations. Manufacturing a
+right/wrong split from any of them would put an activity on a card that does not mean it. So
+University ships two activities done properly rather than three with one faked. The `0` is
+recorded as an expectation in the suite, so changing it has to be deliberate.
+
+### The audit fixture now uses the field names the prompts actually ask for
+
+Found while investigating the above, and worth its own note. The `competency-summary` fixture
+wrote `goodItems`/`badItems` directly - but the **prompt** asks for
+`standardItems`/`errorItems`, and `normalizeCardSchema` is what aliases them to the names the
+Category Sort reads. A fixture that writes the aliased names skips the alias entirely, so if
+that alias ever broke, **five routes would lose their Category Sort and the suite would still
+be green.** The fixture now answers the way the server really answers.
+
+Final state, all seven routes rendered and counted:
+
+| route | flip | sort | quiz |
+|---|---|---|---|
+| vet, workplace, general, policy, pd | 9 | 6 | 3 when sent |
+| university | 9 | 0 (by contract) | 3 when sent |
+| topicstext | 9 | 6 | **1 - server-capped** |
+
+## 15.4.11 - 2026-09-05
+
+**Topics and Text lost two of its three activities, silently. The prompt never required the
+fields they are built from, and nothing noticed they were missing.**
+
+Reported live: *"the activity for topics and text is missing the 3 mcq (only 1 currently),
+no flash cards at all"*. Two separate faults sat behind that, with two different owners.
+
+### Ours - the activity fields were never actually required
+
+Flip and Learn is built from `keyTerms` on the subtopic cards. Category Sort is built from
+`goodItems`/`badItems` on the decision-point. `renderDecisionChallenge` builds the
+three-activity block only above **2 flip items and 4 sort items**; below either floor it
+renders a bare decision-point instead.
+
+Nothing required those fields to arrive:
+
+- The route's prompt opens `FIELDS: Return every field exactly as specified. Do not rename,
+  omit, add or reorder fields.` and then gives each card a **summary line** listing its
+  fields. Those lines read `subtopic - heading, paragraphs[2]` and
+  `decision-point - title, question, options[4]{...}`. Both **omitted the activity fields**,
+  which were described only in the prose underneath. The header and the body disagreed, and
+  the header is the half a model obeys.
+- The structural gate does not check them, so a pack without them is valid.
+- The `[CARD SHAPE]` diagnostic, which would have shown it at a glance, only prints when the
+  structural gate has already failed - which this does not.
+
+So the pack was valid, silent, and short two activities.
+
+**Fixed.** Both summary lines now list the activity fields, and both carry a sentence saying
+what omitting them costs. And a new soft-issue check, `activityFieldIssues()`, measures the
+harvest at the **renderer's** thresholds and reports a shortfall. The section is never failed
+over it - prose that teaches well is worth keeping even when an activity cannot be built from
+it.
+
+> **Correction, v15.4.13.** This entry originally claimed the shortfall would reach the
+> repair pass and raise "N sections need attention". **It did neither.** `softIssues` is not
+> the repair queue - the queue is the subset matching `CC_REPAIRABLE`, and neither new string
+> matched it, so the finding was measured and then discarded. See 15.4.13 below. A release
+> whose headline was "this can no longer fail silently" shipped a check that failed silently.
+
+### The vendor's - Topics and Text can only ever return one question
+
+`decisionPointByRoute` gives the six fixed routes a decision-point schema carrying
+`schemaVersion: 2` + `questions[3]`. It gives Topics and Text a **separate union** -
+`title`, `question`, `options[4]`, `goodItems`, `badItems` - with no `questions` member at
+all. Structured outputs cannot emit a field the schema does not declare, so on this route the
+three-question ask can only come back as one, and the model takes the route-specific fallback
+in `getDecisionPointBlock`.
+
+Not fixable in the plugin. What this release adds is the ability to **tell**: on Topics and
+Text the decision-point's shape is now logged unconditionally, naming whether the server sent
+one question or three. It is deliberately not raised as a soft issue - a repair pass cannot
+add a field the schema forbids, so flagging it would put every section of this route in
+"needs attention" forever, and a guard that cries wolf is one people stop reading.
+
+**The vendor ask:** add `schemaVersion` + `questions[3]` to the Topics-and-Text decision-point
+union, additively, exactly as the six fixed routes already have it. The client is ready - see
+below.
+
+### All seven routes audited
+
+`tests/js/test-activity-block-all-routes.js` (95 checks) builds a realistic pack for each
+route from that route's own `CC_CARD_ORDER`, renders it through the real player, and counts
+what a learner would see. What it found:
+
+The designed deck sizes are **9 flip cards** (`CC_MAX_FLIP_CARDS`, three tidy rows), **6 sort
+items** (`CC_MAX_SORT_ITEMS`, balanced three and three) and **3 quiz questions**. Measured:
+
+| route | flip | sort | challenge frame | 3 questions when sent |
+|---|---|---|---|---|
+| vet | 9 | 6 | yes | yes |
+| workplace | 9 | 6 | yes | yes |
+| general | 9 | 6 | yes | yes |
+| policy | 9 | 6 | yes | yes |
+| pd | 9 | 6 | yes | yes |
+| university | **3** | **0** | yes | yes |
+| topicstext | 9 (was 4) | 6 | yes | yes |
+
+**Topics and Text reached 9 in this release.** Its flip deck is built from `keyTerms` on the
+subtopic cards and the prompt asked each card for **exactly one**, so a topic broken into
+the route's minimum of three subtopics produced a three-card deck - a third of an activity.
+It now asks for three per card, which fills the deck at the minimum subtopic count and is
+capped at nine above it. The count is also recorded in `CC_EXPECTED_ITEMS`, so
+`itemCountIssues()` puts a card that returns two of three into the repair queue exactly as
+it does for every other card type, rather than quietly shipping a deck one card short.
+
+**A note on the first draft of this audit,** because it nearly caused a wild goose chase: it
+used a token two items per field and reported 6 flip cards on routes that really produce 14.
+That would have sent someone hunting a shortfall that does not exist while hiding the two
+that do. The fixture now takes its counts from `CC_EXPECTED_ITEMS`, so it cannot drift from
+the contract.
+
+University has no Category Sort, and that is a decision rather than a gap: nothing in its
+card contract is a good/bad contrast - `concept-anchor` carries definitions,
+`theoretical-framework` and `analytical-lens` carry positions, the case studies carry cases.
+Manufacturing a right/wrong split from any of them would put an activity on a card that does
+not mean it. The exemption is now **asserted**, so if that contract ever gains a contrast
+field the suite fails and someone decides deliberately, rather than the sort silently never
+appearing.
+
+The last column matters for the vendor ask above: **every route, Topics and Text included,
+renders all three questions when they are sent.** The client is not the reason a route shows
+one.
+
+University's two gaps need the **vendor**, not this plugin, and are recorded in the suite as
+expectations rather than comments - so the day either is closed, the suite fails and someone
+updates the number deliberately:
+
+- **flip 3, not 9.** `concept-anchor` is the route's only `keyTerms` carrier and its card
+  contract says three. Raising our expected count to nine while the server still expects
+  three is exactly the live-contract mismatch that caused the General outage on 4 September,
+  so it has not been done unilaterally.
+- **sort 0.** Nothing in the University contract is a good/bad contrast.
+  `theoretical-framework` and `analytical-lens` carry positions, the case studies carry
+  cases, `ethics-considerations` carries considerations. Manufacturing a right/wrong split
+  from any of them would put an activity on a card that does not mean it. This is a teaching
+  decision before it is a schema change.
+
+### Removing Try Again did not break the quiz
+
+Asked directly, and worth answering with a walk rather than an opinion: `data-total="3"`
+proves the markup holds three questions and proves nothing about whether a learner can reach
+question two. If v15.4.6's Try Again removal had broken the between-questions button, a
+three-question quiz would look exactly like a one-question quiz from the learner's seat.
+
+The suite now walks all three activities the way a learner does - answer, press Next
+Question, assert the next one is visible and the previous is out of the accessibility tree,
+to the end; turn all nine flip cards; sort all six items - and asserts the completion flags
+and the score. **All of it passes.** The quiz unlocks Next Question on answering, all three
+questions are reachable, `quiz-passed` is true only when every question was right first
+time, and there is no Try Again left on the panel.
+
+Two faults were found while writing that walk, both in the test rather than the plugin, and
+both worth recording because either would have been reported as a bug: the option element is
+`.cc5-dp-option` (not `.cc5-quiz-option`) and the sort button carries `data-tap` (not
+`data-category`). The third was more instructive - the fixture injected cards straight into
+the manifest, skipping `normalizeCardSchema`, which is what turns the v2 shape's
+`correctIndex` into the per-option `correct` flag the renderer reads. A quiz with no correct
+answer rendered, and the player looked broken. Every fixture now goes through the real
+normaliser, because that is the path a server response takes.
+
+### Why this keeps happening
+
+Both times this route lost its activities - v15.3.11 to v15.3.14, and University until
+v15.4.2 - the cause was one card type missing from a hand-maintained list in the harvester,
+and both times it was found by looking at a rendered pack rather than by reading the code.
+That is why the new suite renders and counts rather than asserting on the harvester.
+
 ## 15.4.10 - 2026-09-05
 
 **Topics and Text narrated a glossary that was not on the screen, and never read the body

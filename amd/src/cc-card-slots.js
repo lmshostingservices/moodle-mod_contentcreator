@@ -354,13 +354,29 @@ define([], function() {
         html += '<div class="cc5-card-body">';
         if (section.frameworks && section.frameworks.length) {
             section.frameworks.forEach(function(fw) {
-                html += '<div class="cc5-framework-item"><h5>' + escapeHtml(fixGrammar(fw.name || '')) + '</h5>';
-                if (fw.originator)  html += '<p class="cc5-fw-originator"><em>' + escapeHtml(fixGrammar(fw.originator)) + '</em></p>';
-                html += '<p>' + escapeHtml(fixGrammar(fw.principle || fw.description || '')) + '</p>';
+                // v15.4.14: a null or a bare string in this array used to throw on
+                // `fw.name` and take the WHOLE SLIDE down - renderSlideContent's guard
+                // caught it, so the learner got the fallback panel instead of the card,
+                // with every other framework on it lost too. One malformed element should
+                // cost its own row, not the slide. Found by feeding the renderer the shapes
+                // saved manifests actually contain, not by a report.
+                if (!fw) { return; }
+                if (typeof fw === 'string') {
+                    html += '<div class="cc5-framework-item"><h5>'
+                         +  escapeHtml(fixGrammar(fw)) + '</h5></div>';
+                    return;
+                }
+                if (typeof fw !== 'object') { return; }
+                // A field that is an object rather than a string renders as the literal
+                // text "[object Object]" on the card. Coerced to empty instead.
+                var _fs = function(v) { return (typeof v === 'string') ? v : ''; };
+                html += '<div class="cc5-framework-item"><h5>' + escapeHtml(fixGrammar(_fs(fw.name))) + '</h5>';
+                if (_fs(fw.originator))  html += '<p class="cc5-fw-originator"><em>' + escapeHtml(fixGrammar(_fs(fw.originator))) + '</em></p>';
+                html += '<p>' + escapeHtml(fixGrammar(_fs(fw.principle) || _fs(fw.description))) + '</p>';
                 // v13.84: arrow glyph dropped in favour of a plain label, matching the
                 // VET/Workplace/PD routes.
-                if (fw.application) html += '<p class="cc5-fw-application"><strong>' + escapeHtml(getLabel('application') || 'In practice') + ':</strong> <span>' + escapeHtml(fixGrammar(fw.application)) + '</span></p>';
-                if (fw.limitation)  html += '<p class="cc5-fw-limitation">'  + getIcon('alert-circle')  + ' <span>' + escapeHtml(fixGrammar(fw.limitation)) + '</span></p>';
+                if (_fs(fw.application)) html += '<p class="cc5-fw-application"><strong>' + escapeHtml(getLabel('application') || 'In practice') + ':</strong> <span>' + escapeHtml(fixGrammar(_fs(fw.application))) + '</span></p>';
+                if (_fs(fw.limitation))  html += '<p class="cc5-fw-limitation">'  + getIcon('alert-circle')  + ' <span>' + escapeHtml(fixGrammar(_fs(fw.limitation))) + '</span></p>';
                 // v13.84 FIX BUG-RENDER-FW-NEST: this closing tag was missing, so every
                 // framework after the first was rendered INSIDE its predecessor —
                 // the panel-in-panel-in-card nesting seen on the University route.
@@ -406,11 +422,26 @@ define([], function() {
         if (section.considerations && section.considerations.length) {
             html += '<div class="cc5-ethics-list">';
             section.considerations.forEach(function(c) {
-                if (typeof c === 'object' && c.dimension) {
-                    html += '<div class="cc5-ethics-item"><strong>' + escapeHtml(fixGrammar(c.dimension)) + ':</strong> ';
-                    html += escapeHtml(fixGrammar(c.description || '')) + '</div>';
-                } else {
-                    html += '<div class="cc5-ethics-item">' + escapeHtml(fixGrammar(typeof c === 'string' ? c : (c.text || c.description || ''))) + '</div>';
+                // v15.4.14: `typeof null === 'object'` is TRUE, so a null in this array
+                // passed the first test and then threw on `c.dimension` - and the else
+                // branch threw on `c.text` for the same value. Either way the exception
+                // reached renderSlideContent's guard and cost the learner the whole slide,
+                // not just the row. A field that is an object rather than a string was the
+                // other half: it rendered as the literal text "[object Object]".
+                if (!c) { return; }
+                var _s = function(v) { return (typeof v === 'string') ? v : ''; };
+                if (typeof c === 'string') {
+                    html += '<div class="cc5-ethics-item">' + escapeHtml(fixGrammar(c)) + '</div>';
+                    return;
+                }
+                if (typeof c !== 'object') { return; }
+                var _dim = _s(c.dimension);
+                var _body = _s(c.description) || _s(c.text);
+                if (_dim) {
+                    html += '<div class="cc5-ethics-item"><strong>' + escapeHtml(fixGrammar(_dim)) + ':</strong> ';
+                    html += escapeHtml(fixGrammar(_body)) + '</div>';
+                } else if (_body) {
+                    html += '<div class="cc5-ethics-item">' + escapeHtml(fixGrammar(_body)) + '</div>';
                 }
             });
             html += '</div>';

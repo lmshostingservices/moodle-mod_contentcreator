@@ -53,7 +53,7 @@ define([], function() {
     // test-version-mirror.js asserts this equals $plugin->release and runs with the suite,
     // so a fourth recurrence fails a test instead of reaching production.
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.4.10';
+    var CC_VERSION = '15.4.14';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was

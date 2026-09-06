@@ -3841,11 +3841,30 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
      * @param {Array} cards Normalised cards.
      * @return {Array} Issue strings.
      */
-    const keyTakeawayIssues = function(cards) {
+    const keyTakeawayIssues = function(cards, mode) {
         var spec = (Prompts && Prompts.CC_KEY_TAKEAWAY_SPEC) || { min: 28, max: 40 };
         var banned = (Prompts && Prompts.CC_TAKEAWAY_BANNED_OPENINGS) || [];
         var issues = [];
         if (!cards.length) { return issues; }
+        // v15.4.13: not on Topics and Text, which never asks for the field.
+        //
+        // This check read card 1 of every route unconditionally. Six routes ask their
+        // first card for a keyTakeaway - VET, Workplace, General, Policy, PD and
+        // University all name it in their prompts. Topics and Text does not mention it
+        // ANYWHERE: its subtopic card is heading, paragraphs and keyTerms, and the
+        // vendor's published required fields for it are cardType, heading, paragraphs.
+        //
+        // So on that one route this fired on every section, for a field the prompt never
+        // asked for - and `/keyTakeaway/` is in CC_REPAIRABLE, so it did not merely add
+        // noise: it spent a PAID REPAIR CALL on every Topics-and-Text section, demanding
+        // a field the strict schema very likely cannot even emit. A repair that cannot
+        // succeed, bought every time.
+        //
+        // Same shape as v13.98.2's repair that fired on every section and took a release
+        // to undo, and as v15.3.4's option-parity issue sitting below the repair prompt's
+        // slice. Found on 6 September while auditing v15.4.11's own work, not by a test -
+        // so test-activity-fields-required.js now asserts it too.
+        if (mode === 'topicstext') { return issues; }
         // The field is read off card 1 by buildSectionFromCards().
         var card = cards[0] || {};
         var text = String(card.keyTakeaway || '').trim();
@@ -4611,7 +4630,21 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         // the four arrays that render as a fixed grid, where a missing element is a hole
         // the learner can see - not to every short array, because a paid repair that
         // fires on every section is the failure v13.98.2 spent a release undoing.
-        /(?:sceneParts|conceptInsights|steps|items) came back with \d+ of the/,
+        // v15.4.13: keyTerms added. It renders as a visible grid on the card AND it is the
+        // entire Flip and Learn deck on two routes, so a card short of its count is a hole
+        // the learner sees twice over.
+        //
+        // Added after a concrete near-miss. v15.4.12 raised the Topics-and-Text ask from
+        // one key term per subtopic to three, because the deck holds nine and three
+        // subtopics times one is a third of an activity. If the vendor's strict schema
+        // caps that array lower, each card comes back with one - and the shortfall was
+        // measured and then dropped: itemCountIssues raised it correctly on all three
+        // cards, and none of them matched this list. activityFieldIssues() does not cover
+        // it either, and correctly so: its floor is the RENDERER's (2 flip items), and
+        // three items clears it. The activity builds; it is simply a third of the size it
+        // should be. Reported here rather than duplicated there, because the same fault in
+        // two queues means two entries in a repair prompt that only takes eight.
+        /(?:sceneParts|conceptInsights|steps|items|keyTerms) came back with \d+ of the/,
         // v15.3.7 FIX-CC-FIDELITY-ISSUES-INERT: the Policy route's own fidelity checks.
         //
         // policyFidelityIssues() is the only check in this product that catches a
@@ -4629,7 +4662,31 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         // repaired, not flagged, not shown. The pack shipped telling staff they face a
         // consequence their policy does not contain.
         /INVENTED FIGURES/,                  // digits in the cards that are not in the source
-        /THE RULE IS NOT QUOTED/             // card 2 summarises instead of quoting the clause
+        /THE RULE IS NOT QUOTED/,            // card 2 summarises instead of quoting the clause
+        // v15.4.13: the Topics-and-Text activity fields. THIS LINE IS THE WHOLE FIX.
+        //
+        // v15.4.11 added activityFieldIssues() to stop that route losing Flip and Learn
+        // and Category Sort in silence, put it high in the softIssues list, and wrote a
+        // changelog entry saying "soft issues feed the repair pass, so the first
+        // consequence is that the model is asked again for the missing field".
+        //
+        // That was FALSE, and false in exactly the way this list's own v15.3.7 comment
+        // sixteen lines above warns about: softIssues is not the repair queue - the repair
+        // queue is the subset of softIssues MATCHING THIS LIST. Neither of the two new
+        // strings matched any pattern in it, and the same filter feeds `needsReview`, so
+        // the check ran, correctly found the missing keyTerms, and had its finding thrown
+        // away three times over. Not repaired, not flagged, not shown. A release whose
+        // headline was "this can no longer fail silently" shipped a check that failed
+        // silently.
+        //
+        // Found by auditing v15.4.11 against its own changelog rather than by any test,
+        // which is why test-activity-fields-required.js now asserts the ROUTING as well as
+        // the detection - a check nothing acts on is not a check.
+        //
+        // Repairable rather than review-only because a second call genuinely fixes it: the
+        // fields are cheap, the model simply omitted them, and asking again is the correct
+        // first move. Scoped to this exact sentence so it cannot fire on anything else.
+        /activity cannot be built/
     ];
 
     /**
@@ -4719,6 +4776,74 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
             out[m[1]] = Math.max(out[m[1]] || 0, spec[path]);
         });
         return out;
+    };
+
+    /**
+     * v15.4.11: the fields that ARE the Topics-and-Text activities, checked for presence.
+     *
+     * This route degrades in total silence and has now done so three times.
+     * renderDecisionChallenge builds the three-activity block only above 2 flip items and
+     * 4 sort items; below that it renders a bare decision-point. The flip items come from
+     * `keyTerms` on the subtopic cards and the sort items from `goodItems`/`badItems` on
+     * the decision-point - and NOTHING anywhere requires those fields to be present.
+     *
+     * So a pack that comes back without them is structurally valid, passes every gate,
+     * logs nothing, and hands the learner one multiple-choice question where three
+     * activities were designed. The `[CARD SHAPE]` diagnostic that would have shown it at
+     * a glance only prints when the structural gate has already failed, which this does
+     * not. That is how it survived v15.3.11 to v15.3.14 unnoticed.
+     *
+     * Reported as a SOFT issue deliberately. Soft issues are fed to the repair pass, so
+     * the first thing that happens is the model is asked for the missing field; if it
+     * still does not arrive, the issue is recorded on the card and the section appears in
+     * "N sections need attention" instead of looking complete. The section is never
+     * failed outright over it - prose that teaches well is worth keeping even when an
+     * activity could not be built from it.
+     *
+     * The thresholds are the RENDERER's, not the prompt's, because what matters is
+     * whether the learner gets the activity - not whether every card was perfect.
+     *
+     * @param {Array}  cards The section's cards.
+     * @param {String} mode  The normalised route.
+     * @return {Array} Issue strings.
+     */
+    const activityFieldIssues = function(cards, mode) {
+        if (mode !== 'topicstext' || !Array.isArray(cards)) { return []; }
+        var issues = [];
+        var flip = 0, good = 0, bad = 0, subtopics = 0, dp = null;
+        cards.forEach(function(card) {
+            if (!card) { return; }
+            if (card.cardType === 'subtopic') {
+                subtopics++;
+                (Array.isArray(card.keyTerms) ? card.keyTerms : []).forEach(function(t) {
+                    var term = (typeof t === 'string') ? t : (t && (t.term || t.title) || '');
+                    var def = (typeof t === 'string') ? '' : (t && (t.definition || t.text) || '');
+                    if (term && def) { flip++; }
+                });
+            }
+            if (card.cardType === 'decision-point') {
+                dp = card;
+                good = (Array.isArray(card.goodItems) ? card.goodItems : []).length;
+                bad = (Array.isArray(card.badItems) ? card.badItems : []).length;
+            }
+        });
+        // 2 is renderDecisionChallenge's floor for Flip and Learn.
+        if (subtopics && flip < 2) {
+            issues.push('The Flip and Learn activity cannot be built: ' + flip + ' usable '
+                + 'keyTerms came back across ' + subtopics + ' subtopic cards, and the '
+                + 'activity needs at least 2. Every subtopic card must carry keyTerms as '
+                + 'exactly one {term, definition} pair - term 1-4 words, definition 12-25 '
+                + 'words that stands alone without the paragraph beside it.');
+        }
+        // 4 is renderDecisionChallenge's floor for the Category Sort.
+        if (dp && (good + bad) < 4) {
+            issues.push('The Category Sort activity cannot be built: the decision-point '
+                + 'came back with ' + good + ' goodItems and ' + bad + ' badItems, and the '
+                + 'activity needs at least 4 items between them. Return goodItems as '
+                + 'exactly 3 and badItems as exactly 3, each {text} of 8-16 words stating '
+                + 'an action that can be judged without the card it came from.');
+        }
+        return issues;
     };
 
     const itemCountIssues = function(cards) {
@@ -5338,6 +5463,43 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                 ccWarn('[CARD SHAPE] could not summarise cards: ' + e.message);
             }
         }
+        // v15.4.11: say which decision-point shape Topics and Text actually got back.
+        //
+        // This route is the one route whose strict schema, as the vendor published it in
+        // `decisionPointByRoute`, has no `schemaVersion: 2` + `questions[3]` member - its
+        // union is title / question / options[4] / goodItems / badItems. Structured
+        // outputs cannot emit a field the schema does not declare, so on this route the
+        // prompt's three-question ask can only ever come back as one question, and the
+        // route-specific fallback in getDecisionPointBlock is what the model takes.
+        //
+        // That is a server-side limit and nothing here can lift it. What was missing was
+        // any way to TELL, from a support log, whether the learner got one question
+        // because the schema refused three or because something in this client dropped
+        // them. Printed unconditionally on this route, and deliberately NOT raised as a
+        // soft issue: a repair pass cannot add a field the schema forbids, so flagging it
+        // would put every Topics-and-Text section in "needs attention" forever, and a
+        // guard that cries wolf is one people stop reading.
+        try {
+            if (ccNormaliseGenerationRoute((context && context.mode) || 'general') === 'topicstext') {
+                var _dp = cards.filter(function(c) { return c && c.cardType === 'decision-point'; })[0];
+                if (_dp) {
+                    var _qn = Array.isArray(_dp.questions) ? _dp.questions.length : 0;
+                    if (_qn >= 2) {
+                        ccLog('[CC QUIZ] Topics and Text decision-point returned '
+                            + _qn + ' questions.');
+                    } else {
+                        ccWarn('[CC QUIZ] Topics and Text decision-point returned the '
+                            + 'SINGLE-question shape, so the learner gets 1 question, not 3. '
+                            + 'This route\'s strict schema has no `questions` member - the '
+                            + 'client asked for three and the server cannot emit them. Not '
+                            + 'fixable in the plugin: the vendor must add `schemaVersion` + '
+                            + '`questions[3]` to the Topics-and-Text decision-point union.');
+                    }
+                }
+            }
+        } catch (e) {
+            // A diagnostic must never affect a generation.
+        }
         // v13.85: soft issues do not invalidate the section. They are fed to the
         // repair pass on the first attempt and recorded on the card on the last.
         var softissues = [];
@@ -5354,6 +5516,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                 // the content teaches; this is about whether it is true. Returns [] on
                 // every other route.
                 .concat(policyFidelityIssues(cards, context, mode))
+                // v15.4.11: high in the queue because it is the only issue in this list
+                // that costs the learner a WHOLE ACTIVITY rather than degrading one card,
+                // and because the repair prompt takes the top slice - placed low it would
+                // routinely never be sent. Returns [] on every route but Topics and Text.
+                .concat(activityFieldIssues(cards, mode))
                 .concat(cardQualityIssues(cards, mode, context))
                 .concat(specificDensityIssues(cards, mode))
                 .concat(paddingIssues(cards))
@@ -5373,7 +5540,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                 // at all. Everything above it now is about how WELL a card teaches; this
                 // is about whether the assessment works.
                 .concat(optionParityIssues(cards))
-                .concat(keyTakeawayIssues(cards))
+                .concat(keyTakeawayIssues(cards, mode))
                 // v13.98.1: subject drift sits high because it is the one issue where
                 // the content is not thin or malformed - it is about the wrong thing.
                 // No amount of length repair fixes a card that is off-subject.
@@ -7244,6 +7411,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         subjectDriftIssues: subjectDriftIssues,
         sourceAnchorIssues: sourceAnchorIssues,
         cardQualityIssues: cardQualityIssues,
+        // v15.4.11: exported so a test can prove the Topics-and-Text activity fields are
+        // measured at the RENDERER's thresholds, and prove the detector stays silent on
+        // the six routes that never carry those fields.
+        activityFieldIssues: activityFieldIssues,
         // v15.3.9: exported so the server-verdict path is testable.
         ccQuality: ccQuality,
         // v15.3.7: exported so a test can assert WHICH faults are worth a paid repair
