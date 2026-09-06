@@ -446,12 +446,63 @@ Generate ALL content in ${languageName}. This is NON-NEGOTIABLE
      * Without this the route cannot exist: the validator hard-fails on an exact count,
      * which is why the old build had to pin it to four fixed slots with fixed headings.
      *
-     * min is 3 because two cards is a paragraph, not a topic. max is 10 because beyond
-     * that the two-column grid stops being scannable and the subtopics are really
-     * separate topics.
+     * v15.4.16: min is SIX, raised from three at the author's request - "why don't we have
+     * min 4 cards, it looks much more even... in fact let's change it to min 6 cards... so
+     * that we have enough info for a full activity."
+     *
+     * Both halves of that are right. The two-column grid reads unevenly at three, and -
+     * the substantive reason - the activity block is derived from the cards: keyTerms
+     * become the Flip and Learn deck and the decision-point's contrast becomes the
+     * Category Sort. Three subtopic cards is not enough material to fill a nine-card deck
+     * without asking each card for more terms than it honestly has.
+     *
+     * Three was also the cheapest possible pack. The author is billed per subtopic, and a
+     * model that sat on the floor - which it did, every time, until v15.4.15 rebalanced
+     * the instruction - delivered minimum content at full price.
+     *
+     * max stays 10: beyond that the two-column grid stops being scannable and the
+     * subtopics are really separate topics.
+     *
+     * NOTE the knock-on: getCardCountForMode returns min + 1, and that number feeds the
+     * REGENERATE COMPLETENESS check (cards.length >= expectedCardCount). Modules built
+     * before this change hold 4 cards and will now read as incomplete against a floor of
+     * 7. That is correct - they ARE short of the current contract - but it means an old
+     * module may offer to regenerate where it previously did not.
      */
     const CC_CARD_COUNT_RANGE = {
         topicstext: { min: 3, max: 10 }
+    };
+
+    /**
+     * v15.4.16: what we ASK for, as distinct from what we ACCEPT.
+     *
+     * The author asked for a floor of six - "why don't we have min 4 cards, it looks much
+     * more even... in fact let's change it to min 6 cards... so that we have enough info
+     * for a full activity." Both reasons are sound: the two-column grid reads unevenly at
+     * three, and the activity block is derived from the cards, so three subtopics cannot
+     * honestly fill a nine-card Flip and Learn deck.
+     *
+     * The first attempt raised CC_CARD_COUNT_RANGE.min to 6 and test-field-ranges stopped
+     * it, correctly. That constant is what validateCards ENFORCES, and the vendor's
+     * published contract for this route is 3-10. A client that rejects a four-card pack
+     * the server considers valid hard-fails a section the server was happy with, retries
+     * both providers and then fails it outright - which is the live-contract mismatch that
+     * took General down on 4 September, and the exact reason that test exists.
+     *
+     * So the two numbers are separated. ACCEPT stays at the vendor's 3; ASK is 6. A pack
+     * that comes back under the ask is not destroyed - it raises a soft issue, gets one
+     * free repair pass to expand, and if it still comes back short it ships and is flagged
+     * for the author rather than lost.
+     *
+     * Raise CC_CARD_COUNT_RANGE.min to match only when the vendor publishes 6 as their
+     * minimum too.
+     */
+    const CC_CARD_COUNT_TARGET = {
+        topicstext: { min: 6 }
+    };
+
+    const getCardCountTarget = (mode) => {
+        return CC_CARD_COUNT_TARGET[mode] || null;
     };
 
     /**
@@ -2597,16 +2648,25 @@ Do not return voiceoverText. Visible card content is the narration.
 
 Return ONLY valid JSON: { "cards": [...] }. No markdown, no code fences.
 
-HOW MANY CARDS: Break the topic into the subtopics it actually has - a MINIMUM of 3 and a
+HOW MANY CARDS: Break the topic into the subtopics it actually has - a MINIMUM of 6 and a
 MAXIMUM of 10 - and return one "subtopic" card for each, in teaching order, followed by
 exactly one "decision-point" card at the end.
-- Let the subject decide the number. A topic with five real parts gets five cards, one with
-  eight gets eight. THREE IS THE FLOOR, NOT THE DEFAULT: returning three cards is a claim
-  that the topic has only three distinct parts, and most topics worth teaching have more.
-  Before settling on a number, list the parts the topic actually has and count them.
-- Do not pad to reach ten, and do not compress eight genuine subtopics into three or four.
+
+THE DECISION-POINT IS NOT OPTIONAL. Exactly one, and it must be the LAST card. The entire
+activity block - the Quiz, Flip and Learn, and the Category Sort - is built from it. A pack
+that omits it gives the learner no activity at all, and it will be rejected.
+
+- SIX IS THE FLOOR, NOT THE DEFAULT. Returning six is a claim that the topic has exactly
+  six distinct parts. Before settling on a number, list the parts the topic actually has
+  and count them; if there are eight, return eight.
+- Do not pad to reach ten, and do not compress eight genuine subtopics into six.
   Under-splitting is the commoner fault and the more damaging one: it buries two subjects
   inside one card and the learner meets them as a single undifferentiated block.
+- If the topic genuinely seems to have fewer than six parts, you have taken too coarse a
+  view of it. Split on the distinctions a specialist would make - mechanism versus
+  application, the general rule versus the case where it does not hold, the method versus
+  how you know it worked. Do NOT invent parts the subject does not have; find the ones you
+  had folded together.
 - Each subtopic must be a DISTINCT part of the topic that could carry its own heading in a
   textbook. If two cards could swap their prose without anyone noticing, they are one card.
 - Order them so each builds on the one before.
@@ -4599,6 +4659,9 @@ applies only if you must name someone the text does not already name.
         // v15.3.11: content-driven card counts (Topics and Text).
         CC_CARD_COUNT_RANGE: CC_CARD_COUNT_RANGE,
         getCardCountRange: getCardCountRange,
+        // v15.4.16: the ASK, as distinct from the ACCEPT above. See CC_CARD_COUNT_TARGET.
+        CC_CARD_COUNT_TARGET: CC_CARD_COUNT_TARGET,
+        getCardCountTarget: getCardCountTarget,
         buildChatGptPromptFile: buildChatGptPromptFile,
         buildFiveCardUserPrompt: buildFiveCardUserPrompt,
         normalizeCards: normalizeCards,

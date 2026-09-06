@@ -1,5 +1,81 @@
 # Changelog
 
+## 15.4.16 - 2026-09-06
+
+**A Topics-and-Text pack with no activity at all was judged perfectly valid. And the
+subtopic floor is raised from three to six.**
+
+### A pack with no decision-point passed every check
+
+Reported live: *"the latest build didn't even build an activity."* The pack came back as
+three subtopic cards and **nothing else** - no decision-point - and `validateCards` returned
+**valid, zero hard issues, zero soft issues**. It shipped in silence.
+
+The whole three-activity block is built FROM the decision-point card, so its absence costs
+the learner the Quiz, Flip and Learn and Category Sort in one go.
+
+**Why nothing noticed.** A range route's only structural check was the TOTAL COUNT:
+
+```
+if (cards.length < lo || cards.length > hi) { ...issue... }
+```
+
+Three cards sits inside 3-10, so it passed - and a count says nothing about composition.
+The fixed routes never had this hole because they are matched against an exact ordered
+list, where a missing card shows up as a count mismatch. Giving this route a range removed
+the count check's ability to notice, and nothing replaced it. Same defect family as
+everything else this week: the validator accepts a shape the renderer cannot use.
+
+Now reported - missing, duplicated, or not last - along with a pack short of the subtopic
+count the route asks for.
+
+**Soft, not hard, and the distinction is the point.** A hard failure re-runs the section,
+and if the model omits the card again the learner gets **nothing** - worse than cards with
+no activity. Soft means one free repair pass asks for the missing card, and if it still
+does not arrive the section ships and appears in "N sections need attention".
+
+### The subtopic floor: asked for six, still accept three
+
+Requested: *"why don't we have min 4 cards, it looks much more even... in fact let's change
+it to min 6 cards... so that we have enough info for a full activity."* Both reasons hold -
+the two-column grid reads unevenly at three, and the activity block is derived from the
+cards, so three subtopics cannot honestly fill a nine-card Flip and Learn deck.
+
+**The first attempt at this was wrong and a test caught it.** Raising
+`CC_CARD_COUNT_RANGE.min` to 6 changes what `validateCards` **enforces**, and the vendor
+publishes **3-10** for this route. A client that rejects a four-card pack the server
+considers valid hard-fails a section the server was happy with, retries both providers and
+then fails it outright - which is exactly the live-contract mismatch that took General down
+on 4 September, and precisely what `test-field-ranges` exists to prevent. It did its job.
+
+So the two numbers are now separated:
+
+| | value | enforced by |
+|---|---|---|
+| **ACCEPT** (`CC_CARD_COUNT_RANGE`) | 3-10 | `validateCards` - matches the vendor contract |
+| **ASK** (`CC_CARD_COUNT_TARGET`) | 6 | the prompt, and the repair pass |
+
+A pack under the ask is not destroyed: it raises a soft issue, gets one free repair pass to
+expand, and ships flagged if it still comes back short. `CC_CARD_COUNT_RANGE.min` moves to
+6 only when the vendor publishes 6 as their minimum too.
+
+The prompt now also says plainly that the decision-point is not optional, must be the last
+card, and that a pack omitting it will be rejected - and, for the floor, tells the model
+where to look for the parts it folded together rather than to invent parts the subject does
+not have.
+
+### Fourth time in one release, so it is now structural
+
+Every one of these new findings was, on first write, **measured and then discarded** - they
+matched nothing in `CC_REPAIRABLE`, so no repair ran and no section was flagged. That is now
+the fourth occurrence in this release alone, after `activityFieldIssues`, `keyTakeawayIssues`
+and the `keyTerms` count.
+
+The family is therefore given a stable **`PACK SHAPE:`** prefix and routed by that prefix
+rather than by the wording of each message, so the next message added to it is routed by
+construction instead of by remembering. Mutation-proven: breaking the pattern fails six
+checks.
+
 ## 15.4.15 - 2026-09-06
 
 **Try Again sent the learner back to the start of the lesson instead of the activity. On

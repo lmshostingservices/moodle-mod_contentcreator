@@ -4686,7 +4686,20 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         // Repairable rather than review-only because a second call genuinely fixes it: the
         // fields are cheap, the model simply omitted them, and asking again is the correct
         // first move. Scoped to this exact sentence so it cannot fire on anything else.
-        /activity cannot be built/
+        /activity cannot be built/,
+        // v15.4.16: pack COMPOSITION - a missing or misplaced decision-point, or a pack
+        // short of the subtopic count the route asks for.
+        //
+        // Given a stable "PACK SHAPE:" prefix, and routed by that prefix rather than by
+        // the wording of each message, because this is the FOURTH time in one release that
+        // a new detector has been written, wired into softIssues, and then had every
+        // finding silently discarded for matching nothing in this list. Prefixing the
+        // family means the next message added to it is routed by construction instead of
+        // by remembering.
+        //
+        // Repairable rather than review-only: the missing card is cheap for the model to
+        // add and the repair pass carries the same subtopicKey, so the retry is free.
+        /^PACK SHAPE:/
     ];
 
     /**
@@ -4810,6 +4823,57 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
     const activityFieldIssues = function(cards, mode) {
         if (mode !== 'topicstext' || !Array.isArray(cards)) { return []; }
         var issues = [];
+
+        // v15.4.16: the decision-point itself, and the size of the pack.
+        //
+        // THE MISSING DECISION-POINT. Reported live: "the latest build didn't even build an
+        // activity." The pack came back as subtopic cards and nothing else. It was judged
+        // completely valid - no hard issue, no soft issue, no log line - because a range
+        // route's only structural check was that the TOTAL COUNT sat between 3 and 10, and
+        // a count says nothing about composition. The fixed routes never had this hole:
+        // they are matched against an exact ordered list, so a missing card is a count
+        // mismatch. Giving this route a range removed the count check's ability to notice
+        // and nothing replaced it. The whole activity block is built FROM this card, so
+        // its absence costs the learner the Quiz, Flip and Learn and Category Sort at once.
+        //
+        // SOFT, not hard, and the distinction matters. A hard failure re-runs the section
+        // and, if the model omits the card again, the learner ends up with NOTHING - worse
+        // than cards with no activity. Soft means: one free repair pass asks for the
+        // missing card, and if it still does not arrive the section ships and appears in
+        // "N sections need attention" instead of vanishing.
+        var _dp = cards.filter(function(c) { return c && c.cardType === 'decision-point'; });
+        if (_dp.length === 0) {
+            issues.push('PACK SHAPE: no decision-point card came back, so this section has no activity '
+                + 'at all - the Quiz, Flip and Learn and Category Sort are every one of them '
+                + 'built from that card. Return exactly one decision-point as the LAST card, '
+                + 'after the subtopic cards, carrying questions[3], goodItems[3] and '
+                + 'badItems[3].');
+        } else if (_dp.length > 1) {
+            issues.push('PACK SHAPE: got ' + _dp.length + ' decision-point cards. Return exactly one, as '
+                + 'the LAST card; the extra ones are rendered as a second activity block.');
+        } else if (cards.length && cards[cards.length - 1].cardType !== 'decision-point') {
+            issues.push('PACK SHAPE: the decision-point is not the LAST card. It closes the topic and '
+                + 'carries the activity block, so every subtopic card must come before it.');
+        }
+
+        // THE PACK SIZE. Asked for six as a floor - "so that we have enough info for a full
+        // activity". Reported here rather than in validateCards on purpose: the vendor's
+        // published range for this route is 3-10, and a client that REJECTS a four-card
+        // pack the server accepts hard-fails a section the server was happy with. See
+        // CC_CARD_COUNT_TARGET in prompts.js. So the ask is enforced by repair, not by
+        // rejection.
+        var _target = (Prompts && typeof Prompts.getCardCountTarget === 'function')
+            ? Prompts.getCardCountTarget(mode) : null;
+        var _subs = cards.filter(function(c) { return c && c.cardType === 'subtopic'; }).length;
+        if (_target && _target.min && _subs && _subs < _target.min) {
+            issues.push('PACK SHAPE: only ' + _subs + ' subtopic cards came back; this topic is asked for '
+                + 'at least ' + _target.min + '. Returning ' + _subs + ' is a claim that the '
+                + 'topic has exactly ' + _subs + ' distinct parts. Split on the distinctions a '
+                + 'specialist would make - mechanism against application, the general rule '
+                + 'against the case where it does not hold, the method against how you know it '
+                + 'worked - and write the parts that were folded together. Do not invent parts '
+                + 'the subject does not have.');
+        }
         var flip = 0, good = 0, bad = 0, subtopics = 0, dp = null;
         cards.forEach(function(card) {
             if (!card) { return; }
