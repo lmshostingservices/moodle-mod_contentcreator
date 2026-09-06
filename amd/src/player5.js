@@ -5698,6 +5698,47 @@ define([
             }
         },
 
+        /**
+         * v15.4.15: put the learner back AT THE ACTIVITY after a re-render.
+         *
+         * FIX-CC-TRY-AGAIN-LANDS-AT-START. Reported: "when we click try again for the
+         * activity it takes the student back to the start of the learning, not the start
+         * of the activity."
+         *
+         * Every Try Again path calls render(), which rebuilds the slide from the manifest.
+         * On a PROSE or STEP pack the activity block is rendered `cc5-prose-hidden`,
+         * revealed only by the final card's button - so after a re-render the block the
+         * learner was working in is shut again, and scrolling to it lands on a hidden
+         * element. What they see is the top of the learning cards.
+         *
+         * Scrolling alone could never have fixed this: the block has to be RE-OPENED
+         * first. On every other route the challenge renders inline and always visible, so
+         * only the scroll is needed - hence the two branches.
+         *
+         * Shared by both retry handlers on purpose. They had drifted already: one scrolled
+         * to a class (`.cc5-activity-section`) that is emitted nowhere in this codebase,
+         * making its scroll a permanent no-op. Two copies of this logic is how that
+         * happens.
+         *
+         * @param {String} preferId Optional id of the block that was on screen before the
+         *                          re-render, so a multi-section slide returns to the same
+         *                          one rather than the first.
+         */
+        reopenActivityBlock: function(preferId) {
+            var $grid = this.container.find('.cc5-prose-grid[data-prose-seq]').first();
+            if ($grid.length) {
+                var _lastIdx = parseInt($grid.attr('data-prose-total'), 10) - 1;
+                if (!isNaN(_lastIdx)) { this.revealProseCard($grid, _lastIdx, false); }
+                // Reveals, parks the narration, spends the final-card button and scrolls
+                // with scrollElementToTop - all of it already correct in one place.
+                this.revealProseActivities($grid);
+                return;
+            }
+            var el = (preferId && document.getElementById(preferId))
+                || this.container.find('.cc5-decision-challenge')[0];
+            if (el) { this.scrollElementToTop(el); }
+        },
+
         revealProseActivities: function($grid) {
             // A length-0 set is not a usable anchor: nextAll() on it returns nothing and
             // a container-wide search would reveal an unrelated block if a slide ever
@@ -12720,11 +12761,11 @@ define([
                 var _blockId = $block.attr('id') || '';
                 self.render();
                 setTimeout(function() {
-                    var el = (_blockId && document.getElementById(_blockId))
-                        || self.container.find('.cc5-decision-challenge')[0];
-                    if (el) {
-                        self.scrollElementToTop(el);
-                    }
+                    // v15.4.15: reopen, then scroll. Scrolling alone left the learner at
+                    // the top of the lesson on every prose and step pack, because
+                    // render() re-hides the activity block behind the final card's
+                    // button. See reopenActivityBlock().
+                    self.reopenActivityBlock(_blockId);
                 }, 50);
             });
 
@@ -14702,14 +14743,35 @@ define([
             if (slideContent.length) {
                 slideContent[0].scrollTop = 0;
             }
-            
-            // 6. Smooth scroll activity section into view
-            var activitySection = this.container.find('.cc5-activity-section');
-            if (activitySection.length) {
-                setTimeout(function() {
-                    activitySection[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            }
+
+            // 6. Put the learner back at the ACTIVITY, not at the top of the lesson.
+            //
+            // v15.4.15 FIX-CC-TRY-AGAIN-LANDS-AT-START. Reported: "when we click try again
+            // for the activity it takes the student back to the start of the learning, not
+            // the start of the activity."
+            //
+            // Two faults, and the first hid the second.
+            //
+            // (a) The old step 6 looked for `.cc5-activity-section`. **That class is
+            //     emitted nowhere** - not by cc-card-slots.js, not by this file; the only
+            //     occurrence in the codebase was the selector itself. So the set was always
+            //     empty, the scroll never ran, and the learner was left wherever step 5 put
+            //     them: scrollTop = 0, the top of the slide. Exactly the reported symptom,
+            //     and invisible in review because a jQuery no-op looks like working code.
+            //
+            // (b) Step 4 re-renders the slide, and on a prose or step pack the activity
+            //     block is rendered `cc5-prose-hidden` behind the final card's button. So
+            //     even a correct scroll would have landed on a hidden element - the learner
+            //     would have had to click through every card again to get back to the
+            //     activity they were already doing. Scrolling alone could not have fixed
+            //     this; the block has to be re-opened.
+            //
+            // revealProseActivities() is reused rather than reimplemented: it already
+            // removes the hidden class, parks the narration, spends the final-card button
+            // and scrolls with scrollElementToTop, which measures the sticky header instead
+            // of hiding the heading behind it. Reimplementing any of that here is how the
+            // two paths drift apart, which is the defect shape this codebase produces most.
+            this.reopenActivityBlock();
             
             // 7. Update navigation state after reset
             setTimeout(function() {

@@ -1,5 +1,92 @@
 # Changelog
 
+## 15.4.15 - 2026-09-06
+
+**Try Again sent the learner back to the start of the lesson instead of the activity. On
+every route, in the shipped default.**
+
+Reported as a Topics-and-Text problem: *"when we click try again for the activity it takes
+the student back to the start of the learning, not the start of the activity."* It was not a
+Topics-and-Text problem.
+
+### Two faults, and the first hid the second
+
+**(a) The scroll target does not exist.** `resetActivity()` scrolled to
+`.cc5-activity-section`. That class is emitted **nowhere** - not by `cc-card-slots.js`, not by
+`player5.js`. The only occurrence in the entire codebase was the selector looking for it. The
+jQuery set was always empty, the scroll never ran, and the learner was left where the line
+before had put them: `scrollTop = 0`, the top of the slide. A jQuery no-op reads as working
+code, which is why it survived review.
+
+**(b) The block is shut by the time you scroll to it.** Both retry paths call `render()`,
+which rebuilds the slide from the manifest. On a prose or step pack the activity block is
+rendered `cc5-prose-hidden`, revealed only by the final card's button. So even a correct
+scroll landed on a hidden element, and the learner had to click through every card again to
+reach the activity they were already doing. **Scrolling alone could never have fixed this.**
+
+### Why it is every route, not one
+
+The obvious reading is that only Topics and Text hides its activity block. The setting says
+otherwise:
+
+```
+this.oneCardAtATime = (config.manifest.settings?.oneCardAtATime) !== false;
+```
+
+**Absent or true, it is ON** - and `_isStepPack = oneCardAtATime && !_isProsePack &&
+_steppable.length > 1` makes every route with more than one steppable card render its
+activity block behind the final card's button, exactly like a prose pack. So in the shipped
+default this affects all seven routes. Only a course with one-card-at-a-time explicitly
+turned off escaped it, which is why it read as a single-route fault.
+
+The first draft of the guard set `oneCardAtATime: false` in its fixtures and found only
+Topics and Text failing - it was testing the non-default configuration. The suite now
+asserts with the setting **omitted**, so it exercises the real default rather than a value
+someone has to remember to keep in step.
+
+### Fix
+
+One shared helper, `reopenActivityBlock()`, used by both retry paths: re-open the block, then
+scroll to it with `scrollElementToTop` (which measures the sticky header instead of hiding
+the heading behind it). It reuses `revealProseActivities()` rather than reimplementing the
+reveal, because the two paths had already drifted once - that is how one of them ended up
+scrolling to a class nothing emits.
+
+`tests/js/test-try-again-returns-to-activity.js` (58 checks) renders all seven routes, opens
+the activities as a learner does, presses the challenge's own Try Again, and asserts the
+block is still open afterwards - in both configurations. Mutation-proven: reverting the fix
+fails 2 checks with one-card-at-a-time off and 8 with it on.
+
+### Also in this release - two prompt changes, both Topics and Text
+
+**The three-card floor.** The route always returned 4 cards: three subtopics plus the
+decision-point, the exact minimum. Nothing capped it - the instruction was asymmetric. It
+stated a hard minimum, then warned only against going too high (*"Do not pad to reach ten"*),
+so the model sat on the safe end every time. Worse, v15.4.12's key-terms note contained the
+phrase *"a topic broken into the minimum of three subtopics"*, putting the number 3 beside
+the word "minimum" in the middle of the field spec. That anchor is removed and the count
+instruction is now symmetric: **THREE IS THE FLOOR, NOT THE DEFAULT**, with an explicit
+instruction to list the topic's parts and count them, and a warning that under-splitting is
+the commoner and more damaging fault. Worth noting commercially: three subtopics is also the
+cheapest possible pack, so the floor was quietly delivering minimum content at full price.
+
+**The self-contradicting quiz instruction.** The card contract said *"One multiple-choice
+question"* while the decision-point block below it asked for three, and the block handed this
+route an escape hatch - *"if your output schema rejects `questions`, fall back to the
+single-decision shape"*. Verified against the LIVE production contract (2026-09-05.3):
+`decisionPointByRoute.topicstext` now declares **both** branches and
+`decisionPointSchemas.v2.routes` lists topicstext, so the hatch's guard condition is false -
+and a model cannot evaluate a condition about its own schema, so in practice it read as
+permission.
+
+**This is hygiene, not a fix.** Live testing confirmed the route is returning three questions
+correctly today; a first report of "only 1 MCQ" turned out to be the one-question-at-a-time
+display being read as a one-question quiz. The contradiction is removed because a prompt that
+argues with itself only has to be misread once, not because anything is currently broken.
+The wording deliberately does not copy the other routes' *"it fails the whole section"* - on
+this route the legacy shape is still accepted and nothing fails, so that would be a lie, and
+an instruction a model can discover is false is one it discounts.
+
 ## 15.4.14 - 2026-09-06
 
 **A second audit pass, run before testing. Three more defects, one of which cost the learner

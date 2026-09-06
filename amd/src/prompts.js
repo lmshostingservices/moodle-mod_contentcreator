@@ -2600,8 +2600,13 @@ Return ONLY valid JSON: { "cards": [...] }. No markdown, no code fences.
 HOW MANY CARDS: Break the topic into the subtopics it actually has - a MINIMUM of 3 and a
 MAXIMUM of 10 - and return one "subtopic" card for each, in teaching order, followed by
 exactly one "decision-point" card at the end.
-- Let the subject decide the number. A topic with five real parts gets five cards. Do not
-  pad to reach ten and do not compress eight genuine subtopics into four.
+- Let the subject decide the number. A topic with five real parts gets five cards, one with
+  eight gets eight. THREE IS THE FLOOR, NOT THE DEFAULT: returning three cards is a claim
+  that the topic has only three distinct parts, and most topics worth teaching have more.
+  Before settling on a number, list the parts the topic actually has and count them.
+- Do not pad to reach ten, and do not compress eight genuine subtopics into three or four.
+  Under-splitting is the commoner fault and the more damaging one: it buries two subjects
+  inside one card and the learner meets them as a single undifferentiated block.
 - Each subtopic must be a DISTINCT part of the topic that could carry its own heading in a
   textbook. If two cards could swap their prose without anyone noticing, they are one card.
 - Order them so each builds on the one before.
@@ -2620,21 +2625,22 @@ FIELDS: Return every field exactly as specified. Do not rename, omit, add or reo
    the term itself. These become the Flip and Learn cards, so a definition must stand alone
    without the paragraph beside it. REQUIRED on every subtopic card - a card without them
    costs the learner the Flip and Learn activity while still looking complete.
-   Three per card, not one: the deck holds nine cards, and a topic broken into the minimum
-   of three subtopics must still fill it. Take the three terms this subtopic actually
-   introduces - do not repeat a term already defined on an earlier card, and do not pad
-   with a word the paragraphs never use.
+   Three per card, not one: they fill the Flip and Learn deck. Take the three terms this
+   subtopic actually introduces - do not repeat a term already defined on an earlier card,
+   and do not pad with a word the paragraphs never use.
 
-LAST. decision-point  -  title, question, options[4]{text(10-16 words), correct, feedback},
-      goodItems[3], badItems[3]
-   One multiple-choice question testing understanding of the subtopics above, not recall of
-   a phrase.
+LAST. decision-point  -  schemaVersion: 2, questions[3], goodItems[3], badItems[3]
+   THREE multiple-choice questions testing understanding of the subtopics above, not recall
+   of a phrase. See the DECISION POINT section below for the exact object shape.
    EVERY FIELD ON THIS LINE IS REQUIRED. goodItems and badItems are not optional extras:
    they are the Category Sort activity, and a card that omits them costs the learner a whole
    activity while still looking complete.
-   title: 3-7 words naming what is being checked. No topic name repeated verbatim.
-   question: 15-30 words, answerable only by someone who understood the article.
-   options: exactly 4. Exactly ONE has correct: true.
+   The older single-question shape - "title", "question", "options[4]" - is still accepted
+   by this route's schema, so returning it fails nothing and reports no error; it simply
+   shows the learner one question where three were designed. Return the three-question
+   shape.
+   Each question: 15-30 words, answerable only by someone who understood the article.
+   options: exactly 4 per question. correctIndex says which one is right.
    ANSWER-LENGTH PARITY: all four options MUST be the same length and the same level of
    detail (10-16 words each, each naming a specific action). The correct one must not be
    the longest, the most detailed, or the only one carrying a justification clause. Wrong
@@ -2877,10 +2883,31 @@ use a worked example instead and name no one.
         // outright, so a model that takes the fallback produces a card the vendor refuses
         // and the section fails. Topics and Text is not a fixed route and carries its
         // decision in its own shape, so it keeps the escape hatch.
+        // v15.4.15: the Topics-and-Text escape hatch is GONE, because its premise expired.
+        //
+        // It was written when that route's strict schema had no `questions` member, so a
+        // model that tried v2 would have had the card rejected. Verified against the LIVE
+        // production contract endpoint on 6 Sep 2026 (contractVersion 2026-09-05.3):
+        // decisionPointByRoute.topicstext now declares BOTH branches, and
+        // decisionPointSchemas.v2.routes lists topicstext explicitly.
+        //
+        // Leaving the hatch in place after that was actively harmful. The condition it was
+        // guarded by - "if your output schema rejects questions" - is now false, but a
+        // model cannot check its own schema, so in practice it read as permission. Set
+        // against a card contract that also still said "One multiple-choice question", the
+        // model took the easier branch every time and the learner got one question out of
+        // three. Reported live, diagnosed as a vendor limit, and it was ours.
+        //
+        // The wording below is deliberately not the other routes' "there is no fallback,
+        // it fails the section" - on THIS route that would be a lie. v1 is still accepted,
+        // nothing fails, and that is precisely why the instruction has to carry the reason
+        // rather than a threat.
         const FALLBACK = (mode === 'topicstext')
-            ? ' If - and only if - your output schema rejects "questions", fall back to '
-              + 'the card contract\'s own single-decision shape carrying the strongest of '
-              + 'the three questions. '
+            ? ' On this route the schema ALSO still accepts the old single-question shape, '
+              + 'so returning it breaks nothing and reports no error - it simply shows the '
+              + 'learner one question where three were designed. Do not return it. There is '
+              + 'no condition under which the single-question shape is the right answer '
+              + 'here. '
             : ' There is no fallback: the single-question fields are rejected on this '
               + 'route, so a card that uses them fails the whole section. ';
         return `
