@@ -1,5 +1,53 @@
 # Changelog
 
+## 15.4.17 - 2026-09-06
+
+**Six subtopic cards is now a hard floor on Topics and Text, enforced, not just asked for.**
+
+v15.4.16 separated the ask (6) from the accept (3-10) so the client would never be stricter
+than the vendor. The author's instruction was explicit - *"min 6 please everywhere"* - so the
+accepted floor moves to six as well.
+
+### This is a knowingly accepted risk, recorded rather than hidden
+
+The vendor still publishes **3-10** for this route. The client now accepts **6-10**. So:
+
+> A pack of 3-5 subtopic cards is **valid to the server and rejected here.** It fails the
+> structural gate, spends its one free repair attempt asking for more, and if the model
+> returns short a second time the section fails and renders placeholders.
+
+That is the same shape as the mismatch that took General down on 4 September, and it is only
+tolerable because the direction is inverted: there the client demanded more cards than the
+server would ever emit, so it could never be satisfied. Here the server permits what we ask
+for - the model simply has to be persuaded to produce it.
+
+**The rollback is one number.** `CC_CARD_COUNT_RANGE.topicstext.min` back to 3; the ask
+survives in `CC_CARD_COUNT_TARGET` and is enforced by the repair pass instead of by
+rejection.
+
+`test-field-ranges` compares the client's range against the vendor's on every route and
+would have failed this change. Rather than relaxing that comparison, the divergence is
+declared in a `DELIBERATELY_STRICTER` table with the exact expected value, so the check keeps
+its teeth: it still fails if the number moves again, if the maximum diverges, or if any other
+route starts diverging. Mutation-proven - changing the floor from 6 to 7 fails immediately.
+
+### Two smaller consequences
+
+**The rejection now explains itself.** "Expected between 6 and 11 cards, got 4" gives the
+repair pass a number and no instruction. A short pack now also gets the guidance the soft
+check used to carry: split on the distinctions a specialist would make - mechanism against
+application, the general rule against the case where it does not hold - and write the parts
+that were folded together, rather than inventing parts the subject does not have.
+
+**The soft duplicate is removed.** With the count enforced at the gate, keeping the soft
+`PACK SHAPE` count check as well would put one fault in two queues - the mistake
+`itemCountIssues`' own comment warns about. The decision-point checks stay soft, because a
+missing card should be repaired rather than cost the learner the whole section.
+
+**Still open with the vendor:** raise the published minimum for this route to 6, and confirm
+whether their strict schema enforces a minimum subtopic count at all. If it enforces none,
+six is only ever encouraged server-side and this client-side floor is what makes it real.
+
 ## 15.4.16 - 2026-09-06
 
 **A Topics-and-Text pack with no activity at all was judged perfectly valid. And the

@@ -4856,41 +4856,28 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                 + 'carries the activity block, so every subtopic card must come before it.');
         }
 
-        // THE PACK SIZE. Asked for six as a floor - "so that we have enough info for a full
-        // activity". Reported here rather than in validateCards on purpose: the vendor's
-        // published range for this route is 3-10, and a client that REJECTS a four-card
-        // pack the server accepts hard-fails a section the server was happy with. See
-        // CC_CARD_COUNT_TARGET in prompts.js. So the ask is enforced by repair, not by
-        // rejection.
-        var _target = (Prompts && typeof Prompts.getCardCountTarget === 'function')
-            ? Prompts.getCardCountTarget(mode) : null;
-        var _subs = cards.filter(function(c) { return c && c.cardType === 'subtopic'; }).length;
-        if (_target && _target.min && _subs && _subs < _target.min) {
-            issues.push('PACK SHAPE: only ' + _subs + ' subtopic cards came back; this topic is asked for '
-                + 'at least ' + _target.min + '. Returning ' + _subs + ' is a claim that the '
-                + 'topic has exactly ' + _subs + ' distinct parts. Split on the distinctions a '
-                + 'specialist would make - mechanism against application, the general rule '
-                + 'against the case where it does not hold, the method against how you know it '
-                + 'worked - and write the parts that were folded together. Do not invent parts '
-                + 'the subject does not have.');
-        }
-        var flip = 0, good = 0, bad = 0, subtopics = 0, dp = null;
+        // THE PACK SIZE is no longer checked here. v15.4.17 made six a HARD floor in
+        // CC_CARD_COUNT_RANGE at the author's instruction, so a short pack now fails the
+        // structural gate outright and never reaches this measurement pass. Reporting it
+        // here as well would put one fault in two queues - the mistake itemCountIssues'
+        // own comment warns about. If the floor is ever rolled back to the vendor's 3,
+        // restore the soft check here so the ask is still enforced by repair.
+
+        // What the two derived activities can actually be built from.
+        var flip = 0, subtopics = 0;
+        var dp = _dp[0] || null;
+        var good = dp && Array.isArray(dp.goodItems) ? dp.goodItems.length : 0;
+        var bad = dp && Array.isArray(dp.badItems) ? dp.badItems.length : 0;
         cards.forEach(function(card) {
-            if (!card) { return; }
-            if (card.cardType === 'subtopic') {
-                subtopics++;
-                (Array.isArray(card.keyTerms) ? card.keyTerms : []).forEach(function(t) {
-                    var term = (typeof t === 'string') ? t : (t && (t.term || t.title) || '');
-                    var def = (typeof t === 'string') ? '' : (t && (t.definition || t.text) || '');
-                    if (term && def) { flip++; }
-                });
-            }
-            if (card.cardType === 'decision-point') {
-                dp = card;
-                good = (Array.isArray(card.goodItems) ? card.goodItems : []).length;
-                bad = (Array.isArray(card.badItems) ? card.badItems : []).length;
-            }
+            if (!card || card.cardType !== 'subtopic') { return; }
+            subtopics++;
+            (Array.isArray(card.keyTerms) ? card.keyTerms : []).forEach(function(t) {
+                var term = (typeof t === 'string') ? t : ((t && (t.term || t.title)) || '');
+                var def = (typeof t === 'string') ? '' : ((t && (t.definition || t.text)) || '');
+                if (term && def) { flip++; }
+            });
         });
+
         // 2 is renderDecisionChallenge's floor for Flip and Learn.
         if (subtopics && flip < 2) {
             issues.push('The Flip and Learn activity cannot be built: ' + flip + ' usable '
@@ -5332,8 +5319,19 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
             var lo = countRange.min;
             var hi = countRange.max + (activitiesOff ? 0 : 1); // +1 for the decision-point
             if (cards.length < lo || cards.length > hi) {
-                issues.push('Expected between ' + lo + ' and ' + hi
-                    + ' cards, got ' + cards.length);
+                // v15.4.17: a SHORT pack gets the guidance, because short is the case that
+                // actually happens and "Expected between 6 and 11, got 4" tells the repair
+                // pass a number without telling it what to do about it.
+                issues.push('Expected between ' + lo + ' and ' + hi + ' cards, got '
+                    + cards.length
+                    + (cards.length < lo
+                        ? '. Returning ' + cards.length + ' is a claim that the topic has '
+                          + 'that many distinct parts. Split on the distinctions a specialist '
+                          + 'would make - mechanism against application, the general rule '
+                          + 'against the case where it does not hold, the method against how '
+                          + 'you know it worked - and write the parts that were folded '
+                          + 'together. Do not invent parts the subject does not have.'
+                        : '.'));
             }
         } else if (cards.length !== expectedCount
             && !(activitiesOff && cards.length === expectedCount - 1)) {

@@ -469,8 +469,28 @@ Generate ALL content in ${languageName}. This is NON-NEGOTIABLE
      * 7. That is correct - they ARE short of the current contract - but it means an old
      * module may offer to regenerate where it previously did not.
      */
+    // v15.4.17: min is SIX, on the AUTHOR'S EXPLICIT INSTRUCTION ("min 6 please everywhere").
+    //
+    // READ THIS BEFORE CHANGING ANYTHING HERE. The client is now deliberately STRICTER than
+    // the vendor, whose published contract for this route is 3-10. That is a knowingly
+    // accepted risk, not an oversight:
+    //
+    //   A pack of 3-5 subtopic cards is VALID to the server and INVALID to us. It fails the
+    //   structural gate, spends its one free repair attempt asking for more, and if the
+    //   model returns short a second time the section fails and renders placeholders.
+    //
+    // This is the same shape as the mismatch that took General down on 4 September, and it
+    // is only tolerable here because the direction is inverted: there the client asked for
+    // MORE cards than the server would emit and could never be satisfied; here the server
+    // permits what we ask for, the model simply has to be persuaded to produce it.
+    //
+    // THE ROLLBACK IS THIS ONE NUMBER. Set min back to 3 and the ask survives in
+    // CC_CARD_COUNT_TARGET, enforced by the repair pass instead of by rejection.
+    //
+    // Remove this comment once LMS Labs publish 6 as their own minimum for this route -
+    // then the client and vendor agree again and none of the above applies.
     const CC_CARD_COUNT_RANGE = {
-        topicstext: { min: 3, max: 10 }
+        topicstext: { min: 6, max: 10 }
     };
 
     /**
