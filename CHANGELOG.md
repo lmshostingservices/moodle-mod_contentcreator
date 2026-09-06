@@ -1,5 +1,46 @@
 # Changelog
 
+## 15.4.18 - 2026-09-06
+
+**v15.4.17's floor could not have worked. The repair pass was forbidden from adding cards.**
+
+Caught before release, while checking that the retry behind the new hard floor could
+actually succeed. It could not.
+
+The Topics-and-Text repair prompt ended, unconditionally:
+
+> *"Return the corrected cards with **EXACTLY the same number of cards you were given (4)**,
+> in the same order... **Do not add a card and do not remove one.**"*
+
+That instruction was correct for the only repair this route could previously need - a pack
+of any length in range with a bad field somewhere in it. v15.4.17 created a repair it cannot
+perform: a four-card pack now fails the structural gate, the repair pass is handed
+*"Expected between 6 and 11 cards, got 4"* and told in the same message that it must return
+exactly four.
+
+**So every short pack would have burned its one attempt and fallen to placeholder cards.** A
+floor introduced to guarantee six cards would instead have produced EMPTY SECTIONS - worse
+than the four cards it was rejecting, and the exact opposite of its purpose.
+
+The closing instruction is now conditional on what actually failed:
+
+- **short** - "return AT LEAST 6, keep every card you were given, add new subtopic cards
+  before the decision-point, do not pad"
+- **a field fault** - unchanged: same number, same order
+- **too long** - unchanged: the count must not move
+
+The shortfall is detected from the structural gate's own message rather than by re-deriving
+the count, so the gate stays the single source of the decision.
+
+`tests/js/test-repair-can-reach-the-floor.js` (10 checks) asserts all three branches and that
+the repair targets the gate's own minimum - if those two numbers ever diverge, the repair
+aims at a count the gate will not accept and every short pack fails twice. Mutation-proven:
+restoring the unconditional instruction fails seven checks.
+
+**The general lesson, which is worth more than the fix:** raising a validation floor is only
+half a change. The repair path has to be able to reach the new floor, or the stricter gate
+converts recoverable content into no content at all.
+
 ## 15.4.17 - 2026-09-06
 
 **Six subtopic cards is now a hard floor on Topics and Text, enforced, not just asked for.**

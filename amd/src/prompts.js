@@ -4421,20 +4421,53 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
     };
 
     const buildTopicsTextContentRepairPrompt = (cards, issues, topicTitle, context) => {
-        const issueList = (Array.isArray(issues) ? issues : [issues])
-            .filter(Boolean).map((i, n) => (n + 1) + '. ' + i).join('\n');
+        const issueArr = (Array.isArray(issues) ? issues : [issues]).filter(Boolean);
+        const issueList = issueArr.map((i, n) => (n + 1) + '. ' + i).join('\n');
+        const have = Array.isArray(cards) ? cards.length : 0;
+
+        // v15.4.18: A COUNT REPAIR MUST BE ALLOWED TO ADD CARDS.
+        //
+        // This prompt ended "Do not add a card and do not remove one" unconditionally, and
+        // that was right for the only repair this route could previously need: a
+        // content-driven pack of any length in range, with a bad FIELD somewhere in it.
+        //
+        // v15.4.17 made six subtopic cards a hard floor, which created a repair this
+        // prompt could not perform. A four-card pack now fails the structural gate, the
+        // repair pass is handed the failure "Expected between 6 and 11 cards, got 4" - and
+        // then told, in the same message, that it must return exactly four. The retry
+        // cannot succeed. Every short pack would have burned its attempt and fallen to
+        // placeholder cards, so a floor intended to guarantee six would have produced
+        // EMPTY SECTIONS instead: a worse outcome than the four cards it was rejecting,
+        // and the opposite of what the floor is for.
+        //
+        // So the closing instruction is now conditional on what actually failed. Detected
+        // from the issue text rather than by re-deriving the count here, because the
+        // structural gate is the thing that decided the pack was short and its message is
+        // the single source of that decision.
+        let needMin = 0;
+        issueArr.forEach(function(i) {
+            const m = /Expected between (\d+) and \d+ cards, got (\d+)/.exec(String(i));
+            if (m && Number(m[2]) < Number(m[1])) { needMin = Math.max(needMin, Number(m[1])); }
+        });
+
+        const closing = needMin
+            ? '\n\nThis pack is SHORT. Return { "cards": [...] } with AT LEAST ' + needMin
+              + ' cards - you were given ' + have + '. Keep every card you were given, in the'
+              + ' same order and with its wording intact except where an issue above names it,'
+              + ' and ADD new "subtopic" cards to reach the count. Every added card takes the'
+              + ' same shape as the existing ones: heading, paragraphs[2], keyTerms[3]. The'
+              + ' "decision-point" card stays LAST - insert the new subtopic cards before it.'
+              + ' Do not pad: the added cards must carry parts of the topic that the existing'
+              + ' cards genuinely leave out, and must not restate them.'
+            : '\n\nReturn the corrected { "cards": [...] } with EXACTLY the same number of'
+              + ' cards you were given (' + have + '),'
+              + ' in the same order, preserving everything the issues do not mention.'
+              + ' Do not add a card and do not remove one.';
+
         return 'Topic: ' + (topicTitle || '')
             + '\n\nISSUES TO FIX:\n' + issueList
             + '\n\nCURRENT CARDS:\n' + JSON.stringify(cards)
-            // v15.3.11: the count is CONTENT-DRIVEN on this route, so a repair must
-            // return the same number of cards it was handed - not a fixed 5. Hard-coding
-            // 5 told the model to invent a card, or drop one, on every repair of a pack
-            // that is not exactly five long, which after the subtopic rebuild is most of
-            // them.
-            + '\n\nReturn the corrected { "cards": [...] } with EXACTLY the same number of'
-            + ' cards you were given (' + (Array.isArray(cards) ? cards.length : 0) + '),'
-            + ' in the same order, preserving everything the issues do not mention.'
-            + ' Do not add a card and do not remove one.';
+            + closing;
     };
 
     // v15.1.7 FIX-CC-GENERAL-REPAIR-WAS-VET. General had no branch in either dispatcher
