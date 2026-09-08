@@ -2952,6 +2952,61 @@ use a worked example instead and name no one.
 `;
     };
 
+    /**
+     * v15.4.20: the decision-point SHAPE, for a repair pass - not the generation contract.
+     *
+     * v15.4.19 appended getDecisionPointBlock() to the seven repair system prompts, because
+     * optionFeedbackIssues() asks a repair to return `questions[].options[]` as objects and
+     * a model that has never been shown that shape answers in the single-question one.
+     *
+     * That was right about the problem and wrong about the fix. The generation block also
+     * says "Exactly three questions. Exactly four options each", "THE THREE QUESTIONS MUST
+     * TEST THREE DIFFERENT THINGS" and the parity rule - sitting directly above a repair
+     * instruction that says "fix ONLY the fields the listed issues name, everything else
+     * byte-for-byte unchanged". On a legacy one-question card, a repair fired for an
+     * unrelated issue would have read that as an instruction to invent two more questions
+     * and rewrite every option. The word-count regression guard would not have caught it
+     * either: that discards a repair which came back SHORTER, and this one comes back
+     * longer.
+     *
+     * So the repair gets the shape and nothing else: what an option looks like, and what a
+     * wrong option's feedback has to say. Every "write a card like this" rule stays in the
+     * generation block where it belongs.
+     *
+     * @param {String} mode Route key.
+     * @return {String} The block, or '' for a route with no decision-point.
+     */
+    const getDecisionPointRepairBlock = (mode) => {
+        const order = CC_CARD_ORDER[mode] || [];
+        if (order.indexOf('decision-point') === -1) { return ''; }
+        return `
+
+===========================================================================
+DECISION-POINT SHAPE  -  FOR REPAIR ONLY
+===========================================================================
+If a listed issue names a decision-point card, return that card in the shape
+it already has, with the same number of questions and the same number of
+options. Do not add a question. Do not remove one. Do not rewrite a question
+or an option the issues do not name.
+
+Every option is an OBJECT, never a bare string:
+
+  {"text": "the answer as the learner reads it",
+   "feedback": "why this answer is right, or what is wrong with it"}
+
+ALL options carry "feedback", including the wrong ones. A wrong option's
+feedback names the specific error in THAT choice - what it overlooks, what it
+would cost, in this pack's own subject matter. It is not "that is incorrect,
+the answer is B", it is not the correct answer's explanation reworded, and it
+is not a restatement of the option itself.
+
+"correctIndex" and the question-level "feedback" are unchanged: correctIndex
+still says which option is right, and the question-level line still explains
+why. Keep both exactly as they were unless an issue names them.
+===========================================================================
+`;
+    };
+
     const getDecisionPointBlock = (mode) => {
         const order = CC_CARD_ORDER[mode] || [];
         if (order.indexOf('decision-point') === -1) { return ''; }
@@ -3036,11 +3091,25 @@ specified alongside "questions" - on the Topics and Text route those six
 items ARE the Category Sort activity, and a card that drops them costs the
 learner a whole activity while still looking complete.
 
-FEEDBACK GOES ON EVERY OPTION. A learner who picks a wrong answer learns from
-being told why THAT answer is wrong, not why a different one is right - so
-each option carries its own "feedback", and the question-level "feedback"
-explains the correct answer. Options may be plain strings if you have nothing
-per-option to say, but that is the weaker card.
+FEEDBACK GOES ON EVERY OPTION, AND IT IS NOT OPTIONAL. Every option is an
+OBJECT - {"text": "...", "feedback": "..."} - never a plain string. All four
+carry feedback, including the three wrong ones.
+
+A learner who picks a wrong answer learns from being told why THAT answer is
+wrong. So each distractor's feedback names the specific error in THAT choice -
+what it overlooks, what it costs, what it would lead to here - in this pack's
+own subject matter. It is the only teaching that learner receives, because the
+question is answered once and does not come back.
+
+Three things a distractor's feedback must never be:
+  - "That is incorrect. The correct answer is B." - it explains nothing.
+  - the correct answer's explanation reworded - that is the question-level
+    "feedback", and it is already shown.
+  - a restatement of the option - "Ignoring non-verbal cues is wrong because
+    you should not ignore non-verbal cues."
+
+The question-level "feedback" stays: it explains why the RIGHT answer is right.
+"correctIndex" is still required and still says which option that is.
 
 THE THREE QUESTIONS MUST TEST THREE DIFFERENT THINGS. Question 1 checks the
 rule or principle the pack taught. Question 2 puts it in a situation where
@@ -3206,10 +3275,25 @@ Do NOT use English for any card content. Ignore any English writing style or spe
         if (context.targetAudience) { lines.push(`- Written for: ${ccHumanValue(context.targetAudience)}`); }
         if (context.courseName) { lines.push(`- Part of: ${context.courseName}`); }
 
-        // v13.92: the v13.91 mechanism-structure pin is gone with the card it pinned.
-        // Card 3 is now examples-and-application, which has no structure to choose.
 
-        return `${langPrefix}Write a short-course text module: 4 short prose cards plus 1 question card.
+        // v15.4.21: this prompt described the route as it was before v15.3.11.
+        //
+        // Three sentences of it - the opening line, the card list and the "Remember" -
+        // still asked for "4 short prose cards plus 1 question card" named overview,
+        // key-concepts, examples-application and key-takeaways, and told the model NOT to
+        // put headings on cards 1-4. Every one of those statements is now false: the route
+        // emits 6-10 content-driven `subtopic` cards, each REQUIRED to carry its own 2-6
+        // word heading (the field specs measure it, and the Flip and Learn deck is built
+        // from the keyTerms beside it), plus the decision-point last.
+        //
+        // So every generation call on this route sent a user prompt contradicting its own
+        // system prompt on the card count, the card types AND the heading - and the one
+        // instruction a user prompt is most likely to win on is the last line before the
+        // model starts writing. That the route works is down to the system prompt and the
+        // strict schema carrying it; the contradiction has been sitting in the paid path
+        // since v15.3.11 regardless. The closing line now echoes the system contract
+        // instead of an older one.
+        return `${langPrefix}Write a short-course text module: one prose card for each part of the topic, then one question card.
 
 CONTEXT:
 ${lines.join('\n')}
@@ -3217,8 +3301,8 @@ ${topic.keyPoints?.length ? `\nPOINTS THAT MUST BE COVERED: ${ccTextList(topic.k
 ${context.additionalInstructions ? `\nAUTHOR INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${ccRelevantSource(context.priorityContent, topic, CC_SOURCE_BUDGET)}` : ''}
 
-Write all 5 cards in order: overview, key-concepts, examples-application, key-takeaways, decision-point.
-Remember: no heading fields on cards 1-4, exactly two paragraphs each, 58-70 words per paragraph, and never the characters backslash-n anywhere.${ccSiblingBlock(topic)}${langSuffix}`;
+Return one "subtopic" card for each distinct part of this topic - a minimum of 6 and a maximum of 10, in teaching order - and exactly one "decision-point" card last.
+Remember: every subtopic card carries its own 2-6 word heading, exactly two paragraphs of 58-70 words each and exactly three key terms; the decision-point is the last card and carries its three questions, goodItems and badItems; and never the characters backslash-n anywhere.${ccSiblingBlock(topic)}${langSuffix}`;
     };
 
     /**
@@ -4189,7 +4273,18 @@ Generate the full 7-card sequence.${ccUniVarietyBlock(topic.title || topic.name 
         // so every route now does the same. The card contract exists in exactly one place
         // per route, and a repair can no longer be told something the generator was not.
         const langBlock = getLanguageInstructions(context?.language || context?.voiceLanguage || 'en-AU');
-        return VET_SYSTEM_PROMPT
+        // v15.4.19: the repair pass gets the DECISION-POINT block too.
+        //
+        // v15.3.13 left it out deliberately and recorded that as known: "a repair pass
+        // on a three-question card sees a contract describing one". That was tolerable
+        // while no repairable issue named the three-question shape. It stopped being
+        // tolerable this release: optionFeedbackIssues() is in CC_REPAIRABLE and its
+        // instruction is literally "return every option as {text, feedback}" inside
+        // `questions[]` - so a repair that has never been shown that shape would answer
+        // it in the single-question one, and either lose two questions or be refused by
+        // the strict schema. The block is the same one the generator was given, from
+        // the same function, for the same reason the rest of this contract is.
+        return VET_SYSTEM_PROMPT + getDecisionPointRepairBlock('vet')
             + '\n\nYou are REPAIRING an existing pack, not writing a new one.'
             + '\nThe card contract above is authoritative - it is the same contract the'
             + '\npack was generated against.'
@@ -4250,7 +4345,18 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         // so every route now does the same. The card contract exists in exactly one place
         // per route, and a repair can no longer be told something the generator was not.
         const langBlock = getLanguageInstructions(context?.language || context?.voiceLanguage || 'en-AU');
-        return UNIVERSITY_SYSTEM_PROMPT
+        // v15.4.19: the repair pass gets the DECISION-POINT block too.
+        //
+        // v15.3.13 left it out deliberately and recorded that as known: "a repair pass
+        // on a three-question card sees a contract describing one". That was tolerable
+        // while no repairable issue named the three-question shape. It stopped being
+        // tolerable this release: optionFeedbackIssues() is in CC_REPAIRABLE and its
+        // instruction is literally "return every option as {text, feedback}" inside
+        // `questions[]` - so a repair that has never been shown that shape would answer
+        // it in the single-question one, and either lose two questions or be refused by
+        // the strict schema. The block is the same one the generator was given, from
+        // the same function, for the same reason the rest of this contract is.
+        return UNIVERSITY_SYSTEM_PROMPT + getDecisionPointRepairBlock('university')
             + '\n\nYou are REPAIRING an existing pack, not writing a new one.'
             + '\nThe card contract above is authoritative - it is the same contract the'
             + '\npack was generated against.'
@@ -4307,7 +4413,18 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         // so every route now does the same. The card contract exists in exactly one place
         // per route, and a repair can no longer be told something the generator was not.
         const langBlock = getLanguageInstructions(context?.language || context?.voiceLanguage || 'en-AU');
-        return WORKPLACE_SYSTEM_PROMPT
+        // v15.4.19: the repair pass gets the DECISION-POINT block too.
+        //
+        // v15.3.13 left it out deliberately and recorded that as known: "a repair pass
+        // on a three-question card sees a contract describing one". That was tolerable
+        // while no repairable issue named the three-question shape. It stopped being
+        // tolerable this release: optionFeedbackIssues() is in CC_REPAIRABLE and its
+        // instruction is literally "return every option as {text, feedback}" inside
+        // `questions[]` - so a repair that has never been shown that shape would answer
+        // it in the single-question one, and either lose two questions or be refused by
+        // the strict schema. The block is the same one the generator was given, from
+        // the same function, for the same reason the rest of this contract is.
+        return WORKPLACE_SYSTEM_PROMPT + getDecisionPointRepairBlock('workplace')
             + '\n\nYou are REPAIRING an existing pack, not writing a new one.'
             + '\nThe card contract above is authoritative - it is the same contract the'
             + '\npack was generated against.'
@@ -4366,7 +4483,18 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
         // so every route now does the same. The card contract exists in exactly one place
         // per route, and a repair can no longer be told something the generator was not.
         const langBlock = getLanguageInstructions(context?.language || context?.voiceLanguage || 'en-AU');
-        return PD_SYSTEM_PROMPT
+        // v15.4.19: the repair pass gets the DECISION-POINT block too.
+        //
+        // v15.3.13 left it out deliberately and recorded that as known: "a repair pass
+        // on a three-question card sees a contract describing one". That was tolerable
+        // while no repairable issue named the three-question shape. It stopped being
+        // tolerable this release: optionFeedbackIssues() is in CC_REPAIRABLE and its
+        // instruction is literally "return every option as {text, feedback}" inside
+        // `questions[]` - so a repair that has never been shown that shape would answer
+        // it in the single-question one, and either lose two questions or be refused by
+        // the strict schema. The block is the same one the generator was given, from
+        // the same function, for the same reason the rest of this contract is.
+        return PD_SYSTEM_PROMPT + getDecisionPointRepairBlock('pd')
             + '\n\nYou are REPAIRING an existing pack, not writing a new one.'
             + '\nThe card contract above is authoritative - it is the same contract the'
             + '\npack was generated against.'
@@ -4412,12 +4540,30 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
     // entirely. Reuse the route's own system prompt, which already carries the full
     // card spec, and state the issues against it.
     const buildTopicsTextContentRepairSystemPrompt = (context) => {
-        return TOPICSTEXT_SYSTEM_PROMPT
+        // v15.4.19: the repair pass gets the DECISION-POINT block too.
+        //
+        // v15.3.13 left it out deliberately and recorded that as known: "a repair pass
+        // on a three-question card sees a contract describing one". That was tolerable
+        // while no repairable issue named the three-question shape. It stopped being
+        // tolerable this release: optionFeedbackIssues() is in CC_REPAIRABLE and its
+        // instruction is literally "return every option as {text, feedback}" inside
+        // `questions[]` - so a repair that has never been shown that shape would answer
+        // it in the single-question one, and either lose two questions or be refused by
+        // the strict schema. The block is the same one the generator was given, from
+        // the same function, for the same reason the rest of this contract is.
+        return TOPICSTEXT_SYSTEM_PROMPT + getDecisionPointRepairBlock('topicstext')
             + '\n\nYou are REPAIRING an existing module, not writing a new one.'
             + '\nKeep every paragraph that is already good. Change ONLY what the listed'
-            + '\nissues name. Return all 5 cards in the same order: overview, key-concepts,'
-            + '\nexamples-application, key-takeaways, decision-point. Do not add heading'
-            + '\nfields to cards 1-4 and do not exceed two paragraphs per card.';
+            // v15.4.21: the same stale five-card list the generation prompt carried, in
+            // the pass that is meant to CORRECT a pack. It named four card types this
+            // route retired at v15.3.11 and forbade the heading every subtopic card is
+            // now required to have - so a repair fired for an unrelated issue was told to
+            // strip the headings and reshape a 6-10 card pack into five differently-named
+            // ones. Now: return what you were given, fix what the issues name.
+            + '\nissues name. Return the SAME cards you were given, the same number of them'
+            + '\nand in the same order - as many subtopic cards as arrived, then the'
+            + '\ndecision-point last. Keep each subtopic card\'s heading and its three key'
+            + '\nterms, and do not exceed two paragraphs per card.';
     };
 
     const buildTopicsTextContentRepairPrompt = (cards, issues, topicTitle, context) => {
@@ -4494,7 +4640,18 @@ Return ONLY a valid JSON object with "cards" array of exactly 7 cards.`;
     // fails validation on its last attempt after being paid for.
     const buildPolicyContentRepairSystemPrompt = (context) => {
         const langBlock = getLanguageInstructions(context?.language || context?.voiceLanguage || 'en-AU');
-        return POLICY_SYSTEM_PROMPT
+        // v15.4.19: the repair pass gets the DECISION-POINT block too.
+        //
+        // v15.3.13 left it out deliberately and recorded that as known: "a repair pass
+        // on a three-question card sees a contract describing one". That was tolerable
+        // while no repairable issue named the three-question shape. It stopped being
+        // tolerable this release: optionFeedbackIssues() is in CC_REPAIRABLE and its
+        // instruction is literally "return every option as {text, feedback}" inside
+        // `questions[]` - so a repair that has never been shown that shape would answer
+        // it in the single-question one, and either lose two questions or be refused by
+        // the strict schema. The block is the same one the generator was given, from
+        // the same function, for the same reason the rest of this contract is.
+        return POLICY_SYSTEM_PROMPT + getDecisionPointRepairBlock('policy')
             + '\n\nYou are REPAIRING an existing pack, not writing a new one.'
             + '\nThe card contract above is authoritative - it is the same contract the'
             + '\npack was generated against, including its fidelity rules.'
@@ -4550,7 +4707,18 @@ Return ONLY a valid JSON object with "cards" array of exactly ${getCardCountForM
 
     const buildGeneralContentRepairSystemPrompt = (context) => {
         const langBlock = getLanguageInstructions(context?.language || context?.voiceLanguage || 'en-AU');
-        return GENERAL_SYSTEM_PROMPT
+        // v15.4.19: the repair pass gets the DECISION-POINT block too.
+        //
+        // v15.3.13 left it out deliberately and recorded that as known: "a repair pass
+        // on a three-question card sees a contract describing one". That was tolerable
+        // while no repairable issue named the three-question shape. It stopped being
+        // tolerable this release: optionFeedbackIssues() is in CC_REPAIRABLE and its
+        // instruction is literally "return every option as {text, feedback}" inside
+        // `questions[]` - so a repair that has never been shown that shape would answer
+        // it in the single-question one, and either lose two questions or be refused by
+        // the strict schema. The block is the same one the generator was given, from
+        // the same function, for the same reason the rest of this contract is.
+        return GENERAL_SYSTEM_PROMPT + getDecisionPointRepairBlock('general')
             + '\n\nYou are REPAIRING an existing pack, not writing a new one.'
             + '\nThe card contract above is authoritative - it is the same contract the'
             + '\npack was generated against.'

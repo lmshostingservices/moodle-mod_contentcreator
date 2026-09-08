@@ -12241,6 +12241,49 @@ define([
                 $opt.find('.cc5-dp-feedback').show();
                 $options.attr('data-answered', 'true').data('answered', true);
                 $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
+                // FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19): reveal the right answer
+                // when the learner got it wrong.
+                //
+                // Reported: "when we get the question right the feedback shows, when we get
+                // it wrong I don't see the feedback at all". Both halves of that are this
+                // one gap. The vendor's published v2 decision-point carries plain-string
+                // options and ONE feedback per question, so normalizeCardSchema puts that
+                // line on the correct option and leaves every distractor with
+                // `feedback: ''` - and the renderer only emits `.cc5-dp-feedback` when
+                // there is text for it. A learner who picked a distractor therefore had
+                // nothing to show: no explanation, and - since v15.4.6 removed Try Again -
+                // no second attempt and no way to find out which answer was right either.
+                // The question was scored and closed in silence.
+                //
+                // Per-option feedback still wins wherever the pack has it (v1 packs, and
+                // any v2 pack whose options arrive as objects). This is the floor beneath
+                // it: whatever the pack carries, a wrong answer now always ends with the
+                // correct option named, marked and showing its own explanation.
+                //
+                // Scoped to the CHALLENGE quiz on purpose. The standalone decision-point
+                // card above keeps Try Again, and revealing the answer there would turn a
+                // practice card into the "lock with the answer printed underneath" that
+                // FIX-CC-QUIZ-GATE-INCONSISTENT took out of this panel.
+                // v15.4.20: no .first(). normalizeCardSchema marks an option correct on
+                // `i === correctIndex` OR a carried `correct`/`isCorrect`, so a payload with
+                // both can produce two options flagged correct - and the renderer puts the
+                // "Correct answer" badge on BOTH. Revealing only the first left the second
+                // badged and dimmed at 42%, which reads as a rendering fault. Rare, and a
+                // dropped `.first()` is the whole cost of not having it.
+                var _revealAudio = '';
+                if (!isCorrect) {
+                    var $right = $options.find('.cc5-dp-option[data-correct="true"]').not($opt);
+                    _revealAudio = $right.first().attr('data-feedback-audio') || '';
+                    $right.addClass('cc5-dp-reveal');
+                    $right.find('.cc5-dp-feedback').show();
+                    // getLabel, not a literal: FIX-CC-AMD-HARDCODED-STRINGS took the
+                    // English out of this file once already, and this string is announced
+                    // to a screen reader on a card whose every other word is translated.
+                    // ('Correct'/'Incorrect' two lines above are pre-existing literals and
+                    // are left alone here - changing what a scored answer announces is a
+                    // separate change from adding a new announcement.)
+                    $right.find('.cc5-dp-result-text').text(getLabel('correctAnswerLabel'));
+                }
                 $opt.focus();
                 // v13.32: Quiz voiceover — speak feedback text aloud via Web Speech API
                 // FIX-CC-QUIZ-VOICE-DELAY (v13.38): Chrome Web Speech API has a known
@@ -12270,7 +12313,15 @@ define([
                 // a build where TTS failed - the feedback is silent rather than spoken by the
                 // wrong voice. Silence is recoverable; the wrong narrator is not.
                 if (self.quizVoiceEnabled) {
-                    var _fbUrl = $opt.attr('data-feedback-audio');
+                    // v15.4.20: fall back to the REVEALED answer's clip.
+                    //
+                    // This panel advertises "Questions & feedback are read aloud". On the
+                    // exact case this release is about - a v2 pack whose distractors carry
+                    // no feedback, and so no pre-generated clip - a learner who answered
+                    // wrong got the "no clip, silent by design" warning and nothing else,
+                    // while text they could not hear was now on screen beside it. When the
+                    // chosen option has nothing to say, the revealed correct answer does.
+                    var _fbUrl = $opt.attr('data-feedback-audio') || _revealAudio;
                     if (_fbUrl) {
                         try {
                             // v13.94.6: the section narration has to stop too. This handler

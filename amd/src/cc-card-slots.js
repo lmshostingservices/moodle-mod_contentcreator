@@ -1502,6 +1502,13 @@ define([], function() {
                     html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
                     html += '<div class="cc5-dp-option-body">';
                     html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';
+                    // FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19): the flag that names
+                    // the right answer when the learner did not pick it. Hidden by CSS
+                    // until the player adds .cc5-dp-reveal - see the handler in player5.js.
+                    if (isCorrect) {
+                        html += '<span class="cc5-dp-correct-flag">'
+                             +  escapeHtml(getLabel('correctAnswerLabel')) + '</span>';
+                    }
                     if (opt.feedback) {
                         html += '<div class="cc5-dp-feedback" role="status" aria-live="polite">' +
                             escapeHtml(fixGrammar(opt.feedback)) + '</div>';

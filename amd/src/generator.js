@@ -3347,7 +3347,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
             // one card where padding actively hurts.
             if (card.cardType === 'decision-point') { return; }
 
-            const words = harvestCardText(card, 0).split(/\s+/).filter(Boolean).length;
+            const words = ccWordCount(harvestCardText(card, 0));
             packWords += words;
             scored++;
 
@@ -3450,8 +3450,101 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
     // =========================================================================
 
     /** Words in a string, whitespace-delimited. */
+    /**
+     * v15.4.21: word count that is not an English-only assumption.
+     * v15.4.22: and whose divisors are MEASURED rather than guessed.
+     *
+     * This was `trim().split(/\s+/)`, and every content range in this file is compared
+     * against its result - the 10-16 words an option must be, the 12-25 its feedback must
+     * be, the per-card floors, the "PACK IS WRITTEN SHORT" verdict, and the before/after
+     * comparison the repair guard uses to reject a repair that lost content.
+     *
+     * Of the 53 languages in LANGUAGE_NAMES, FIVE are written without spaces between
+     * words: ja, zh, cmn, yue and th. In those, a complete well-written option is ONE
+     * whitespace token, so every option measured "below the 10-16 word range" - and that
+     * message matches CC_REPAIRABLE, so each of those packs also spent its one repair
+     * attempt per section, on every run, correcting content that was never wrong.
+     * Measured on a Japanese decision-point card written to spec: 1 repairable parity
+     * issue and 1 missing-feedback issue before this change, 0 and 0 after; an English
+     * card scores 0 either way.
+     *
+     * THE DIVISORS COME FROM THIS PLUGIN'S OWN TRANSLATION TABLE. translations.js holds
+     * 669 English UI strings and their translations in all 53 languages - the same
+     * sentence written twice - so the characters-per-English-word ratio can be measured
+     * rather than assumed. Over every pair of 4+ English words (n = 104-113 per language):
+     *
+     *     Japanese   2.76 Han+kana characters per English word   (p25 2.33, p75 3.50)
+     *     Chinese    1.75 Han characters per English word        (p25 1.50, p75 2.00)
+     *     Thai       5.00 Thai characters per English word       (p25 4.17, p75 6.00)
+     *     Korean     0.78 WHITESPACE WORDS per English word
+     *
+     * Three things follow, and each of them corrects a guess made in v15.4.21:
+     *
+     * 1. Japanese and Chinese cannot share a divisor: 2.76 against 1.75 is a 58%
+     *    difference, and both are written in Han. They are told apart by kana, which is
+     *    present in Japanese prose and never in Chinese.
+     * 2. KOREAN MUST NOT BE TOUCHED. v15.4.21 put Hangul in the same class as Han on the
+     *    assumption that Korean is unspaced. It is not - it is spaced, at 0.78 words per
+     *    English word - and dividing its syllables by 2 inflated a 12-word Korean sentence
+     *    to 19, which would have let genuinely short Korean content pass every floor.
+     * 3. Lao, Khmer, Myanmar and Tibetan were in v15.4.21's ranges and are gone. Not one
+     *    of them is in LANGUAGE_NAMES, so no pack can be generated in them and the code
+     *    was covering a case that cannot arise.
+     *
+     * WHICH END OF THE MEASURED RANGE TO TAKE. The medians above are the honest centre,
+     * and using them was wrong for what this number is FOR. Every consumer of it in this
+     * file is a MINIMUM - fieldIssues reports a field below its floor, optionParityIssues
+     * reports an option below the 10-16 range, ccHasRealFeedback asks for six words - and
+     * a minimum enforced on an estimate whose interquartile range is +/-25% will fail
+     * content that is perfectly good. Measured: a faithful 25-character Japanese rendering
+     * of a 12-word English option scores 9 against a floor of 10 at the median divisor,
+     * and trips a repairable issue for being well written.
+     *
+     * So the divisor is the p25 of each measured distribution, not the median: the count
+     * is deliberately generous, and a shortfall has to be real - roughly 25% below the
+     * floor rather than one word - before it is reported. The failure that costs the
+     * author is a false accusation with a paid repair attached; the failure that costs a
+     * learner is thin content, and the vendor's own passes and the ratio checks (which are
+     * relative and unaffected by any divisor) still see that.
+     *
+     * The ratios are drawn from UI strings, which are shorter than card prose, so treat
+     * them as calibration rather than truth - but they are calibration against real
+     * paired text, and these are gates, not measurements. ENGLISH AND EVERY OTHER SPACED
+     * LANGUAGE IS UNCHANGED: with no character in these ranges the function takes the
+     * same path it always did and returns the same number, so every existing range,
+     * floor and threshold still means exactly what it meant.
+     *
+     * @param {String} str Any text.
+     * @return {Number} Word count, or its measured equivalent for a script without spaces.
+     */
+    // Han (incl. Extension A and compatibility) plus kana and CJK punctuation. Hangul is
+    // deliberately absent - Korean is space-separated. See the note above.
+    const CC_HAN = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3000-\u303f]/g;
+    // Hiragana and katakana: present in Japanese prose, absent from Chinese. This is what
+    // separates a 2.76 divisor from a 1.75 one.
+    const CC_KANA = /[\u3040-\u30ff]/;
+    const CC_THAI = /[\u0e00-\u0e7f]/g;
+    // p25 of each measured distribution, not the median - see "WHICH END" above.
+    // (medians for reference: ja 2.76, zh 1.75, th 5.00.)
+    const CC_CHARS_PER_WORD_JA = 2.33;
+    const CC_CHARS_PER_WORD_ZH = 1.50;
+    const CC_CHARS_PER_WORD_TH = 4.17;
     const ccWordCount = function(str) {
-        return String(str || '').trim().split(/\s+/).filter(Boolean).length;
+        var t = String(str || '').trim();
+        if (!t) { return 0; }
+        var han = (t.match(CC_HAN) || []).length;
+        var thai = (t.match(CC_THAI) || []).length;
+        if (!han && !thai) {
+            // The English path - and the Korean, Vietnamese, Arabic, Hindi and every other
+            // spaced path. Untouched.
+            return t.split(/\s+/).filter(Boolean).length;
+        }
+        // Whatever is left once the unspaced runs are removed is still words: a mixed
+        // sentence ("AVETMISS の報告は 30 日以内") has both, and both count.
+        var rest = t.replace(CC_HAN, ' ').replace(CC_THAI, ' ').trim();
+        var restWords = rest ? rest.split(/\s+/).filter(Boolean).length : 0;
+        var perWord = CC_KANA.test(t) ? CC_CHARS_PER_WORD_JA : CC_CHARS_PER_WORD_ZH;
+        return restWords + Math.round(han / perWord) + Math.round(thai / CC_CHARS_PER_WORD_TH);
     };
 
     /**
@@ -3589,16 +3682,33 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
             // Exempted narrowly: only on a v2 card, only for feedback that is entirely
             // absent, and only when the question did supply its question-level line. A
             // v2 card whose correct answer has no feedback either is still reported, and
-            // v1 cards are untouched. The prompt asks for per-option feedback and the
-            // vendor has been asked to allow it; when it arrives this exemption stops
-            // applying by itself, because the fields will not be empty.
+            // v1 cards are untouched. The exemption stops applying by itself once the
+            // fields are filled.
+            //
+            // v15.4.19: this suppresses the NOISE, not the fault. It was written when
+            // per-option feedback was something the vendor had not built yet, so an empty
+            // distractor was simply the shape of the data. That has not been true since 5
+            // September - the vendor implemented {text, feedback} - and treating it as
+            // ordinary is how three releases shipped quizzes that mark an answer wrong and
+            // explain nothing. What is dropped here is nine "0 words, needs 30-44" lines
+            // per card, which would fill the card's ten-issue slice and push real findings
+            // out of it. The fault itself is now raised ONCE per question, high in the
+            // repair queue, by optionFeedbackIssues() - which is in CC_REPAIRABLE, so it
+            // is also the thing that gets a paid repair.
             var _v2NoPerOptionFeedback = (card.cardType === 'decision-point'
                 && Number(card.schemaVersion) >= 2
                 && Array.isArray(card.questions)
-                && card.questions.every(function(q) {
-                    var o = (q && q.options) || [];
+                // v15.4.20: judge the array this function actually MEASURES, not all three
+                // questions. The specs read `options[].feedback`, and normalizeCardSchema
+                // points card.options at questions[0] - so questions 2 and 3 are not
+                // measured here at all. With `.every()` a partial repair (question 1 fixed,
+                // 2 and 3 still bare - the likeliest outcome of the new repair) switched
+                // the exemption OFF for the whole card and let the noise it exists to
+                // suppress back in on the one question that had just been fixed.
+                && (function() {
+                    var o = (card.questions[0] && card.questions[0].options) || [];
                     return o.filter(function(x) { return x && x.feedback; }).length === 1;
-                }));
+                })());
             var _skipEmptyOptionFeedback = false;
             cardSpecs.forEach(function(spec) {
                 // Per VALUE, not per spec. Skipping the whole spec also skipped the ONE
@@ -3721,6 +3831,145 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
     };
 
     /**
+     * v15.4.19 FIX-CC-NO-REASON-ON-WRONG-ANSWER: a wrong answer with nothing to say.
+     *
+     * Reported from the demo: "if they get it wrong there should be a reason why they got
+     * it wrong - it used to have a reason for every wrong answer." It did. v1 cards carry
+     * {text, feedback, correct} on all four options, and the player has always shown the
+     * chosen option's feedback whichever way the learner answered.
+     *
+     * The regression came in with the vendor's schema v2. Its first published form carried
+     * plain-string options and ONE feedback per question, so normalizeCardSchema puts that
+     * line on the correct answer and leaves the three distractors with `feedback: ''` -
+     * nothing to render, nothing to say. The vendor implemented per-option feedback on 5
+     * September (v15.3.14: "options may now be a plain string or {text, feedback}"), and
+     * the prompt asked for it - but it also told the model that plain strings were
+     * acceptable "if you have nothing per-option to say", which is an invitation, and
+     * fieldIssues() exempted the resulting empty fields from measurement, so nothing
+     * reported the loss and no repair could fire on it. Three releases of quizzes that
+     * mark an answer wrong and explain nothing.
+     *
+     * The escape hatch is gone from the prompt. This check is what makes that stick: a
+     * distractor with no feedback, or a token one, is now a first-class repairable issue
+     * rather than an exemption. It sits directly under option parity in the queue for the
+     * same reason parity was moved there - it is not about how well a card teaches, it is
+     * about whether the card teaches at all once the learner is wrong.
+     *
+     * @param {Array} cards Normalised cards.
+     * @return {Array} Issue strings.
+     */
+    /**
+     * v15.4.20: is there a real explanation in this string?
+     *
+     * v15.4.21: the character floor this carried is gone, because the reason for it is.
+     * ccWordCount() is now script-aware, so a Japanese explanation measures in word units
+     * like every other language and the ordinary floor applies. The floor is kept low on
+     * purpose: this is a "did the model answer at all" test, not a length test, and
+     * fieldIssues() owns length.
+     *
+     * @param {String} text The feedback text.
+     * @return {Boolean} True if something was actually written here.
+     */
+    const ccHasRealFeedback = function(text) {
+        var t = String(text || '').trim();
+        if (!t) { return false; }
+        // Far below the 30-44 words fieldIssues() asks for. A short reason beats silence.
+        return ccWordCount(t) >= 6;
+    };
+
+    /**
+     * v15.4.19 FIX-CC-NO-REASON-ON-WRONG-ANSWER: a wrong answer with nothing to say.
+     *
+     * Reported from the demo: "if they get it wrong there should be a reason why they got
+     * it wrong - it used to have a reason for every wrong answer." It did. v1 cards carry
+     * {text, feedback, correct} on all four options, and the player has always shown the
+     * chosen option's feedback whichever way the learner answered.
+     *
+     * The regression came in with the vendor's schema v2. Its first published form carried
+     * plain-string options and ONE feedback per question, so normalizeCardSchema puts that
+     * line on the correct answer and leaves the three distractors with `feedback: ''` -
+     * nothing to render, nothing to say. The vendor implemented per-option feedback on 5
+     * September (v15.3.14: "options may now be a plain string or {text, feedback}"), and
+     * the prompt asked for it - but it also told the model that plain strings were
+     * acceptable "if you have nothing per-option to say", which is an invitation, and
+     * fieldIssues() exempted the resulting empty fields from measurement, so nothing
+     * reported the loss and no repair could fire on it. Three releases of quizzes that
+     * mark an answer wrong and explain nothing.
+     *
+     * v15.4.20 - TWO TIERS, and the tier is chosen by evidence rather than by hope.
+     *
+     * A check that fires a PAID repair on every decision-point card of every pack is the
+     * exact regression v13.98.2 spent a release undoing, and that is what a one-tier
+     * version of this would do for as long as the model keeps taking the string shape. So
+     * the pack is asked a question first: does per-option feedback survive this pipeline
+     * AT ALL - does any wrong option anywhere in these cards carry a reason?
+     *
+     *   YES - the shape works, this card is a model slip: REPAIRABLE. One issue per card,
+     *         not per question, so three questions cannot eat three of the repair
+     *         prompt's eight slots with near-identical text.
+     *   NO  - every distractor in the pack is bare, so the shape is being dropped
+     *         wholesale (a route whose strict schema strips it, or a model that ignored
+     *         the instruction). A repair would re-buy the same card and change nothing.
+     *         Reported REVIEW-ONLY: it raises needsReview so the author sees it, and
+     *         spends no credits.
+     *
+     * It self-heals: the day the shape starts arriving, the first tier takes over on its
+     * own, because the evidence test starts passing.
+     *
+     * @param {Array} cards Normalised cards.
+     * @return {Array} Issue strings.
+     */
+    const optionFeedbackIssues = function(cards) {
+        var issues = [];
+        var bare = [];          // [{ci, questions: [n], count}]
+        var shapeWorks = false;
+
+        (cards || []).forEach(function(card, ci) {
+            if (!card || card.cardType !== 'decision-point') { return; }
+            var _qs = (Array.isArray(card.questions) && card.questions.length)
+                ? card.questions : [{options: card.options}];
+            var qsMissing = [];
+            _qs.forEach(function(_q, _qi) {
+                var options = (_q && Array.isArray(_q.options)) ? _q.options : null;
+                if (!options || options.length < 2) { return; }
+                var missing = 0;
+                options.forEach(function(o) {
+                    if (!o || o.correct) { return; }
+                    if (ccHasRealFeedback(o.feedback)) { shapeWorks = true; } else { missing++; }
+                });
+                if (missing) { qsMissing.push({q: _qi + 1, n: missing, total: _qs.length}); }
+            });
+            if (qsMissing.length) { bare.push({ci: ci, qs: qsMissing}); }
+        });
+
+        bare.forEach(function(b) {
+            var multi = b.qs.length && b.qs[0].total > 1;
+            var where = 'Card ' + (b.ci + 1) + ' (decision-point)'
+                + (multi ? ' question ' + b.qs.map(function(x) { return x.q; }).join(', ') : '');
+            if (shapeWorks) {
+                issues.push(where + ': the wrong options carry NO FEEDBACK, so a learner who '
+                    + 'picks one is marked wrong and told nothing. Other options in this pack '
+                    + 'do carry it, so the shape is accepted - return EVERY option as '
+                    + '{"text": "...", "feedback": "..."} and give each wrong one a reason that '
+                    + 'names the specific error in THAT choice: what it overlooks and what it '
+                    + 'would cost here. Not "incorrect, the answer is B", and not the correct '
+                    + 'answer\'s explanation reworded.');
+            } else {
+                // Distinct wording on purpose: this string matches CC_REVIEW_ONLY, not
+                // CC_REPAIRABLE. It is a report to the author, not an instruction to a
+                // model that has already declined to follow it once.
+                issues.push(where + ': NO WRONG-ANSWER FEEDBACK ANYWHERE IN THIS PACK. Every '
+                    + 'distractor came back bare, so a learner who answers wrong is scored and '
+                    + 'told nothing. The player falls back to revealing the correct answer. '
+                    + 'Regenerate the section to get per-option reasons; if it persists, the '
+                    + 'route is dropping the {text, feedback} option shape and that is a '
+                    + 'vendor-side question.');
+            }
+        });
+        return issues;
+    };
+
+    /**
      * v13.98: distractors that announce their own wrongness.
      *
      * Every wrong option in the v13.97.1 pack was a self-evidently bad idea: "Use only
@@ -3748,22 +3997,35 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         var issues = [];
         cards.forEach(function(card, ci) {
             if (card.cardType !== 'decision-point') { return; }
-            var options = Array.isArray(card.options) ? card.options : [];
-            var flagged = [];
-            options.forEach(function(o, i) {
-                if (!o || o.correct) { return; }
-                var text = String(o.text || o.option || '');
-                var hit = CC_TELL_PATTERNS.some(function(re) { return re.test(text); });
-                if (hit) { flagged.push((i + 1) + ' ("' + text.slice(0, 48) + '")'); }
+            // v15.4.19: EVERY question, not just the first - the same defect
+            // optionParityIssues() was fixed for in v15.3.13, in the check immediately
+            // above it, and missed here. `card.options` is normalizeCardSchema's pointer
+            // at questions[0], so on a three-question card this read one question and
+            // passed the other two in silence. The live pack that prompted this release
+            // has "Ignoring non-verbal cues..." and "Interrupting to provide solutions..."
+            // as two of its four options - a textbook double giveaway - and if that
+            // question had been the second or third it would have shipped unflagged.
+            var _qs = (Array.isArray(card.questions) && card.questions.length)
+                ? card.questions : [{options: card.options}];
+            _qs.forEach(function(_q, _qi) {
+                var options = (_q && Array.isArray(_q.options)) ? _q.options : [];
+                var flagged = [];
+                options.forEach(function(o, i) {
+                    if (!o || o.correct) { return; }
+                    var text = String(o.text || o.option || '');
+                    var hit = CC_TELL_PATTERNS.some(function(re) { return re.test(text); });
+                    if (hit) { flagged.push((i + 1) + ' ("' + text.slice(0, 48) + '")'); }
+                });
+                // One giveaway is a wording slip; two or more is the whole question.
+                if (flagged.length >= 2) {
+                    issues.push('Card ' + (ci + 1) + ' (decision-point)'
+                        + (_qs.length > 1 ? ' question ' + (_qi + 1) : '') + ': wrong option ' +
+                        flagged.join(' and option ') + ' announce their own wrongness, so the question ' +
+                        'tests nothing. Replace them with choices a COMPETENT person might actually ' +
+                        'make - a real misconception, or a rule applied at the wrong threshold. Draw ' +
+                        'them from the beliefs the reference material corrects.');
+                }
             });
-            // One giveaway is a wording slip; two or more is the whole question.
-            if (flagged.length >= 2) {
-                issues.push('Card ' + (ci + 1) + ' (decision-point): wrong option ' +
-                    flagged.join(' and option ') + ' announce their own wrongness, so the question ' +
-                    'tests nothing. Replace them with choices a COMPETENT person might actually ' +
-                    'make - a real misconception, or a rule applied at the wrong threshold. Draw ' +
-                    'them from the beliefs the reference material corrects.');
-            }
         });
         return issues;
     };
@@ -4619,6 +4881,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         /below the \d+-\d+ word range/,      // option stubs (parity)
         /is \d+ words and the shortest/,     // answerable by shape
         /announce their own wrongness/,      // giveaway distractors
+        /carry NO FEEDBACK/,                 // v15.4.19: a wrong answer that explains nothing
         /specific to this subject/,          // subject drift
         /same small set of abstractions/,    // every consequence lands alike
         /distinct outcomes between/,         // ditto
@@ -4718,7 +4981,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
      * ever get.
      */
     const CC_REVIEW_ONLY = [
-        /NO SOURCE DOCUMENT REACHED GENERATION/
+        /NO SOURCE DOCUMENT REACHED GENERATION/,
+        // v15.4.20: every distractor in the pack came back bare. Raises needsReview so the
+        // author sees it; deliberately NOT repairable - see optionFeedbackIssues().
+        /NO WRONG-ANSWER FEEDBACK ANYWHERE IN THIS PACK/
     ];
 
     /**
@@ -5602,6 +5868,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                 // at all. Everything above it now is about how WELL a card teaches; this
                 // is about whether the assessment works.
                 .concat(optionParityIssues(cards))
+                // v15.4.19: directly under parity, and for the same reason. Parity asks
+                // whether the question can be answered without reading it; this asks
+                // whether being wrong teaches the learner anything. Both are about the
+                // assessment working at all, so both sit above every how-well check.
+                .concat(optionFeedbackIssues(cards))
                 .concat(keyTakeawayIssues(cards, mode))
                 // v13.98.1: subject drift sits high because it is the one issue where
                 // the content is not thin or malformed - it is about the wrong thing.
@@ -5941,7 +6212,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                     // already acceptable, and the original content is kept.
                     // ===========================================================
                     const _candidateWords = fixedCards.reduce(function(sum, c) {
-                        try { return sum + harvestCardText(c, 0).split(/\s+/).filter(Boolean).length; }
+                        try { return sum + ccWordCount(harvestCardText(c, 0)); }
                         catch (e) { return sum; }
                     }, 0);
                     const candidate = {
@@ -5965,7 +6236,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                     // produced, so compare against that when there is no bestCandidate yet.
                     if (!bestCandidate && attemptCount > 1 && lastScore && Array.isArray(lastScore.cards)) {
                         const _priorWords = lastScore.cards.reduce(function(sum, c) {
-                            try { return sum + harvestCardText(c, 0).split(/\s+/).filter(Boolean).length; }
+                            try { return sum + ccWordCount(harvestCardText(c, 0)); }
                             catch (e) { return sum; }
                         }, 0);
                         if (_priorWords > 0 && candidate.words < _priorWords * 0.95) {
@@ -6095,7 +6366,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                         // recorded the size of what was produced. Now it does.
                         contentWords: (function() {
                             try {
-                                return harvestCardText(card, 0).split(/\s+/).filter(Boolean).length;
+                                return ccWordCount(harvestCardText(card, 0));
                             } catch (e) { return null; }
                         })(),
                         // v13.85: carried on the card so a QA panel, an export or the next
@@ -6194,7 +6465,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                     attemptCount: bestCandidate.attempt,
                     qualityAction: bestCandidate.soft.length ? 'QUALITY_FLAGGED' : 'VALIDITY_GATE_PASS',
                     contentWords: (function() {
-                        try { return harvestCardText(card, 0).split(/\s+/).filter(Boolean).length; }
+                        try { return ccWordCount(harvestCardText(card, 0)); }
                         catch (e) { return null; }
                     })(),
                     qualityIssues: bestCandidate.soft.length ? bestCandidate.soft.slice(0, 10) : undefined
@@ -6217,7 +6488,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         const _salvage = (lastScore && Array.isArray(lastScore.cards)) ? lastScore.cards : null;
         const _salvageWords = _salvage
             ? _salvage.reduce(function(sum, c) {
-                try { return sum + harvestCardText(c, 0).split(/\s+/).filter(Boolean).length; } catch (e) { return sum; }
+                try { return sum + ccWordCount(harvestCardText(c, 0)); } catch (e) { return sum; }
             }, 0)
             : 0;
 
@@ -7466,7 +7737,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         // never have to be done twice.
         validateCards: validateCards,
         fieldIssues: fieldIssues,
+        // v15.4.21: exported so the suite can assert the script-aware measure directly -
+        // every content range in this file is compared against its result.
+        ccWordCount: ccWordCount,
         optionParityIssues: optionParityIssues,
+        optionFeedbackIssues: optionFeedbackIssues,
         distractorQualityIssues: distractorQualityIssues,
         concretenessIssues: concretenessIssues,
         keyTakeawayIssues: keyTakeawayIssues,

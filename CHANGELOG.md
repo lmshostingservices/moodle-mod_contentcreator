@@ -1,5 +1,402 @@
 # Changelog
 
+## 15.4.25 - 2026-09-08
+
+**Verified on real Moodle 4.5.13+ and 5.2.2+ — which immediately found a defect every
+headless check had passed.**
+
+Moodle 4.5.13+ and 5.2.2+ were installed from the official tarballs against MariaDB 10.11
+and PHP 8.3, the PREVIOUS release (15.4.18) was installed on each, and this one was upgraded
+over it - the path a customer actually takes. Both upgrades completed clean, both report
+`2026090633`, and neither server log carries a single plugin-related warning, notice,
+deprecation or 500.
+
+A pack shaped exactly like a saved schema-v2 manifest - the question's one feedback line on
+the correct option, three bare distractors - was seeded into each site, and a headless
+Chromium logged in, dismissed the first-run tutorial, opened the challenge and answered
+wrong. **36 of 36 end-to-end checks pass on both versions**, including the ones that matter
+most: Moodle's own AMD loader serves the rebuilt bundles, the correct answer is revealed with
+its explanation, the badge shows, the revealed option stays at full opacity while the
+untouched one dims, and the borders compute green and red.
+
+### The defect a screenshot found and nothing else did
+
+The "Correct answer" badge rendered **glued to the end of the option text**:
+
+> Record the incident in the register within two working days of it happening `CORRECT ANSWER`
+
+The badge was `display: inline-block`, and the option text is an inline `<span>` - so the
+badge flowed onto the same line as the last word, and its `margin-top` did nothing, because
+margin-top does not move an inline box on its own line. Every check up to this point asked
+"is the badge visible" and it was. **Visible is not the same as placed.**
+
+Now `display: block; width: fit-content`, and the runtime suite has a 22nd check that
+compares the badge's top edge against the option text's bottom edge - it fails if the badge
+ever shares a line with the text again. Mutation-tested by putting `inline-block` back.
+
+### Also added
+
+- `tests/moodle/e2e-real-moodle.js` - the end-to-end run, against whatever Moodles are
+  serving on :8045 and :8052.
+- `tests/moodle/SETUP.md` and `seed.php` - how those two sites were built, including the two
+  things that will otherwise waste an hour: the manifest must carry `locked: true` or
+  view.php correctly shows the builder instead of the player, and the first-run tutorial
+  overlay intercepts clicks until `.cc5-tutorial-btn` is pressed.
+- Moodle 5.x keeps the code under `public/`, so the plugin installs to `public/mod/` there
+  and to `mod/` on 4.5. SETUP.md says so; it is the kind of thing that is obvious once and
+  never again.
+
+## 15.4.24 - 2026-09-08
+
+**The PHP side had never been checked at all, and the place a real Moodle would have caught
+things is now written down rather than assumed.**
+
+Asked whether a Moodle 4 and 5 install was being used to verify this work: no. It is not
+possible in the environment these releases are built in - moodle.org, github and codeload
+are all blocked by egress policy, and there is no database server - so every claim about
+Moodle behaviour in 15.4.19-23 was inference from the code. That is now stated where it
+matters instead of left implied.
+
+### tests/php/static-checks.php - 15 checks, no Moodle needed
+
+`php tests/php/static-checks.php`, from the plugin root. It checks the plugin-shaped
+mistakes that only surface once Moodle loads the thing:
+
+- every `.php` file parses (35 of them);
+- `version.php`, `package.json` and the CHANGELOG name the same release, and
+  `$plugin->version` is a well-formed 10-digit integer - v15.3.13 shipped twice under one
+  version number and Moodle upgrades on the number, so the second ZIP was ignored;
+- every `get_string()` key used in PHP exists in `lang/en` - a missing one renders as
+  `[[thekey]]` on the page;
+- every capability checked in code is defined in `db/access.php`, and every defined
+  capability has its lang string - a missing one shows a raw key in Define Roles;
+- the built AMD bundles contain this release's markers AND no bundle is older than its
+  source, which is the stale-build failure of the first v15.4.20 ZIP, caught by mtime as
+  well as by content.
+
+All 15 pass. Nothing was broken on the PHP side - but nothing had looked, either.
+
+### The calibration parser was reading 669 of 676 strings
+
+Found while checking `getLabel()` key coverage: four keys looked missing from
+`translations.js` and were not. The parser matched only single-quoted values, so every
+string containing an apostrophe - `"Edit each card's content..."` - was invisible to it. The
+same regex was in the divisor calibration guard added in 15.4.22, which means that guard was
+quietly measuring a subset of the table. Both now read either quote style, and the check
+demands all 676 keys. Re-measured: the seven extra strings are short ones the 4-word filter
+excludes anyway, so ja 2.33 / zh 1.50 / th 4.17 are unchanged. The finding is not that the
+numbers were wrong; it is that a guard measuring a subset it does not know about is worth as
+little as no guard.
+
+### tests/moodle/VERIFY.md
+
+The three things no suite here can reach - the plugin installing and upgrading on a real
+site, Moodle's AMD loader actually serving the rebuilt modules, and whether a NEWLY
+generated pack arrives with per-option feedback - written as a 10-minute pass for Moodle 4.5
+and 5.x. It includes the diagnosis step that matters: if a new pack still has bare
+distractors, WHICH of the two quality issues appears says whether the model slipped
+(repairable) or the route is dropping the option shape (a vendor question).
+
+## 15.4.23 - 2026-09-08
+
+**The reveal, executed in a real browser. Every claim about it until now was reasoning.**
+
+15.4.19-22 verified this fix by reading code, computing the CSS cascade in jsdom, and
+running the checks in node. None of that executes the thing the learner does: click a wrong
+answer and see something appear. Everything about that behaviour - that jQuery's `.show()`
+beats a stylesheet `display:none`, that the delegated handler binds at all, that the reveal
+survives the dimming rule, that Enter takes the same path - was an argument, not a result.
+Reasoning about a cascade is precisely what produced the dark-mode defect fixed in 15.4.20.
+
+`tests/js/test-quiz-reveal-runtime.js` - 21 checks in headless Chromium against the REAL
+rendered markup (from `cc-card-slots.js`), the REAL stylesheet, and the REAL handler lifted
+verbatim out of `player5.js` by locating its own source text. If that extraction ever stops
+matching, the file fails loudly rather than quietly testing nothing. It skips (exit 0, with
+a reason) where playwright or a chromium build is absent.
+
+What it proves, on the exact card shape a saved v2 manifest holds:
+
+- a wrong answer reveals the correct one, its feedback computes to `display: block`, and the
+  text on screen is the explanation - not an empty box;
+- the revealed option is at full opacity while the other unchosen one is at 0.42, so the
+  reveal is what the eye goes to;
+- the badge is visible, and the screen reader is told which option is correct;
+- a right answer behaves as it always did: its own feedback, no reveal, no badge;
+- Enter on a wrong option takes the same route as a click;
+- a second answer is refused - one selected option, sounds fire once;
+- in dark mode the revealed answer computes a green border and the chosen wrong one a red
+  border, which is the fix from 15.4.20 confirmed by a browser rather than by argument.
+
+**The first draft of this suite reported two dark-mode failures that did not exist.**
+`.cc5-dp-option` carries a 0.18s colour transition, and it sampled the computed colour
+immediately after the click - mid-interpolation, `rgb(117,179,240)` for a border that
+settles red. It now waits for every animation on the panel to finish before believing any
+colour. Worth recording: a runtime test that reads colours without waiting for transitions
+will invent defects, and inventing a defect costs the same as missing one.
+
+Mutations run: remove the `addClass('cc5-dp-reveal')` line - 6 checks fail; delete the
+dark-mode rule for an incorrect answer - the dark border check fails; change one character
+in the handler's signature so the extraction stops matching - the suite refuses to run and
+says so.
+
+`playwright` is added to devDependencies. The suite is skipped, not failed, without it.
+
+## 15.4.22 - 2026-09-08
+
+**Checking 15.4.21's own work: two of its claims were assertions, and one of them was a
+regression.**
+
+### Korean was being counted as if it had no spaces. It does.
+
+15.4.21 put Hangul in the same class as Han "because Korean is CJK". Korean is written WITH
+spaces between words. Measured against this plugin's own translation table: **0.78 whitespace
+words per English word** - it counts correctly with no help at all. Dividing its syllables
+by 2 inflated a 12-word Korean sentence to 19, which would have let genuinely short Korean
+content clear every floor in `generator.js` - the opposite of the defect being fixed,
+introduced while fixing it. Hangul is out.
+
+Lao, Khmer, Myanmar and Tibetan are out too. Not one of them appears in `LANGUAGE_NAMES`, so
+no pack can be generated in them: 15.4.21 was covering cases that cannot arise. **The real
+figure is five of the 53 shipped languages - ja, zh, cmn, yue, th - not the "12" that entry
+claimed.** That number was asserted, never counted.
+
+### The divisors are now measured, not guessed
+
+`translations.js` holds 669 English UI strings and their translations in all 53 languages -
+the same sentence written twice - so characters-per-English-word can be **measured**. Over
+every pair of four or more English words:
+
+| | measured | 15.4.21 guessed |
+|---|---|---|
+| Japanese | 2.76 chars/word (p25 2.33, p75 3.50, n=108) | 2 |
+| Chinese (zh, cmn, yue) | 1.75 chars/word (p25 1.50, p75 2.00, n=104) | 2 |
+| Thai | 5.00 chars/word (p25 4.17, p75 6.00, n=113) | 4 |
+| Korean | 0.78 **words**/word (n=113) | treated as unspaced |
+
+Japanese and Chinese differ by 58% and are both written in Han, so one divisor cannot serve
+both. They are told apart by kana, which Japanese prose always has and Chinese never does.
+
+**And the divisor is the p25, not the median** - deliberately. Every consumer of this count
+in `generator.js` is a MINIMUM, and a floor enforced on an estimate with a +/-25% spread
+fails good content: measured, a faithful 25-character Japanese rendering of a 12-word English
+option scores 9 against a floor of 10 at the median divisor, and trips a repairable issue for
+being well written. At the p25 the count is generous and a shortfall has to be real before it
+is reported. The ratio checks are relative and unaffected by any divisor, so the "correct
+answer is visibly the longest" fault is still caught.
+
+Before and after on a Japanese decision-point card written to spec: **1 repairable issue and
+1 missing-feedback issue before, 0 and 0 after.** An English card: 0 either way.
+
+### What else was checked, and held
+
+- **The credit claim.** Traced to `generator.js:6259` - a repairable issue triggers
+  `continue`, which is another AI call. `MAX_ATTEMPTS = 2`, so it is one extra paid attempt
+  per section per run, not unbounded. The changelog wording now says that.
+- **The reveal's audio fallback.** `builder.js:11551` generates a clip only where feedback
+  text exists (`if (!fbText ...) continue`), so on a bare-distractor card the correct option
+  has a clip and the distractors do not - which is exactly the case the fallback covers.
+- **Both dead-code claims.** `scorm.exporter.js` and `document_generator/` are referenced
+  from nowhere in any `.js`, `.php`, `.mustache` or lang file - only from CHANGELOG prose.
+- **Korean, Vietnamese, Arabic, Hindi and Greek** are now asserted in the suite to count
+  byte-for-byte as they did before any of this.
+
+### The suite now checks its own calibration
+
+`tests/js/test-quiz-feedback.js` is 71 checks. It re-derives the ratios from
+`translations.js` on every run and fails if a divisor drifts from the p25 it was measured at,
+or if someone re-centres them on the median - the mistake this release corrects. It also
+renders the exact card shape a saved v2 manifest holds and asserts what the learner gets: one
+option marked correct, one "Correct answer" badge on it, a feedback element on it for the
+reveal to show, and none on the distractors.
+
+## 15.4.21 - 2026-09-08
+
+**The three items 15.4.20 left open, and a worse one found while fixing them.**
+
+### Word counts were an English-only assumption, on the paid path
+
+`ccWordCount()` was `trim().split(/\s+/)`, and every content range in `generator.js` is
+compared against its result - the 10-16 words an option must be, the 12-25 its feedback must
+be, the per-card floors, the "PACK IS WRITTEN SHORT" verdict, and the repair guard's
+before/after content comparison.
+
+> **Two claims in this entry were wrong and are corrected in 15.4.20 above: it is FIVE of the
+> 53 languages, not 12, and the divisors and script list below were guesses. Read 15.4.22.**
+
+Languages written without spaces between words score a complete, well-written option as one
+whitespace token. So on such a pack: every option was "below the 10-16 word range", every
+feedback field was "0 words, needs 12-25", every section tripped the written-short verdict -
+and the option-stub rule is in `CC_REPAIRABLE`, so each of those packs also spent its repair
+attempt, on every run, fixing content that was never wrong.
+
+Non-spaced runs are converted to word units by the average word length of the script. **Text
+with no such characters takes exactly the path it always did and returns the same number**, so
+every existing calibration still means what it meant. The content-volume counters behind the
+repair regression guard now use the same measure, so a repair on such a pack is compared like
+with like.
+
+### Topics and Text was generating against a prompt three releases out of date
+
+The route stopped using fixed card slots at v15.3.11 - it emits 6-10 content-driven
+`subtopic` cards, each **required** to carry its own 2-6 word heading, plus the
+decision-point. Three sentences of its **generation** user prompt still said otherwise:
+
+> *"Write a short-course text module: 4 short prose cards plus 1 question card… Write all 5
+> cards in order: overview, key-concepts, examples-application, key-takeaways,
+> decision-point… Remember: **no heading fields on cards 1-4**…"*
+
+Every generation call on that route sent a user prompt contradicting its own system prompt on
+the card count, the card types **and** the heading - and told the model to omit the field the
+field specs measure and the Flip and Learn deck sits beside. The last line before a model
+starts writing is the one it is most likely to follow. The route works because the system
+prompt and the strict schema carry it, but this has been in the paid path since v15.3.11.
+Both the user prompt and the repair prompt now echo the current contract.
+
+### A suite, and mutation proof that it bites
+
+`tests/js/test-quiz-feedback.js` - 54 checks over the tiering, the routing (`CC_REPAIRABLE` /
+`CC_REVIEW_ONLY` - the v15.4.15-18 rule that a check nothing acts on is not a check), the
+script-aware measure, a complete Japanese pack raising nothing, every question being checked
+rather than the first, the prompts, and **build freshness**: `amd/build/*.min.js` is what
+Moodle serves, and the first v15.4.20 ZIP shipped a player bundle compiled before the last
+source edit. Four mutations were run and each failed for its stated reason: reverting
+`ccWordCount`, removing the review-only routing, restoring the generation block to a repair
+prompt, and editing a marker out of the built bundle.
+
+## 15.4.20 - 2026-09-08
+
+**A wrong answer had no reason attached, and it used to. Fixing the generator, not the symptom.**
+
+15.4.19 (below) revealed the correct answer when the learner got it wrong. That answers
+*"which one was right"*. It does not answer *"why was mine wrong"* - and that reason existed
+until the schema v2 migration.
+
+### Where the reason went
+
+Three things, each individually defensible, that together removed per-distractor feedback and
+then hid the loss:
+
+1. **The prompt offered a way out.** The three-question block ended: *"Options may be plain
+   strings if you have nothing per-option to say, but that is the weaker card."* A model
+   picking between four objects with feedback and four strings takes the strings.
+2. **The vendor's first v2 shape only allowed strings** - one `feedback` per question - so
+   `normalizeCardSchema()` puts that line on the correct answer and leaves the distractors
+   empty. That constraint ended on 5 September, when LMS Labs implemented `{text, feedback}`
+   (v15.3.14). The prompt was updated to ask; the escape hatch stayed.
+3. **`fieldIssues()` exempted the empty fields from measurement** - correctly, to stop nine
+   "0 words, needs 30-44" lines per card filling the repair slice - so nothing reported the
+   loss and no repair could fire on it.
+
+### What changed
+
+- **The escape hatch is gone.** Every option is now `{"text", "feedback"}`, all four, no
+  conditions. The block spells out what a distractor's feedback has to be - the specific
+  error in THAT choice, in this pack's subject matter - and names the three non-answers it
+  must not be, including "that is incorrect, the answer is B" and the correct answer's
+  explanation reworded.
+- **`optionFeedbackIssues()`** - new check. A wrong option carrying under 6 words of feedback
+  is a first-class issue, raised once per question, placed directly under option parity at the
+  top of the repair queue, and **in `CC_REPAIRABLE`** so it earns a paid repair. The
+  `fieldIssues()` exemption now suppresses only the length noise; the fault itself is reported
+  by name.
+- **The repair pass is finally shown the decision-point contract.** Every route's repair system
+  prompt now includes `getDecisionPointBlock(mode)`. v15.3.13 left it out deliberately and
+  logged it as known - tolerable while no repairable issue named the three-question shape.
+  This release adds one whose instruction is "return every option as {text, feedback}" inside
+  `questions[]`, so a repair that had never seen that shape would have answered in the
+  single-question one and been refused by the strict schema.
+- **`distractorQualityIssues()` now checks every question**, not just the first - the same
+  `card.options`-is-questions[0] defect fixed for option parity in v15.3.13, one function away.
+  The live pack that prompted this release has two self-announcing distractors on question 1
+  ("Ignoring non-verbal cues...", "Interrupting to provide solutions..."); on question 2 or 3
+  they would have shipped unflagged.
+
+**Packs already generated cannot be repaired by an upgrade** - the distractor feedback was
+never written, so there is nothing to render. Regenerate a section to get the reasons back;
+until then 15.4.19's reveal is what those packs show.
+
+### Self-audit, after the first build
+
+An independent review of the diff found seven defects in it, all fixed before this ZIP:
+
+- **The build was stale.** `amd/build/player5.min.js` had been compiled before the last
+  source edit, so the shipped bundle still carried an English literal where the source used
+  `getLabel`. Moodle serves the build, not the source. Rebuilt and verified string-by-string
+  against the sources.
+- **`optionFeedbackIssues()` would have fired on every CJK pack, forever.** It measured with
+  `ccWordCount()`, which splits on whitespace - Japanese, Chinese and Thai have none, so a
+  complete 40-character explanation counted as one word. A pack in those languages would
+  have failed this check on every decision-point card and bought a repair that changed
+  nothing. It now clears on 6 English words **or** 20 characters of anything.
+- **It would also have fired a paid repair on every v2 pack**, which is the exact regression
+  v13.98.2 spent a release undoing. The check is now two-tier, decided by evidence: if any
+  wrong option anywhere in the pack carries a reason, the shape works and a bare card is a
+  model slip - **repairable**. If none do, the shape is being dropped wholesale and a repair
+  would re-buy the same card - **review-only**: it raises `needsReview` for the author and
+  spends nothing. It self-heals the day the shape starts arriving. One issue per card, not
+  per question, so three questions cannot eat three of the repair prompt's eight slots.
+- **The generation block contradicted the repair instruction.** Appending
+  `getDecisionPointBlock()` to the repair prompts also told a repair "exactly three
+  questions, exactly four options, three questions must test three different things" - next
+  to "fix ONLY the fields the issues name". On a legacy one-question card, a repair fired
+  for an unrelated issue would have read that as licence to invent two questions and rewrite
+  every option, and the regression guard would not have caught it (it discards repairs that
+  come back *shorter*). Replaced with `getDecisionPointRepairBlock()`: the option shape and
+  the feedback rule, nothing else.
+- **The `fieldIssues()` exemption was all-or-nothing across three questions**, so a partial
+  repair - question 1 fixed, 2 and 3 still bare, the likeliest outcome - switched it off and
+  let the suppressed noise back in. Now judged on the array that is actually measured.
+- **The reveal was silent on a panel that says "feedback is read aloud".** A wrong answer
+  with no feedback has no audio clip either, so the learner heard nothing while new text
+  appeared. The revealed answer's clip now plays when the chosen option has none.
+- **`.first()` on the reveal.** Two options can be flagged correct (a payload carrying both
+  `correctIndex` and a stale `correct`), and the renderer badges both. Dropped.
+
+Also fixed while checking: **the answered states had no dark-mode rules at all.**
+`.cc5-player.dark-mode .cc5-dp-option` and `.cc5-player .cc5-dp-option[data-selected=...]`
+carry equal specificity and the dark rule sits ~1,470 lines later, so in dark mode an
+answered option lost both the green and the red edge - only the tick or cross survived. That
+predates this release. Fixed here, with the reveal, because this release is about a learner
+being able to see how they answered. Every state verified by computing the cascade in both
+themes; all feedback text clears WCAG AA (5.1-9.4:1), and the "Correct answer" badge was
+darkened from `hsl(142 65% 42%)` to 30% because white on it was 2.56:1.
+
+
+## 15.4.19 - 2026-09-08
+
+**A wrong answer showed no feedback at all, and never revealed which answer was right.**
+
+Reported from the demo course: *"when we get the question right the feedback shows, when we
+get it wrong I don't see the feedback at all."*
+
+Root cause is the vendor's published v2 decision-point shape. It carries plain-string
+options and ONE `feedback` per question, so `normalizeCardSchema()` puts that line on the
+correct option - "why this is the right answer" belongs there - and every distractor is
+normalised with `feedback: ''`. The renderer emits `.cc5-dp-feedback` only when there is
+text for it, so a distractor had no feedback element at all: nothing for the click handler's
+`.show()` to reveal.
+
+The result was a dead end. Since v15.4.6 removed Try Again from the challenge quiz, a
+learner who picked a distractor got a red border, an X, a scored question - and no
+explanation, no second attempt, and no way to find out which option was correct, because
+the unchosen options are dimmed to 42% and keep their feedback hidden.
+
+**The correct option is now revealed whenever the learner answers wrong.** It picks up a
+green edge, a "Correct answer" flag and its own feedback text, and it is exempt from the
+dimming rule that greys the options nobody chose. Per-option feedback still wins wherever
+the pack has it - v1 packs, and any v2 pack whose options arrive as objects; this is the
+floor beneath it, so a wrong answer always ends with the right answer named and explained.
+
+Scoped to the challenge quiz only. The standalone decision-point card keeps Try Again, and
+revealing the answer there would recreate the "lock with the answer printed underneath"
+that FIX-CC-QUIZ-GATE-INCONSISTENT removed.
+
+Also: `correctAnswerLabel` was defined in English only and now carries all 53 languages, so
+the flag is not the one English word on a translated card.
+
+Files: `amd/src/player5.js`, `amd/src/cc-card-slots.js`, `amd/src/translations.js`,
+`styles/player5.css`.
+
 ## 15.4.18 - 2026-09-06
 
 **v15.4.17's floor could not have worked. The repair pass was forbidden from adding cards.**

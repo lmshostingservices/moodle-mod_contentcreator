@@ -17964,8 +17964,51 @@ body[data-bs-theme="dark"] .cc5-player .cc5-topic-card:hover {
 }
 .cc5-player .cc5-dp-option[data-selected="incorrect"] .cc5-dp-result-icon { opacity: 1; }
 
-/* Dim unchosen options after answer */
-.cc5-player .cc5-dp-options[data-answered="true"] .cc5-dp-option:not([data-selected]) {
+/* FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19): the revealed right answer.
+   Applied by the challenge-quiz handler to the correct option when the learner picked a
+   wrong one. Deliberately quieter than [data-selected="correct"] - it is not a score,
+   it is the answer being shown - so it carries the green edge and the explanation but
+   not the filled letter or the tick. */
+.cc5-player .cc5-dp-option.cc5-dp-reveal {
+    border-color: hsl(142deg 45% 62%);
+    background: hsl(142deg 60% 98%);
+    pointer-events: none;
+}
+.cc5-player .cc5-dp-option.cc5-dp-reveal .cc5-dp-feedback {
+    display: block;
+    background: hsl(142deg 65% 94%);
+    color: hsl(142deg 65% 28%);
+    border: 1px solid hsl(142deg 55% 80%);
+}
+.cc5-player .cc5-dp-correct-flag {
+    display: none;
+}
+.cc5-player .cc5-dp-option.cc5-dp-reveal .cc5-dp-correct-flag {
+    /* v15.4.25: block, not inline-block. Found by looking at a rendered page on a real
+       Moodle - the option text is an inline <span>, so an inline-block badge flowed
+       straight after the last word: "...within two working days of it happening CORRECT
+       ANSWER". margin-top does nothing to an inline box on the same line, which is why
+       every jsdom and headless check passed: the badge WAS visible, just glued to the
+       sentence. width:fit-content keeps it the width of its text once it is a block. */
+    display: block;
+    width: fit-content;
+    margin-top: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    /* v15.4.20: 30%, not 42%. White on hsl(142 65% 42%) is 2.56:1 - this is 10.9px
+       uppercase bold, which WCAG treats as small text and needs 4.5:1. 30% gives 5.12:1. */
+    background: hsl(142deg 65% 30%);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+/* Dim unchosen options after answer.
+   v15.4.19: the revealed correct answer is exempt - dimming the one thing the learner
+   still has to read would undo the reveal above. */
+.cc5-player .cc5-dp-options[data-answered="true"] .cc5-dp-option:not([data-selected]):not(.cc5-dp-reveal) {
     opacity: 0.42;
     pointer-events: none;
 }
@@ -19360,6 +19403,46 @@ body.dark .cc5-player .cc5-dp-try-again-btn:active,
 }
 .cc5-player.dark-mode .cc5-dp-option:hover:not([data-selected]) {
     background: hsl(0deg 0% 14%);
+}
+/* v15.4.20: the ANSWERED states in dark mode. Found while checking the reveal added in
+   15.4.19, and the pre-existing half is the more serious of the two.
+   `.cc5-player.dark-mode .cc5-dp-option` and `.cc5-player .cc5-dp-option[data-selected=...]`
+   carry the same specificity (three class-level selectors each), and the dark rule sits
+   ~1470 lines LATER in this file - so in dark mode it won on background AND border-color,
+   and an answered option kept neither the green nor the red edge. The only surviving
+   signal was the tick or cross glyph. That has been true since dark mode met this card;
+   it is fixed here rather than left, because this release is about a learner being able
+   to see how they answered. Specificity is now four, so these win outright. */
+.cc5-player.dark-mode .cc5-dp-option[data-selected="correct"] {
+    background: hsl(142deg 35% 11%);
+    border-color: hsl(142deg 45% 40%);
+}
+.cc5-player.dark-mode .cc5-dp-option[data-selected="correct"] .cc5-dp-feedback {
+    background: hsl(142deg 35% 14%);
+    color: hsl(142deg 55% 75%);
+    border-color: hsl(142deg 30% 28%);
+}
+.cc5-player.dark-mode .cc5-dp-option[data-selected="incorrect"] {
+    background: hsl(0deg 30% 12%);
+    border-color: hsl(0deg 50% 48%);
+}
+.cc5-player.dark-mode .cc5-dp-option[data-selected="incorrect"] .cc5-dp-feedback {
+    background: hsl(0deg 30% 15%);
+    color: hsl(0deg 70% 80%);
+    border-color: hsl(0deg 30% 32%);
+}
+.cc5-player.dark-mode .cc5-dp-option.cc5-dp-reveal {
+    background: hsl(142deg 25% 11%);
+    border-color: hsl(142deg 35% 36%);
+}
+.cc5-player.dark-mode .cc5-dp-option.cc5-dp-reveal .cc5-dp-feedback {
+    background: hsl(142deg 35% 14%);
+    color: hsl(142deg 55% 75%);
+    border-color: hsl(142deg 30% 28%);
+}
+.cc5-player.dark-mode .cc5-dp-option.cc5-dp-reveal .cc5-dp-correct-flag {
+    background: hsl(142deg 50% 34%);
+    color: hsl(0deg 0% 100%);
 }
 .cc5-player.dark-mode .cc5-mistake-item {
     border-color: hsl(0deg 40% 25%);
