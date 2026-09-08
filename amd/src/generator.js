@@ -3215,6 +3215,15 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
             var text = harvestCardTextForSentences(card, 0);
             var sentences = splitSentences(text);
             if (!sentences.length) { return; }
+            // v15.4.26: Flesch-Kincaid is a formula over ENGLISH words and syllables, and
+            // both counts here come from splitting on whitespace. Japanese, Chinese and
+            // Thai have no word spaces and no syllable structure this counts, so a whole
+            // card measured as one 1-word sentence and the grade came out as nonsense.
+            // Report-only - these strings are in neither CC_REPAIRABLE nor CC_REVIEW_ONLY -
+            // so it cost no credits, but it filled the author's quality issues with numbers
+            // that meant nothing. Skipped rather than approximated: there is no honest
+            // reading-grade formula for those scripts in this file.
+            if (CC_HAN_ONE.test(text) || CC_THAI_ONE.test(text)) { return; }
             var words = sentences.join(' ').split(/\s+/).filter(Boolean);
             var label = 'Card ' + (i + 1) + ' (' + (card.cardType || 'unknown') + ')';
 
@@ -3524,6 +3533,13 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
     // separates a 2.76 divisor from a 1.75 one.
     const CC_KANA = /[\u3040-\u30ff]/;
     const CC_THAI = /[\u0e00-\u0e7f]/g;
+    // v15.4.26: non-global twins for .test(). A /g regex carries lastIndex BETWEEN calls,
+    // so `CC_HAN.test(x)` alternates true/false on the same string depending on how many
+    // times it has been called before - a bug whose symptom is "works, except sometimes,
+    // depending on what ran first". match() is unaffected, which is why the /g originals
+    // stay for ccWordCount. Anything asking a yes/no question uses these.
+    const CC_HAN_ONE = new RegExp(CC_HAN.source);
+    const CC_THAI_ONE = new RegExp(CC_THAI.source);
     // p25 of each measured distribution, not the median - see "WHICH END" above.
     // (medians for reference: ja 2.76, zh 1.75, th 5.00.)
     const CC_CHARS_PER_WORD_JA = 2.33;
@@ -5275,9 +5291,32 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
      * @return {Boolean} True when the item is anchored in its subject.
      */
     const ccHasSubjectAnchor = function(text) {
-        if (/\d/.test(text)) { return true; }
+        if (/[\d\uff10-\uff19]/.test(text)) { return true; }   // ASCII or full-width digits.
         // A capitalised word that is not sentence-initial: a name, a system, a method.
         if (/(?:[a-z,;]\s+)([A-Z][a-zA-Z'’-]{2,})/.test(text)) { return true; }
+        // v15.4.26: DO NOT ACCUSE TEXT THIS TEST CANNOT READ.
+        //
+        // Both signals above are English orthography: Arabic digits, and a capital letter
+        // mid-sentence standing for a name or a system. Japanese, Chinese and Thai have
+        // neither - they have no letter case at all - so a perfectly specific Japanese
+        // consequence ("第四条が定める提出期限を超えるため、監査で不適合として指摘されます")
+        // scored zero anchors, and a properly written card was reported as "4 of 4 carry
+        // nothing specific to this subject".
+        //
+        // Measured before this fix: that card raised 1 issue on vet and 1 on workplace, and
+        // the message matches /specific to this subject/ in CC_REPAIRABLE - so every VET or
+        // Workplace pack in those languages bought its one repair attempt per section, on
+        // every run, to fix content that was never wrong. The identical failure the word
+        // count had in v15.4.21, in a check nobody had looked at.
+        //
+        // Not "improved" for those scripts - SKIPPED. Kanji compounds and katakana runs are
+        // everywhere in ordinary Japanese prose, so any rule built on them would pass
+        // everything and detect nothing, while pretending to measure. A check that cannot
+        // read a language should stay silent about it: the cost of a false accusation is a
+        // paid repair and a needsReview flag, the cost of silence is that packs in five of
+        // the 53 languages are not screened for generic filler. That is the right way round,
+        // and it is written here so the next person knows it was a decision.
+        if (CC_HAN_ONE.test(text) || CC_THAI_ONE.test(text)) { return true; }
         return false;
     };
 
@@ -7740,6 +7779,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         // v15.4.21: exported so the suite can assert the script-aware measure directly -
         // every content range in this file is compared against its result.
         ccWordCount: ccWordCount,
+        // v15.4.26: exported so the suite can hit the anchor test DIRECTLY. Asserting
+        // it through subjectDriftIssues was not enough - a /g regex's lastIndex leak
+        // averages out over eight calls per card, so the mutation that reintroduced it
+        // passed the indirect test. A hazard that only shows on the raw helper needs a
+        // test on the raw helper.
+        ccHasSubjectAnchor: ccHasSubjectAnchor,
         optionParityIssues: optionParityIssues,
         optionFeedbackIssues: optionFeedbackIssues,
         distractorQualityIssues: distractorQualityIssues,

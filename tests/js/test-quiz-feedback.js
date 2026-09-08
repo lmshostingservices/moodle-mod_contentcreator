@@ -317,6 +317,69 @@ check('no "option stub" parity issue on it either (the check that spent the repa
     G.optionParityIssues([jpCard]).length === 0,
     JSON.stringify(G.optionParityIssues([jpCard])));
 
+console.log('\n4b. Checks that cannot read a language must stay silent, not accuse it');
+
+// A Japanese "mistakes" card written properly: specific, subject-anchored prose, but with
+// no Latin capitals and no Arabic digits - which is ordinary Japanese, not a defect.
+// Before v15.4.26 ccHasSubjectAnchor scored every item as generic and subjectDriftIssues
+// raised a REPAIRABLE issue, so every VET/Workplace pack in those languages spent its one
+// repair attempt per section fixing content that was never wrong.
+const jpMistakes = {cardType: 'mistakes', items: [
+    {mistake: '登録簿への記入を月次確認まで先送りする',
+     consequence: '第四条が定める提出期限を超えるため、監査で不適合として指摘されます。'},
+    {mistake: '口頭の報告だけで記録を残さない',
+     consequence: '記録が存在しないため、是正措置の根拠を示すことができません。'},
+    {mistake: '苦情が出た事案だけを記録する',
+     consequence: '発生件数の傾向が把握できず、再発防止の判断材料を失います。'},
+    {mistake: '個人の手帳に記録して共有しない',
+     consequence: '担当者が不在のとき、他の職員が対応履歴を確認できません。'}
+]};
+const enMistakes = {cardType: 'mistakes', items: [
+    {mistake: 'Leaving the register until the monthly review',
+     consequence: 'That breaks the deadline in Clause 4 and an audit records it as non-compliance.'},
+    {mistake: 'Reporting verbally and keeping no record',
+     consequence: 'With no entry in the Register there is no evidence the corrective action happened.'},
+    {mistake: 'Recording only incidents a client complained about',
+     consequence: 'The trend across 12 months is lost, so prevention decisions have nothing to work from.'},
+    {mistake: 'Keeping the record in a personal notebook',
+     consequence: 'When that member of staff is away, nobody can check the Register history.'}
+]};
+['vet', 'workplace'].forEach(function(mode) {
+    check(mode + ': a well-written Japanese card raises no subject-drift issue',
+        G.subjectDriftIssues([jpMistakes], mode).length === 0,
+        JSON.stringify(G.subjectDriftIssues([jpMistakes], mode)).slice(0, 160));
+    check(mode + ': the English equivalent is still judged as before',
+        G.subjectDriftIssues([enMistakes], mode).length === 0);
+});
+
+// The same call, repeated. CC_HAN carries /g for match(), and a /g regex used with .test()
+// keeps lastIndex between calls - so an unguarded version returns true, true, false, true
+// on identical input. Five identical results is the assertion.
+const repeatedDrift = [];
+for (let i = 0; i < 5; i++) { repeatedDrift.push(G.subjectDriftIssues([jpMistakes], 'vet').length); }
+check('...and that stays true across repeated calls',
+    repeatedDrift.every(function(n) { return n === 0; }), repeatedDrift.join(','));
+
+// Straight at the helper. Through subjectDriftIssues the lastIndex leak averages out over
+// eight calls a card and the mutation slips through - so the assertion lives here, on the
+// one function whose answer must never depend on how many times it has been asked.
+const anchorRuns = [];
+for (let i = 0; i < 6; i++) {
+    anchorRuns.push(G.ccHasSubjectAnchor('第四条が定める提出期限を超えるため、監査で不適合として指摘されます'));
+}
+check('ccHasSubjectAnchor gives the same answer every time for the same Japanese text',
+    anchorRuns.every(function(v) { return v === true; }), anchorRuns.join(','));
+const thaiRuns = [];
+for (let i = 0; i < 6; i++) {
+    thaiRuns.push(G.ccHasSubjectAnchor('การบันทึกเหตุการณ์ในทะเบียนภายในสองวันทำการถือว่าเป็นไปตามข้อกำหนด'));
+}
+check('...and for the same Thai text', thaiRuns.every(function(v) { return v === true; }), thaiRuns.join(','));
+check('an English item with no figure and no name is still called generic',
+    G.ccHasSubjectAnchor('misses cues for adjusting advice, leaving clients feeling unheard') === false);
+check('an English item carrying a figure or a name still passes',
+    G.ccHasSubjectAnchor('breaks the deadline in Clause 4') === true
+    && G.ccHasSubjectAnchor('the trend across 12 months is lost') === true);
+
 console.log('\n5. distractorQualityIssues - every question, not only the first');
 
 const giveaway = {cardType: 'decision-point', schemaVersion: 2, questions: [

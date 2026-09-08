@@ -1,5 +1,55 @@
 # Changelog
 
+## 15.4.26 - 2026-09-08
+
+**The same defect as v15.4.21's word count, in a check nobody had looked at - and it was
+buying a paid repair on every CJK pack.**
+
+`ccHasSubjectAnchor()` decides whether an item carries anything specific to its subject. Its
+two signals are **Arabic digits** and **a capital letter mid-sentence** standing for a name
+or a system. Japanese, Chinese and Thai have neither - they have no letter case at all.
+
+So a properly written Japanese `mistakes` card - specific, anchored, exactly what the prompt
+asks for - scored zero anchors on every item and `subjectDriftIssues()` reported *"4 of 4
+mistakes carry nothing specific to this subject"*. **That message matches
+`/specific to this subject/` in `CC_REPAIRABLE`**, so every VET or Workplace pack in those
+languages spent its one repair attempt per section, on every run, rewriting content that was
+never wrong. Measured before the fix: 1 repairable issue on vet, 1 on workplace, from a card
+whose English twin scores 0.
+
+**Skipped for those scripts, not approximated.** Kanji compounds and katakana runs are
+everywhere in ordinary Japanese prose, so any rule built on them passes everything and
+detects nothing while looking like a measurement. A check that cannot read a language should
+say nothing about it: a false accusation costs a paid repair and a `needsReview` flag; silence
+costs screening for generic filler in five of the 53 languages. That trade is written into the
+code so the next person knows it was a decision.
+
+`readabilityIssues()` gets the same treatment. Flesch-Kincaid is a formula over English words
+and syllables counted by splitting on whitespace, so an entire Japanese card measured as one
+one-word sentence and produced a reading grade that meant nothing. Report-only, so it cost no
+credits - it just filled the author's quality issues with fiction.
+
+### A hazard found in the fix itself, before it shipped
+
+The guard was first written as `CC_HAN.test(text)`. **`CC_HAN` carries the `/g` flag** for
+`ccWordCount`'s `match()`, and a global regex used with `.test()` keeps `lastIndex` between
+calls - the same regex on the same string returns `true true true false true`. Non-global
+twins (`CC_HAN_ONE`, `CC_THAI_ONE`) now serve every yes/no question; the `/g` originals stay
+for `match()`.
+
+### A test that was theatre, and now is not
+
+The first version of that guard asserted stability through `subjectDriftIssues()`, and the
+mutation that put the `/g` regex back **passed it** - eight calls per card average the leak
+out. The assertion now hits `ccHasSubjectAnchor()` directly, six times on one string, and
+`ccHasSubjectAnchor` is exported for that purpose. Re-mutated: it fails, as it should.
+
+**A guard that survives the mutation it was written for is not a guard.** Both this and the
+badge-placement check from 15.4.25 were caught by asking "would this fail if the bug came
+back?" rather than by the suite going green.
+
+Suite: 80 checks (was 71).
+
 ## 15.4.25 - 2026-09-08
 
 **Verified on real Moodle 4.5.13+ and 5.2.2+ — which immediately found a defect every
