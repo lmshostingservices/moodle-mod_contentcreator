@@ -1,5 +1,66 @@
 # Changelog
 
+## 15.4.27 - 2026-09-09
+
+**The voice congratulated learners who got it wrong. That was v15.4.20's fallback, and it is
+removed.**
+
+Reported from the demo: *"currently the correct feedback is read out when I click the wrong
+answers"*. Exactly right, and it is the worst kind of defect - the two channels said opposite
+things and the audio was the more convincing one.
+
+v15.4.20 added a fallback: when the chosen option had no clip of its own, play the REVEALED
+correct answer's clip, on the reasoning that a panel promising "Questions & feedback are read
+aloud" should not fall silent. On any pack generated before that release - which is every
+pack in the field - the distractors carry no feedback and therefore no clip, so **every wrong
+answer played the correct answer's line. The generator writes those lines starting
+"Correct! ..."**. A learner marked wrong on screen heard "Correct! Clarifying questions help
+address concerns accurately."
+
+**Now: the learner hears their own answer's feedback, or nothing.** There is nothing true to
+say aloud about a choice the pack never explained, so nothing is said. The reveal stays on
+screen - correct answer, badge, explanation - so the eye still gets the whole story and the
+ear is not lied to. When the pack DOES carry a reason for that distractor - every pack
+generated from the v15.4.20 prompt onward - its own clip plays, which is what was asked for.
+
+Two runtime checks, both mutation-tested:
+
+- a wrong answer with no reason of its own plays **nothing** (fails if the fallback returns);
+- a wrong answer that HAS its own reason plays **exactly one clip, its own**, with the correct
+  answer still revealed beside it.
+
+The harness now stubs `window.Audio` and records every clip the handler reaches for, so the
+question it answers is not "does audio work" but "whose feedback is the learner hearing".
+
+### Found while checking this fix
+
+Removing the fallback exposed a second fault in the same block. The code that stops the
+SECTION narration - "answering a quiz while the section was still being narrated produced two
+Chirp voices at once", v13.94.6 - sat *inside* the "has a clip" branch, because when it was
+written the only reason to stop the narration was to make room for the clip. With the
+fallback gone there is now a real path where no clip plays, and on that path the background
+voice carried on talking over a learner who had just answered. Pressing an answer is an
+interaction: the narration now stops either way. Mutation-tested.
+
+### And the test for it was flaky - two runs in five
+
+The new audio check clicked `.cc5-dp-option[data-correct="false"]`, and `shuffleOptions()`
+randomises the order, so "the first wrong option" was sometimes the distractor that DOES
+carry a clip. That clip then played, correctly, and failed a check that expected silence. The
+player was right every time; the selector was wrong two runs in five. It now names the option
+it means - `:not([data-feedback-audio])` - and passes 8 runs out of 8.
+
+**A test that fails intermittently is worse than no test:** it trains you to re-run rather
+than to look, and the one time it means something you will not believe it.
+
+### Checked, and unchanged
+
+The STANDALONE decision-point card - the practice card with Try Again, shown when activities
+are switched off - is byte-for-byte identical to v15.4.18. Same set of delegated handlers as
+before, none added or removed. Every change in this release is inside the challenge quiz.
+
+Suite: 26 runtime checks (was 22 at v15.4.25), 80 local, 15 PHP static.
+
 ## 15.4.26 - 2026-09-08
 
 **The same defect as v15.4.21's word count, in a check nobody had looked at - and it was

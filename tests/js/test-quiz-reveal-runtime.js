@@ -92,11 +92,21 @@ const card = {cardType: 'decision-point', schemaVersion: 2, title: 'Recording in
     options: [
         {text: 'Record the incident in the register within two working days of it happening',
          feedback: 'Clause 4 gives two working days, and the register is what an auditor checks first.',
+         // The clip a v2 pack has on its correct option - and NOT on its distractors. The
+         // generator writes these lines starting "Correct!", which is why playing this one
+         // to someone who answered wrong was worse than saying nothing.
+         feedbackAudioUrl: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=',
          correct: true},
         {text: 'Tell the supervisor verbally and leave the register until the monthly review',
          feedback: '', correct: false},
         {text: 'Wait until the client complains before entering anything in the register',
-         feedback: '', correct: false}
+         feedback: '', correct: false},
+        // A distractor that DOES carry its own reason, as every pack generated from the
+        // v15.4.20 prompt onward should. Its own clip must be the one that plays.
+        {text: 'Treat the email thread about it as the record and skip the register',
+         feedback: 'An email is not the register, and clause 4 names the register specifically.',
+         feedbackAudioUrl: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAB=',
+         correct: false}
     ]
 }]};
 card.options = card.questions[0].options;
@@ -128,8 +138,18 @@ const page_html = `<!doctype html><html><head><meta charset="utf-8">
 <script>
 // Stubs for everything the handler reaches outside itself. Nothing here influences the
 // behaviour under test - they only stop it throwing.
-var self = {quizVoiceEnabled: false, currentAudio: null, _quizFbAudio: null,
+var narration = {paused: false, pause: function() { this.paused = true; }};
+var self = {quizVoiceEnabled: true, currentAudio: narration, _quizFbAudio: null,
     stopNarrationForActivities: function() {}, scrollElementToTop: function() {}};
+window.__narration = narration;
+// Capture every clip the handler tries to play. The question this answers is not "does
+// audio work" - it is "WHOSE feedback is the learner hearing".
+window.__played = [];
+var NativeAudio = window.Audio;
+window.Audio = function(src) {
+    window.__played.push(src);
+    return {play: function() { return Promise.resolve(); }, pause: function() {}, currentTime: 0};
+};
 var calls = {correctSound: 0, incorrectSound: 0, unlock: 0, celebration: 0};
 function playDecisionCorrectSound() { calls.correctSound++; }
 function playDecisionIncorrectSound() { calls.incorrectSound++; }
@@ -243,7 +263,12 @@ async function snapshot(page) {
         before.options.every(function(o) { return !o.feedbackVisible && !o.flagVisible && !o.revealed; }),
         JSON.stringify(before.options));
 
-    await page.click('.cc5-quiz-question.cc5-active .cc5-dp-option[data-correct="false"]');
+    // :not([data-feedback-audio]) is load-bearing. shuffleOptions() randomises the order, so
+    // "the first wrong option" is sometimes the distractor that DOES carry its own clip -
+    // which then plays, correctly, and failed this check about two runs in five. The bug was
+    // in the selector, not the player: an audio assertion has to name WHICH option it clicks.
+    await page.click('.cc5-quiz-question.cc5-active '
+        + '.cc5-dp-option[data-correct="false"]:not([data-feedback-audio])');
     const after = await snapshot(page);
     const chosen = after.options.find(function(o) { return o.selected === 'incorrect'; });
     const right = after.options.find(function(o) { return o.correct === 'true'; });
@@ -278,6 +303,29 @@ async function snapshot(page) {
         !!right && /Correct answer/.test(right.srText), right && right.srText);
     check('the incorrect sound fired, the correct one did not',
         after.calls.incorrectSound === 1 && after.calls.correctSound === 0, JSON.stringify(after.calls));
+
+    check('a wrong answer with no reason of its own plays NOTHING - it must never read out '
+        + 'the correct answer\'s "Correct!..." line to someone who just got it wrong',
+        (await page.evaluate(function() { return window.__played.length; })) === 0,
+        JSON.stringify(await page.evaluate(function() { return window.__played; })));
+
+    check('answering silences the section narration even when no clip plays',
+        (await page.evaluate(function() { return window.__narration.paused; })) === true);
+
+    console.log('\n1b. A wrong answer that HAS its own reason reads that reason out');
+    await page.goto('file://' + tmp);
+    await page.evaluate(function() { window.__openQuiz(); });
+    // The distractor carrying its own feedback and its own clip.
+    await page.click('.cc5-quiz-question.cc5-active .cc5-dp-option[data-feedback-audio]'
+        + '[data-correct="false"]');
+    await page.waitForTimeout(500);
+    const playedOwn = await page.evaluate(function() { return window.__played; });
+    check('exactly one clip plays, and it is the WRONG answer\'s own',
+        playedOwn.length === 1 && /ZGF0YQAAAAB=$/.test(playedOwn[0]),
+        JSON.stringify(playedOwn));
+    const stateOwn = await snapshot(page);
+    check('...and the correct answer is still revealed beside it',
+        stateOwn.options.some(function(o) { return o.correct === 'true' && o.revealed; }));
 
     console.log('\n2. Clicking the RIGHT answer is unchanged');
     await page.goto('file://' + tmp);

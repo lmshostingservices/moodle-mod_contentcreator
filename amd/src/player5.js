@@ -12270,10 +12270,8 @@ define([
                 // "Correct answer" badge on BOTH. Revealing only the first left the second
                 // badged and dimmed at 42%, which reads as a rendering fault. Rare, and a
                 // dropped `.first()` is the whole cost of not having it.
-                var _revealAudio = '';
                 if (!isCorrect) {
                     var $right = $options.find('.cc5-dp-option[data-correct="true"]').not($opt);
-                    _revealAudio = $right.first().attr('data-feedback-audio') || '';
                     $right.addClass('cc5-dp-reveal');
                     $right.find('.cc5-dp-feedback').show();
                     // getLabel, not a literal: FIX-CC-AMD-HARDCODED-STRINGS took the
@@ -12313,28 +12311,47 @@ define([
                 // a build where TTS failed - the feedback is silent rather than spoken by the
                 // wrong voice. Silence is recoverable; the wrong narrator is not.
                 if (self.quizVoiceEnabled) {
-                    // v15.4.20: fall back to the REVEALED answer's clip.
+                    // v15.4.27: THE LEARNER HEARS THEIR OWN ANSWER'S FEEDBACK, OR NOTHING.
                     //
-                    // This panel advertises "Questions & feedback are read aloud". On the
-                    // exact case this release is about - a v2 pack whose distractors carry
-                    // no feedback, and so no pre-generated clip - a learner who answered
-                    // wrong got the "no clip, silent by design" warning and nothing else,
-                    // while text they could not hear was now on screen beside it. When the
-                    // chosen option has nothing to say, the revealed correct answer does.
-                    var _fbUrl = $opt.attr('data-feedback-audio') || _revealAudio;
+                    // v15.4.20 added a fallback here: when the chosen option had no clip,
+                    // it played the REVEALED correct answer's clip instead, reasoning that
+                    // a panel promising "feedback is read aloud" should not go silent.
+                    //
+                    // Reported from the demo, and it is worse than silence. On a pack whose
+                    // distractors carry no feedback - every pack generated before v15.4.20 -
+                    // a learner who picks a wrong answer hears the CORRECT answer's line,
+                    // and the generator writes those lines starting "Correct! ...". So the
+                    // voice congratulates someone who just got it wrong, while the screen
+                    // marks them wrong. Two channels, opposite messages, and the audio is
+                    // the one a learner with the screen at arm's length believes.
+                    //
+                    // There is nothing true to say aloud about a choice the pack never
+                    // explained, so nothing is said. The reveal is still on screen with the
+                    // correct answer, its badge and its explanation - the eye gets the full
+                    // story, and the ear is not lied to. When the pack DOES carry a reason
+                    // for that distractor (every pack generated from v15.4.20's prompt
+                    // onward), its own clip plays, which is what was asked for.
+                    var _fbUrl = $opt.attr('data-feedback-audio');
+                    // v15.4.27: ANSWERING SILENCES THE NARRATION, CLIP OR NO CLIP.
+                    //
+                    // v13.94.6 put this inside the "has a clip" branch, because at the time
+                    // the only reason to stop the section narration was to make room for the
+                    // feedback clip. With the v15.4.20 fallback removed there is now a real
+                    // path where no clip plays - a distractor the pack never explained - and
+                    // on that path the section narration carried on talking over a learner
+                    // who had just answered. Pressing an answer is an interaction; the
+                    // background voice stops for it either way.
+                    if (self.currentAudio) {
+                        try { self.currentAudio.pause(); } catch (e) { /* detached */ }
+                    }
+                    if (self._quizFbAudio) {
+                        try {
+                            self._quizFbAudio.pause();
+                            self._quizFbAudio.currentTime = 0;
+                        } catch (e) { /* already detached */ }
+                    }
                     if (_fbUrl) {
                         try {
-                            // v13.94.6: the section narration has to stop too. This handler
-                            // only ever knew about the PREVIOUS feedback clip, so answering a
-                            // quiz while the section was still being narrated produced two
-                            // Chirp voices at once - the same narrator, different sentences.
-                            if (self.currentAudio) {
-                                try { self.currentAudio.pause(); } catch (e) { /* detached */ }
-                            }
-                            if (self._quizFbAudio) {
-                                self._quizFbAudio.pause();
-                                self._quizFbAudio.currentTime = 0;
-                            }
                             self._quizFbAudio = new Audio(_fbUrl);
                             self._quizFbAudio.play().catch(function(e) {
                                 // Autoplay policy, or a missing file. Never fall back to a
