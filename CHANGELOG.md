@@ -1,5 +1,88 @@
 # Changelog
 
+## 15.4.29 - 2026-09-09
+
+**The industry and sub-industry pickers: 29 industries to 45, and Employment Services where
+it was asked for.**
+
+`builder.js` keys three parallel structures by industry name - the dropdown (`INDUSTRIES`),
+the sub-industry list (`INDUSTRY_SUBCATEGORIES`) and the job titles (`INDUSTRY_JOB_TITLES`).
+All three moved together; an industry present in one and missing from another degrades
+silently, which is what the new guard exists to stop.
+
+**Employment Services, both ways.** It is now a sub-industry of Community Services, as asked -
+alongside Disability Employment Support, Financial Counselling, Emergency Relief & Food
+Security, Settlement Services, Volunteer Coordination, Community Housing and Advocacy &
+Social Justice, taking that list from 10 to 18. It is ALSO an industry in its own right, with
+twelve sub-industries (Job Placement & Case Management, Disability Employment Services, Youth
+Employment Programs, Recruitment & Staffing, Temporary & Contract Staffing, Career Coaching,
+Workforce Development, Employer Engagement, Apprenticeship & Work Placement Support,
+Rehabilitation & Return to Work, Skills Assessment, Job Readiness Training) and fifteen job
+titles - because a course written
+FOR an employment services provider is not a community services course that mentions jobs.
+
+**Sixteen new industries**, named in neutral international terms rather than
+jurisdiction-specific ones: Animal Care & Veterinary, Beauty & Personal Care, Cleaning
+Services, Correctional & Justice Services, Emergency Services, Employment Services, Fitness &
+Wellbeing, Laboratory & Scientific Services, Legal Services, Maritime, Marketing &
+Communications, Rail, Real Estate & Property, Renewable Energy, Telecommunications, Waste
+Management & Recycling. Each with 10-12 sub-industries and 12-15 job titles.
+
+**Sixteen existing industries deepened** where the list was thinner than the sector: Cyber
+Security and Cloud & DevOps under Information Technology; Insurance, Superannuation and
+Financial Crime under Finance; Dental, Pharmacy and Medical Imaging under Healthcare; Meat
+Processing, Baking and Food Safety under Food Processing; Local Government under Government;
+Textiles, Furnishing and Printing under Manufacturing; Forestry, Fishing and Beekeeping under
+Agriculture; and so on.
+
+Totals: **45 industries, 524 sub-industries, 704 job titles** (was 29 / 292 / 492 - measured
+from the v15.4.18 tree, after an earlier draft of this entry asserted 280 without counting).
+
+### Why this is safe to expand
+
+The value is free text all the way through - `PARAM_TEXT` in the web service, then straight
+into the prompt as `industrySector`. There is no vendor allowlist to fall foul of, and task
+and equipment categories fall back to a sensible `_default` set for any industry that has no
+bespoke list, so a new industry degrades to generic categories rather than to nothing.
+
+### Nine terms renamed after a naming audit
+
+The brief was neutral international naming, and nine entries I had written were
+jurisdiction-specific: Labour Hire, Apprenticeship & Traineeship Support, Return-to-Work
+Services and Coordinator, Strata & Body Corporate, Strata Manager, Master (Coxswain),
+Integrated Rating, Superannuation & Pensions. They are now Temporary & Contract Staffing,
+Apprenticeship & Work Placement Support, Rehabilitation & Return to Work, Rehabilitation
+Coordinator, Owners Association & Community Management, Community Association Manager,
+Skipper, Able Seafarer and Pensions & Retirement Funds.
+
+Pre-existing entries are left as they are - "Aboriginal & Torres Strait Islander Services",
+"TAFE", "Aboriginal Health Worker" - because renaming what was already shipped is a
+different decision from naming what is new. Say the word if they should follow.
+
+### What a new industry does NOT get
+
+Task and equipment categories are keyed by industry too, and the sixteen new ones have no
+bespoke lists - they resolve to the generic six (Core Operations, Quality & Standards, Safety
+& Risk, Communication, Equipment & Resources, Improvement & Development). Verified by calling
+the real lookups: every new industry returns 6 task and 6 equipment categories, never empty,
+and existing industries keep their tailored sets (Aged Care still opens with Personal Care
+(ADLs), Mobility Support, Meal Assistance). Writing bespoke categories for the new sixteen is
+worthwhile follow-up work, not a defect.
+
+### The guard
+
+Eight checks assert the three structures agree: every industry in the dropdown has
+sub-industries AND job titles, no orphan keys defined for industries the dropdown does not
+offer, no duplicates, "Other" stays last, and Employment Services is present both under
+Community Services and as its own industry. Mutation-tested by deleting one industry's
+sub-industry block - the check fails.
+
+Verified in a real browser on **both Moodle 4.5.13+ and 5.2.2+**: the workplace builder
+renders 45 industries, selecting Community Services rebuilds the sub-industry list to 18
+including Employment Services, that option can actually be selected, choosing Employment
+Services as an industry swaps the list to its own twelve, and no JavaScript error is thrown
+switching between them. 28 checks, saved as `tests/moodle/e2e-industry-pickers.js`.
+
 ## 15.4.27 - 2026-09-09
 
 **The voice congratulated learners who got it wrong. That was v15.4.20's fallback, and it is

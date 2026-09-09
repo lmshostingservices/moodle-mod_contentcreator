@@ -461,6 +461,54 @@ check('the bare distractors carry no feedback element (nothing to show - this is
 check('the badge is inside the option body, where the reveal styling scopes it',
     /cc5-dp-option-body[\s\S]{0,300}?cc5-dp-correct-flag/.test(rendered));
 
+console.log('\n6c. The industry pickers - three lists that must never drift apart');
+
+// builder.js keys three structures by industry name: the dropdown itself, the sub-industry
+// list, and the job titles. Nothing enforces that they agree, and the failure is silent -
+// getSubcategoriesForIndustry() falls back to ['General'] and getJobTitlesForIndustry() to
+// the 'Other' list, so an industry added to the dropdown alone looks fine until an author
+// picks it and finds one meaningless sub-industry.
+const builderSrc = fs.readFileSync(path.join(SRC, 'builder.js'), 'utf8');
+
+/**
+ * Pull one top-level const (array or object literal) out of builder.js.
+ *
+ * @param {String} name Const name.
+ * @return {String} Its source text.
+ */
+function constBlock(name) {
+    const m = builderSrc.match(new RegExp('const ' + name + ' = [\\[{][\\s\\S]*?\\n    [\\]}];'));
+    return m ? m[0] : '';
+}
+const industries = [...constBlock('INDUSTRIES').matchAll(/'([^']+)'/g)].map(function(m) { return m[1]; });
+const subKeys = [...constBlock('INDUSTRY_SUBCATEGORIES').matchAll(/^ {8}'([^']+)':/gm)].map(function(m) { return m[1]; });
+const jobKeys = [...constBlock('INDUSTRY_JOB_TITLES').matchAll(/^ {8}'([^']+)':/gm)].map(function(m) { return m[1]; });
+
+check('all three industry structures were found in builder.js',
+    industries.length > 0 && subKeys.length > 0 && jobKeys.length > 0,
+    industries.length + '/' + subKeys.length + '/' + jobKeys.length);
+check('every industry in the dropdown has sub-industries (' + industries.length + ' industries)',
+    industries.every(function(i) { return subKeys.indexOf(i) !== -1; }),
+    industries.filter(function(i) { return subKeys.indexOf(i) === -1; }).join(', '));
+check('every industry in the dropdown has job titles',
+    industries.every(function(i) { return jobKeys.indexOf(i) !== -1; }),
+    industries.filter(function(i) { return jobKeys.indexOf(i) === -1; }).join(', '));
+check('no orphan keys - nothing defined for an industry the dropdown does not offer',
+    subKeys.every(function(k) { return industries.indexOf(k) !== -1; })
+    && jobKeys.every(function(k) { return industries.indexOf(k) !== -1; }),
+    subKeys.filter(function(k) { return industries.indexOf(k) === -1; })
+        .concat(jobKeys.filter(function(k) { return industries.indexOf(k) === -1; })).join(', '));
+check('"Other" is last in the dropdown, so it does not sort into the middle',
+    industries[industries.length - 1] === 'Other', industries[industries.length - 1]);
+check('Employment Services is offered under Community Services',
+    /'Community Services': \[[^\]]*'Employment Services'/.test(constBlock('INDUSTRY_SUBCATEGORIES')));
+check('...and as an industry in its own right, with its own sub-industries and job titles',
+    industries.indexOf('Employment Services') !== -1
+    && subKeys.indexOf('Employment Services') !== -1
+    && jobKeys.indexOf('Employment Services') !== -1);
+check('no duplicate industries in the dropdown',
+    new Set(industries).size === industries.length);
+
 console.log('\n7. The build is not stale - amd/build is what Moodle serves');
 
 [
