@@ -644,6 +644,34 @@ define([
     const CC_MAX_SORT_ITEMS = 6;
 
     /**
+     * v15.4.30 FIX-SUBTOPIC-PARAGRAPHS-DISCARDED.
+     *
+     * These two lists existed twice: once where the slide editor DRAWS the paragraph
+     * boxes, once where Save COLLECTS them. v15.3.11 added `subtopic` to the drawing
+     * copy and not to the collecting one, so on every Topics-and-Text card the editor
+     * offered paragraph boxes, accepted the author's typing, and then threw it away -
+     * the card object was deep-copied from the original and `paragraphs` was never
+     * written over it. Save reported success, the manifest was rewritten, and the
+     * paragraphs in it were the old ones. Nothing in the UI could reveal this: the
+     * reload was showing exactly what had been stored.
+     *
+     * One list, module scope, read by both. A card type that gets paragraph editors
+     * now gets a paragraph collector by construction, not by someone remembering.
+     *
+     * CC_PROSE_EDIT_TYPES  - every card whose body is authored as paragraphs.
+     * CC_PROSE_FIXED_HEADING_TYPES - the subset whose heading and narration belong to
+     * the route rather than the author, so Save blanks title/heading/voiceover on them.
+     * `subtopic` is deliberately NOT in the second list: it writes its own heading, and
+     * renderProseSection reads that heading from card.title.
+     */
+    const CC_PROSE_EDIT_TYPES = ['overview', 'key-concepts', 'examples-application',
+        'key-takeaways', 'orientation', 'foundations', 'mechanism', 'in-practice',
+        'boundaries', 'subtopic'];
+    const CC_PROSE_FIXED_HEADING_TYPES = ['overview', 'key-concepts',
+        'examples-application', 'key-takeaways', 'orientation', 'foundations',
+        'mechanism', 'in-practice', 'boundaries'];
+
+    /**
      * v15.3.13: every question on a decision-point, in one shape.
      *
      * normalizeCardSchema folds both decision-point schemas into `questions` and keeps
@@ -15820,14 +15848,14 @@ define([
                 // Third time this same list-of-card-types shape has bitten in one release
                 // cycle - the flip harvester in v15.3.14, the University one earlier today,
                 // and this.
-                var _PROSE_EDIT_TYPES = ['overview', 'key-concepts', 'examples-application', 'key-takeaways',
-                    'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries', 'subtopic'];
+                // v15.4.30: both lists now come from module scope, shared with the Save
+                // collector. Keeping a private copy here is what discarded every edited
+                // subtopic paragraph - see CC_PROSE_EDIT_TYPES.
+                var _PROSE_EDIT_TYPES = CC_PROSE_EDIT_TYPES;
                 // ...but a subtopic writes its OWN heading, where the retired slots had one
                 // supplied by the platform. So the paragraph editors and the disabled
                 // heading box are two separate questions from here on.
-                var _FIXED_HEADING_TYPES = ['overview', 'key-concepts', 'examples-application',
-                    'key-takeaways', 'orientation', 'foundations', 'mechanism', 'in-practice',
-                    'boundaries'];
+                var _FIXED_HEADING_TYPES = CC_PROSE_FIXED_HEADING_TYPES;
                 var _PROSE_EDIT_HEADINGS = {
                     'overview': 'Overview', 'key-concepts': 'Key Concepts',
                     'examples-application': 'Examples & Application', 'key-takeaways': 'Key Takeaways',
@@ -16886,8 +16914,10 @@ define([
                         voiceoverText:_blk.find('.cc5-edit-card-voiceover').val().trim()
                     });
                     // v13.92: Topics-and-Text prose cards.
-                    if (['overview','key-concepts','examples-application','key-takeaways',
-                         'orientation','foundations','mechanism','in-practice','boundaries'].indexOf(_ct) !== -1) {
+                    // v15.4.30: the shared list. This branch used to carry its own copy
+                    // WITHOUT `subtopic`, so the editor drew paragraph boxes for every
+                    // Topics-and-Text card and Save quietly dropped what was typed in them.
+                    if (CC_PROSE_EDIT_TYPES.indexOf(_ct) !== -1) {
                         var _pParas = [];
                         _blk.find('.cc5-edit-prose-para').each(function() {
                             var t = $(this).val().trim();
@@ -16896,11 +16926,17 @@ define([
                         // Only overwrite when the author left something behind. An
                         // accidental clear-all must not silently empty the card.
                         if (_pParas.length) { _cu.paragraphs = _pParas; }
-                        // The heading is fixed and the narration is the paragraphs, so
-                        // neither of these is authored on this route.
-                        delete _cu.heading;
-                        _cu.title = '';
-                        _cu.voiceoverText = '';
+                        // v15.4.30: blank the heading and narration only on the FIXED-heading
+                        // slots. A subtopic writes its own heading, and renderProseSection
+                        // reads it from card.title - so blanking title here would have
+                        // replaced the author's card name with "No content yet" the moment
+                        // subtopic joined this branch. The editor draws a real, enabled Card
+                        // Title box for subtopic precisely because that value is authored.
+                        if (CC_PROSE_FIXED_HEADING_TYPES.indexOf(_ct) !== -1) {
+                            delete _cu.heading;
+                            _cu.title = '';
+                            _cu.voiceoverText = '';
+                        }
                         if (_blk.find('.cc5-edit-prose-terms-list').length) {
                             var _pTerms = [];
                             _blk.find('.cc5-edit-prose-term-item').each(function() {

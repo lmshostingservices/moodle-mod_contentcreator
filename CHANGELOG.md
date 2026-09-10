@@ -1,5 +1,52 @@
 # Changelog
 
+## 15.4.30 - 2026-09-10
+
+**FIX-SUBTOPIC-PARAGRAPHS-DISCARDED: editing a card's text in the slide editor did
+nothing. Save reported success and the old text came back on every reload.**
+
+Reported from a live site: open Edit Slide, change the paragraph, press Save Changes,
+refresh - the original wording is still on screen. It was not a caching problem. The
+paragraph was never saved, so the reload was showing exactly what had been stored.
+
+Two lists of card types existed in `player5.js`: one where the editor DRAWS the paragraph
+boxes, one where Save COLLECTS them. v15.3.11 added the content-driven `subtopic` card to
+the drawing copy and not to the collecting one. From that release on, every
+Topics-and-Text card offered paragraph boxes, accepted what the author typed, and threw it
+away - the card object handed to the webservice was a deep copy of the original, and
+`paragraphs` was never written over it. The manifest really was rewritten and the
+webservice really did return success, which is why nothing in the interface could hint
+that the text had been dropped. Key terms, which feed the Flip & Learn cards, were lost
+the same way and for the same reason.
+
+- The two lists are now single module-scope constants, `CC_PROSE_EDIT_TYPES` and
+  `CC_PROSE_FIXED_HEADING_TYPES`, read by both the editor and the collector. A card type
+  that gets paragraph editors now gets a paragraph collector by construction.
+- Blanking the title, heading and voiceover on save is now restricted to the fixed-slot
+  card types. `subtopic` writes its own heading and `renderProseSection` reads that
+  heading from `card.title`, so applying the old blanking to it would have replaced the
+  author's card name with "No content yet" - the regression this fix could most easily
+  have introduced, and the reason two checks in the new suite assert the heading survives.
+
+Verification. `tests/moodle/e2e-slide-edit-persistence.js` (23 checks per site, 46 across
+both) drives a real Moodle: it turns editing mode on with Moodle's own switch, opens the
+slide editor, changes the paragraph, presses Save Changes, reloads the page and reads what
+the learner sees. It **fails on 15.4.29 and passes on this build**, which is the only
+evidence worth having. It also asserts what must NOT change: the card keeps its heading,
+the paragraph that was not edited survives, and the neighbouring card - never opened - is
+untouched by the full `cards[]` replacement the save performs.
+
+`tests/js/test-quiz-feedback.js` gains 8 checks (88 to 96) that fail if a second literal
+copy of the type list reappears anywhere in `player5.js`, and one mutation check proving
+those assertions can actually fail. Reintroducing the old collector list was confirmed to
+break the suite.
+
+Audit performed alongside the fix. Every input control the slide editor emits was diffed
+against every selector that reads one back: 82 controls, none orphaned. The card types the
+editor branches on were diffed against the card types the collector branches on; with
+`subtopic` added the two sets now agree. No sibling defect of this kind remains in the
+save path.
+
 ## 15.4.29 - 2026-09-09
 
 **The industry and sub-industry pickers: 29 industries to 45, and Employment Services where

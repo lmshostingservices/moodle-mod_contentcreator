@@ -535,5 +535,42 @@ check('the answered states have dark-mode rules (they had none before v15.4.20)'
     /dark-mode \.cc5-dp-option\[data-selected="correct"\]/.test(cssFile)
     && /dark-mode \.cc5-dp-option\[data-selected="incorrect"\]/.test(cssFile));
 
+console.log('\n8. The prose card-type lists cannot drift apart again (v15.4.30)');
+
+const p5 = fs.readFileSync(path.join(ROOT, 'amd', 'src', 'player5.js'), 'utf8');
+
+const editTypes = (p5.match(/const CC_PROSE_EDIT_TYPES = \[([\s\S]*?)\];/) || [])[1] || '';
+const fixedTypes = (p5.match(/const CC_PROSE_FIXED_HEADING_TYPES = \[([\s\S]*?)\];/) || [])[1] || '';
+check('CC_PROSE_EDIT_TYPES exists at module scope', !!editTypes);
+check('CC_PROSE_FIXED_HEADING_TYPES exists at module scope', !!fixedTypes);
+check('subtopic is in the paragraph-editing list', /'subtopic'/.test(editTypes));
+check('subtopic is NOT in the fixed-heading list (it writes its own heading)',
+    !/'subtopic'/.test(fixedTypes));
+
+// The defect was a SECOND copy of the list, in the Save collector, missing 'subtopic'.
+// Any literal list of these card types outside the two constants above is that defect
+// coming back, so fail on it rather than trusting a comment to be read.
+const constDecls = (p5.match(/const CC_PROSE_(?:EDIT|FIXED_HEADING)_TYPES = \[[\s\S]*?\];/g) || []).join('\n');
+const withoutConsts = p5.split('\n').filter(function(line) {
+    return constDecls.indexOf(line) === -1;
+}).join('\n');
+const strayLists = (withoutConsts.match(/\[[^\]]*'key-takeaways'[^\]]*'boundaries'[^\]]*\]/g) || [])
+    .concat(withoutConsts.match(/\[[^\]]*'boundaries'[^\]]*'key-takeaways'[^\]]*\]/g) || []);
+check('no second literal copy of the prose type list survives in player5.js',
+    strayLists.length === 0, strayLists.slice(0, 1).join(' | '));
+
+// And the collector must read the shared constant, not re-derive membership.
+check('the Save collector gates the paragraph branch on CC_PROSE_EDIT_TYPES',
+    /CC_PROSE_EDIT_TYPES\.indexOf\(_ct\) !== -1/.test(p5));
+check('the Save collector blanks title/heading only for fixed-heading types',
+    /CC_PROSE_FIXED_HEADING_TYPES\.indexOf\(_ct\) !== -1/.test(p5));
+
+// Mutation proof: putting 'subtopic' into the fixed-heading list must break a check
+// above. If it does not, these assertions are decoration.
+const mutated = p5.replace(/(const CC_PROSE_FIXED_HEADING_TYPES = \[)/, "$1'subtopic', ");
+const mutatedFixed = (mutated.match(/const CC_PROSE_FIXED_HEADING_TYPES = \[([\s\S]*?)\];/) || [])[1] || '';
+check('the fixed-heading assertion actually fails when subtopic is added to it',
+    /'subtopic'/.test(mutatedFixed));
+
 console.log('\n' + (failures ? 'FAILED ' + failures + ' of ' + checks : 'PASSED all ' + checks + ' checks'));
 process.exit(failures ? 1 : 0);
