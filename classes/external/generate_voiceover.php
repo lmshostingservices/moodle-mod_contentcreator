@@ -292,10 +292,9 @@ class generate_voiceover extends external_api {
         // the capability gate and the rate limiters live here rather than at the
         // top of the function - a cache hit above must cost nothing and must not
         // be blocked. Mirrors ajax.php's ordering. See FIX-CACHE-ORDER above.
-        // V15.5.0: the capability check moved behind \mod_contentcreator\ondemand,
-        // which applies the site-level learnerondemand switch first. The capability
-        // is still required; the switch is an administrator-visible off button that
-        // does not require editing the student role definition.
+        // V15.6.0: staff only. A learner cannot reach this at all now - see
+        // \mod_contentcreator\ondemand for why the site-level switch was removed rather
+        // than defaulted to off. Cached audio is served above and never comes here.
         \mod_contentcreator\ondemand::require_can_generate($context);
 
         // This endpoint spends site credits (5 per call) and is available to any user who

@@ -813,32 +813,19 @@ check(
     'userid is annotated, so the users are included in the backup file',
     strpos($bksrc, "\$evidence->annotate_ids('user', 'userid');") !== false);
 
-echo "\n13. The learner on-demand gate - the switch that stops learners spending credits\n";
+echo "\n13. The on-demand gate - learners may not spend site credits, at all\n";
 
-// V15.5.4. \mod_contentcreator\ondemand sits in front of all three credit-spending calls a
-// learner can originate. It had no test, and two of its rules are the kind that get
-// "simplified" later by someone who has not read the history:
+// V15.6.0. This gate has been narrowed twice and both earlier positions were wrong in the
+// same direction - each made it EASIER to turn off something that should never have been
+// on, while leaving it on by default:
 //
-//   - UNSET must read as ENABLED. get_config() returns false for a setting that was never
-//     written, which on upgrade is every existing site. A falsy-means-off reading would
-//     switch voiceover off for every site in the world on the upgrade that added it.
-//   - The CAPABILITY is checked first, and is not waived by the switch being on.
+//   before v13.85  gated on :view alone; every enrolled learner could spend
+//   v13.85         added the capability, granted to student so nothing changed
+//   v15.5.0        added a site switch in front of it, defaulting to on
+//   v15.6.0        staff only, structurally, with no setting to get wrong
 //
-// The stubs below are guarded so this file stays inert if it is ever loaded somewhere that
-// already has Moodle's own functions.
-if (!function_exists('get_config')) {
-    /**
-     * Stand in for Moodle's get_config().
-     *
-     * @param string $plugin Plugin name.
-     * @param string $name Setting name.
-     * @return mixed The value set by the harness.
-     */
-    function get_config($plugin, $name = null) {
-        global $ccfakeconfig;
-        return array_key_exists($name, $ccfakeconfig) ? $ccfakeconfig[$name] : false;
-    }
-}
+// The stubs are guarded so this file stays inert if it is ever loaded where Moodle's own
+// functions already exist.
 if (!function_exists('has_capability')) {
     /**
      * Stand in for Moodle's has_capability().
@@ -850,21 +837,6 @@ if (!function_exists('has_capability')) {
     function has_capability($cap, $context = null) {
         global $ccfakecaps;
         return !empty($ccfakecaps[$cap]);
-    }
-}
-if (!function_exists('require_capability')) {
-    /**
-     * Stand in for Moodle's require_capability().
-     *
-     * @param string $cap Capability name.
-     * @param mixed $context Ignored.
-     * @return void
-     * @throws Exception When the harness did not grant it.
-     */
-    function require_capability($cap, $context = null) {
-        if (!has_capability($cap)) {
-            throw new Exception('nocapability:' . $cap);
-        }
     }
 }
 if (!class_exists('moodle_exception')) {
@@ -894,44 +866,37 @@ if (!class_exists('context')) {
 require_once(__DIR__ . '/../../classes/ondemand.php');
 
 /**
- * Run the gate and report what happened.
+ * Run the gate with a given set of capabilities.
  *
- * @param mixed $setting Value get_config() should return for learnerondemand.
  * @param array $caps Capabilities the user holds.
- * @return string 'allowed', 'nocapability' or 'switchedoff'.
+ * @return string 'allowed' or 'refused'.
  */
-function cc_gate($setting, array $caps): string {
-    global $ccfakeconfig, $ccfakecaps;
-    $ccfakeconfig = ['learnerondemand' => $setting];
+function cc_gate(array $caps): string {
+    global $ccfakecaps;
     $ccfakecaps = $caps;
     try {
         \mod_contentcreator\ondemand::require_can_generate(new context());
         return 'allowed';
-    } catch (moodle_exception $e) {
-        return 'switchedoff';
     } catch (Exception $e) {
-        return 'nocapability';
+        return 'refused';
     }
 }
 
-$learner = ['mod/contentcreator:generateondemand' => true];
-$teacher = ['mod/contentcreator:generateondemand' => true, 'mod/contentcreator:manage' => true];
-$reviewer = ['mod/contentcreator:generateondemand' => true, 'mod/contentcreator:review' => true];
-
+$ondemand = 'mod/contentcreator:generateondemand';
 $gatecases = [
-    // Unset and empty string are what every existing site looks like on upgrade.
-    'a site that has never saved the setting keeps working' => [cc_gate(false, $learner), 'allowed'],
-    'an empty setting value keeps working' => [cc_gate('', $learner), 'allowed'],
-    'explicitly on' => [cc_gate('1', $learner), 'allowed'],
-    'explicitly on as an integer' => [cc_gate(1, $learner), 'allowed'],
-    'switched off stops a learner' => [cc_gate('0', $learner), 'switchedoff'],
-    'switched off as an integer stops a learner' => [cc_gate(0, $learner), 'switchedoff'],
-    'switched off does NOT stop a teacher' => [cc_gate('0', $teacher), 'allowed'],
-    'switched off does NOT stop a reviewer' => [cc_gate('0', $reviewer), 'allowed'],
-    'the capability is still required when the switch is on' => [cc_gate('1', []), 'nocapability'],
-    'the capability is still required when the switch is off' => [cc_gate('0', []), 'nocapability'],
-    'a teacher without the capability is still refused' => [
-        cc_gate('1', ['mod/contentcreator:manage' => true]), 'nocapability'],
+    'a learner holding the capability is REFUSED anyway' => [cc_gate([$ondemand => true]), 'refused'],
+    'a learner holding nothing is refused' => [cc_gate([]), 'refused'],
+    'an editing teacher is allowed' => [
+        cc_gate([$ondemand => true, 'mod/contentcreator:manage' => true]), 'allowed'],
+    'a non-editing teacher is allowed, via :review' => [
+        cc_gate([$ondemand => true, 'mod/contentcreator:review' => true]), 'allowed'],
+    'a manager is allowed' => [
+        cc_gate([$ondemand => true, 'mod/contentcreator:manage' => true, 'mod/contentcreator:review' => true]),
+        'allowed'],
+    'staff WITHOUT the capability are still refused, so a site can prohibit it' => [
+        cc_gate(['mod/contentcreator:manage' => true]), 'refused'],
+    'a reviewer without the capability is refused' => [
+        cc_gate(['mod/contentcreator:review' => true]), 'refused'],
 ];
 $gatebad = [];
 foreach ($gatecases as $why => $pair) {
@@ -944,14 +909,47 @@ check(
     empty($gatebad),
     implode("\n         ", $gatebad));
 
+// The point of v15.6.0: being staff is required structurally, not by configuration. If
+// can_generate() ever stops consulting :manage/:review, granting the capability to the
+// student role would put learners back on the paid balance.
 check(
-    'an unconfigured site reads as ENABLED, so the upgrade changes nothing',
-    (function () {
-        global $ccfakeconfig;
-        $ccfakeconfig = [];
-        return \mod_contentcreator\ondemand::learner_generation_enabled() === true;
-    })(),
-    'every existing site would lose learner voiceover on upgrade');
+    'the gate requires staff, not merely the capability',
+    strpos(file_get_contents(__DIR__ . '/../../classes/ondemand.php'), 'mod/contentcreator:manage') !== false
+    && strpos(file_get_contents(__DIR__ . '/../../classes/ondemand.php'), 'mod/contentcreator:review') !== false,
+    'can_generate() no longer checks for staff');
+
+// The setting is gone and must not come back by accident.
+$noswitch = strpos(file_get_contents(__DIR__ . '/../../settings.php'), 'learnerondemand') === false
+    && strpos(file_get_contents(__DIR__ . '/../../classes/ondemand.php'), 'learnerondemand') === false;
+check(
+    'no site setting can re-enable learner generation',
+    $noswitch,
+    'learnerondemand is referenced again - it was removed in v15.6.0 on purpose');
+
+// The student archetype must not appear on the capability, or a FRESH install would grant
+// it again - and the Define Roles screen would imply learners can do something they cannot.
+$accessrc = file_get_contents(__DIR__ . '/../../db/access.php');
+$capblock = substr(
+    $accessrc,
+    strpos($accessrc, "'mod/contentcreator:generateondemand'"),
+    400
+);
+check(
+    'student is not among the generateondemand archetypes',
+    strpos($capblock, "'student'") === false,
+    'a fresh install would grant learners a capability they cannot use');
+
+// And an EXISTING site must have it taken away, because an archetype default is only
+// applied when the capability is first installed.
+$upsrc = file_get_contents(__DIR__ . '/../../db/upgrade.php');
+check(
+    'the upgrade revokes the capability from the student role on existing sites',
+    strpos($upsrc, "unassign_capability('mod/contentcreator:generateondemand'") !== false
+    && strpos($upsrc, "'archetype' => 'student'") !== false,
+    'sites upgrading from v15.5.x would keep the stale grant on the Define Roles screen');
+check(
+    'the upgrade also clears the removed setting out of the config table',
+    strpos($upsrc, "unset_config('learnerondemand', 'mod_contentcreator')") !== false);
 
 echo "\n14. Whole-plugin integrity - not just the code this release touched\n";
 

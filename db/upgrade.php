@@ -332,5 +332,46 @@ function xmldb_contentcreator_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026091800, 'contentcreator');
     }
 
+    if ($oldversion < 2026091900) {
+        // V15.6.0 FIX-CC-LEARNER-CREDIT-SPEND.
+        //
+        // mod/contentcreator:generateondemand no longer lists student among its archetypes,
+        // but an archetype default is only applied when a capability is FIRST installed. On
+        // every existing site the student role already carries the grant from v13.85, and
+        // removing it from db/access.php does not take it away.
+        //
+        // So it is taken away here. The gate in \mod_contentcreator\ondemand already
+        // refuses any caller who is not staff, whatever the role says, so this is not what
+        // stops a learner spending credits - that is already handled. This is about the
+        // Define Roles screen telling the truth: leaving the grant in place would show
+        // administrators a permission their learners appear to hold and cannot use.
+        //
+        // Only roles with the student ARCHETYPE are touched. A custom role that an
+        // administrator deliberately granted this to is left alone - it will simply find
+        // the capability has no effect unless that role is also staff.
+        $studentroles = $DB->get_records('role', ['archetype' => 'student'], '', 'id, shortname');
+        $revoked = [];
+        foreach ($studentroles as $role) {
+            unassign_capability('mod/contentcreator:generateondemand', $role->id);
+            $revoked[] = $role->shortname;
+        }
+        if (!empty($revoked)) {
+            upgrade_log(
+                UPGRADE_LOG_NORMAL,
+                'mod_contentcreator',
+                'Revoked mod/contentcreator:generateondemand from the student role(s): '
+                    . implode(', ', $revoked) . '. Learners can no longer originate a call '
+                    . 'that spends site credits; everything already generated still plays.'
+            );
+        }
+
+        // The site-level switch added in v15.5.0 is gone. Its stored value would otherwise
+        // sit in the config table forever, and a future reader could mistake it for a live
+        // setting.
+        unset_config('learnerondemand', 'mod_contentcreator');
+
+        upgrade_mod_savepoint(true, 2026091900, 'contentcreator');
+    }
+
     return true;
 }

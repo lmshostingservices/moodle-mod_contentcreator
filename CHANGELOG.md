@@ -1,5 +1,85 @@
 # Changelog
 
+## 15.6.0 - 2026-09-19
+
+**Learners can no longer spend site credits. There is no setting for it.**
+
+### FIX-CC-LEARNER-CREDIT-SPEND
+
+Three endpoints spend site credits from inside the player: on-demand voiceover, through
+both the web service and ajax.php, and the document example generator. This gate has been
+narrowed twice before and both earlier positions were wrong in the same direction — each
+made it *easier to turn off* something that should never have been on, while leaving it on
+by default:
+
+| | |
+|---|---|
+| before v13.85 | gated on `:view` alone; every enrolled learner could spend |
+| v13.85 | added `:generateondemand`, granted to **student** so nothing changed |
+| v15.5.0 | added a site switch in front of it, **defaulting to on** |
+| **v15.6.0** | **staff only, structurally, with no setting to get wrong** |
+
+A setting that is always meant to be off is not a setting, it is a decision — and leaving
+it configurable meant every site started out exposed and had to be told to change it. One
+live site had 36 learners who could each draw on the paid balance.
+
+So:
+
+- **The `learnerondemand` setting is gone**, and the upgrade clears its stored value out of
+  the config table rather than leaving a dead key that reads like a live one.
+- **`student` is no longer among the capability's archetypes**, so a fresh install does not
+  grant it.
+- **The upgrade revokes it from existing student roles.** An archetype default is applied
+  only when a capability is first installed, so removing it from `db/access.php` does not
+  take it away from a site that already has it. Only roles with the *student archetype* are
+  touched; a custom role an administrator deliberately granted it to is left alone.
+- **The gate requires the caller to be staff regardless of any role definition.**
+  `:manage` covers editing teachers and managers, `:review` covers non-editing teachers.
+  Granting the capability to a learner role now achieves nothing.
+
+The capability itself is **kept**, not deleted: a site may still want to prohibit generation
+for a particular staff role, and that is what it is for now.
+
+**What a learner loses: nothing that has already been generated.** Cached audio still plays,
+every pre-generated clip and document example still works, and none of that reaches this
+gate — all three call sites check their cache first and only come here when a request would
+actually spend credits. What changes is that a card whose narration was never generated
+stays silent for a learner instead of quietly billing the site, and the teacher pre-generates
+it from the builder, which is where that decision belongs.
+
+### The consequence that had to be handled with it
+
+The player's preload treats a failed `generate_voice` as a **soft failure** and routes it
+into a three-attempt retry ladder. A permanent refusal answered that way would cost three
+requests per card per learner and end with the card marked **failed** rather than simply
+silent — and a section left `pending` strands the waiting screen at N-1 of N.
+
+That is the same shape as the HTML-interstitial fault v15.5.1 made fatal, and it gets the
+same treatment. `ajax.php` answers a refusal as a structured `{success:false,
+staffonly:true}` rather than letting the exception escape, and all three `generate_voice`
+handlers in the player recognise it, mark the section `unavailable`, and stop. No retries,
+no error state, no toast: silent by design, which is what a learner should see on a card the
+teacher has not narrated yet.
+
+`test-transport-fatal.js` covers it — 29 checks now — keyed on the `staffonly` flag rather
+than on message wording, and asserting all three handlers check it. Removing the guard from
+one handler fails the suite.
+
+### Tests
+
+Section 13 of `tests/php/static-checks.php` was rewritten around the new behaviour: seven
+gate outcomes across learner, editing teacher, non-editing teacher and manager, with and
+without the capability; that staff is required structurally rather than by configuration;
+that no setting can re-enable it; that `student` is absent from the archetypes; and that the
+upgrade both revokes the capability and clears the dead config key. Two mutations —
+dropping the staff requirement, and putting `student` back — both fail the suite.
+
+Verified: 40/40 PHP files lint clean, 0 eslint errors, 11/11 JavaScript suites, 64/64
+plugin static checks, `grunt amd` reproducible, version mirror 3/3.
+
+**Still not smoke tested against a live generation.** This release changes what a learner
+sees on an un-narrated card, which is worth watching for specifically.
+
 ## 15.5.5 - 2026-09-18
 
 The release pipeline found four things, all but one of them in `tests/php/static-checks.php`

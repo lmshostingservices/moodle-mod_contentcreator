@@ -58,18 +58,26 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
-    // V13.85: On-demand generation performed by a LEARNER inside the player -
-    // voiceover playback and document examples. Both spend site credits, and both
-    // were previously gated on :view alone, which meant every enrolled student in
-    // every course could spend from the same paid balance with no way for an
-    // administrator to stop them short of disabling the feature site-wide.
-    // Granted to student by default so that nothing changes for existing sites;
-    // the point is that it can now be prohibited for a role, a course or a cohort.
+    // Generation performed on demand from inside the player - voiceover and document
+    // examples. Both spend site credits.
+    //
+    // V13.85 introduced this capability and granted it to student, so that nothing changed
+    // for existing sites; the point then was that it COULD be prohibited per role, course
+    // or cohort. V15.5.0 added a site-level switch in front of it, still defaulting to on.
+    //
+    // V15.6.0 ends that. A learner may not spend site credits, full stop. The switch is
+    // gone and student is no longer among the archetypes, because a setting that is always
+    // meant to be off is not a setting - it is a decision, and leaving it configurable
+    // meant every site started out exposed and had to be told to change it.
+    //
+    // The capability is KEPT rather than deleted: a site may still want to grant it to a
+    // trainer or assessor role that is not an editing teacher. It no longer decides on its
+    // own, though - \mod_contentcreator\ondemand also requires the caller to be staff, so
+    // granting it to a learner role achieves nothing.
     'mod/contentcreator:generateondemand' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
         'archetypes' => [
-            'student' => CAP_ALLOW,
             'teacher' => CAP_ALLOW,
             'editingteacher' => CAP_ALLOW,
             'manager' => CAP_ALLOW,

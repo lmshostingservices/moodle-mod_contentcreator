@@ -626,6 +626,27 @@ define([
      * @param {Object} data Parsed JSON response body.
      * @return {Object|null} {retryafter, bucket, scope} when refused, else null.
      */
+    /**
+     * v15.6.0: is this response a permanent refusal rather than a transient fault?
+     *
+     * A learner may not originate a call that spends site credits - see
+     * \mod_contentcreator\ondemand. ajax.php answers such a call with
+     * `{success:false, staffonly:true}` rather than letting an exception escape, precisely
+     * so that this can be told apart from a timeout or a busy server.
+     *
+     * Telling them apart matters. The preload treats a failed generate_voice as a soft
+     * failure and routes it into a three-attempt retry ladder; a permanent refusal handled
+     * that way costs three requests per card per learner and ends with the card marked
+     * FAILED rather than simply silent. It is the same shape as the HTML-interstitial fault
+     * v15.5.1 made fatal, and it gets the same treatment.
+     *
+     * @param {Object} data Parsed response body.
+     * @return {Boolean} True when retrying can never succeed.
+     */
+    const ccIsStaffOnlyRefusal = function(data) {
+        return !!(data && data.success === false && data.staffonly === true);
+    };
+
     const ccRateLimitInfo = function(data) {
         if (!data || data.success) { return null; }
         var coded = (data.errorcode === 'ratelimited');
@@ -2850,6 +2871,22 @@ define([
                 })
                 .then(function(data) {
                     delete section._preloadAbortCtrl;
+                    // v15.6.0: a refusal is final. Mark the section done and silent rather
+                    // than throwing into the retry ladder below - three attempts against a
+                    // permission decision cannot change its answer, and leaving the section
+                    // 'pending' strands the waiting screen at N-1 of N.
+                    if (ccIsStaffOnlyRefusal(data)) {
+                        ccLog('[CC v' + CC_VERSION + '] section ' + section.id
+                            + ' has no pre-generated narration and this user may not generate it'
+                            + '  -  silent by design.');
+                        section.voiceoverStatus = 'unavailable';
+                        delete self.voiceoverLoading[section.id];
+                        self.voiceoverPreloadStatus.loaded++;
+                        self.updatePreloadingProgress();
+                        activeRequests--;
+                        startNext();
+                        return;
+                    }
                     // v12.48 FIX-CC-TTS-MUTEX: PHP returns {pending:true} when its file lock
                     // cannot be acquired (another PHP process is already generating this section).
                     // Treat as a temporary hold  -  don't count against retry budget, wait 10s.
@@ -3172,6 +3209,13 @@ define([
             })
             .then(function(data) {
                 delete self.voiceoverLoading[currentSection.id];
+                if (ccIsStaffOnlyRefusal(data)) {
+                    // v15.6.0: silent by design. See ccIsStaffOnlyRefusal().
+                    ccLog('[CC v' + CC_VERSION + '] narration for ' + currentSection.id
+                        + ' has not been generated and this user may not generate it.');
+                    currentSection.voiceoverStatus = 'unavailable';
+                    return;
+                }
                 if (data.success && data.audioContent) {
                     var audioUrl = 'data:' + (data.audioType || 'audio/ogg') + ';base64,' + data.audioContent;
                     self.voiceoverCache[currentSection.id] = audioUrl;                    if (self.editMode || self.canEdit || self.isTeacher) {
@@ -9602,6 +9646,13 @@ define([
             })
             .then(function(data) {
                 delete self.voiceoverLoading[section.id];
+                if (ccIsStaffOnlyRefusal(data)) {
+                    // v15.6.0: silent by design. See ccIsStaffOnlyRefusal().
+                    ccLog('[CC v' + CC_VERSION + '] narration for ' + section.id
+                        + ' has not been generated and this user may not generate it.');
+                    section.voiceoverStatus = 'unavailable';
+                    return;
+                }
                 if (data.success && data.audioContent) {
                     var audioUrl = 'data:' + data.audioType + ';base64,' + data.audioContent;
                     self.voiceoverCache[section.id] = audioUrl;

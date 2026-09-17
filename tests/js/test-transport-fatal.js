@@ -27,6 +27,8 @@ const AMD = path.join(__dirname, '..', '..', 'amd', 'src');
 const SRC = path.join(AMD, 'generator.js');
 const STATE = path.join(AMD, 'cc-state.js');
 const BUILDER = path.join(AMD, 'builder.js');
+const PLAYER = path.join(AMD, 'player5.js');
+const AJAX = path.join(__dirname, '..', '..', 'ajax.php');
 
 /** Pull looksLikeHtml out of cc-state.js without executing the whole module. */
 function loadPredicate() {
@@ -115,7 +117,22 @@ module.exports = function run() {
         ['builder.js reads responses through CcState.readJson',
             fs.readFileSync(BUILDER, 'utf8').indexOf('CcState.readJson(') !== -1],
         ['no bare response.json() is left in builder.js',
-            (fs.readFileSync(BUILDER, 'utf8').match(/await\s+\w*[Rr]esp\w*\.json\(\)/g) || []).length === 0]
+            (fs.readFileSync(BUILDER, 'utf8').match(/await\s+\w*[Rr]esp\w*\.json\(\)/g) || []).length === 0],
+
+        // v15.6.0: a permission refusal is the OTHER kind of permanent fault. A learner may
+        // not originate a credit-spending call, and ajax.php answers one with
+        // {success:false, staffonly:true}. The preload treats a failed generate_voice as a
+        // soft failure and routes it into a three-attempt retry ladder, so a refusal handled
+        // like a transient fault costs three requests per card per learner and ends with the
+        // card marked FAILED rather than simply silent.
+        ['the player can recognise a permission refusal',
+            fs.readFileSync(PLAYER, 'utf8').indexOf('const ccIsStaffOnlyRefusal =') !== -1],
+        ['it keys on the staffonly flag, not on message wording',
+            /data\.staffonly === true/.test(fs.readFileSync(PLAYER, 'utf8'))],
+        ['all three generate_voice handlers check it before retrying or failing',
+            (fs.readFileSync(PLAYER, 'utf8').match(/ccIsStaffOnlyRefusal\(data\)/g) || []).length === 3],
+        ['ajax.php sends the flag rather than letting the exception escape',
+            fs.readFileSync(AJAX, 'utf8').indexOf("['staffonly' => true]") !== -1]
     ];
     structural.forEach(function (s) {
         if (s[1]) { pass++; } else { failures.push({ name: s[0], err: 'not found in generator.js' }); }

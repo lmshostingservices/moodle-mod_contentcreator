@@ -171,21 +171,6 @@ if ($hassiteconfig && isset($settings)) {
         )
     );
 
-    // V15.5.0: A discoverable off switch for every credit-spending call a learner can
-    // originate - on-demand voiceover and the document example generator. The
-    // mod/contentcreator:generateondemand capability already gated these, but its
-    // student default was applied when the plugin was installed, so on an existing
-    // site the only way to stop learners spending was to edit the student role.
-    // Default 1: upgrading changes nothing.
-    $settings->add(
-        new admin_setting_configcheckbox(
-            'mod_contentcreator/learnerondemand',
-            get_string('learnerondemand', 'mod_contentcreator'),
-            get_string('learnerondemanddesc', 'mod_contentcreator'),
-            1
-        )
-    );
-
     $settings->add(
         new admin_setting_configselect(
             'mod_contentcreator/voicelanguage',

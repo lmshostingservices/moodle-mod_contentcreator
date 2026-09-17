@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Content Creator - Learner on-demand generation policy
+ * Content Creator - On-demand generation policy
  *
  * @package    mod_contentcreator
  * @copyright  2025 AI Grader
@@ -27,23 +27,40 @@ namespace mod_contentcreator;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Single gate for every credit-spending call a LEARNER can originate.
+ * The single gate in front of every credit-spending call the player can originate.
  *
- * V15.5.0. Three endpoints spend site credits on a learner's behalf: on-demand
- * voiceover (web service and ajax.php) and the document example generator. Each
- * already required mod/contentcreator:generateondemand, but that capability is
- * granted to the student archetype by default, and a capability default only
- * applies to roles created after the plugin is installed. On an existing site the
- * student role already carried it, so an administrator who wanted to stop learners
- * drawing on the paid balance had to edit the student role definition - which is
- * neither obvious nor discoverable from the plugin's own settings page.
+ * V15.6.0. Three endpoints spend site credits from inside the player: on-demand voiceover
+ * (the web service and ajax.php) and the document example generator. **A learner may not
+ * reach any of them.**
  *
- * This class adds a single site-level switch in front of the capability. It
- * defaults to on, so upgrading changes nothing; turning it off stops all three
- * endpoints for anyone who is not staff, without touching role definitions.
+ * The history is worth keeping, because this has been narrowed twice and both earlier
+ * positions were wrong in the same direction:
  *
- * Staff are exempt: a teacher previewing a course is the person who would
- * otherwise have pre-generated the same audio from the builder.
+ * - Before v13.85 the three endpoints were gated on :view alone. Every enrolled learner on
+ *   the site could draw on the same paid balance, with no control short of switching voice
+ *   off entirely.
+ * - v13.85 added mod/contentcreator:generateondemand and granted it to the student
+ *   archetype, so that nothing changed for existing sites. But an archetype default is
+ *   applied when the plugin is INSTALLED, so on an existing site the student role already
+ *   carried it and an administrator had to edit the role definition to take it away.
+ * - v15.5.0 put a site-level switch in front of the capability, still defaulting to on,
+ *   so that the control was at least discoverable from the settings page.
+ *
+ * Each step made it easier to turn off something that should never have been on. A setting
+ * that is always meant to be off is not a setting, it is a decision - and leaving it
+ * configurable meant every site started out exposed and had to be told to change it. One
+ * live site had 36 learners who could each spend from the paid balance.
+ *
+ * So the switch is gone, student is no longer among the capability's archetypes, and this
+ * gate requires the caller to be STAFF regardless of what any role definition says. A site
+ * that grants the capability to a learner role achieves nothing by it.
+ *
+ * What a learner loses: nothing that has already been generated. Cached audio still plays,
+ * every pre-generated clip and document example still works, and none of that reaches this
+ * class - the three call sites check their cache first and only come here when a request
+ * would actually spend credits. What changes is that a card whose narration was never
+ * generated stays silent for a learner instead of quietly billing the site, and the teacher
+ * pre-generates it from the builder, which is where that decision belongs.
  *
  * @package    mod_contentcreator
  * @copyright  2025 AI Grader
@@ -51,47 +68,39 @@ defined('MOODLE_INTERNAL') || die();
  */
 class ondemand {
     /**
-     * Whether learner-initiated, credit-spending generation is permitted site-wide.
+     * May this user originate a call that spends site credits?
      *
-     * Unset and empty string both mean "not configured yet", which on upgrade is
-     * every existing site, and both must read as enabled so behaviour is unchanged.
+     * Staff only: :manage covers editing teachers and managers, :review covers
+     * non-editing teachers as well. The capability is required on top, so a site can still
+     * prohibit generation for a particular staff role - it just cannot grant it to a
+     * learner.
      *
-     * @return bool True when learners may originate credit-spending calls.
+     * @param \context $context Module context of the activity being viewed.
+     * @return bool True when this user may spend credits here.
      */
-    public static function learner_generation_enabled(): bool {
-        $raw = get_config('mod_contentcreator', 'learnerondemand');
-        if ($raw === false || $raw === '') {
-            return true;
+    public static function can_generate(\context $context): bool {
+        if (!has_capability('mod/contentcreator:generateondemand', $context)) {
+            return false;
         }
-        return (bool)(int)$raw;
+        return has_capability('mod/contentcreator:manage', $context)
+            || has_capability('mod/contentcreator:review', $context);
     }
 
     /**
-     * Gate a credit-spending call that a learner may have originated.
+     * Gate a call that is about to spend site credits.
      *
-     * Call this at the point credits are about to be spent - after any cache
-     * lookup, never at the top of an endpoint, so that replaying already-generated
-     * audio stays free and stays available even when the switch is off.
+     * Call this at the point credits would actually be spent - AFTER any cache lookup,
+     * never at the top of an endpoint. Replaying audio that already exists must stay free
+     * and must stay available to learners, and it does not come through here.
      *
      * @param \context $context Module context of the activity being viewed.
      * @return void
-     * @throws \required_capability_exception When the user may not generate.
-     * @throws \moodle_exception When the site has switched learner generation off.
+     * @throws \moodle_exception When this user may not spend credits.
      */
     public static function require_can_generate(\context $context): void {
-        require_capability('mod/contentcreator:generateondemand', $context);
-
-        if (self::learner_generation_enabled()) {
+        if (self::can_generate($context)) {
             return;
         }
-
-        // Staff would otherwise pre-generate the same content from the builder, so
-        // the switch is aimed at the learner cohort only.
-        if (has_capability('mod/contentcreator:manage', $context)
-            || has_capability('mod/contentcreator:review', $context)) {
-            return;
-        }
-
-        throw new \moodle_exception('errorlearnerondemandoff', 'mod_contentcreator');
+        throw new \moodle_exception('errorgenerationstaffonly', 'mod_contentcreator');
     }
 }

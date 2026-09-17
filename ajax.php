@@ -1224,9 +1224,19 @@ try {
         // no administrative control short of switching voice off entirely. The new
         // capability is granted to student by default, so nothing changes until a site
         // chooses to prohibit it.
-        // V15.5.0: now routed through \mod_contentcreator\ondemand so the site-level
-        // learnerondemand switch applies as well as the capability.
-        \mod_contentcreator\ondemand::require_can_generate($context);
+        // V15.6.0: staff only. A learner cannot reach this at all now - see
+        // \mod_contentcreator\ondemand for why the site-level switch was removed rather
+        // than defaulted to off. Cached audio is served above and never comes here.
+        //
+        // Answered as a STRUCTURED refusal rather than by letting the exception escape,
+        // and the `staffonly` flag is the point of it. The player's preload treats a failed
+        // generate_voice as a soft failure and routes it into a three-attempt retry: a
+        // permanent refusal answered like a transient fault would cost three requests per
+        // card per learner and end with the card marked failed rather than simply silent.
+        // Same shape as the HTML-interstitial fault v15.5.1 made fatal, and the same fix.
+        if (!\mod_contentcreator\ondemand::can_generate($context)) {
+            mod_contentcreator_fail('errorgenerationstaffonly', null, ['staffonly' => true]);
+        }
         mod_contentcreator_check_ratelimit('voice', 2500, HOURSECS);
 
         if (empty($siteid) || empty($apikey)) {
