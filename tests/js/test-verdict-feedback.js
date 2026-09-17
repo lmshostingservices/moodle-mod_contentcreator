@@ -159,12 +159,40 @@ ok(/CcState\.withVerdict\(\s*\n?\s*CcState\.verdictLabel\(/.test(builder)
 ok(/CcState\.verdictLabel\(_dpOpts\[oi\]\.correct\)/.test(builder),
     'the narrated verdict is not taken from the option\'s own correctness');
 
-// The player must resolve the words through getLabel, not as literals. They were literals
+// The player must resolve the words from a table, not as literals. They were literals
 // until this release, which was tolerable only while they were screen-reader-only text.
-ok(!/\?\s*'Correct'\s*:\s*'Incorrect'/.test(player),
-    'player5 still hard-codes the English verdict');
-ok((player.match(/getLabel\(isCorrect \? 'correct_pos' : 'correct_neg'\)/g) || []).length >= 4,
-    'the verdict words are not resolved through getLabel everywhere');
+// Scoped to everything OUTSIDE verdictWord(). The resolver keeps a final English
+// fallback on purpose - an unknown language must still say something rather than render
+// a key - and a blanket ban on the literal would forbid the one place it belongs.
+const playerOutsideResolver = player.split('function verdictWord(isCorrect)')[0]
+    + player.slice(player.indexOf('function verdictWord(isCorrect)'))
+        .split('\n    }').slice(1).join('\n    }');
+ok(!/\?\s*'Correct'\s*:\s*'Incorrect'/.test(playerOutsideResolver),
+    'player5 hard-codes the English verdict somewhere outside verdictWord()');
+ok((player.match(/verdictWord\(/g) || []).length >= 6,
+    'the verdict words are not resolved through verdictWord() everywhere');
+
+// v15.6.4 self-audit: and it must be the NARRATION table, in the pack's language.
+//
+// getLabel reads UI_LABELS, which translations.js prunes to the PAGE language plus
+// English. On an English Moodle serving a Japanese pack, UI_LABELS['ja'] is gone, so
+// getLabel yields English - beside a clip saying the Japanese word, because builder.js
+// narrated it from NARRATION_LABELS, which is exported in full. Screen and audio would
+// disagree in exactly the place this release exists to make them agree.
+ok(/function verdictWord\(isCorrect\)/.test(player),
+    'player5 has no verdictWord() resolver');
+const vw = player.slice(player.indexOf('function verdictWord(isCorrect)'));
+const vwBody = vw.slice(0, vw.indexOf('\n    }') + 6);
+ok(/_narrationLabels\[/.test(vwBody),
+    'verdictWord does not read the narration table, so a non-English pack would show '
+    + 'English on screen while its clip speaks the pack language');
+ok(vwBody.indexOf('currentLang') !== -1,
+    'verdictWord does not resolve against the PACK language');
+ok(/viaLabel !== key/.test(vwBody),
+    'verdictWord can return the key itself - a learner would read "correct_pos." aloud '
+    + 'in their feedback');
+ok(/'Correct' : 'Incorrect'/.test(vwBody),
+    'verdictWord has no final English fallback, so an unknown language yields nothing');
 
 // --- 6. The builder must not re-bill a clip that already says it -------------------
 console.log('  clip regeneration');

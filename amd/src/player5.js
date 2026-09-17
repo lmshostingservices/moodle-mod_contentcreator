@@ -941,6 +941,41 @@ define([
     }
 
     /**
+     * The verdict word - "Correct" / "Incorrect" - in the language of the PACK.
+     *
+     * v15.6.4 self-audit. This used getLabel, which was wrong in a way that only shows up
+     * on a non-English pack, and only to someone who both looks and listens.
+     *
+     * getLabel reads UI_LABELS, which translations.js PRUNES to the page language plus
+     * English. On an English Moodle serving a Japanese pack, UI_LABELS['ja'] is not there,
+     * so getLabel falls through to English - while the clip beside it says 正しい, because
+     * builder.js narrated it from NARRATION_LABELS, which is exported in full for every
+     * language. Screen and audio would disagree, in the one place this release exists to
+     * make them agree.
+     *
+     * So this resolves from the same table the builder used, in the same language, and
+     * keeps getLabel only as a fallback - which is also what lets an English site
+     * customise the wording through cclabel_*, since NARRATION_LABELS has no such hook.
+     *
+     * @param {Boolean} isCorrect Whether the chosen option was the right one.
+     * @returns {String} The word, in the pack's language.
+     */
+    function verdictWord(isCorrect) {
+        // _narrationLabels and currentLang are declared later in this same module scope.
+        // Safe: both are assigned while the module evaluates, and nothing calls this
+        // before a learner clicks an option.
+        var key = isCorrect ? 'correct_pos' : 'correct_neg';
+        var code = String(currentLang || 'en').split('-')[0];
+        var table = _narrationLabels[code] || _narrationLabels[currentLang] || null;
+        if (table && table[key]) { return table[key]; }
+        var viaLabel = getLabel(key);
+        // getLabel returns the key itself when it resolves nothing, which must never be
+        // rendered - "correct_pos. Construction guidance requires..." is worse than the
+        // missing verdict this release set out to restore.
+        return (viaLabel && viaLabel !== key) ? viaLabel : (isCorrect ? 'Correct' : 'Incorrect');
+    }
+
+    /**
      * Set current language from manifest (v6.5.24)
      * @param {string} language - The language code (e.g., 'ja-JP', 'zh-CN', 'en-AU')
      */
@@ -12462,8 +12497,8 @@ define([
                 // v15.6.4: the verdict leads the feedback, in words, for everyone.
                 // CcState.withVerdict is what builder.js also narrates, so the clip and
                 // the line on screen cannot say different things.
-                var verdictWord = getLabel(isCorrect ? 'correct_pos' : 'correct_neg');
-                var fbText = CcState.withVerdict(verdictWord, result.feedback);
+                var chosenVerdict = verdictWord(isCorrect);
+                var fbText = CcState.withVerdict(chosenVerdict, result.feedback);
                 // v15.6.4: when the pack gives a distractor no feedback at all - the
                 // vendor's v2 shape puts one line on the correct option and leaves every
                 // other one empty - the learner used to get a red border and no words.
@@ -12473,8 +12508,8 @@ define([
                 // plays.
                 if (fbText) {
                     $fb.text(fbText);
-                } else if (verdictWord) {
-                    $fb.text(verdictWord + '.');
+                } else if (chosenVerdict) {
+                    $fb.text(chosenVerdict + '.');
                 } else {
                     $fb.remove();
                 }
@@ -12490,7 +12525,7 @@ define([
                 // separate change. This release is that change - the same two words are
                 // now shown to everyone, so they must be translated for everyone.
                 $option.find('.cc5-dp-result-text').text(
-                    getLabel(isCorrect ? 'correct_pos' : 'correct_neg'));
+                    verdictWord(isCorrect));
                 // Show its feedback
                 $option.find('.cc5-dp-feedback').show();
                 // v15.5.0: the lock moved above, before the grading call.
@@ -12620,7 +12655,7 @@ define([
                 // v15.6.4: the verdict leads the feedback, in words, for everyone.
                 // CcState.withVerdict is what builder.js also narrates, so the clip and
                 // the line on screen cannot say different things.
-                var chosenWord = getLabel(isCorrect ? 'correct_pos' : 'correct_neg');
+                var chosenWord = verdictWord(isCorrect);
                 var chosenText = CcState.withVerdict(chosenWord, result.feedback);
                 // See the standalone handler above: an empty distractor still gets its
                 // verdict, because a border colour is not a sentence.
@@ -12635,7 +12670,7 @@ define([
                 // v13.86: same accessibility treatment as the standalone card above.
                 $opt.attr('aria-pressed', 'true');
                 $opt.find('.cc5-dp-result-text').text(
-                    getLabel(isCorrect ? 'correct_pos' : 'correct_neg'));
+                    verdictWord(isCorrect));
                 $opt.find('.cc5-dp-feedback').show();
                 // FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19): reveal the right answer
                 // when the learner got it wrong.
@@ -12684,11 +12719,16 @@ define([
                     // v15.6.4: the positive verdict, always - this is the RIGHT answer
                     // being revealed, whatever the learner chose. Its own clip carries the
                     // same word, because builder.js narrates it from the same helper.
-                    var rightText = CcState.withVerdict(getLabel('correct_pos'),
+                    var rightText = CcState.withVerdict(verdictWord(true),
                         result.correctfeedback);
                     if (rightText) {
                         $rightFb.text(rightText).show();
                     } else {
+                        // Deliberately NOT the bare-verdict fallback the chosen option
+                        // gets. This option already displays the "Correct answer" flag
+                        // two lines above, so a lone "Correct." underneath it would say
+                        // the same thing twice. The asymmetry is the point, not an
+                        // oversight.
                         $rightFb.remove();
                     }
                     // getLabel, not a literal: FIX-CC-AMD-HARDCODED-STRINGS took the

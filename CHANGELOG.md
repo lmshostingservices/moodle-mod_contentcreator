@@ -1,5 +1,69 @@
 # Changelog
 
+## 15.6.5 - 2026-09-19
+
+**Self-audit of 15.6.1–15.6.4. Two real defects found in my own work, both of the same
+kind: something that looks right in the file it was written in and is wrong in the place
+it actually runs.**
+
+### FIX-CC-FAILURE-REPORT-IGNORES-DARK-MODE
+
+The failure report panel added in 15.6.3 rendered as a **white box with black text on a
+dark page**.
+
+`tokens.css` declares the dark values on `.contentcreator-container` and its siblings —
+never on `:root`. A fixed overlay has to hang off `document.body` to sit above everything,
+so it resolved the LIGHT values. It would have been the first thing an author saw after a
+failed build.
+
+The panel now copies the resolved token values from the container's own computed style
+rather than re-testing the theme selectors. Six mechanisms set dark mode in `tokens.css`
+(`.cc-dark`, `.dark`, `.theme-dark`, `body.dark`, `[data-theme]`, `[data-bs-theme]`) and a
+seventh will arrive with the next Moodle; whatever the container resolved to is correct by
+definition.
+
+### FIX-CC-VERDICT-IN-THE-WRONG-LANGUAGE
+
+15.6.4 resolved the new "Correct" / "Incorrect" through `getLabel`, which reads `UI_LABELS`
+— and `translations.js` **prunes that table to the page language plus English**. On an
+English Moodle serving a Japanese pack, `UI_LABELS['ja']` is not there, so the screen would
+have said *"Correct"* in English beside a clip saying 正しい, because `builder.js` narrated
+it from `NARRATION_LABELS`, which is exported in full for every language.
+
+Screen and audio disagreeing is the exact failure the shared helper exists to prevent, and
+15.6.4 reintroduced it one layer up. `verdictWord()` now resolves from the same table the
+builder used, in the pack's language, keeping `getLabel` as a fallback so an English site
+can still customise the wording through `cclabel_*`.
+
+### Also fixed in the failure report
+
+- **A listener leak.** The `keydown` handler was removed only when Escape fired, so closing
+  with the button or the backdrop left it on `document` holding a closure over the whole
+  problem list — and every reopen added another.
+- **`aria-modal` was a claim, not a behaviour.** Tab could leave the dialog. It now wraps.
+- **Focus is returned** to whatever opened the panel, instead of the top of the document.
+
+### Documented rather than changed
+
+The revealed correct answer deliberately does *not* get the bare-verdict fallback the
+chosen option gets: it already displays the "Correct answer" flag, so a lone "Correct."
+beneath it would say the same thing twice. Noted in the source, because it reads like an
+oversight and is not.
+
+### Tests
+
+- `tests/js/test-failure-report-runtime.js`: +6 checks. The harness now reproduces
+  `tokens.css`'s actual scoping — dark on the container, light on `:root` — and **asserts
+  the harness itself is scoped that way**, because a harness that put dark on `:root` would
+  pass whether or not the fix existed. Four mutations caught.
+- `tests/js/test-verdict-feedback.js`: +5 checks on the resolver, including that it can
+  never return the key itself — a learner reading *"correct_pos. Construction guidance
+  requires…"* would be worse than the missing verdict this all started with.
+- Both Chromium suites now lift the **real** `verdictWord` out of `player5.js` alongside the
+  real `withVerdict`. Stubbing it would have hidden precisely the defect above.
+
+**Not smoke tested against a live generation.**
+
 ## 15.6.4 - 2026-09-19
 
 **"Correct." and "Incorrect." are back — on screen and in the narration.**

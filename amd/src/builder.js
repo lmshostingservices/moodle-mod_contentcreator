@@ -13343,6 +13343,10 @@ define([
         const bad = (results || []).filter(function(t) { return t.problems && t.problems.length; });
         if (!bad.length) { return; }
 
+        // Where focus came from, so closing returns it there rather than to the top of the
+        // document. Null when the panel opened by itself at the end of a build.
+        const opener = document.activeElement;
+
         const existing = document.getElementById('cc-fail-report');
         if (existing) { existing.remove(); }
 
@@ -13393,15 +13397,71 @@ define([
             + s('msgfailclose') + '</button>'
             + '</div>'
             + '</div>';
+        // v15.6.4 self-audit: carry the theme across.
+        //
+        // A fixed overlay has to hang off document.body to sit above everything, but the
+        // dark-mode tokens are declared on `.contentcreator-container` and its siblings -
+        // NOT on :root - so anything outside that container resolves the LIGHT values. On a
+        // dark site this panel would have rendered as a white box with black text over a
+        // dark page, which is the first thing an author would have seen after a failed
+        // build.
+        //
+        // The values are copied from the container's own computed style rather than by
+        // re-testing the theme selectors here. Six mechanisms set dark mode in tokens.css
+        // (.cc-dark, .dark, .theme-dark, body.dark, [data-theme], [data-bs-theme]) and a
+        // seventh will arrive with the next Moodle; whatever the container resolved to is
+        // correct by definition.
+        try {
+            const themed = window.getComputedStyle(container);
+            ['--cc-bg', '--cc-bg-subtle', '--cc-fg', '--cc-fg-muted', '--cc-border',
+                '--cc-radius', '--cc-primary'].forEach(function(token) {
+                const value = themed.getPropertyValue(token);
+                if (value && value.trim()) { wrap.style.setProperty(token, value.trim()); }
+            });
+        } catch (e) {
+            // A computed style is not available in every embedding. Light is the safe
+            // default and the panel is still perfectly readable in it.
+            ccWarn('[CC] could not read the theme for the failure report: '
+                + ((e && e.message) || e));
+        }
+
         document.body.appendChild(wrap);
 
-        const close = function() { wrap.remove(); };
+        // v15.6.4 self-audit: the keydown listener used to be removed only when Escape
+        // fired, so closing with the button or the backdrop left it on document - holding
+        // a closure over the whole problem list - and every reopen added another. Removed
+        // by close(), whichever way the panel is dismissed.
+        const onEsc = function(e) {
+            if (e.key === 'Escape') { close(); }
+        };
+        const close = function() {
+            document.removeEventListener('keydown', onEsc);
+            wrap.remove();
+            // Put the author back where they were, rather than at the top of the document.
+            if (opener && typeof opener.focus === 'function') { opener.focus(); }
+        };
         wrap.querySelector('#cc-fail-close').onclick = close;
         wrap.querySelector('#cc-fail-dismiss').onclick = close;
         // A click on the backdrop closes; a click inside must not.
         wrap.onclick = function(e) { if (e.target === wrap) { close(); } };
-        document.addEventListener('keydown', function onEsc(e) {
-            if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+        document.addEventListener('keydown', onEsc);
+
+        // aria-modal says the rest of the page is inert, so Tab must not leave the panel.
+        // Claiming modality without enforcing it strands a keyboard user behind a dialog
+        // they cannot see out of.
+        wrap.addEventListener('keydown', function(e) {
+            if (e.key !== 'Tab') { return; }
+            const focusable = wrap.querySelectorAll('button');
+            if (!focusable.length) { return; }
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
         });
 
         // Plain text, because this is what gets pasted into a support ticket or an email

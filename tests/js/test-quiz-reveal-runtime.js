@@ -97,6 +97,31 @@ function loadWithVerdict() {
     }
     return src.slice(start, end);
 }
+/**
+ * v15.6.4: the SHIPPED verdictWord, lifted out of player5.js.
+ *
+ * The handlers under test call it. Stubbing it would hide the very thing it exists for -
+ * resolving the verdict from the pack's own narration table so the screen and the clip
+ * say the same word.
+ *
+ * @returns {String} The function source.
+ */
+function loadVerdictWord() {
+    const src = fs.readFileSync(path.join(SRC, 'player5.js'), 'utf8');
+    const start = src.indexOf('function verdictWord(isCorrect)');
+    if (start === -1) { throw new Error('verdictWord() not found in player5.js'); }
+    let depth = 0;
+    let end = src.indexOf('{', start);
+    for (; end < src.length; end++) {
+        if (src[end] === '{') { depth++; } else if (src[end] === '}') {
+            depth--;
+            if (depth === 0) { end++; break; }
+        }
+    }
+    return src.slice(start, end);
+}
+const VERDICT_WORD_SRC = loadVerdictWord();
+
 const WITH_VERDICT_SRC = loadWithVerdict();
 
 Slots.init({
@@ -235,6 +260,11 @@ function ccWarn() {}
 // "Correct." / "Incorrect." at the head of the feedback now, and the clip says the same.
 ${WITH_VERDICT_SRC}
 var CcState = {withVerdict: withVerdict};
+${VERDICT_WORD_SRC}
+// The pack language and the narration table verdictWord resolves against. 'en' here, but
+// the lookup order is the shipped one.
+var currentLang = 'en';
+var _narrationLabels = {en: {correct_pos: 'Correct', correct_neg: 'Incorrect'}};
 function getLabel(k) {
     if (k === 'correctAnswerLabel') { return 'Correct answer'; }
     if (k === 'correct_pos') { return 'Correct'; }

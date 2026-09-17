@@ -74,7 +74,22 @@ while ((lm = langRe.exec(lang)) !== null) {
 
 const harness = `
 <!DOCTYPE html><html><head><meta charset="utf-8"></head><body>
-<div id="container"></div>
+<style>
+/* tokens.css declares the dark values on .contentcreator-container, NOT on :root. The
+   harness reproduces exactly that, because it is the reason the panel needed the fix:
+   anything hung off document.body resolves the light values. */
+:root {
+    --cc-bg: hsl(0 0% 100%); --cc-bg-subtle: hsl(0 0% 96%);
+    --cc-fg: hsl(0 0% 9%); --cc-fg-muted: hsl(0 0% 40%);
+    --cc-border: hsl(0 0% 89%); --cc-radius: 8px; --cc-primary: hsl(210deg 91% 60%);
+}
+.contentcreator-container.cc-dark {
+    --cc-bg: hsl(0 0% 7%); --cc-bg-subtle: hsl(0 0% 11%);
+    --cc-fg: hsl(0 0% 98%); --cc-fg-muted: hsl(217 8% 65%);
+    --cc-border: hsl(0 0% 18%);
+}
+</style>
+<div id="container" class="contentcreator-container"></div>
 <script>
 var STRINGS = ${JSON.stringify(strings)};
 function s(key) { return STRINGS[key] === undefined ? key : STRINGS[key]; }
@@ -94,7 +109,8 @@ try {
         value: {writeText: function(t) { copied = t; return Promise.resolve(); }}
     });
 } catch (e) { /* If it cannot be overridden, the textarea fallback still records. */ }
-var CcState = {CC_VERSION: '15.6.4'};
+var CcState = {CC_VERSION: '15.6.5'};
+function ccWarn() {}
 var container = document.getElementById('container');
 ${lift('ccCollectTopicProblems')}
 ${lift('ccClassifyFailure')}
@@ -228,7 +244,7 @@ const failedTopic = {
         copyText && /HTTP 413/.test(copyText) && /card count 5/.test(copyText),
         String(copyText).slice(0, 200));
     check('...and stamps the plugin version, so a pasted report identifies the build',
-        copyText && copyText.indexOf('15.6.4') !== -1);
+        copyText && copyText.indexOf('15.6.5') !== -1);
 
     await page.click('#cc-fail-dismiss');
     check('it closes', (await page.locator('#cc-fail-report').count()) === 0);
@@ -279,6 +295,106 @@ const failedTopic = {
     check('...and they are shown as text rather than rendered',
         (await page.textContent('#cc-fail-report')).indexOf('<img src=x') !== -1);
 
+    console.log('');
+    console.log('5. It carries the theme, because it lives outside the themed container');
+    // tokens.css declares dark mode on .contentcreator-container and its siblings, never
+    // on :root. A fixed overlay has to hang off document.body to sit above everything, so
+    // it resolves the LIGHT values - a white panel with black text on a dark page, which
+    // is the first thing an author would see after a failed build.
+    const themed = await page.evaluate(() => {
+        document.getElementById('container').classList.add('cc-dark');
+        window.ccShowFailureReport([{
+            title: 'T', pass: false,
+            problems: [{ section: 'S', cardType: 'c', reason: 'HTTP 413' }]
+        }]);
+        const panel = document.getElementById('cc-fail-report');
+        const container = document.getElementById('container');
+        const read = (el, t) => window.getComputedStyle(el).getPropertyValue(t).trim();
+        return {
+            panelBg: read(panel, '--cc-bg'),
+            containerBg: read(container, '--cc-bg'),
+            panelFg: read(panel, '--cc-fg'),
+            containerFg: read(container, '--cc-fg'),
+            bodyBg: read(document.body, '--cc-bg')
+        };
+    });
+    check('the harness really does scope dark to the container, as tokens.css does',
+        themed.bodyBg !== themed.containerBg,
+        JSON.stringify(themed) + ' - if these match, this test proves nothing');
+    check('the panel resolves the CONTAINER\'s background, not the page default',
+        themed.panelBg === themed.containerBg, JSON.stringify(themed));
+    check('...and its foreground too', themed.panelFg === themed.containerFg,
+        JSON.stringify(themed));
+    await page.evaluate(() => {
+        document.getElementById('cc-fail-dismiss').click();
+        document.getElementById('container').classList.remove('cc-dark');
+    });
+
+    console.log('');
+    console.log('6. It cleans up after itself, and keeps focus');
+    // The keydown listener used to be removed only when Escape fired. Closing with the
+    // button left it on document, holding a closure over the whole problem list, and every
+    // reopen added another.
+    const listeners = await page.evaluate(() => {
+        let live = 0;
+        const realAdd = document.addEventListener.bind(document);
+        const realRemove = document.removeEventListener.bind(document);
+        document.addEventListener = function (type) {
+            if (type === 'keydown') { live++; }
+            return realAdd.apply(document, arguments);
+        };
+        document.removeEventListener = function (type) {
+            if (type === 'keydown') { live--; }
+            return realRemove.apply(document, arguments);
+        };
+        const rs = [{ title: 'T', pass: false,
+            problems: [{ section: 'S', cardType: 'c', reason: 'x' }] }];
+        for (let i = 0; i < 5; i++) {
+            window.ccShowFailureReport(rs);
+            document.getElementById('cc-fail-dismiss').click();
+        }
+        document.addEventListener = realAdd;
+        document.removeEventListener = realRemove;
+        return live;
+    });
+    check('closing by button removes the key listener, five opens later',
+        listeners === 0, 'listeners still attached: ' + listeners);
+
+    // aria-modal="true" asserts the rest of the page is inert. Tab must not leave.
+    const trapped = await page.evaluate(async () => {
+        window.ccShowFailureReport([{ title: 'T', pass: false,
+            problems: [{ section: 'S', cardType: 'c', reason: 'x' }] }]);
+        const panel = document.getElementById('cc-fail-report');
+        const buttons = panel.querySelectorAll('button');
+        buttons[buttons.length - 1].focus();
+        const ev = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+        buttons[buttons.length - 1].dispatchEvent(ev);
+        return {
+            prevented: ev.defaultPrevented,
+            wrappedToFirst: document.activeElement === buttons[0],
+            inside: panel.contains(document.activeElement)
+        };
+    });
+    check('Tab off the last control wraps back into the dialog',
+        trapped.prevented && trapped.wrappedToFirst && trapped.inside,
+        JSON.stringify(trapped));
+
+    // Closing must hand focus back to whatever opened it.
+    const returned = await page.evaluate(() => {
+        document.getElementById('cc-fail-dismiss').click();
+        const badge = document.createElement('button');
+        badge.id = 'opener';
+        document.getElementById('container').appendChild(badge);
+        badge.focus();
+        window.ccShowFailureReport([{ title: 'T', pass: false,
+            problems: [{ section: 'S', cardType: 'c', reason: 'x' }] }]);
+        document.getElementById('cc-fail-dismiss').click();
+        return document.activeElement && document.activeElement.id;
+    });
+    check('closing returns focus to whatever opened it', returned === 'opener',
+        'focus landed on: ' + returned);
+
+    console.log('');
     check('no JavaScript error was thrown across the whole run',
         pageErrors.length === 0, pageErrors.join('\n'));
 

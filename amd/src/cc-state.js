@@ -71,7 +71,7 @@ define([], function() {
     // so that never fired either.
     //
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.6.4';
+    var CC_VERSION = '15.6.5';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was
