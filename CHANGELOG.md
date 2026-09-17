@@ -1,5 +1,23 @@
 # Changelog
 
+## 15.4.32 - 2026-09-17
+
+Coding-standard and plugin-review cleanup only. **No behavioural change of any
+kind** — every fix in this release is boilerplate, comment capitalisation or
+statement formatting. Sites on 15.4.31 lose nothing by waiting; sites installing
+fresh should take this one.
+
+Moodle plugin-review boilerplate and coding-style advisories, all non-behavioural:
+the two CLI developer fixtures under `tests/moodle/` gained the GPL header and the
+`@package` / `@copyright` / `@license` tags they were missing; comment blocks
+introduced in this release now begin with a capital, matching the codebase's own
+`// FIX-CC-X (v15.4.31).` and `// V15.4.31:` convention; and two multi-line calls
+were reformatted so the first argument starts on its own line.
+
+
+Verified: 37/37 PHP files lint clean, 0 eslint errors, 7/7 JavaScript suites,
+15/15 plugin static checks, `grunt amd` reproducible.
+
 ## 15.4.31 - 2026-09-17
 
 Content-quality and content-loss fixes, prioritised against the live Octec
@@ -121,6 +139,7 @@ warning ahead of `json_encode()` and corrupts the response body.
 **Tooling.** `.eslintrc.json` gains an override for `tests/` and `Gruntfile.js`
 (Node scripts were being linted as browser AMD modules); `.eslintignore` covers
 the Playwright dev scripts. `amd/src` lints with 0 errors.
+
 
 
 ### Second batch — prompt contracts, jurisdiction, and the rest of the audit

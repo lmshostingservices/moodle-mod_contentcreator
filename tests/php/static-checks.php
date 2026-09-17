@@ -112,10 +112,12 @@ $plugin = new stdClass();
 include 'version.php';
 $pkg = json_decode(file_get_contents('package.json'), true);
 preg_match('/^## ([0-9.]+)/m', file_get_contents('CHANGELOG.md'), $logm);
-check('version.php, package.json and the CHANGELOG all say the same release',
+check(
+    'version.php, package.json and the CHANGELOG all say the same release',
     $plugin->release === $pkg['version'] && $plugin->release === ($logm[1] ?? ''),
     "version.php={$plugin->release} package.json={$pkg['version']} changelog=" . ($logm[1] ?? '?'));
-check('$plugin->version is a 10-digit YYYYMMDDXX integer',
+check(
+    '$plugin->version is a 10-digit YYYYMMDDXX integer',
     (bool)preg_match('/^20\d{8}$/', (string)$plugin->version), (string)$plugin->version);
 check('component is mod_contentcreator', $plugin->component === 'mod_contentcreator');
 
@@ -124,7 +126,8 @@ $string = [];
 include 'lang/en/contentcreator.php';
 $usedstrings = [];
 foreach ($phpfiles as $f) {
-    if (preg_match_all('/get_string\(\s*[\'"]([a-zA-Z0-9_]+)[\'"]\s*,\s*[\'"]mod_contentcreator[\'"]/',
+    if (preg_match_all(
+    '/get_string\(\s*[\'"]([a-zA-Z0-9_]+)[\'"]\s*,\s*[\'"]mod_contentcreator[\'"]/',
             file_get_contents($f), $mm)) {
         foreach ($mm[1] as $k) {
             $usedstrings[$k][] = $f;
@@ -132,7 +135,8 @@ foreach ($phpfiles as $f) {
     }
 }
 $missingstrings = array_diff(array_keys($usedstrings), array_keys($string));
-check(count($usedstrings) . ' get_string() keys all exist in lang/en (a missing one renders as [[key]])',
+check(
+    count($usedstrings) . ' get_string() keys all exist in lang/en (a missing one renders as [[key]])',
     empty($missingstrings), implode(', ', $missingstrings));
 
 echo "\n4. Capabilities\n";
@@ -150,7 +154,8 @@ foreach ($phpfiles as $f) {
         }
     }
 }
-check('every capability checked in code is defined in db/access.php',
+check(
+    'every capability checked in code is defined in db/access.php',
     empty(array_diff(array_keys($capsused), $defined)),
     implode(', ', array_diff(array_keys($capsused), $defined)));
 $nostring = [];
@@ -159,8 +164,12 @@ foreach ($defined as $c) {
         $nostring[] = $c;
     }
 }
-check(count($defined) . ' capabilities all have their lang string (a missing one shows a raw key '
-    . 'in Define Roles)', empty($nostring), implode(', ', $nostring));
+check(
+    count($defined) . ' capabilities all have their lang string (a missing one shows a raw key '
+        . 'in Define Roles)',
+    empty($nostring),
+    implode(', ', $nostring)
+);
 
 echo "\n5. Built AMD matches source - amd/build is what Moodle serves\n";
 $markers = [
@@ -173,7 +182,8 @@ $markers = [
 foreach ($markers as $mod => $needles) {
     $built = file_get_contents("amd/build/$mod.min.js");
     foreach ($needles as $needle) {
-        check("amd/build/$mod.min.js contains \"$needle\"",
+        check(
+    "amd/build/$mod.min.js contains \"$needle\"",
             strpos($built, $needle) !== false, 'Rebuild with: npx grunt amd');
     }
 }
@@ -185,7 +195,8 @@ foreach ($srcfiles as $src) {
         $stale[] = basename($src);
     }
 }
-check('no built module is older than its source',
+check(
+    'no built module is older than its source',
     empty($stale), 'stale: ' . implode(', ', $stale) . ' - run: npx grunt amd');
 
 echo "\n" . ($failures ? "FAILED $failures of $checks" : "PASSED all $checks static checks") . "\n";

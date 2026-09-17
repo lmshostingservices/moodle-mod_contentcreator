@@ -1,4 +1,31 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * Content Creator - seed a Topics-and-Text subtopic pack for manual testing.
+ *
+ * Developer fixture. Run from the Moodle root with the CLI:
+ *     php tests/moodle/seed-subtopic.php
+ * It is not reachable over the web and takes no user input.
+ *
+ * @package    mod_contentcreator
+ * @copyright  2026 LMS-Labs
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 // Seeds a Topics-and-Text activity whose cards are `subtopic` — the content-driven
 // prose card added in v15.3.11. This is the shape that exposed
 // FIX-SUBTOPIC-PARAGRAPHS-DISCARDED: the slide editor drew paragraph boxes for it and
@@ -10,10 +37,12 @@ require_once($CFG->dirroot . '/lib/modinfolib.php');
 global $DB, $CFG;
 
 $cat = $DB->get_record('course_categories', [], '*', IGNORE_MULTIPLE);
-$course = create_course((object)[
+$course = create_course(
+    (object)[
     'fullname' => 'Subtopic edit test', 'shortname' => 'subedit' . time(),
     'category' => $cat->id, 'format' => 'topics', 'numsections' => 2,
-]);
+    ]
+);
 
 $manifest = [
   'title' => 'CampusPlus training',

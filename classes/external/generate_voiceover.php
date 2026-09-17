@@ -113,7 +113,7 @@ class generate_voiceover extends external_api {
         string $text,
         string $sectionid = '',
         string $language = '',
-        // v15.4.31 FIX-CC-VOICEOVER-PARAM-ORDER. execute_parameters() declares
+        // FIX-CC-VOICEOVER-PARAM-ORDER (v15.4.31). execute_parameters() declares
         // cmid, text, sectionId, language, subtopicKey, voice - and Moodle dispatches
         // external functions POSITIONALLY. The signature had $voice fifth and
         // $subtopickey sixth, so subtopicKey landed in $voice and vice versa. `voice` is
@@ -169,7 +169,7 @@ class generate_voiceover extends external_api {
         // lookup. See "BILLED PATH BEGINS" below.
 
         // Version 6.5.51: Default to enabled when setting not configured.
-        // v15.4.31: see ajax.php - "0" is falsy, so ?: 1 made the kill switch inert.
+        // V15.4.31: see ajax.php - "0" is falsy, so ?: 1 made the kill switch inert.
         $rawenablevoice = get_config('mod_contentcreator', 'enablevoice');
         $enablevoice = ($rawenablevoice === false || $rawenablevoice === '') ? 1 : (int)$rawenablevoice;
         if (!$enablevoice) {

@@ -365,7 +365,7 @@ class save_slide_edit extends external_api {
             $sectionfound = false;
             $creditsused = 0;
 
-            // v15.4.31 FIX-CC-SLIDE-EDIT-ID-TYPE.
+            // FIX-CC-SLIDE-EDIT-ID-TYPE (v15.4.31).
             //
             // The comparison was a strict === between the manifest's id and the web-service
             // parameter. topicId and sectionId are declared PARAM_TEXT, so they always

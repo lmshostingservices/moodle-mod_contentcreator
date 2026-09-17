@@ -65,7 +65,7 @@ class mod_contentcreator_mod_form extends moodleform_mod {
     public function add_completion_rules() {
         $mform = $this->_form;
 
-        // v15.4.31 FIX-CC-COMPLETION-RULES-INVISIBLE.
+        // FIX-CC-COMPLETION-RULES-INVISIBLE (v15.4.31).
         //
         // Since Moodle 4.3, moodleform_mod appends get_suffix() to completion element
         // names when the form is rendered inside the course-level "Default activity
@@ -109,7 +109,7 @@ class mod_contentcreator_mod_form extends moodleform_mod {
      * @return bool True if one or more rules is enabled, false if none are.
      */
     public function completion_rule_enabled($data) {
-        // v15.4.31: must read the same suffixed keys add_completion_rules() wrote.
+        // V15.4.31: must read the same suffixed keys add_completion_rules() wrote.
         $suffix = method_exists($this, 'get_suffix') ? $this->get_suffix() : '';
         return !empty($data['completionviewallslides' . $suffix])
             || !empty($data['completionallactivities' . $suffix]);

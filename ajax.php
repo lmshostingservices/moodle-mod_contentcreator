@@ -692,7 +692,7 @@ try {
 
     // Additional settings.
     $voicelanguage = get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU';
-    // v15.4.31 FIX-CC-ENABLEVOICE-INERT. `?: 1` treated the string "0" that
+    // FIX-CC-ENABLEVOICE-INERT (v15.4.31). `?: 1` treated the string "0" that
     // admin_setting_configcheckbox stores when the box is UNticked as falsy and replaced
     // it with 1, so the only site-wide kill switch for TTS credit spend could not be
     // turned off. An administrator who disabled voiceover kept paying, with nothing in
@@ -1521,7 +1521,7 @@ try {
             try {
                 $DB->insert_record('contentcreator_checklist', $record);
             } catch (\dml_exception $e) {
-                // v15.4.31: was catch (\Throwable) with an unconditional success:true
+                // V15.4.31: was catch (\Throwable) with an unconditional success:true
                 // below. The comment says it absorbs "the table does not exist yet", but
                 // it swallowed unique-index violations, column-length overflow (topicid is
                 // PARAM_TEXT and unbounded against a CHAR(255) column) and connection
@@ -1830,7 +1830,7 @@ try {
         mod_contentcreator_require_manage($context, $cm);
 
         $audiodata = base64_decode($audiocontent, true);
-        // v15.4.31: $strict. base64_decode() WITHOUT it never returns false - it silently
+        // V15.4.31: $strict. base64_decode() WITHOUT it never returns false - it silently
         // discards invalid characters - so the === false arm was dead and only the length
         // check did any work. Any NUL-free rubbish of 1000+ bytes was stored as .ogg.
         if ($audiodata === false || strlen($audiodata) < 1000) {

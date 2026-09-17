@@ -204,7 +204,7 @@ $string['cachedef_jobowner'] = 'Ownership records binding an asynchronous genera
 // V13.86: PLAYER UI LABELS
 //
 // The player's ~347 interface labels lived only inside amd/src/translations.js, a
-// private 53-language table with its own getLabel() lookup. Nothing in the plugin
+// Private 53-language table with its own getLabel() lookup. Nothing in the plugin
 // called get_string() for any of them, so none could be translated through AMOS or
 // customised by an administrator - a hard fail on the plugins-directory checklist.
 //
