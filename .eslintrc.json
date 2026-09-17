@@ -32,5 +32,22 @@
       "error",
       "never"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "tests/js/**/*.js",
+        "Gruntfile.js"
+      ],
+      "env": {
+        "node": true,
+        "browser": true,
+        "amd": false
+      },
+      "rules": {
+        "no-console": "off",
+        "space-before-function-paren": "off"
+      }
+    }
+  ]
 }

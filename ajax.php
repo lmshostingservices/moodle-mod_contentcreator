@@ -692,7 +692,13 @@ try {
 
     // Additional settings.
     $voicelanguage = get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU';
-    $enablevoice = get_config('mod_contentcreator', 'enablevoice') ?: 1;
+    // v15.4.31 FIX-CC-ENABLEVOICE-INERT. `?: 1` treated the string "0" that
+    // admin_setting_configcheckbox stores when the box is UNticked as falsy and replaced
+    // it with 1, so the only site-wide kill switch for TTS credit spend could not be
+    // turned off. An administrator who disabled voiceover kept paying, with nothing in
+    // the interface to say so.
+    $rawenablevoice = get_config('mod_contentcreator', 'enablevoice');
+    $enablevoice = ($rawenablevoice === false || $rawenablevoice === '') ? 1 : (int)$rawenablevoice;
     $country = get_config('mod_contentcreator', 'country') ?: 'Australia';
 
     $apibaseurl = MOD_CONTENTCREATOR_API_BASE;
@@ -1514,9 +1520,20 @@ try {
             $record->timemodified = time();
             try {
                 $DB->insert_record('contentcreator_checklist', $record);
-            } catch (\Throwable $e) {
-                // Gracefully ignore installs where the table does not exist yet.
+            } catch (\dml_exception $e) {
+                // v15.4.31: was catch (\Throwable) with an unconditional success:true
+                // below. The comment says it absorbs "the table does not exist yet", but
+                // it swallowed unique-index violations, column-length overflow (topicid is
+                // PARAM_TEXT and unbounded against a CHAR(255) column) and connection
+                // errors alike - and told the learner the checklist was saved when it was
+                // not, so the tick vanished on reload with nothing to explain it. The log
+                // line is DEBUG_DEVELOPER, which no production site runs, so it was
+                // invisible from both ends.
                 debugging('mod_contentcreator checklist insert failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+                mod_contentcreator_response([
+                    'success' => false,
+                    'error' => get_string('errorsavefailed', 'mod_contentcreator'),
+                ]);
             }
         }
 
@@ -1812,7 +1829,10 @@ try {
         require_login($cm->course, false, $cm);
         mod_contentcreator_require_manage($context, $cm);
 
-        $audiodata = base64_decode($audiocontent);
+        $audiodata = base64_decode($audiocontent, true);
+        // v15.4.31: $strict. base64_decode() WITHOUT it never returns false - it silently
+        // discards invalid characters - so the === false arm was dead and only the length
+        // check did any work. Any NUL-free rubbish of 1000+ bytes was stored as .ogg.
         if ($audiodata === false || strlen($audiodata) < 1000) {
             mod_contentcreator_fail('errorinvalidaudio');
         }

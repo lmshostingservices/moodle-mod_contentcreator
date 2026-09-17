@@ -133,7 +133,9 @@ $editmode = optional_param('edit', 0, PARAM_INT);
 // itself and only accepts an allowlisted endpoint key from the client.
 if ($canmanage && (!$islocked || $editmode)) {
     // Show the builder for teachers when there is no content, or when in edit mode.
-    $enablevoice = get_config('mod_contentcreator', 'enablevoice') ?: 1;
+    // v15.4.31: see ajax.php - "0" is falsy, so ?: 1 made the kill switch inert.
+    $rawenablevoice = get_config('mod_contentcreator', 'enablevoice');
+    $enablevoice = ($rawenablevoice === false || $rawenablevoice === '') ? 1 : (int)$rawenablevoice;
     $voicelanguage = get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU';
     // V15.1.5: site pronunciation list, applied to narration only. See cc-state.js.
     $pronunciations = (string)(get_config('mod_contentcreator', 'pronunciations') ?: '');

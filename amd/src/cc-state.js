@@ -52,8 +52,26 @@ define([], function() {
     // releases before it. Manual sync discipline has now failed three times; tests/js/
     // test-version-mirror.js asserts this equals $plugin->release and runs with the suite,
     // so a fourth recurrence fails a test instead of reaching production.
+    // v15.4.31: recurred a FOURTH time. 15.4.18 shipped, and this constant then sat
+    // unchanged through 15.4.19 .. 15.4.30 - twelve releases. Confirmed against the
+    // live Octec database on 17 Sep 2026: six manifests carried
+    // "builtWithVersion":"15.4.18", two of them written that same day, on a site
+    // running 15.4.30.
+    //
+    // The v15.1.1 note above says test-version-mirror.js makes a fourth recurrence
+    // impossible. That test is not in the shipped package, which is why it recurred.
+    // tests/js/test-version-mirror.js is restored in this release and runs from
+    // tests/js/run-all.js, so `npm test` now fails on a mismatch.
+    //
+    // The cost is not cosmetic. generator.js keys its system-prompt cache on this
+    // constant precisely so a regeneration cannot reuse a prompt from an older
+    // release; frozen, a pack regenerated on 15.4.30 could hit the cached prompt
+    // built under 15.4.18 and silently lose twelve releases of prompt fixes, at full
+    // price. builder.js's stale-build prompt compares it against the manifest stamp,
+    // so that never fired either.
+    //
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.4.18';
+    var CC_VERSION = '15.4.31';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was
@@ -1677,6 +1695,39 @@ define([], function() {
     }
 
     /**
+     * v15.4.31 FIX-CC-RATELIMIT-INVISIBLE-ON-VENDOR-PATHS.
+     *
+     * v15.4.3 made the server's refusal machine-readable: ajax.php answers a rate limit
+     * with {success:false, errorcode:'ratelimited', bucket, scope, retryafter, ceiling}
+     * precisely so a client need not match English prose in a plugin shipping 53
+     * languages. builder.js and player5.js both have a ccRateLimitInfo() reader for it.
+     *
+     * But the three vendor helpers below threw `new Error(data.error)` and dropped the
+     * envelope on the floor, so ONLY data.error - a translated sentence - survived.
+     * Every caller of vendorFetch was therefore blind to a rate limit: a refused unit
+     * fetch surfaced as "training.gov.au is unavailable, upload the PDF instead", advice
+     * that cannot work, and a refused topic suggestion fell through to a hardcoded
+     * placeholder pack.
+     *
+     * Attaching the fields to the Error keeps every existing `catch (e) { e.message }`
+     * working unchanged while letting a caller that cares read e.errorcode.
+     *
+     * @param {Object} data Decoded response envelope.
+     * @param {String} fallback Message to use when the server sent none.
+     * @return {Error} Error carrying the machine-readable fields.
+     */
+    function vendorError(data, fallback) {
+        var err = new Error((data && data.error) || fallback);
+        if (data && data.errorcode) { err.errorcode = data.errorcode; }
+        if (data && data.bucket) { err.bucket = data.bucket; }
+        if (data && data.scope) { err.scope = data.scope; }
+        if (data && data.retryafter !== undefined) { err.retryafter = parseInt(data.retryafter, 10) || 0; }
+        if (data && data.ceiling !== undefined) { err.ceiling = data.ceiling; }
+        err.rateLimited = !!(data && data.errorcode === 'ratelimited');
+        return err;
+    }
+
+    /**
      * Call the vendor API through the Moodle server-side proxy.
      *
      * The site's API credentials never reach the browser. The client names an
@@ -1710,7 +1761,7 @@ define([], function() {
             })
             .then(function(data) {
                 if (!data || data.success !== true) {
-                    throw new Error((data && data.error) || 'Request failed');
+                    throw vendorError(data, 'Request failed');
                 }
                 return data.data;
             });
@@ -1744,7 +1795,7 @@ define([], function() {
             })
             .then(function(data) {
                 if (!data || data.success !== true) {
-                    throw new Error((data && data.error) || 'Upload failed');
+                    throw vendorError(data, 'Upload failed');
                 }
                 return data.data;
             });
@@ -1775,7 +1826,7 @@ define([], function() {
                 var type = response.headers.get('Content-Type') || '';
                 if (type.indexOf('application/json') !== -1) {
                     return response.json().then(function(data) {
-                        throw new Error((data && data.error) || 'Download failed');
+                        throw vendorError(data, 'Download failed');
                     });
                 }
                 return response.blob();

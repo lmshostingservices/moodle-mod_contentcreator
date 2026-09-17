@@ -365,10 +365,28 @@ class save_slide_edit extends external_api {
             $sectionfound = false;
             $creditsused = 0;
 
+            // v15.4.31 FIX-CC-SLIDE-EDIT-ID-TYPE.
+            //
+            // The comparison was a strict === between the manifest's id and the web-service
+            // parameter. topicId and sectionId are declared PARAM_TEXT, so they always
+            // arrive as PHP strings; a manifest whose topics[].id or sections[].id was
+            // written as a JSON NUMBER decodes to int. 1 === "1" is false, so the section
+            // was never found, the method returned errorsectionnotfound, and the teacher
+            // saw a save fail on a slide that plainly exists. This is the same user-visible
+            // symptom the v15.4.30 note investigated from the player side.
+            //
+            // Casting both sides to string keeps the strict comparison - the point of ===
+            // here is to avoid PHP's loose "abc" == 0 behaviour, which the cast preserves -
+            // while making an int id and a string id of the same value match.
+            //
+            // The isset() guards and the ?? [] are the other half: a topic with no 'id',
+            // or no 'sections', previously raised "Undefined array key" and then ran
+            // foreach over null, which under AJAX_SCRIPT emits a warning BEFORE
+            // json_encode() and corrupts the response body.
             foreach ($manifest['topics'] as &$topic) {
-                if ($topic['id'] === $params['topicId']) {
-                    foreach ($topic['sections'] as &$section) {
-                        if ($section['id'] === $params['sectionId']) {
+                if (isset($topic['id']) && (string)$topic['id'] === (string)$params['topicId']) {
+                    foreach (($topic['sections'] ?? []) as &$section) {
+                        if (isset($section['id']) && (string)$section['id'] === (string)$params['sectionId']) {
                             $section['title'] = $params['title'];
                             $section['description'] = $params['description'];
                             $section['requirements'] = $requirementsarr;

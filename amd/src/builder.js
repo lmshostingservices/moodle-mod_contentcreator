@@ -108,6 +108,7 @@ define([
         'errsuggesttopics', 'errexcelvetonly', 'errexcelnotga', 'errexcelnotopics',
         'errtopicstructure', 'errpastedtext', 'errsavecontent', 'errsaveregenerated',
         'errfiletoolarge', 'errfiletype', 'errnotopicplan', 'errnotopicssuggested',
+        'msgneedsreview', 'msgqafailedhint',
         'errneedcoursetitle', 'errneedtrainingtopic', 'errneedunitcodefirst',
         'errneedunitcode', 'errneedunittext', 'errselectpdf', 'errselectmode',
         'erruploadpdf', 'errtgaunavailable', 'errunitevidencemissing',
@@ -317,6 +318,8 @@ define([
         errnotopicssuggested: 'No topics were suggested. Try a different course title or paste your own topics.',
         errneedcoursetitle: 'Please enter a course / topic title first.',
         errneedtrainingtopic: 'Please enter a training topic first, or upload a document.',
+        msgneedsreview: 'Needs review',
+        msgqafailedhint: 'One or more cards failed generation - open the module and check this topic',
         errneedunitcodefirst: 'Please enter a unit code first.',
         errneedunitcode: 'Please enter a unit code.',
         errneedunittext: 'Please paste the unit text before processing.',
@@ -4697,7 +4700,8 @@ define([
      * @return {String} HTML- and attribute-safe text.
      */
     const escapeHtml = (str) => {
-        if (!str) return '';
+        // v15.4.31: `!str` swallowed 0 and false, returning '' for a legitimate value.
+        if (str === null || str === undefined || str === '') { return ''; }
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -6650,7 +6654,7 @@ define([
                         <div class="cc-paste-text-panel" id="cc-wp-paste-panel">
                             <textarea class="cc-paste-textarea" id="cc-wp-paste-text"
                                       placeholder="${s('msgphchatgptoutput')}"
-                                      data-testid="textarea-wp-paste" rows="6">${workplacePastedContent || ''}</textarea>
+                                      data-testid="textarea-wp-paste" rows="6">${escapeHtml(workplacePastedContent || '')}</textarea>
                             <div class="cc-paste-footer">
                                 <span class="cc-paste-word-count" id="cc-wp-paste-count">${workplacePastedContent ? countWords(workplacePastedContent) + s('msgwordsuffix') : s('msgzerowords')}</span>
                             </div>
@@ -6796,7 +6800,7 @@ define([
                     <div id="cc-bulk-paste-panel" data-testid="panel-bulk-paste">
                         <textarea class="cc-paste-textarea" id="cc-bulk-paste-text" 
                                   placeholder="${s('msgphbulkpaste')}" 
-                                  data-testid="textarea-bulk-paste" rows="10">${storedOutcomes.length > 0 ? escapeHtml(storedOutcomes.join('\\n')) : ''}</textarea>
+                                  data-testid="textarea-bulk-paste" rows="10">${storedOutcomes.length > 0 ? escapeHtml(storedOutcomes.join('\n')) : ''}</textarea>
                         <div class="cc-bulk-paste-actions">
                             <span class="cc-paste-word-count" id="cc-bulk-paste-count">${storedOutcomes.length > 0 ? storedOutcomes.length + s('msgitemssuffix') : s('msgzeroitems')}</span>
                             <div class="cc-bulk-paste-buttons">
@@ -7038,7 +7042,7 @@ define([
                         <label class="cc-label" style="margin-bottom:8px;">${s('msgpastesubtopicslabel')}</label>
                         <textarea id="cc-pd-paste-text" class="cc-textarea" style="min-height:150px;font-family:monospace;" 
                                   placeholder="${s('msgphpdpaste')}"
-                                  data-testid="textarea-pd-paste" rows="10">${storedOutcomes.length > 0 ? escapeHtml(storedOutcomes.join('\\n')) : ''}</textarea>
+                                  data-testid="textarea-pd-paste" rows="10">${storedOutcomes.length > 0 ? escapeHtml(storedOutcomes.join('\n')) : ''}</textarea>
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
                             <span class="cc-paste-word-count" id="cc-pd-paste-count">${storedOutcomes.length > 0 ? storedOutcomes.length + s('msgitemssuffix') : s('msgzeroitems')}</span>
                             <div style="display:flex;gap:8px;">
@@ -7110,7 +7114,7 @@ define([
                                   placeholder="${s('msgphchatgptoutput')}"
                                   data-testid="textarea-pd-chatgpt">${escapeHtml(pdPastedContent)}</textarea>
                         <div style="display:flex;justify-content:space-between;margin-top:4px;">
-                            <span class="cc-paste-word-count" id="cc-pd-chatgpt-count">${pdPastedContent ? pdPastedContent.split(/\\s+/).filter(Boolean).length + s('msgwordsuffix') : s('msgzerowords')}</span>
+                            <span class="cc-paste-word-count" id="cc-pd-chatgpt-count">${pdPastedContent ? pdPastedContent.split(/\s+/).filter(Boolean).length + s('msgwordsuffix') : s('msgzerowords')}</span>
                         </div>
                     </div>
                 </div>
@@ -10129,6 +10133,14 @@ define([
                     foundationSkills: unit.foundationSkills || []
                 };
                 selectedElementIds = [];
+                // v15.4.31: the topic arrays must go with the elements. fetchTGAUnit()
+                // clears them; Refresh and Paste did not, so after replacing the element
+                // set the wizard still held suggestions built against the PREVIOUS one -
+                // and generated subtopics whose PC codes belong to different elements,
+                // into an audit-facing compliance map.
+                suggestedMajorTopics = [];
+                selectedMajorTopicIds = [];
+                topicPlan = null;
                 const detailsEl = document.getElementById('cc-unit-details');
                 if (detailsEl) { detailsEl.innerHTML = renderTGADetails(tgaData); detailsEl.classList.remove('cc-hidden'); }
                 const elementListEl = document.getElementById('cc-element-list');
@@ -10137,9 +10149,15 @@ define([
                 if (corrBar) corrBar.classList.remove('cc-hidden');
                 bindMajorTopicSelectorEvents();
                 bindElementSelectionEvents();
+            } else {
+                // v15.4.31: there was no else. A refusal - including a rate limit or a
+                // credit failure - re-enabled the button, restored the label and showed
+                // nothing at all, so the author saw the spinner stop and the old data
+                // unchanged with no indication anything had gone wrong.
+                showError(humaniseError(data.error) || s('errtgaunavailable'));
             }
         } catch (e) {
-            showError('Refresh failed: ' + e.message);
+            showError(humaniseError(e.message) || s('errtgaunavailable'));
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:14px;height:14px;"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Refresh from TGA'; }
         }
@@ -10245,8 +10263,12 @@ define([
                 tgaData = null;
             }
         } catch (err) {
-            // Show PDF upload fallback on error/timeout
-            showError(s('errtgaunavailable'));
+            // v15.4.31: the real message used to be discarded and every failure was
+            // reported as "training.gov.au is unavailable - upload the PDF instead",
+            // including not-configured, session-expired, rate-limited and invalid-unit-
+            // code. ajax.php deliberately passes the vendor's actionable text through
+            // and the UI threw it away, so the advice was frequently impossible to act on.
+            showError(humaniseError(err && err.message) || s('errtgaunavailable'));
             pdfUploadSection?.classList.remove('cc-hidden');
             tgaData = null;
         } finally {
@@ -10405,7 +10427,7 @@ define([
                 showError(data.error || 'Failed to extract data from pasted text.');
             }
         } catch (err) {
-            showError(s('errpastedtext'));
+            showError(humaniseError(err && err.message) || s('errpastedtext'));
         } finally {
             pdfLoadingEl?.classList.add('cc-hidden');
             if (pdfLoadingEl) pdfLoadingEl.querySelector('span').textContent = s('msgextractingpdf');
@@ -12254,8 +12276,34 @@ define([
                             ccWarn('[PROGRESS] could not reconcile voiceover rows: ' + _ptErr.message);
                         }
 
+                        // v15.4.31 FIX-CC-VOICEOVER-SKIP-FREEZES-TAB.
+                        //
+                        // The stop conditions used to sit on the INNER loop only:
+                        //
+                        //   while (index < allSections.length) {
+                        //       while (promises.length < CONCURRENT && index < allSections.length
+                        //               && !_voSkipRequested && !_voRateLimited) { ...enqueue... }
+                        //       if (promises.length >= CONCURRENT) { await Promise.race(promises); }
+                        //   }
+                        //
+                        // Once the author pressed "Skip voiceover", or a rate limit armed
+                        // _voRateLimited, the inner loop stopped enqueuing but `index` never
+                        // advanced - so the OUTER condition stayed true forever. As soon as
+                        // promises.length fell below CONCURRENT there was no `await` left in
+                        // the loop body, and the whole thing became a tight synchronous spin
+                        // that starved the event loop. The in-flight voiceovers could then
+                        // never settle, the tab locked at 100% CPU, and the generated (and
+                        // already paid for) manifest was never saved. The only way out was
+                        // killing the tab. Pressing the bypass button the UI offers, or
+                        // hitting a rate limit the v15.4.3 work exists to handle gracefully,
+                        // destroyed the run.
+                        //
+                        // Two changes: the stop conditions move to the outer loop so it can
+                        // actually terminate, and the `await` is unconditional so every
+                        // iteration yields to the event loop even when fewer than CONCURRENT
+                        // are in flight.
                         const promises = [];
-                        while (index < allSections.length) {
+                        while (index < allSections.length && !_voSkipRequested && !_voRateLimited) {
                             while (promises.length < CONCURRENT && index < allSections.length
                                     && !_voSkipRequested && !_voRateLimited) {
                                 const section = allSections[index++];
@@ -12264,10 +12312,12 @@ define([
                                 });
                                 promises.push(p);
                             }
-                            if (promises.length >= CONCURRENT) {
-                                await Promise.race(promises);
-                            }
+                            if (!promises.length) { break; }
+                            await Promise.race(promises);
                         }
+                        // Let whatever is still in flight finish either way, so a skip or a
+                        // rate limit keeps the clips already generated rather than orphaning
+                        // calls the site has been billed for.
                         await Promise.all(promises);
                         // v12.57: Hide the bypass button now that the phase is over.
                         if (_voSkipWrap) _voSkipWrap.style.display = 'none';
@@ -12966,12 +13016,17 @@ define([
         if (topicResults.length > 0) {
             qaResultsHtml = '<div class="cc-qa-results"><h3 class="cc-qa-results-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;vertical-align:middle;margin-right:6px;"><path d="M9 12l2 2 4-4"/><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>' + s('msgqaresultstitle') + '</h3><p class="cc-qa-results-desc">' + s('msgqadesc') + '</p>';
             topicResults.forEach(function(t) {
-                const badgeClass = 'cc-qa-badge-pass';
-                const badgeLabel = s('msgvalid');
+                // v15.4.31: `t.pass` was computed from the cards and then never read -
+                // badgeClass and badgeLabel were constants, so EVERY topic rendered
+                // "Valid", including topics whose every card was qualityAction FAILED.
+                // The one screen an author uses to decide whether a pack is shippable was
+                // structurally incapable of reporting a failure.
+                const badgeClass = t.pass ? 'cc-qa-badge-pass' : 'cc-qa-badge-fail';
+                const badgeLabel = t.pass ? s('msgvalid') : s('msgneedsreview');
                 qaResultsHtml += '<div class="cc-qa-topic-row">';
                 qaResultsHtml += '<div class="cc-qa-topic-info">';
-                qaResultsHtml += '<div class="cc-qa-topic-name">' + t.title + '</div>';
-                qaResultsHtml += '<div class="cc-qa-topic-scores">' + s('msgstructurevalidated') + '</div>';
+                qaResultsHtml += '<div class="cc-qa-topic-name">' + escapeHtml(t.title) + '</div>';
+                qaResultsHtml += '<div class="cc-qa-topic-scores">' + (t.pass ? s('msgstructurevalidated') : s('msgqafailedhint')) + '</div>';
                 qaResultsHtml += '</div>';
                 qaResultsHtml += '<div class="cc-qa-badge ' + badgeClass + '">' + badgeLabel + '</div>';
                 qaResultsHtml += '</div>';

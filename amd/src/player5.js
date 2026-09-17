@@ -1290,7 +1290,9 @@ define([
     }
 
     function escapeHtml(str) {
-        if (!str) return '';
+        // v15.4.31: `!str` swallowed 0 and false, returning '' for a legitimate value -
+        // and this is used in attribute position for ids that can be numeric.
+        if (str === null || str === undefined || str === '') { return ''; }
         var div = document.createElement('div');
         div.textContent = str;
         // v13.86: the HTML serialiser escapes & < > in a text node but NEVER quotes,
@@ -4369,7 +4371,13 @@ define([
             // Apply custom header color from manifest (v6.4.4) or use default
             var headerColor = this.manifest.appearanceSettings?.headerColor || '#047857';
             var headerClasses = 'cc5-slide-header' + (isActivitySlide ? ' cc5-slide-header--has-type-label' : '');
-            html += '<div class="' + headerClasses + '" style="background: ' + headerColor + ';">';
+            // v15.4.31: headerColor is author-controlled via the manifest and was interpolated
+            // raw into a style attribute on EVERY learner-facing slide. Validated rather than
+            // merely escaped: a style attribute is not a safe place for arbitrary text even
+            // when quoted, and only a colour is ever meant here.
+            var safeHeaderColor = /^(#[0-9A-Fa-f]{3,8}|[a-zA-Z]{3,20})$/.test(String(headerColor))
+                ? headerColor : '#047857';
+            html += '<div class="' + headerClasses + '" style="background: ' + safeHeaderColor + ';">';
             
             // v7.9.87: Only show slide type label for activity slides (removes empty div from learning slides)
             if (isActivitySlide) {
@@ -6760,13 +6768,32 @@ define([
             var activityType = activity.activityType;
             var $container = this.container;
             var isComplete = false;
-            
+
+            // v15.4.31 FIX-CC-ACTIVITY-NEVER-COMPLETES.
+            //
+            // All six cases below had the completion test INSIDE the `length === 0`
+            // guard, with no else - a lost else, repeated six times:
+            //
+            //     if ($decisionPoints.length === 0) {
+            //         isComplete = true;
+            //         var $answered = $decisionPoints.filter('.cc5-answered');
+            //         isComplete = $answered.length === $decisionPoints.length;
+            //     }
+            //
+            // So an activity that actually HAS decision points skipped the whole block,
+            // isComplete stayed false, canNavigateNext() returned false and the Next
+            // chevron was disabled permanently - while an EMPTY activity auto-completed,
+            // which is the inverse of what is wanted. It shipped because the
+            // activityCompleted[slideId] cache short-circuits this function once a
+            // handler has recorded the interaction, so the failure was intermittent and
+            // depended on which handler the learner happened to trigger first.
             switch (activityType) {
                 case 'scenario-branching':
                     // All decision points must be answered
                     var $decisionPoints = $container.find('.cc5-scenario-branching .cc5-decision-point');
                     if ($decisionPoints.length === 0) {
                         isComplete = true;
+                    } else {
                         var $answered = $decisionPoints.filter('.cc5-answered');
                         isComplete = $answered.length === $decisionPoints.length;
                     }
@@ -6777,6 +6804,7 @@ define([
                     var $responseItems = $container.find('.cc5-best-response .cc5-response-item');
                     if ($responseItems.length === 0) {
                         isComplete = true;
+                    } else {
                         var $revealed = $responseItems.filter('.cc5-revealed');
                         isComplete = $revealed.length === $responseItems.length;
                     }
@@ -6787,6 +6815,7 @@ define([
                     var $details = $container.find('.cc5-what-went-wrong details.cc5-model-answer');
                     if ($details.length === 0) {
                         isComplete = true;
+                    } else {
                         var $opened = $details.filter('[open]');
                         isComplete = $opened.length === $details.length;
                     }
@@ -6797,6 +6826,7 @@ define([
                     var $sequenceSteps = $container.find('.cc5-sequencing .cc5-sequence-steps');
                     if ($sequenceSteps.length === 0) {
                         isComplete = true;
+                    } else {
                         isComplete = $sequenceSteps.attr('data-checked') === 'true';
                     }
                     break;
@@ -6806,6 +6836,7 @@ define([
                     var $situationItems = $container.find('.cc5-escalation .cc5-situation-item');
                     if ($situationItems.length === 0) {
                         isComplete = true;
+                    } else {
                         var $decided = $situationItems.filter(function() {
                             return $(this).find('.cc5-decision-btn.cc5-selected').length > 0;
                         });
@@ -6818,6 +6849,7 @@ define([
                     var $textareas = $container.find('.cc5-reflection .cc5-reflection-input');
                     if ($textareas.length === 0) {
                         isComplete = true;
+                            } else {
                         var allMeetMinimum = true;
                         $textareas.each(function() {
                             var text = $(this).val() || '';
@@ -10348,11 +10380,13 @@ define([
                 html += '<span class="cc5-picker-item-number">' + (index + 1) + '</span>';
                 html += '</div>';
                 // v7.2.0: Add zoom button to preview image fullscreen
-                html += '<button type="button" class="cc5-image-zoom-btn" data-image-url="' + imgUrl + '" aria-label="' + getLabel('zoomImage') + '">';
+                // v15.4.31: the v13.86 sweep escaped the <img src> on the line above and missed
+                // these two data- attributes, which are read back and re-injected by the zoom modal.
+                html += '<button type="button" class="cc5-image-zoom-btn" data-image-url="' + escapeHtml(imgUrl) + '" aria-label="' + escapeHtml(getLabel('zoomImage')) + '">';
                 html += getIcon('zoomIn');
                 html += '</button>';
                 // v11.10: Download button for generated images
-                html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + imgUrl + '" aria-label="' + getLabel('downloadImage') + '" title="' + getLabel('downloadImage') + '">';
+                html += '<button type="button" class="cc5-image-download-btn" data-image-url="' + escapeHtml(imgUrl) + '" aria-label="' + escapeHtml(getLabel('downloadImage')) + '" title="' + escapeHtml(getLabel('downloadImage')) + '">';
                 html += getIcon('download');
                 html += '</button>';
                 html += '</div>';
@@ -10494,7 +10528,10 @@ define([
             html += getIcon('x');
             html += '</button>';
             html += '<div class="cc5-zoom-modal-content">';
-            html += '<img src="' + imageUrl + '" alt="' + getLabel('zoomImage') + '">';
+            // v15.4.31: escaped. imageUrl comes from the community gallery, i.e. from
+                // OTHER Moodle sites, and reached an src attribute raw. The identical
+                // construct three hundred lines below (_renderGalleryModal) was escaped.
+                html += '<img src="' + escapeHtml(imageUrl) + '" alt="' + escapeHtml(getLabel('zoomImage')) + '">';
             html += '</div>';
             html += '</div>';
             html += '</div>';
@@ -17398,14 +17435,34 @@ define([
                                         sec.voiceoverSchemaVersion = VOICEOVER_SCHEMA_VERSION;
                                         sec.voiceoverTextHash = voiceoverTextHash(_autoVoText); // v9.98
                                         self.voiceoverCache[sectionId] = audioUrl;
-                        // v13.94.6: stamp the entry so it can be validated on replay.
-                        self.voiceoverCacheHash = self.voiceoverCacheHash || {};
-                        self.voiceoverCacheHash[sectionId] = section.voiceoverTextHash
-                            || voiceoverTextHash(self.buildFullVoiceoverText(section));
                                         // v13.94.6: stamp the entry so it can be validated on replay.
+                                        //
+                                        // v15.4.31 FIX-CC-EDIT-REGEN-PAYS-TWICE. This block
+                                        // appeared here TWICE, verbatim, and both copies
+                                        // stamped from `section` - which in saveSlideEdit is
+                                        // `self._editingSection`, the deep clone taken when
+                                        // the modal OPENED, i.e. the text before the author's
+                                        // edit. The live, just-updated object is `sec`, and
+                                        // its voiceoverTextHash was set from the new text
+                                        // three lines above.
+                                        //
+                                        // So the freshly generated audio was stamped with the
+                                        // PRE-EDIT hash. playVoiceover() compares the stamp
+                                        // against the live text, saw a mismatch, logged
+                                        // "discarding stale cached voiceover", deleted the
+                                        // entry and issued a SECOND paid TTS call for audio
+                                        // that had just been generated. Line 17296 deletes
+                                        // sec.voiceoverTextHash on the regenerate path, but
+                                        // the clone still carried the old value, so the ||
+                                        // fallback never rescued it.
+                                        //
+                                        // The equivalent block on the on-demand path is
+                                        // correct because its local `section` IS the live
+                                        // manifest object; the two copies had drifted.
                                         self.voiceoverCacheHash = self.voiceoverCacheHash || {};
-                                        self.voiceoverCacheHash[sectionId] = section.voiceoverTextHash
-                                            || voiceoverTextHash(self.buildFullVoiceoverText(section));                                        // v12.25: Confirm voiceover is ready
+                                        self.voiceoverCacheHash[sectionId] = sec.voiceoverTextHash
+                                            || voiceoverTextHash(self.buildFullVoiceoverText(sec));
+                                        // v12.25: Confirm voiceover is ready
                                         Notification.addNotification({
                                             message: getLabel('voUpdated'),
                                             type: 'success'
@@ -19074,7 +19131,11 @@ define([
                 html += '<div class="cc5-doc-disclaimer">';
                 html += '<strong>' + getLabel('trainingExampleTitle') + '</strong>  -  ' + getLabel('trainingExampleDisclaimer');
                 html += '</div>';
-                // Fallback: Show loading and fetch from API (legacy behavior)
+            } else {
+                // v15.4.31: this block's own comment calls it a fallback, but it sat INSIDE
+                // the if. A learner with pre-generated content saw the document AND a
+                // permanent "Generating contextual example..." spinner nothing ever removed;
+                // a learner without it got a completely blank modal body while the fetch ran.
                 html += '<div class="cc5-doc-modal-loading">';
                 html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
                 html += '<span>' + getLabel('generatingContextualExample') + '</span>';

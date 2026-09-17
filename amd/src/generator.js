@@ -1437,7 +1437,19 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
     // Defensive on purpose: the prompt already forbids all of this. Prompts are advice;
     // this is the guarantee.
     // =======================================================================
-    const CC_PROSE_TYPES = ['overview', 'key-concepts', 'examples-application', 'key-takeaways',
+    // v15.4.31: 'subtopic' leads the list. Since v15.3.11 the Topics-and-Text route
+    // emits subtopic cards exclusively - the four names after it are the retired
+    // four-slot shape, kept only so saved modules still normalise. cc-state.js had
+    // exactly this omission and it was fixed there in v15.4.10; generator.js was
+    // never updated, so on the LIVE route every one of the following was inert:
+    //   - normaliseProseParagraphs() never ran, so the literal \n escape sequences
+    //     that v13.92 exists to strip reached the renderer again
+    //   - keyTerms were never coerced to {term, definition}, so CC_FIELD_SPECS read
+    //     keyTerms[].definition as 0 words and reported every card short, forever
+    //   - the "missing paragraphs" structural check never fired on the route's only
+    //     content card
+    const CC_PROSE_TYPES = ['subtopic',
+        'overview', 'key-concepts', 'examples-application', 'key-takeaways',
         'orientation', 'foundations', 'mechanism', 'in-practice', 'boundaries'];
 
     const normaliseProseParagraphs = function(raw) {
@@ -2322,6 +2334,43 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         }
     };
 
+    /**
+     * v15.4.31: a transport fault that must never be retried.
+     *
+     * Distinct from an ordinary Error so the retry ladders in pollJob() and callAI()
+     * can tell "the AI call failed, try again" from "the request never reached the
+     * plugin". The second kind cannot be improved by retrying and, on a path where
+     * the job is already billed, retrying is what loses the content.
+     *
+     * @param {String} message Human-readable cause.
+     */
+    function CcFatalTransportError(message) {
+        this.name = 'CcFatalTransportError';
+        this.message = message;
+        this.ccFatal = true;
+        if (Error.captureStackTrace) { Error.captureStackTrace(this, CcFatalTransportError); }
+    }
+    CcFatalTransportError.prototype = Object.create(Error.prototype);
+    CcFatalTransportError.prototype.constructor = CcFatalTransportError;
+
+    /**
+     * Does this response body look like an HTML page rather than the JSON we asked for?
+     *
+     * Deliberately narrow: only a body whose FIRST non-whitespace bytes open an HTML
+     * document counts. A JSON payload that merely contains markup inside a string - which
+     * generated card content legitimately does - starts with { or [ and is not matched.
+     *
+     * @param {String} body Raw response text.
+     * @return {Boolean} True when the body is an HTML document.
+     */
+    function ccLooksLikeHtml(body) {
+        var head = String(body || '').replace(/^\uFEFF/, '').trimStart().slice(0, 200).toLowerCase();
+        return head.indexOf('<!doctype') === 0
+            || head.indexOf('<html') === 0
+            || head.indexOf('<head') === 0
+            || head.indexOf('<?xml') === 0;
+    }
+
     // -- Async job poller: used by callAI after it starts a generate_slide_async job --
     // Polls GET ajax.php?action=poll_job&jobId=xxx every 3s (first poll after 2s).
     // Returns the inner payload {success, content, credits} when status=done.
@@ -2362,9 +2411,41 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                     { method: 'GET' }, 'The job status check', 25000
                 );
                 if (!pollResp.ok) { throw new Error('Poll HTTP error: ' + pollResp.status); }
-                pollData = JSON.parse(await pollResp.text());
+                var pollText = await pollResp.text();
+                // v15.4.31 FIX-CC-WAF-CHALLENGE-BURNS-PAID-JOB.
+                //
+                // Seen live at Octec on 17 Sep 2026. Every poll came back HTTP 200 with a
+                // bot-protection interstitial instead of ajax.php's JSON:
+                //
+                //   <!DOCTYPE html><title>One moment, please...</title>
+                //   <script>setTimeout(function(){window.location.reload();},5000)</script>
+                //
+                // `pollResp.ok` is true for a 200, so the challenge fell through to
+                // JSON.parse, threw "Unexpected token '<'", and was counted as a TRANSIENT
+                // failure - five times, three seconds apart - after which the job was
+                // abandoned. The jobs had already been submitted and charged, so the site
+                // paid for content it never received and the section shipped as
+                // placeholders. Three sections in that one run.
+                //
+                // An HTML body where JSON belongs is never transient. It means the request
+                // did not reach ajax.php at all: a WAF or bot-challenge page, a maintenance
+                // page, or a login redirect. Retrying cannot help, and retrying is what
+                // turns a recoverable interruption into a lost paid job.
+                if (ccLooksLikeHtml(pollText)) {
+                    throw new CcFatalTransportError(
+                        'The server returned a web page instead of the plugin response while '
+                        + 'polling job ' + jobId + '. This is a security-challenge, maintenance '
+                        + 'or login page from the web server, not a fault in the plugin or the '
+                        + 'AI provider. The job has already been paid for; it can be recovered '
+                        + 'once the server stops intercepting POSTs to ajax.php.');
+                }
+                pollData = JSON.parse(pollText);
                 if (!pollData.ok) { throw new Error(pollData.error || 'Job status check failed'); }
             } catch (pollErr) {
+                // v15.4.31: a transport fault is fatal on the first sighting. Counting it
+                // as transient spends four more pointless polls and then discards a job the
+                // site has been charged for.
+                if (pollErr instanceof CcFatalTransportError) { throw pollErr; }
                 consecutiveErrors++;
                 if (consecutiveErrors >= MAX_CONSECUTIVE_POLL_ERRORS) {
                     throw new Error('Job status check failed ' + consecutiveErrors +
@@ -2527,6 +2608,20 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
             ccDiag('callAI() Raw response length=' + rawText.length + ' chars | preview=' + rawText.substring(0, 200));
 
             let data;
+            // v15.4.31 FIX-CC-WAF-CHALLENGE-BURNS-PAID-JOB, submit side. Same reasoning as
+            // pollJob(): an HTML body means the POST never reached ajax.php, so the retry
+            // ladder below cannot help and its five attempts only widen the window in which
+            // a charged job is lost. Raised before the generic JSON-parse handler so the
+            // author is told what actually happened instead of "invalid JSON".
+            if (ccLooksLikeHtml(rawText)) {
+                ccError('callAI() SERVER RETURNED AN HTML PAGE, NOT JSON');
+                ccError('callAI() Raw response (first 400 chars):', rawText.substring(0, 400));
+                throw new CcFatalTransportError(
+                    'The server returned a web page instead of the plugin response. This is a '
+                    + 'security-challenge, maintenance or login page from your web server, not a '
+                    + 'fault in the plugin or the AI provider. Ask your host to allow POST '
+                    + 'requests to /mod/contentcreator/ajax.php for signed-in users.');
+            }
             try {
                 data = JSON.parse(rawText);
             } catch (jsonErr) {
@@ -2649,6 +2744,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         } catch (error) {
             ccError('callAI() EXCEPTION: ' + error.message);
             const errorMsg = error.message || '';
+            // v15.4.31: a transport fault is never retried, whatever its wording. Checked
+            // by TYPE rather than by matching the message, because every other branch in
+            // this function classifies on prose and that is exactly how the WAF challenge
+            // came to be treated as transient in the first place.
+            if (error && error.ccFatal) { throw error; }
+
             const is429 = errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('Resource exhausted');
             // v10.25: AbortError fires when our 175-second client deadline fires  -  treat it
             // as a timeout transient so it retries with the longer 20s base delay.
@@ -4805,7 +4906,9 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         try {
             sourceText = String((context && (context.sourceExtract || context.priorityContent)) || '');
         } catch (e) { sourceText = ''; }
-        var anchorType = (mode === 'topicstext') ? 'overview' : 'hook-scenario';
+        // v15.4.31: 'subtopic', not the retired 'overview' - anchoring to a card type the
+        // route no longer emits meant every continuity criterion returned early here.
+        var anchorType = (mode === 'topicstext') ? 'subtopic' : 'hook-scenario';
         cards.forEach(function(card, ci) {
             var standard;
             try {
@@ -4841,8 +4944,71 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                     return;
                 }
                 if (c.check !== 'regex' || !c.re) { return; }
+
+                // v15.4.31 FIX-CC-QUALITY-REGEX-SCOPE.
+                //
+                // Every regex criterion used to be tested against harvestCardText(card) -
+                // the WHOLE card flattened into one space-joined string - regardless of
+                // which field the rule names. That is wrong in both directions and it was
+                // costing real money, because every issue this function raises starts
+                // "QUALITY STANDARD [" and that prefix is in CC_REPAIRABLE.
+                //
+                // Measured on the shipped v15.4.30 criteria:
+                //   VET-CONCEPT-1  required a citable instrument. Run over the whole card
+                //                  it PASSED on the sentence "Act quickly when the alarm
+                //                  sounds." and FAILED an honest card whose heading is the
+                //                  empty string the VET prompt explicitly tells it to
+                //                  return when no instrument applies. The repair was then
+                //                  asked to supply an instrument - i.e. the plugin paid to
+                //                  have a legal citation invented on a VET card, which
+                //                  every fidelity block in prompts.js forbids.
+                //   VET-HOOK-4     anchors with \?\s*$. The end of the whole card is the
+                //                  keyTakeaway, which must be two statements, so a fully
+                //                  compliant hook-scenario failed on every generation, on
+                //                  four routes.
+                //
+                // Two optional properties on a criterion fix this without changing how any
+                // existing rule is written:
+                //   field      - a field path in ccReadFieldPathRaw syntax ('heading',
+                //                'sceneParts[].text'), or an ARRAY of paths tried in order
+                //                until one yields a value. The array form carries the
+                //                vendor aliases, so a rule written against sceneParts also
+                //                works on a card that came back as keyPoints.
+                //   fieldIndex - 0-based element of a repeated field. A rule about
+                //                "panel 4" is fieldIndex 3, which is what makes the \?\s*$
+                //                anchor mean the end of THAT panel rather than the end of
+                //                the card.
+                //   allowEmpty - a 'require' rule passes when the named field is empty.
+                //                For fields the prompt explicitly permits to be blank.
+                // A criterion with none of these behaves exactly as it did before, so
+                // rules that are genuinely about the whole card are untouched.
+                var subject = text;
+                if (c.field) {
+                    var paths = Array.isArray(c.field) ? c.field : [c.field];
+                    var parts = [];
+                    for (var pi = 0; pi < paths.length; pi++) {
+                        var vals;
+                        try { vals = ccReadFieldPathRaw(card, paths[pi]); } catch (e) { vals = []; }
+                        var got = vals.map(function(v) { return String((v && v.text) || ''); });
+                        if (got.some(function(g) { return g.trim() !== ''; })) { parts = got; break; }
+                        if (got.length && !parts.length) { parts = got; }
+                    }
+                    if (typeof c.fieldIndex === 'number') {
+                        parts = parts.length > c.fieldIndex ? [parts[c.fieldIndex]] : [];
+                    }
+                    var nonEmpty = parts.filter(function(p) { return p.trim() !== ''; });
+                    // The field is absent or blank. For a require rule that permits it,
+                    // that is a pass, not a failure. A require rule that does NOT permit
+                    // it, and a forbid rule, fall through and are decided against ''.
+                    if (!nonEmpty.length && c.allowEmpty && c.polarity !== 'forbid') { return; }
+                    // A field that is simply not present on this card cannot be judged;
+                    // failing it would report every card whose vendor shape differs.
+                    if (!parts.length) { return; }
+                    subject = parts.join(' ');
+                }
+
                 var matched;
-                try { matched = c.re.test(text); } catch (e) { return; }
+                try { matched = c.re.test(subject); } catch (e) { return; }
                 // v15.3.7: a source-aware forbid rule only fires on content the source
                 // does NOT contain. Re-run the pattern globally over the card text and
                 // keep only the hits that are absent from the document; if every hit is
@@ -4852,7 +5018,10 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                     try {
                         var gre = new RegExp(c.re.source, c.re.flags.indexOf('g') === -1
                             ? c.re.flags + 'g' : c.re.flags);
-                        var hits = text.match(gre) || [];
+                        // v15.4.31: re-scan the SAME subject the rule matched against,
+                        // not the whole card, or a field-scoped rule would be excused by
+                        // a quotation somewhere else on the card.
+                        var hits = subject.match(gre) || [];
                         var unsourced = hits.filter(function(h) {
                             return sourceText.toLowerCase().indexOf(String(h).toLowerCase()) === -1;
                         });
@@ -4978,7 +5147,21 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         //
         // Repairable rather than review-only: the missing card is cheap for the model to
         // add and the repair pass carries the same subtopicKey, so the retry is free.
-        /^PACK SHAPE:/
+        /^PACK SHAPE:/,
+        // v15.4.31: paddingIssues() and duplicateSentenceIssues(). Both have been wired
+        // into softIssues, and priority-ordered within it, for several releases - and both
+        // matched nothing in this list, so every finding was dropped on the floor. Same
+        // failure as the four the comments above describe.
+        //
+        // Repairable rather than review-only because both are cheap for the model to fix
+        // and are squarely content-quality: a promised specific that never arrives, three
+        // abstractions in a row, and a sentence copy-pasted between two cards of one pack
+        // are all things a single rewrite genuinely corrects.
+        //
+        // Anchored to the message prefixes so they cannot fire on anything else.
+        /^A PROMISED SPECIFIC IS NEVER GIVEN/,
+        /^PADDING - THREE ABSTRACTIONS IN A ROW/,
+        /repeats a sentence already used on card/
     ];
 
     /**
@@ -5000,7 +5183,30 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         /NO SOURCE DOCUMENT REACHED GENERATION/,
         // v15.4.20: every distractor in the pack came back bare. Raises needsReview so the
         // author sees it; deliberately NOT repairable - see optionFeedbackIssues().
-        /NO WRONG-ANSWER FEEDBACK ANYWHERE IN THIS PACK/
+        /NO WRONG-ANSWER FEEDBACK ANYWHERE IN THIS PACK/,
+        // v15.4.31 FIX-CC-REPAIR-DESTROYED-CONTENT-UNFLAGGED.
+        //
+        // This is the fifth time a detector has been written, wired into softIssues, and
+        // had every finding silently discarded for matching nothing in either list. The
+        // comment on CC_REPAIRABLE below has warned about this exact failure four times
+        // (v15.3.7, v15.4.11, v15.4.13, v15.4.16) and each time the fix was "add another
+        // pattern" rather than "stop routing on prose". See the note at the head of
+        // CC_REPAIRABLE for why that is now scheduled to change.
+        //
+        // Of the four that were being discarded, THIS one is the serious one. The message
+        // is raised at the end of the structural-repair branch when the repaired section
+        // comes back materially shorter than it went in - the adjacent comment there says
+        // "this is content loss and is being recorded on the section". It was recorded on
+        // `qualityIssues`, which has no reader anywhere in builder.js or player5.js, and
+        // it matched neither list, so it did not raise needsReview either. A repair that
+        // destroyed half a section shipped looking clean and was not counted in
+        // "N sections need attention".
+        //
+        // Review-only rather than repairable on purpose: the content is already gone by
+        // the time this fires, and spending a second paid call to regenerate a section
+        // whose first repair just deleted its content is how a bad repair becomes two bad
+        // repairs. A human has to look at it.
+        /lost content during a structural repair/
     ];
 
     /**
@@ -6108,8 +6314,50 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                     const topIssues = lastIssues.slice(0, 5);
                     ccLog('%c[REPAIR] TARGETED REPAIR with top ' + topIssues.length + '/' + lastIssues.length + ' issues (mode: ' + repairMode + '):', 'color: #ef4444; font-weight: bold;');
                     ccLog('%c[REPAIR] Top issues:', 'color: #ef4444;', topIssues);
+                    // v15.4.31 FIX-CC-REPAIR-LOSES-HALF-THE-CONTRACT.
+                    //
+                    // Generation builds its system prompt as
+                    //   route prompt + card-quality block + legislation + spelling + language
+                    // (see the cache block above). The repair path called
+                    // getContentRepairPromptForMode() and stopped, so a repair pass ran with
+                    // NO spelling instruction and NO legislation context - and a repair
+                    // rewrites the very fields those blocks govern.
+                    //
+                    // Concretely: a US pack repaired with no American-spelling block has its
+                    // keyPoints rewritten into whatever the model defaults to, undoing the
+                    // v13.85 fix on exactly the fields the repair touched. An AU VET pack
+                    // loses the verified instrument list at the moment it is most likely to
+                    // invent one.
+                    //
+                    // The card-quality block goes on for the same reason: every
+                    // "QUALITY STANDARD [...]" issue is repairable, so the model is regularly
+                    // asked to fix a criterion whose full standard - intent, per-card
+                    // guidance, sibling criteria - it has never been shown. It only ever got
+                    // the one-line `rule` string inside the issue text.
+                    //
+                    // Built from the same helpers, in the same order, as generation. This is
+                    // the same class of defect the v15.4.4 note records for the naming block
+                    // at this call site; two more blocks were still missing.
+                    let repairSystem = Prompts.getContentRepairPromptForMode(repairMode, promptContext);
+                    const repairLang = context?.language || context?.voiceLanguage || 'en-AU';
+                    const repairIsNonEnglish = !!Prompts.getLanguageInstructions(repairLang);
+                    const repairCountry = context?.country || context?.countryCode || 'AU';
+
+                    const repairQuality = Prompts.getCardQualityBlock(repairMode);
+                    if (repairQuality) { repairSystem += '\n' + repairQuality; }
+
+                    if (ccLegislationRelevant(repairMode, promptContext, topic)) {
+                        const repairLegislation = Prompts.Legislation.buildPromptInjection(
+                            repairCountry, promptContext?.state || '', 'content');
+                        if (repairLegislation) { repairSystem += '\n' + repairLegislation; }
+                    }
+                    if (!repairIsNonEnglish) {
+                        const repairSpelling = Prompts.getSpellingInstructions(repairCountry);
+                        if (repairSpelling) { repairSystem += '\n' + repairSpelling; }
+                    }
+
                     prompt = {
-                        system: Prompts.getContentRepairPromptForMode(repairMode, promptContext),
+                        system: repairSystem,
                         user: Prompts.buildContentRepairPromptForMode(lastScore?.cards || [], topIssues, topicTitle, promptContext)
                     };
                     contentType = 'five-card-targeted-repair';

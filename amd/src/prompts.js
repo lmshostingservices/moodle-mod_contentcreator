@@ -152,7 +152,8 @@ MANDATORY SPELLING (${code === 'AU' ? 'Australian' : code === 'GB' || code === '
 - Use "-ise" not "-ize": organise, recognise, authorise, prioritise, finalise, minimise, standardise
 - Use "-our" not "-or": colour, behaviour, favour, honour, labour, neighbour
 - Use "-re" not "-er": centre, metre, fibre, litre, theatre
-- Use "-ce" not "-se": licence (noun), defence, offence, practise (verb)
+- Use "-ce" not "-se": licence (noun), defence, offence
+- The practice/practise pair is the exception: practice is the NOUN, practise is the VERB
 - Use "-ogue" not "-og": catalogue, dialogue, analogue
 - Use "-ment" after "e": judgement, acknowledgement, abridgement
 - Double consonants: travelling, cancelling, labelling, modelling
@@ -164,7 +165,8 @@ MANDATORY SPELLING (American English):
 - Use "-ize" not "-ise": organize, recognize, authorize, prioritize, finalize, minimize, standardize
 - Use "-or" not "-our": color, behavior, favor, honor, labor, neighbor
 - Use "-er" not "-re": center, meter, fiber, liter, theater
-- Use "-se" not "-ce": license (noun), defense, offense, practice (verb)
+- Use "-se" not "-ce": license (noun), defense, offense
+- Americans use "practice" for BOTH the noun and the verb
 - Use "-og" not "-ogue": catalog, dialog, analog
 - Single consonants: traveling, canceling, labeling, modeling
 - Other: program (not programme), tire (not tyre), curb (not kerb), gray (not grey)
@@ -412,14 +414,24 @@ Generate ALL content in ${languageName}. This is NON-NEGOTIABLE
     // fell through to the 7-card VET schema. normalizeCards then saw 5 cards against an
     // expected 7 and bailed out, which meant Route 5 never received the markdown
     // stripping, slang substitution or doubled-word repair every other route gets.
+    // v15.4.31: the live shape, not the four-slot design retired in v15.3.11.
+    //
+    // normalizeCards() reads cardTypes.length as the expected count and, on a match,
+    // POSITIONALLY stamps cardType onto untyped cards - so a five-card pack was being
+    // branded with four card types nothing generates any more, and no subtopic card
+    // ever received a contrastType. This route's length is content-driven
+    // (CC_CARD_COUNT_RANGE), so the positional backfill is suppressed for it in
+    // normalizeCards rather than relying on a count that has no single right value.
     const TOPICSTEXT_CARD_SCHEMA = {
-        cardTypes: ['overview', 'key-concepts', 'examples-application', 'key-takeaways', 'decision-point'],
+        cardTypes: ['subtopic', 'decision-point'],
         contrastTypes: {
+            'subtopic':             'translation',
+            'decision-point':       'checklist',
+            // Retained so a module saved before v15.3.11 still resolves a contrast type.
             'overview':             'translation',
             'key-concepts':         'translation',
             'examples-application': 'workplace-scenario',
-            'key-takeaways':        'checklist',
-            'decision-point':       'checklist'
+            'key-takeaways':        'checklist'
         }
     };
 
@@ -1112,6 +1124,62 @@ Generate ALL content in ${languageName}. This is NON-NEGOTIABLE
 
     const getFieldSpecs = (mode) => CC_FIELD_SPECS[mode] || CC_FIELD_SPECS.vet;
 
+    /**
+     * v15.4.31 FIX-CC-IMPOSSIBLE-CARD-BUDGET.
+     *
+     * Every unified route told the model, in a paragraph headed "LENGTH - NOT
+     * NEGOTIABLE", that "written to spec a card lands between 180 and 310 words".
+     * That single band was hand-typed, it was the same on three routes, and it was
+     * arithmetically impossible on several card types. Derived from the field specs
+     * this file already carries:
+     *
+     *     VET / Workplace  mental-model        332-584   (its MINIMUM is 22 words
+     *                                                     above the stated ceiling)
+     *                      concept-explainer   273-373
+     *     PD               mental-model        372-664
+     *                      mistakes            305-600
+     *                      competency-summary  265-470
+     *     University       decision-point      182-272   (stated band 170-265)
+     *
+     * So the prompt asserted two mutually exclusive length rules in the same
+     * breath: hit every per-field range, AND land the whole card in a band those
+     * ranges cannot produce. A model cannot satisfy both, and the way it splits the
+     * difference is by under-writing the per-field ranges - which is the shape of
+     * the long-standing "9% of fields met their stated range" finding.
+     *
+     * The comment at CC_EXPECTED_ITEMS says deriving the floor from the specs is
+     * exactly why that table exists, and that "the two can never contradict each
+     * other again, whichever one someone edits". That was true of the floor and
+     * never got applied to the prose. This is the prose half.
+     *
+     * Renders the real per-card-type totals for the route, so the number in the
+     * prompt is the number the specs produce, by construction.
+     *
+     * @param {String} mode Route id.
+     * @return {String} The length paragraph for that route's system prompt.
+     */
+    const ccCardBudgetLine = function(mode) {
+        var types = getCardSchemaForMode(mode).cardTypes;
+        var rows = [];
+        var lo = null;
+        var hi = null;
+        types.forEach(function(ct) {
+            var r = getCardWordRange(mode, ct);
+            if (!r) { return; }
+            rows.push('  ' + ct + ': ' + r.min + '-' + r.max + ' words');
+            lo = (lo === null || r.min < lo) ? r.min : lo;
+            hi = (hi === null || r.max > hi) ? r.max : hi;
+        });
+        if (!rows.length) { return ''; }
+        return 'CARD TOTALS - THE CARD TYPES ARE NOT THE SAME SIZE, and you must not average them:\n'
+            + rows.join('\n') + '\n'
+            + 'Those totals are the SUM of the per-field ranges specified below; they are not a\n'
+            + 'separate target and there is nothing to reconcile. Write each field inside its own\n'
+            + 'stated range and the card total takes care of itself. Across this route a card runs\n'
+            + 'from about ' + lo + ' to ' + hi + ' words of visible learner-facing text, which is the whole\n'
+            + 'budget - there is no separate narration field to write.';
+    };
+
     // ===========================================================================
     // VET 7-CARD SYSTEM PROMPT
     // ===========================================================================
@@ -1500,9 +1568,9 @@ Naming the trade is not the same as being about the work. "Talk to the client ab
 requirements" is still the conversation, not the job.
 
 LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
-authoritative. Hit every one of them. Written to spec a card lands between 180 and 310 words of
-visible learner-facing text, which is the whole budget - there is no separate narration field to
-write. Use the range as a safety rail, not a target. Write enough to complete the teaching job in that field;
+authoritative. Hit every one of them.
+${ccCardBudgetLine('vet')}
+Use the range as a safety rail, not a target. Write enough to complete the teaching job in that field;
 do not converge on the midpoint and do not pad a simple point.
 Sentences stay under 20 words  -  reaching the word count means MORE sentences carrying more
 specifics, never longer ones. Add detail that does work: the actual step, the real consequence,
@@ -1621,7 +1689,7 @@ a pack about a different subject and still make sense.
    question mark. It must NOT end with the characters resolving it themselves - if the people in
    the scene work it out, the learner has watched somebody else learn and committed to nothing.
 2. concept-explainer  -  keyPoints[5]{title(3-5 words), text(42-56 words  -  how the thing actually works on the job, with the figure, tolerance, interval or named method that makes it usable)}, heading(the Act, regulation or code of practice this sits under  -  name it as a worker would say it, not by section number). If this topic genuinely sits under no such document, return heading as an empty string and keyInfo as the plain requirement - never invent one, and never restate a fact as though it were an obligation., keyInfo(30-42 words  -  the duty it places on this learner, in plain English. What a WORKER must do, not what the RTO must evidence), summaryLine(18-26 words linking to Card 1  -  one full sentence that names the person, place or task from Card 1 and says what they now know. This is a SENTENCE, not a caption: "Back on the same job, you now know which reading tells you to stop and who you tell before you do." is the right length and shape)
-   TEST: each of the three panels must contain something a learner could be WRONG about. A panel
+   TEST: each of the five panels must contain something a learner could be WRONG about. A panel
    that only says a thing is important is not a panel.
    PANEL 1 ANSWERS CARD 1'S QUESTION and opens on the thing that CONTRADICTS THE OBVIOUS GUESS.
    Every panel states a MECHANISM WITH ITS PARTS NAMED, not a benefit with adjectives on it: what
@@ -1655,7 +1723,7 @@ a pack about a different subject and still make sense.
 6. competency-summary  -  title(topic-specific, phrased as the competency itself  -  NOT "You Are Ready When You Can"), standardItems[5]{text(verb-first, 7-10 words  -  a short label, not a sentence), benefit(14-22 words. Not an abstract virtue  -  what it looks like on the job when this is done properly, in the words a supervisor would use signing it off. "The apprentice who follows you through the gate copies whatever you just did, so do it the way you would want it copied." This is the standard an assessor would accept, said plainly)}, errorItems[5]{error(verb or "Not...", 10-12 words), consequence(14-18 words)}
    THESE ARE FACTS IN IMPERATIVE FORM, NOT VIRTUES. The avoid column names the specific WRONG
    BELIEF, not the vice.
-7. decision-point  -  heading(the question itself, 22-32 words, 2nd person, a real situation with the numbers in it), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(32-44 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(30-44 words explaining why it is wrong)}
+7. decision-point  -  heading(the question itself, 22-32 words, 2nd person, a real situation with the numbers in it), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-44 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(30-44 words explaining why it is wrong)}
    Build the three wrong answers from real misconceptions, or from the right answer to a DIFFERENT
    case - a rule applied at the wrong threshold is the best distractor there is.
    TEST: a competent tradesperson should have to think, and should be able to say why each wrong
@@ -1693,9 +1761,9 @@ ${CC_SHARED_QUALITY_RULES}
 VOICE: Clear academic mentor. Sentences under 25 words. Use "you". Technical terms are fine  -  define each one. Never use: learn, understand, know, be aware of, appreciate, explore.
 
 LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
-authoritative. Hit every one of them. Written to spec a card lands between 170 and 265 words of
-visible learner-facing text, which is the whole budget - there is no separate narration field to
-write. Use the range as a safety rail, not a target. Write enough to complete the teaching job in that field;
+authoritative. Hit every one of them.
+${ccCardBudgetLine('university')}
+Use the range as a safety rail, not a target. Write enough to complete the teaching job in that field;
 do not converge on the midpoint and do not pad a simple point.
 Sentences stay under 25 words  -  reaching the word count means MORE sentences carrying more
 specifics, never longer ones. Add detail that does work: the named theorist, the date, the
@@ -1889,9 +1957,9 @@ Naming the industry is not the same as being about the subject. "Ask the athlete
 training" is still the advising, not the science.
 
 LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
-authoritative. Hit every one of them. Written to spec a card lands between 180 and 310 words of
-visible learner-facing text, which is the whole budget - there is no separate narration field to
-write. Use the range as a safety rail, not a target. Write enough to complete the teaching job in that field;
+authoritative. Hit every one of them.
+${ccCardBudgetLine('workplace')}
+Use the range as a safety rail, not a target. Write enough to complete the teaching job in that field;
 do not converge on the midpoint and do not pad a simple point.
 Sentences stay under 20 words  -  reaching the word count means MORE sentences carrying more
 specifics, never longer ones. Add detail that does work: the actual step, the real cost, the
@@ -1966,21 +2034,21 @@ hit. The brackets are annotation - do not return them.
       "icon": "map-pin",
       "text": "A customer reaches the counter at ten past nine on Saturday holding two tubs of
                creatine. She lifts three times a week and wants to know which one is worth the extra
-               nineteen dollars. There are four people in the queue behind her waiting."  [44 words]
+               nineteen dollars. There are four people in the queue behind her and the phone is ringing at the till."  [51 words]
     },
     {
       "title": "The question under it",                       [4 words]
       "icon": "message-circle",
       "text": "She is not really asking about the brand, she is asking whether creatine does anything
                for her. The label she is holding claims a loading phase of twenty grams a day for a
-               week. That is the part she is actually worried about."  [43 words]
+               week. That is the part she is worried about, and the tub costs nineteen dollars more."  [49 words]
     },
     {
       "title": "What the evidence says",                      [4 words]
       "icon": "clipboard-check",
       "text": "Creatine monohydrate at three to five grams a day reaches the same muscle saturation
                as loading. It simply takes about four weeks instead of one, and the dearer tub is the
-               same compound. You tell her that in those words, at the counter."  [43 words]
+               same compound. You tell her that in those words, at the counter, without reaching for the label."  [48 words]
     },
     {
       "title": "What she walks out with",                     [5 words]
@@ -2031,7 +2099,7 @@ a pack about a different subject and still make sense.
    "Carbohydrates are important for energy" is a category label.
    summaryLine names what this rests on from EARLIER in the pack where there is an earlier slide:
    "this only works because of the overlap you saw in slide one".
-   TEST: each of the three panels must contain something a reader could be WRONG about. A panel
+   TEST: each of the five panels must contain something a reader could be WRONG about. A panel
    that only says a thing is important is not a panel.
    PANEL 1 ANSWERS CARD 1'S QUESTION and opens on the thing that CONTRADICTS THE OBVIOUS GUESS.
    Every panel states a MECHANISM WITH ITS PARTS NAMED, not a benefit with adjectives on it: what
@@ -2111,7 +2179,7 @@ a pack about a different subject and still make sense.
    to. "Communicates clearly" fails that. "Checks the batch number against the run sheet" passes.
    THESE ARE FACTS IN IMPERATIVE FORM, NOT VIRTUES. The avoid column names the specific WRONG
    BELIEF, not the vice.
-7. decision-point  -  heading(the question itself, 22-32 words, 2nd person, a real situation with the numbers in it), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(32-44 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(30-44 words explaining why it is wrong)}
+7. decision-point  -  heading(the question itself, 22-32 words, 2nd person, a real situation with the numbers in it), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-44 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(30-44 words explaining why it is wrong)}
    The question must be answerable only by someone who understood the SUBJECT. Build the three
    wrong answers from the beliefs the reference material corrects, or from the right answer to a
    DIFFERENT case - a rule applied at the wrong threshold is the best distractor there is.
@@ -2166,9 +2234,9 @@ step or a system to follow. Do NOT name equipment, PPE or worksites unless the t
 about them. If a card could be satisfied by following a checklist, it is the wrong card.
 
 LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
-authoritative. Hit every one of them. Written to spec a card lands between 180 and 310 words of
-visible learner-facing text, which is the whole budget - there is no separate narration field to
-write. Use the range as a safety rail, not a target. Write enough to complete the teaching job in that field;
+authoritative. Hit every one of them.
+${ccCardBudgetLine('pd')}
+Use the range as a safety rail, not a target. Write enough to complete the teaching job in that field;
 do not converge on the midpoint and do not pad a simple point.
 Sentences stay under 22 words  -  reaching the word count means MORE sentences carrying more
 specifics, never longer ones. Add detail that does work: the actual move, the words you would
@@ -2245,14 +2313,14 @@ hit. The brackets are annotation - do not return them.
       "text": "You put twenty minutes in Priya's calendar for Thursday, having let this same
                conversation slide in February. Her last two handovers went out with the client's
                figures unchecked, and one reached the client that way. You have both documents open
-               in front of you."  [44 words]
+               in front of you, with the client's email printed on top."  [51 words]
     },
     {
       "title": "What you actually say",                       [4 words]
       "icon": "message-circle",
       "text": "You open with the specific: both handovers, both unchecked, and what happened
                downstream on the second one. You do not open by saying how you have been meaning to
-               raise this for a while. She goes quiet, which is roughly what you expected."  [43 words]
+               raise this for a while. She goes quiet for a while, which is roughly what you expected her to do."  [49 words]
     },
     {
       "title": "Reading the silence",                         [3 words]
@@ -2264,9 +2332,9 @@ hit. The brackets are annotation - do not return them.
     {
       "title": "What changes on Monday",                      [4 words]
       "icon": "list-checks",
-      "text": "She asks for a second pair of eyes on her next three handovers, which is her idea
-               rather than yours. You agree to read them by Tuesday lunchtime each week until she
-               says she is done. The fourth one goes out unchecked and correct."  [44 words]
+      "text": "She asks for a second pair of eyes on her next three handovers, her idea not
+               yours. You agree to read them by Tuesday lunchtime each week until she
+               says she is done. The fourth one goes out unchecked and correct, six weeks after the conversation."  [46 words]
     }
   ],
   "keyTakeaway": "Naming your own delay turns a late conversation from an ambush into a shared
@@ -2287,7 +2355,7 @@ a pack about a different subject and still make sense.
    question mark. It must NOT end with the characters resolving it themselves - if the people in
    the scene work it out, the learner has watched somebody else learn and committed to nothing.
 2. concept-explainer  -  keyPoints[5]{title(3-5 words), text(42-56 words  -  what the principle actually claims and where it stops holding, not a restatement of its name)}, heading(the name of the principle, model or professional standard this rests on  -  NOT a law, act or regulation). If this topic genuinely sits under no such document, return heading as an empty string and keyInfo as the plain requirement - never invent one, and never restate a fact as though it were an obligation., keyInfo(30-42 words  -  what that principle actually requires of the practitioner, in plain English), summaryLine(18-26 words linking to Card 1  -  one full sentence that names the person, place or task from Card 1 and says what they now know. This is a SENTENCE, not a caption: "Back on the same job, you now know which reading tells you to stop and who you tell before you do." is the right length and shape)
-   TEST: each of the three panels must contain something a thoughtful practitioner could DISAGREE
+   TEST: each of the five panels must contain something a thoughtful practitioner could DISAGREE
    with. A panel nobody could argue against is a panel with no claim in it.
    PANEL 1 ANSWERS CARD 1'S QUESTION and opens on the thing that CONTRADICTS THE OBVIOUS GUESS.
    Every panel states a MECHANISM WITH ITS PARTS NAMED, not a benefit with adjectives on it: what
@@ -2340,7 +2408,7 @@ a pack about a different subject and still make sense.
    belief being corrected and what it costs when someone acts on it)}
    THESE ARE FACTS IN IMPERATIVE FORM, NOT VIRTUES. The avoid column names the specific WRONG
    BELIEF, not the vice.
-7. decision-point  -  heading(the question itself, 22-32 words, 2nd person, professional judgment, with enough of the situation to make it a real call), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(32-44 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(30-44 words explaining why it is wrong)}
+7. decision-point  -  heading(the question itself, 22-32 words, 2nd person, professional judgment, with enough of the situation to make it a real call), standardItems[1]{text(the ONE correct answer, 10-16 words), consequence(30-44 words explaining why it is right)}, errorItems[3]{error(a plausible wrong answer, 10-16 words), consequence(30-44 words explaining why it is wrong)}
    Every wrong answer must be a move a thoughtful, well-intentioned professional would actually
    make - the kind, reasonable option that costs something later. If a distractor is obviously
    careless, it is not a distractor.
@@ -2410,6 +2478,12 @@ a pack about a different subject and still make sense.
 const POLICY_SYSTEM_PROMPT = `You are an expert compliance-training designer turning an organisation's own policy, code of conduct or procedure document into training that staff will be held to.
 
 Return ONLY valid JSON: { "cards": [...] } - exactly 6 cards, in the order below. No markdown and no code fences.
+
+LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
+authoritative. Hit every one of them.
+${ccCardBudgetLine('policy')}
+Use the range as a safety rail, not a target. Write enough to complete the teaching job in that
+field; do not converge on the midpoint and do not pad a simple point.
 All fields must be returned exactly as specified. Do not rename, omit or reorder fields.
 
 ${CC_SHARED_QUALITY_RULES}
@@ -2469,7 +2543,7 @@ CARDS (generate in this order):
    reasoning.
    summaryLine links back to the scope established on Card 1.
 
-3. mental-model = WHAT YOU MUST DO - title(4-10 words), steps[3-5]{step(3-6 words), icon, detail(80-140 words)}.
+3. mental-model = WHAT YOU MUST DO - title(4-10 words), steps[4-5]{step(3-6 words), icon, detail(80-140 words)}.
    The document's own process, as actions: recognise the trigger, do the required act, tell
    the named role, know what record now exists.
    Any threshold, timeframe or quantity in a step must be the literal figure the source
@@ -2503,7 +2577,13 @@ Do NOT return a voiceoverText field on any card.
 
 const GENERAL_SYSTEM_PROMPT = `You are an expert instructional designer and learning storyteller generating high-quality adult learning that is not formal VET, organisation-specific Workplace training, or University academic study.
 
-Return ONLY valid JSON: { "cards": [...] } - exactly 6 cards, in the order below. No markdown and no code fences.
+Return ONLY valid JSON: { "cards": [...] } - exactly 7 cards, in the order below. No markdown and no code fences.
+
+LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
+authoritative. Hit every one of them.
+${ccCardBudgetLine('general')}
+Use the range as a safety rail, not a target. Write enough to complete the teaching job in that
+field; do not converge on the midpoint and do not pad a simple point.
 All fields must be returned exactly as specified. Do not rename, omit or reorder fields.
 
 ${CC_SHARED_QUALITY_RULES}
@@ -3742,7 +3822,7 @@ able to say what is on yours and not on any of theirs.`;
         const struggles = context.learnerChallenges || context.commonStruggles || context.whatUsuallyGoesWrong || '';
         const realExample = context.realExample || context.exampleToInclude || '';
         const duration = context.courseDuration || context.duration || context.estimatedDuration || '';
-        return `${langPrefix}Create a 6-card General learning sequence: Orient, Understand, Explore, Apply, Challenge, Consolidate.
+        return `${langPrefix}Create a 7-card General learning sequence: Orient, Understand, Apply, Resolve, Explore, Consolidate, Challenge.
 
 CONTEXT:
 - Course/Topic: ${context.courseName || context.courseTitle || topic.title || topic.name || ''}
@@ -3757,9 +3837,9 @@ ${realExample ? `\nREAL EXAMPLE TO INCORPORATE WHERE USEFUL: ${realExample}` : '
 ${context.additionalInstructions ? `\nTEACHER INSTRUCTIONS: ${context.additionalInstructions}` : ''}
 ${context.priorityContent ? `\nREFERENCE MATERIAL:\n${ccRelevantSource(context.priorityContent, topic, CC_SOURCE_BUDGET)}` : ''}
 
-Privately classify the learning type and build the six-card General Learning Blueprint before drafting -
-Orient, Understand, Explore, Apply, Challenge, Consolidate - then write the full 6-card sequence. Reduce
-scope rather than depth if the duration is short.${ccSiblingBlock(topic)}${ccVarietyBlock(topic.title || topic.name || '', 'general', topic, context)}${langSuffix}`;
+Privately classify the learning type and build the seven-card General Learning Blueprint before drafting -
+Orient, Understand, Apply, Resolve, Explore, Consolidate, Challenge - then write the full 7-card sequence.
+Reduce scope rather than depth if the duration is short.${ccSiblingBlock(topic)}${ccVarietyBlock(topic.title || topic.name || '', 'general', topic, context)}${langSuffix}`;
     };
 
     const buildVetFiveCardUserPrompt = (context, topic) => {
@@ -4030,7 +4110,14 @@ Generate the full 7-card sequence.${ccUniVarietyBlock(topic.title || topic.name 
         // Everything below - the per-route field repairs and the text cleanup at the
         // bottom - keys off cardType, not position, and must run either way. Previously
         // a count mismatch returned early and skipped all of it.
-        if (cards.length === expectedCount) {
+        //
+        // v15.4.31: and NEVER positionally on a content-driven route. Topics and Text
+        // emits as many subtopic cards as the topic has parts, so cardTypes.length is
+        // not an expected count there - it is just the list of type names the route
+        // uses. Stamping by position would brand card 2 of a six-subtopic pack as the
+        // decision-point. The alias/contrastType repair in the else branch is keyed on
+        // cardType and is correct for every route, so range routes take that path.
+        if (cards.length === expectedCount && !getCardCountRange(mode)) {
             cards.forEach((card, i) => {
                 if (!card.cardType && card.type) { card.cardType = card.type; delete card.type; }
                 if (!card.cardType) card.cardType = schema.cardTypes[i];

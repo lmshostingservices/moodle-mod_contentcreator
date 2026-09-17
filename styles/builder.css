@@ -2737,6 +2737,28 @@ body.dark .cc-file-upload-zone:hover,
     background: hsl(38 92% 90%);
     color: hsl(32 95% 30%);
 }
+/* v15.4.31: the pass/warn badges had no dark-mode variant either. */
+:root[data-theme="dark"] .cc-qa-badge-pass,
+.cc-dark .cc-qa-badge-pass {
+    background: hsl(142 40% 18%);
+    color: hsl(142 60% 78%);
+}
+:root[data-theme="dark"] .cc-qa-badge-warn,
+.cc-dark .cc-qa-badge-warn {
+    background: hsl(38 45% 20%);
+    color: hsl(38 85% 78%);
+}
+/* v15.4.31: the QA screen could not render a failure - badgeClass was hardcoded to
+   -pass, so this class was never emitted and never styled. Both halves fixed. */
+.cc-qa-badge-fail {
+    background: hsl(0 84% 94%);
+    color: hsl(0 70% 35%);
+}
+:root[data-theme="dark"] .cc-qa-badge-fail,
+.cc-dark .cc-qa-badge-fail {
+    background: hsl(0 45% 20%);
+    color: hsl(0 80% 82%);
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    PLUGIN UPDATE PANEL (v13.95)

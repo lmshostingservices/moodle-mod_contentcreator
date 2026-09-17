@@ -104,8 +104,8 @@ class generate_voiceover extends external_api {
      * @param string $text Text to convert to speech.
      * @param string $sectionid Section identifier the audio belongs to.
      * @param string $language Language code override, for example 'fr-FR'.
-     * @param string $voice Chirp 3 HD voice name.
      * @param string $subtopickey Billing key of the subtopic this audio belongs to.
+     * @param string $voice Chirp 3 HD voice name.
      * @return array Result structure as described by execute_returns().
      */
     public static function execute(
@@ -113,8 +113,15 @@ class generate_voiceover extends external_api {
         string $text,
         string $sectionid = '',
         string $language = '',
-        string $voice = '',
-        string $subtopickey = ''
+        // v15.4.31 FIX-CC-VOICEOVER-PARAM-ORDER. execute_parameters() declares
+        // cmid, text, sectionId, language, subtopicKey, voice - and Moodle dispatches
+        // external functions POSITIONALLY. The signature had $voice fifth and
+        // $subtopickey sixth, so subtopicKey landed in $voice and vice versa. `voice` is
+        // PARAM_ALPHA and a billing key is cck_<base36>_<24 chars>, so
+        // validate_parameters() threw invalid_parameter_exception and the whole call
+        // failed for every web-service and mobile caller.
+        string $subtopickey = '',
+        string $voice = ''
     ): array {
         global $CFG, $USER;
 
@@ -162,7 +169,9 @@ class generate_voiceover extends external_api {
         // lookup. See "BILLED PATH BEGINS" below.
 
         // Version 6.5.51: Default to enabled when setting not configured.
-        $enablevoice = get_config('mod_contentcreator', 'enablevoice') ?: 1;
+        // v15.4.31: see ajax.php - "0" is falsy, so ?: 1 made the kill switch inert.
+        $rawenablevoice = get_config('mod_contentcreator', 'enablevoice');
+        $enablevoice = ($rawenablevoice === false || $rawenablevoice === '') ? 1 : (int)$rawenablevoice;
         if (!$enablevoice) {
             return [
                 'success'      => false,

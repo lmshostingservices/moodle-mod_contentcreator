@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+defined('MOODLE_INTERNAL') || die();
+
 /**
  * Structure step to restore one contentcreator activity.
  *
@@ -220,6 +222,19 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
             $manifest
         );
 
+        // v15.4.31: preg_replace() returns NULL on a PCRE failure (backtrack or JIT
+        // stack limit), and this subject is a whole manifest - documented elsewhere in
+        // this file as 6-10 MB. The null check used to sit BELOW the second call, so a
+        // null from the first was passed straight in as the subject, coerced to '',
+        // and `'' !== null && '' !== $manifest` then passed the guard and wrote a
+        // compressed EMPTY STRING over the restored activity's manifest. Checked here,
+        // where it can still bail out with the original intact.
+        if ($updated === null) {
+            debugging('mod_contentcreator: manifest URL rewrite failed (PCRE), leaving the '
+                . 'restored manifest unchanged.', DEBUG_DEVELOPER);
+            return;
+        }
+
         // Escaped form, as produced by PHP json_encode() without JSON_UNESCAPED_SLASHES.
         $updated = preg_replace(
             '#https?:\\\\/\\\\/[^"\s]+?\\\\/pluginfile\.php\\\\/\d+\\\\/mod_contentcreator\\\\/voiceovers\\\\/\d+\\\\/#',
@@ -227,7 +242,13 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
             $updated
         );
 
-        if ($updated !== null && $updated !== $manifest) {
+        if ($updated === null) {
+            debugging('mod_contentcreator: escaped manifest URL rewrite failed (PCRE), leaving '
+                . 'the restored manifest unchanged.', DEBUG_DEVELOPER);
+            return;
+        }
+
+        if ($updated !== $manifest) {
             // Re-compress on the way back in so the row keeps the storage format the rest
             // of the plugin expects for a manifest of this size.
             $DB->set_field(

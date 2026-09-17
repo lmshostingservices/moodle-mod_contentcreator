@@ -1,5 +1,238 @@
 # Changelog
 
+## 15.4.31 - 2026-09-17
+
+Content-quality and content-loss fixes, prioritised against the live Octec
+database rather than against the source alone. Every change in this release has
+a test in `tests/js/` that fails on 15.4.30 and passes on 15.4.31.
+
+**The test suite is back.** `package.json` has declared `"test": "node
+tests/js/run-all.js"` for some time and that file was not in the package, so
+`npm test` exited MODULE_NOT_FOUND and nothing ran - while comments throughout
+the codebase asserted that specific tests made specific bugs impossible. Four of
+those bugs recurred. `run-all.js` is restored, runs every `tests/js/test-*.js`
+as its own child process, and is wired into the release runbook.
+
+**FIX-CC-VERSION-MIRROR: CC_VERSION had been stale for twelve releases.**
+`cc-state.js` said `15.4.18` on a 15.4.30 plugin - the fourth recurrence of a
+defect whose own comment block says a test prevents it. Confirmed live: six
+manifests in the Octec database carried `"builtWithVersion":"15.4.18"`, two of
+them written the same day, on a 15.4.30 site.
+
+This is not cosmetic. `generator.js` keys its system-prompt cache on the
+constant precisely so a regeneration cannot reuse a prompt from an older
+release; frozen, a pack regenerated on 15.4.30 could hit the prompt cached under
+15.4.18 and silently lose twelve releases of prompt fixes, at full price.
+`builder.js` compares it against the manifest stamp to offer "built with an
+older release, re-apply?" - that never fired either.
+`tests/js/test-version-mirror.js` now fails the suite on any mismatch.
+
+**FIX-CC-WAF-CHALLENGE-BURNS-PAID-JOB: a transport fault is no longer retried.**
+Observed live on 17 September. Every poll returned HTTP 200 carrying a
+bot-protection interstitial (`<!DOCTYPE html>... One moment, please...`) instead
+of JSON. `pollResp.ok` is true for a 200, so the challenge reached `JSON.parse`,
+threw, and was counted as a *transient* failure - five times, three seconds
+apart - after which the job was abandoned. Those jobs had already been submitted
+and charged, so the site paid for content it never received and three sections
+shipped as placeholders.
+
+An HTML body where JSON belongs means the request never reached `ajax.php` -
+a WAF, a maintenance page or a login redirect. It is now detected on both the
+submit and poll paths, raised as a non-retryable `CcFatalTransportError`, and
+re-thrown by type rather than by matching the message wording, which is how the
+misclassification happened in the first place. The author is told what actually
+occurred instead of "invalid JSON".
+
+**FIX-CC-ISSUE-ROUTING: four detectors had every finding silently discarded.**
+`softIssues` is not the repair queue; the repair queue is the subset matching
+`CC_REPAIRABLE`, and the same lists feed `needsReview`. A message matching
+neither is measured and thrown away - not repaired, not flagged, not shown,
+because `qualityIssues` on the card has no reader.
+
+Discarded until now: `paddingIssues` (both messages), `duplicateSentenceIssues`,
+and - the serious one - the structural-repair content-loss warning, whose own
+adjacent comment claims it "is being recorded on the section". A repair that
+destroyed half a section shipped looking clean and was not counted in "N
+sections need attention". That one is review-only on purpose: the content is
+already gone, and a second paid call to regenerate a section whose first repair
+just deleted its content turns one bad repair into two.
+
+This is the fifth occurrence of this exact failure. `tests/js/test-issue-routing.js`
+now asserts the routing of every detector message, and the real fix - returning
+`{message, route}` instead of matching prose with regexes - is recorded in that
+file for whoever takes it on.
+
+**FIX-CC-QUALITY-REGEX-SCOPE: criteria are tested against the field they name.**
+Every regex criterion was run against the whole card flattened into one string,
+regardless of which field the rule was about. Since every issue this raises is
+prefixed `QUALITY STANDARD [` and that prefix is repairable, each misfire bought
+a paid repair. Measured on the shipped criteria:
+
+- `VET-CONCEPT-1` required a citable instrument. It **passed** on the sentence
+  "Act quickly when the alarm sounds." and **failed** an honest card whose
+  `heading` is the empty string the VET prompt explicitly tells it to return
+  when no instrument applies. The repair was then asked to supply one - the
+  plugin was paying to have legislation invented on a VET card, which every
+  fidelity block in `prompts.js` forbids.
+- `VET-HOOK-4` and four siblings anchor with `\?\s*$`. The end of the flattened
+  card is the `keyTakeaway`, which must be two statements, so a fully compliant
+  hook-scenario failed on every generation, on four routes.
+- The absolutist-strawman bans forbade the bare words `only`, `all` and `never`
+  anywhere on a decision-point - including the question stem and all four
+  feedback strings, where the prompts require sentences that use them.
+- `UNI-ANCHOR-2` and `UNI-FRAMEWORK-1` carried the `i` flag, which makes
+  `[A-Z][a-z]{2,}` match any word in any case - so a rule about a capitalised
+  surname and a four-digit year was satisfied by "the survey ran for 1995
+  participants".
+
+Criteria may now declare `field`, `fieldIndex` and `allowEmpty`; a criterion
+declaring none behaves exactly as before, so whole-card rules are untouched.
+Twelve criteria are now scoped. `tests/js/test-card-quality-scope.js` covers
+both directions - the false failures and the false passes.
+
+**FIX-CC-VOICEOVER-SKIP-FREEZES-TAB.** The voiceover pre-generation loop carried
+its stop conditions on the inner loop only, so pressing "Skip voiceover" - or
+arming a rate limit - stopped it enqueuing without advancing `index`. The outer
+condition stayed true, and once fewer than `CONCURRENT` promises were in flight
+there was no `await` left in the body: a tight synchronous spin that starved the
+event loop, locked the tab at 100% CPU and never saved the generated, already
+paid for, manifest. The conditions move to the outer loop and the `await` is
+unconditional. Work already in flight is still awaited, so a skip keeps the
+clips the site has been billed for.
+
+**FIX-CC-EDIT-REGEN-PAYS-TWICE.** After a slide edit triggered a voiceover
+regeneration, the fresh audio was stamped in the cache with the *pre-edit* text
+hash: the block used `section` (the clone taken when the modal opened) where the
+live object is `sec`. `playVoiceover()` compared the stamp to the live text, saw
+a mismatch, discarded the entry as stale and issued a second paid TTS call for
+audio that had just been generated. The block also appeared twice, verbatim;
+the equivalent code on the on-demand path was correct, and the two copies had
+drifted.
+
+**FIX-CC-SLIDE-EDIT-ID-TYPE.** `save_slide_edit` compared manifest ids to
+web-service parameters with `===`. `topicId`/`sectionId` are `PARAM_TEXT` and so
+always strings, while an id written as a JSON number decodes to `int`, and
+`1 === "1"` is false: the section was never found and the teacher saw
+`errorsectionnotfound` on a slide that plainly exists. Both sides are now cast,
+which keeps the strict comparison while matching across types. Missing `id` and
+missing `sections` are guarded, so a malformed topic no longer emits a PHP
+warning ahead of `json_encode()` and corrupts the response body.
+
+**Tooling.** `.eslintrc.json` gains an override for `tests/` and `Gruntfile.js`
+(Node scripts were being linted as browser AMD modules); `.eslintignore` covers
+the Playwright dev scripts. `amd/src` lints with 0 errors.
+
+
+### Second batch — prompt contracts, jurisdiction, and the rest of the audit
+
+**FIX-CC-IMPOSSIBLE-CARD-BUDGET.** Every unified route told the model, under a
+heading reading "LENGTH - NOT NEGOTIABLE", that "written to spec a card lands
+between 180 and 310 words". Derived from the field specs in the same file:
+VET/Workplace `mental-model` is **332-584** — its *minimum* is 22 words above the
+stated ceiling — `concept-explainer` is 273-373, PD's `mistakes` is 305-600 and
+its `competency-summary` 265-470, and University's `decision-point` is 182-272
+against a stated 170-265. The prompt asserted two mutually exclusive length rules
+in one breath, and the way a model splits that difference is by under-writing the
+per-field ranges — which is the shape of the open "9% of fields met their stated
+range" finding.
+
+The band is now rendered from `getCardWordRange()` per card type, so the number in
+the prompt is the number the specs produce, by construction. General and Policy
+had no length paragraph at all and now get one; their `mental-model` is 336-594.
+
+**Worked examples that broke their own rule.** Three Workplace and three PD scene
+panels were annotated 43-44 words against the 46-56 floor the same prompt states,
+so the single strongest signal in each prompt demonstrated under-length output.
+Each gains one clause of concrete detail; a pre-existing 20-word sentence (against
+the prompt's own under-20 rule) is shortened, and all 16 annotations are now
+machine-checked against the prose.
+
+**FIX-CC-GENERAL-CARD-COUNT.** `GENERAL_SYSTEM_PROMPT` said "exactly 6 cards" and
+the user prompt said it twice more, in an order that omitted RESOLVE — while the
+schema, `getCardCountForMode`, `CC_CARD_ORDER`, `CC_FIELD_SPECS` and the prompt's
+own numbered card list all say seven. The user prompt is last and most concrete,
+so the model returned six, positional backfill was skipped, `validateCards` failed
+"Expected 7, got 6", and a billed repair fired on every General section. Vendor
+contract `2026-09-05.2`, recorded in the v15.3.17 release note, confirms seven.
+
+**FIX-CC-TOPICSTEXT-SCHEMA.** `TOPICSTEXT_CARD_SCHEMA` still named the four-slot
+shape retired in v15.3.11, and `normalizeCards` reads `cardTypes.length` as an
+expected count and stamps `cardType` positionally on a match. `CC_PROSE_TYPES` in
+generator.js likewise omitted `subtopic` — the same omission was fixed in
+cc-state.js at v15.4.10 and never carried across — so on the live route paragraph
+normalisation never ran, `keyTerms` were never coerced to `{term, definition}`
+(making `CC_FIELD_SPECS` report every card 0 words), and the continuity anchor
+pointed at `overview`, a card type the route no longer emits. Positional backfill
+is now suppressed for content-driven routes outright.
+
+**FIX-CC-WRONG-JURISDICTION.** The country dropdown emits ISO `GB`; the
+legislation pack is keyed `UK`; `getPack()` fell back to `LEGISLATION_PACKS['AU']`.
+A United Kingdom course was therefore generated against Australian WHS and RTO
+Standards with the block labelled "(Australia)", and the on-slide compliance
+footer read "WHS · APPs · EO · RTO Standards". Same for SG, AE, IN, PH and ZA.
+`GB` now aliases to `UK`, and a country with no verified pack emits **no**
+legislation block rather than another country's.
+
+**FIX-CC-REPAIR-LOSES-HALF-THE-CONTRACT.** Generation builds its system prompt as
+route prompt + card-quality block + legislation + spelling + language. The repair
+path stopped at the route prompt — so a repair rewrote the very fields those
+blocks govern with no spelling instruction and no legislation context, and was
+asked to fix `QUALITY STANDARD [...]` issues whose full standard it had never been
+shown. Built from the same helpers, in the same order, as generation.
+
+**FIX-CC-ACTIVITY-NEVER-COMPLETES.** All six cases in `isActivityComplete()` had
+the completion test *inside* the `length === 0` guard with no else — a lost else,
+repeated six times. An activity that actually had decision points skipped the whole
+block and the Next chevron stayed disabled forever, while an empty activity
+auto-completed. It shipped because the `activityCompleted` cache short-circuits the
+function once a handler has recorded an interaction, making the failure
+intermittent. The document modal had the same inverted shape: its own comment calls
+the block a "fallback" while it sat inside the `if`.
+
+**FIX-CC-ENABLEVOICE-INERT.** `get_config(...) ?: 1` treated the string `"0"` that
+`admin_setting_configcheckbox` stores when unticked as falsy and replaced it with
+1, so the only site-wide kill switch for TTS credit spend could not be turned off.
+Three call sites.
+
+**FIX-CC-VOICEOVER-PARAM-ORDER.** `generate_voiceover::execute()` declared
+parameters in the order `cmid, text, sectionId, language, subtopicKey, voice` and
+its signature took `voice` fifth. Moodle dispatches external functions
+positionally, so `subtopicKey` landed in `$voice`; `voice` is `PARAM_ALPHA` and a
+billing key is `cck_<base36>_<24 chars>`, so `validate_parameters()` threw and the
+call failed outright for every web-service and mobile caller.
+
+**FIX-CC-COMPLETION-RULES-INVISIBLE.** `mod_form.php` did not apply
+`$this->get_suffix()` to its completion elements, required since Moodle 4.3, so
+both custom completion rules were invisible and unsettable in the course-level
+bulk completion editor. The site this was found on runs Moodle 5.2.2.
+
+**FIX-CC-RESTORE-CAN-EMPTY-A-MANIFEST.** The `preg_replace()` null guard in the
+restore step ran *after* the value had already been passed as the subject of the
+second call, so a PCRE failure on the first coerced to `''`, passed the guard, and
+wrote a compressed empty string over the restored activity's manifest. Each result
+is now checked where it can still bail out.
+
+**Other.** `save_checklist` caught `\Throwable` and returned `success: true`
+regardless, so a failed insert told the learner their checklist was saved;
+`base64_decode()` without `$strict` never returns false, so the guard on stored
+audio was dead; `escapeHtml(0)` returned `''` in both builder and player; the QA
+completion screen hardcoded the "Valid" badge and never read the pass flag it had
+computed (and rendered the topic title unescaped); `'\\n'` inside a template
+literal collapsed six subtopics onto one line and `/\\s+/` made the PD word count
+always read "1 words"; the vendor helpers in cc-state.js discarded the
+machine-readable rate-limit envelope so no caller could see a rate limit; "Refresh
+from TGA" had no failure branch at all and left the previous unit's topic
+suggestions in place; four XSS sinks in the player, each with a correctly-escaped
+sibling nearby; `MOODLE_INTERNAL` guards on the four files missing them; and a
+`cc-qa-badge-fail` style, with dark-mode variants for the pass and warn badges
+that had none.
+
+**Not changed, deliberately.** Server-side completion validation, the answer being
+present in the DOM, and the ~4,500 lines of unreferenced code (`amd/src/activities/`,
+`scorm.exporter.js`, `document_generator/`, the VET category tables) are product
+decisions, not defects to patch silently. They remain in the audit document.
+
+
 ## 15.4.30 - 2026-09-10
 
 **FIX-SUBTOPIC-PARAGRAPHS-DISCARDED: editing a card's text in the slide editor did

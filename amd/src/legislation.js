@@ -597,9 +597,25 @@ define([], function() {
      * @param {string} countryCode - ISO country code (AU, UK, NZ, CA, US)
      * @returns {Object|null} Legislation pack or null if not found
      */
+    // v15.4.31 FIX-CC-WRONG-JURISDICTION.
+    //
+    // Two defects, one line. The builder's country dropdown emits ISO 'GB' for the
+    // United Kingdom while the pack is keyed 'UK', and the fallback was
+    // `|| LEGISLATION_PACKS['AU']` - so a UK course was generated against Australian
+    // WHS and RTO Standards, and buildPromptInjection() then labelled the block
+    // "VERIFIED COMPLIANCE CANDIDATE CONTEXT (Australia)". The same applied to every
+    // other country the UI offers with no pack: SG, AE, IN, PH, ZA.
+    //
+    // Silently substituting one country's law for another is the worst possible
+    // failure for this route, so an unknown country now returns null and the callers
+    // emit no legislation block at all rather than the wrong one. ALIASES carries the
+    // spellings that genuinely mean the same jurisdiction.
+    const COUNTRY_ALIASES = { 'GB': 'UK', 'GBR': 'UK', 'AUS': 'AU', 'NZL': 'NZ', 'CAN': 'CA', 'USA': 'US' };
+
     const getPack = (countryCode) => {
-        const code = (countryCode || 'AU').toUpperCase();
-        return LEGISLATION_PACKS[code] || LEGISLATION_PACKS['AU'];
+        const raw = String(countryCode || '').toUpperCase().trim();
+        const code = COUNTRY_ALIASES[raw] || raw;
+        return LEGISLATION_PACKS[code] || null;
     };
 
     /**
@@ -658,6 +674,9 @@ define([], function() {
      */
     const getMergedPack = (countryCode, stateCode) => {
         const basePack = getPack(countryCode);
+        // v15.4.31: no pack for this country means no legislation context, not
+        // Australia's. Every consumer already treats a falsy pack as "say nothing".
+        if (!basePack) { return null; }
         const overlay = getOverlay(countryCode, stateCode);
         return applyOverlay(basePack, overlay);
     };
@@ -698,6 +717,12 @@ define([], function() {
     const buildPromptInjection = (countryCode, stateCode, contentType = 'content') => {
         const pack = getMergedPack(countryCode, stateCode);
 
+        // v15.4.31: no verified pack for this country, so there is no verified context
+        // to inject. Saying nothing is correct; the previous silent fallback to the
+        // Australian pack put WHS and RTO Standards into courses for other countries
+        // and labelled the block "(Australia)".
+        if (!pack || !pack.meta) { return ''; }
+
         let injection = `
 VERIFIED COMPLIANCE CANDIDATE CONTEXT (${pack.meta.country}):
 The following rules come from the plugin's verified country/state pack. They are CANDIDATE CONTEXT,
@@ -726,8 +751,14 @@ TRUTH RULES:
      * @returns {string[]} Array of abbreviations e.g. ['WHS', 'APPs', 'EO']
      */
     const getComplianceTags = (countryCode) => {
-        const code = (countryCode || 'AU').toUpperCase();
-        const abbrevs = ABBREVIATION_MAP[code] || ABBREVIATION_MAP['AU'];
+        // v15.4.31: same fallback defect as getPack(). The on-slide compliance footer
+        // read "WHS - APPs - EO - RTO Standards" on a United Kingdom course, because
+        // 'GB' missed the 'UK' key and dropped through to Australia. An unknown country
+        // now shows no tags rather than another country's.
+        const raw = String(countryCode || '').toUpperCase().trim();
+        const code = COUNTRY_ALIASES[raw] || raw;
+        const abbrevs = ABBREVIATION_MAP[code];
+        if (!abbrevs) { return []; }
         return Object.values(abbrevs).filter(Boolean);
     };
 
@@ -748,6 +779,9 @@ TRUTH RULES:
      */
     const getSpelling = (countryCode) => {
         const pack = getPack(countryCode);
+        // v15.4.31: en-AU remains the default spelling for an unknown country, which is
+        // a house style choice and harmless. It is NOT the same as asserting that
+        // country's law, which is what getPack() used to do.
         return pack?.spelling || 'en-AU';
     };
 

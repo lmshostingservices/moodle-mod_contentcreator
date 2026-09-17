@@ -65,25 +65,41 @@ class mod_contentcreator_mod_form extends moodleform_mod {
     public function add_completion_rules() {
         $mform = $this->_form;
 
+        // v15.4.31 FIX-CC-COMPLETION-RULES-INVISIBLE.
+        //
+        // Since Moodle 4.3, moodleform_mod appends get_suffix() to completion element
+        // names when the form is rendered inside the course-level "Default activity
+        // completion" / bulk-edit screens. Without it the elements are named differently
+        // from what that screen expects, so both custom rules are invisible and
+        // unsettable there - and completion_rule_enabled() looks up keys that are not in
+        // $data, so it reports no rule enabled even when one is.
+        //
+        // The site this was found on runs Moodle 5.2.2, so this is live, not theoretical.
+        // get_suffix() returns '' on the ordinary module settings form, which is why the
+        // defect is invisible in the place authors usually look.
+        $suffix = method_exists($this, 'get_suffix') ? $this->get_suffix() : '';
+
+        $viewall = 'completionviewallslides' . $suffix;
         $mform->addElement(
             'checkbox',
-            'completionviewallslides',
+            $viewall,
             '',
             get_string('completionviewallslides', 'contentcreator')
         );
-        $mform->setType('completionviewallslides', PARAM_INT);
-        $mform->addHelpButton('completionviewallslides', 'completionviewallslides', 'contentcreator');
+        $mform->setType($viewall, PARAM_INT);
+        $mform->addHelpButton($viewall, 'completionviewallslides', 'contentcreator');
 
+        $allact = 'completionallactivities' . $suffix;
         $mform->addElement(
             'checkbox',
-            'completionallactivities',
+            $allact,
             '',
             get_string('completionallactivities', 'contentcreator')
         );
-        $mform->setType('completionallactivities', PARAM_INT);
-        $mform->addHelpButton('completionallactivities', 'completionallactivities', 'contentcreator');
+        $mform->setType($allact, PARAM_INT);
+        $mform->addHelpButton($allact, 'completionallactivities', 'contentcreator');
 
-        return ['completionviewallslides', 'completionallactivities'];
+        return [$viewall, $allact];
     }
 
     /**
@@ -93,6 +109,9 @@ class mod_contentcreator_mod_form extends moodleform_mod {
      * @return bool True if one or more rules is enabled, false if none are.
      */
     public function completion_rule_enabled($data) {
-        return !empty($data['completionviewallslides']) || !empty($data['completionallactivities']);
+        // v15.4.31: must read the same suffixed keys add_completion_rules() wrote.
+        $suffix = method_exists($this, 'get_suffix') ? $this->get_suffix() : '';
+        return !empty($data['completionviewallslides' . $suffix])
+            || !empty($data['completionallactivities' . $suffix]);
     }
 }
