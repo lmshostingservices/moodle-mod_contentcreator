@@ -603,8 +603,14 @@ define(['mod_contentcreator/cc-state'], function(CcState) {
                         coverageNote: aiSubtopic.coverageNote || 'Subtopic directly addresses this PC'
                     };
                     
+                    // v15.5.2 FIX-CC-UNSAFE-SECTION-ID: the vendor's id is taken as given,
+                    // and it becomes the section id that ends up inside jQuery selectors
+                    // built by concatenation. A quote in it throws and kills the handler.
+                    // Constrained to the PARAM_ALPHANUMEXT character set; if nothing
+                    // usable survives, the generated id is used instead.
+                    const _aiId = CcState.safeSectionId(aiSubtopic?.id);
                     subtopics.push({
-                        id: aiSubtopic?.id || `subtopic_${mtIdx}_${s}`,
+                        id: _aiId || `subtopic_${mtIdx}_${s}`,
                         billingKey: CcState.newBillingKey(), // FIX-CC-SUBTOPIC-BILLING-KEY (v13.95.2): carried by every vendor call for this subtopic.
                         // v10.53: Use actualElNum so Element 2  ->  2.1, 2.2 (not 1.1, 1.2)
                         number: `${actualElNum}.${s + 1}`,

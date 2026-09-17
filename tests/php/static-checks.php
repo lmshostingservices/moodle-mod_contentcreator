@@ -126,9 +126,8 @@ $string = [];
 include 'lang/en/contentcreator.php';
 $usedstrings = [];
 foreach ($phpfiles as $f) {
-    if (preg_match_all(
-    '/get_string\(\s*[\'"]([a-zA-Z0-9_]+)[\'"]\s*,\s*[\'"]mod_contentcreator[\'"]/',
-            file_get_contents($f), $mm)) {
+    $getstringpattern = '/get_string\(\s*[\'"]([a-zA-Z0-9_]+)[\'"]\s*,\s*[\'"]mod_contentcreator[\'"]/';
+    if (preg_match_all($getstringpattern, file_get_contents($f), $mm)) {
         foreach ($mm[1] as $k) {
             $usedstrings[$k][] = $f;
         }
@@ -198,6 +197,875 @@ foreach ($srcfiles as $src) {
 check(
     'no built module is older than its source',
     empty($stale), 'stale: ' . implode(', ', $stale) . ' - run: npx grunt amd');
+
+echo "\n6. Release-pipeline rules - the ones that BLOCK a promotion\n";
+
+// V15.5.2. Three pipeline findings in one release, all of them mechanical, all of them
+// caught after the zip was built rather than before. They are cheap to check here.
+
+// --- 6a. No unfiltered parameter types without an on-the-same-line justification ------
+//
+// Moodle's two unfiltered parameter types are approval blockers unless the line carries a
+// justification. check_answer.php shipped a section id as one of them with the reason in a
+// comment BLOCK above the line, which does not count - and was the wrong fix anyway, since
+// the id is now constrained where it is created.
+//
+// V15.5.5: the token is BUILT here rather than written out, so this file does not contain
+// the literal string it is looking for. That is not cosmetic. The first version wrote it
+// out and had to exclude itself from its own sweep - and the harness then became the only
+// file in the plugin with an unjustified usage, which the release pipeline found and this
+// suite could not.
+$unfiltered = 'PARAM' . '_RAW';
+$rawoffenders = [];
+foreach (plugin_php_files() as $f) {
+    foreach (file($f) as $n => $line) {
+        if (!preg_match('/\b' . $unfiltered . '(_TRIMMED)?\b/', $line)) {
+            continue;
+        }
+        // The justification must be on the same line, in the form the pipeline accepts.
+        if (stripos($line, 'pipeline-ignore') !== false) {
+            continue;
+        }
+        $rawoffenders[] = $f . ':' . ($n + 1);
+    }
+}
+check(
+    'every unfiltered parameter type carries a same-line pipeline-ignore justification',
+    empty($rawoffenders),
+    'unjustified: ' . implode(', ', $rawoffenders));
+
+// --- 6b. Comment blocks start with a capital -----------------------------------------
+// V15.5.5: this now also sees TRAILING comments - a // after code on the same line - and
+// it no longer exempts this file.
+//
+// The first version looked only at lines that BEGIN with //. The release pipeline counts a
+// trailing comment as its own block, and there was one sitting in lang/en that this suite
+// declared clean for three releases. A continuation line inside a block is still exempt,
+// or the GPL header would fail in every file.
+$lowercomments = [];
+foreach (plugin_php_files() as $f) {
+    $prevwasownline = false;
+    foreach (file($f) as $n => $line) {
+        $trimmed = trim($line);
+        $ownline = strpos($trimmed, '//') === 0;
+        if ($ownline) {
+            if (!$prevwasownline) {
+                $body = trim(substr($trimmed, 2));
+                if ($body !== '' && preg_match('/^[a-z]/', $body)) {
+                    $lowercomments[] = $f . ':' . ($n + 1) . ' (block)';
+                }
+            }
+            $prevwasownline = true;
+            continue;
+        }
+        $prevwasownline = false;
+        // A trailing comment. The guard against a // inside a quoted string is crude but
+        // sufficient here: a URL is the only realistic false positive and it is preceded
+        // by a colon, not whitespace.
+        if (preg_match('~\S\s+//\s*(.+)$~', $line, $tm) && strpos($line, '://') === false) {
+            if (preg_match('/^[a-z]/', trim($tm[1]))) {
+                $lowercomments[] = $f . ':' . ($n + 1) . ' (trailing)';
+            }
+        }
+    }
+}
+check(
+    'no comment block or trailing comment begins with a lowercase letter',
+    empty($lowercomments),
+    'lowercase openings: ' . implode(', ', $lowercomments));
+
+// V15.5.5: two more of the pipeline's coding-style rules, both of which it found in this
+// very file after the sweeps above had been told to skip it.
+$fnkeyword = 'function' . '(';
+$fnspacing = [];
+foreach (plugin_php_files() as $f) {
+    foreach (file($f) as $n => $line) {
+        // Strip a trailing comment first, so prose describing the rule cannot trip it.
+        $code = preg_replace('~\s//.*$~', '', $line);
+        // The lookbehind matters. A name such as register_shutdown_function ends in the
+        // same eight characters before its parenthesis and is not a violation; a plain
+        // substring match reported one in ajax.php as a defect that was not there.
+        if (preg_match('/(?<![A-Za-z0-9_])' . preg_quote($fnkeyword, '/') . '/', $code)) {
+            $fnspacing[] = $f . ':' . ($n + 1);
+        }
+    }
+}
+check(
+    'no PHP file writes the function keyword with no space before its parenthesis',
+    empty($fnspacing),
+    implode(', ', $fnspacing));
+
+// NOT IMPLEMENTED, deliberately: "multi-line calls, opening paren last on line".
+//
+// The release pipeline reports this rule and the one instance it found has been fixed. A
+// check for it is not here because one sample is not enough to implement it without false
+// positives, and a check that cries wolf is worse than no check - it teaches you to skim
+// past the section it lives in.
+//
+// The two shapes could not be told apart from the evidence available. Both have code after
+// an unclosed opening parenthesis, and only the first was reported:
+//
+//     if (preg_match_all(            <- reported
+//     if (has_capability($a, $b)     <- not reported, and perfectly good code
+//         || has_capability($c, $d)) {
+//
+// A first draft flagged four lines, three of them correct. It was removed rather than
+// tuned on guesswork. If the rule is ever published, implement it here.
+
+// --- 6c. Language strings are one line each -------------------------------------------
+//
+// A literal newline inside a $string value is valid PHP and works at runtime, but AMOS
+// and every lang-file parser expect one string per line. Use "\n" in a double-quoted
+// string instead - the runtime value is identical.
+$langsrc = file_get_contents('lang/en/contentcreator.php');
+preg_match_all("/^\\\$string\\['[A-Za-z0-9_:]+'\\] = '(?:[^'\\\\\\\\]|\\\\\\\\.)*';$/m", $langsrc, $singles);
+$multiline = 0;
+foreach ($singles[0] as $decl) {
+    if (strpos($decl, "\n") !== false) {
+        $multiline++;
+    }
+}
+check(
+    'no language string spans more than one physical line',
+    $multiline === 0,
+    $multiline . ' multi-line string(s) - use "\\n" in a double-quoted string instead');
+
+// --- 6d. The section id character set agrees on both sides ----------------------------
+//
+// cc-state.js constrains ids at creation; evidence.php normalises them on the way back
+// in. If the two character sets drift, a legitimate id stops resolving and the learner's
+// answer cannot be graded.
+// The two helpers share a CHARACTER CLASS but deliberately differ in what they do with a
+// disallowed character, and conflating them is the bug this release fixed.
+//
+//   cc-state.js safeSectionId()      SUBSTITUTES an underscore. It mints a readable id at
+//                                    creation time: "pc 1.1" becomes "pc_1_1".
+//   evidence.php normalise_section_id() REMOVES it, because it has to mangle a string
+//                                    exactly as clean_param(PARAM_ALPHANUMEXT) does in
+//                                    order to match a legacy id back: "pc 1.1" -> "pc11".
+//
+// Section 7 below proves the behaviour. These two only guard the character class, which
+// must stay identical in both or an id that is safe to mint becomes one that cannot be
+// matched.
+$state = file_get_contents('amd/src/cc-state.js');
+$evidence = file_get_contents('classes/evidence.php');
+check(
+    'cc-state.js mints section ids from [A-Za-z0-9_-] by substitution',
+    strpos($state, "replace(/[^A-Za-z0-9_-]+/g, '_')") !== false,
+    'safeSectionId() has changed its character set or its substitution');
+check(
+    'evidence.php matches on the same class by removal, as the transport does',
+    preg_match("/preg_replace\\('\\/\\[\\^A-Za-z0-9_-\\]\\/', *''/", $evidence) === 1,
+    'normalise_section_id() no longer mirrors clean_param(PARAM_ALPHANUMEXT)');
+// Anchored on the DECLARATION, not on the token appearing anywhere in the file. The
+// first version of this check passed a mutation that changed the real parameter type,
+// because the token it looked for was still sitting in a comment three lines above.
+check(
+    'check_answer declares its section id as PARAM_ALPHANUMEXT',
+    preg_match(
+        "/'sectionid'\s*=>\s*new external_value\(\s*PARAM_ALPHANUMEXT\s*,/",
+        file_get_contents('classes/external/check_answer.php')
+    ) === 1,
+    'the section id parameter type no longer matches the character set ids are constrained to');
+
+echo "\n7. Section id resolution - behaviour, against the real class\n";
+
+// V15.5.2. Not static analysis: this loads \mod_contentcreator\evidence and runs its own
+// resolver, because the thing that matters is whether a LEGACY manifest id survives the
+// round trip through PARAM_ALPHANUMEXT - and the first version of it could not.
+//
+// normalise_section_id() has to mangle a string exactly the way clean_param() does for
+// PARAM_ALPHANUMEXT, which REMOVES disallowed characters. The first version SUBSTITUTED an
+// underscore, copying CcState.safeSectionId(). "pc 1.1" then normalised to "pc_1_1" on the
+// server while the transport delivered "pc11": the comparison could never match, on
+// exactly the manifests it was written to rescue.
+//
+// evidence.php's pure methods need no database, so it loads standalone.
+if (!defined('MOODLE_INTERNAL')) {
+    define('MOODLE_INTERNAL', true);
+}
+require_once(__DIR__ . '/../../classes/evidence.php');
+
+/**
+ * What Moodle's clean_param() does to a PARAM_ALPHANUMEXT value.
+ *
+ * @param string $p Raw parameter value.
+ * @return string The value as execute() would receive it.
+ */
+function cc_transport(string $p): string {
+    return preg_replace('/[^A-Za-z0-9_-]/i', '', $p);
+}
+
+/**
+ * Build a one-topic manifest holding the given section ids.
+ *
+ * @param array $ids Section ids.
+ * @return array A manifest.
+ */
+function cc_manifest(array $ids): array {
+    $sections = [];
+    foreach ($ids as $id) {
+        $sections[] = ['id' => $id, 'cards' => []];
+    }
+    return ['topics' => [['id' => 't1', 'sections' => $sections]]];
+}
+
+$cases = [
+    [['subtopic_0_1'], 'subtopic_0_1', 'subtopic_0_1', 'a modern id matches exactly'],
+    [['subtopic_0_1'], 'subtopic_0_1_learning', 'subtopic_0_1', 'the challenge slide suffix is stripped'],
+    [['pc 1.1'], 'pc 1.1', 'pc 1.1', 'a legacy id with a space and a dot still resolves'],
+    [['PC-1.1', 'PC-1.2'], 'PC-1.2', 'PC-1.2', 'the right one of two legacy ids resolves'],
+    [['a"b'], 'a"b', 'a"b', 'a legacy id containing a quote still resolves'],
+    [['x.1', 'x 1'], 'x.1', '', 'two ids that normalise alike are REFUSED, not guessed'],
+    [['subtopic_0_1'], 'nonexistent', '', 'an unknown section is refused'],
+    [['subtopic_0_1'], '', '', 'an empty id is refused'],
+    [[], 'anything', '', 'a manifest with no sections resolves nothing'],
+];
+
+$rtbad = [];
+foreach ($cases as $c) {
+    [$ids, $client, $want, $why] = $c;
+    $got = \mod_contentcreator\evidence::resolve_section_id(cc_manifest($ids), cc_transport($client));
+    if ($got !== $want) {
+        $rtbad[] = $why . " (sent '$client', transport gave '" . cc_transport($client)
+            . "', resolved '$got', expected '$want')";
+    }
+}
+check(
+    count($cases) . ' section id round-trips resolve correctly',
+    empty($rtbad),
+    implode("\n         ", $rtbad));
+
+// The mangling must match the transport, not the client-side minting helper.
+check(
+    'normalise_section_id() removes disallowed characters rather than substituting',
+    \mod_contentcreator\evidence::normalise_section_id('pc 1.1') === 'pc11',
+    "got '" . \mod_contentcreator\evidence::normalise_section_id('pc 1.1')
+        . "', expected 'pc11' - it must mirror clean_param(PARAM_ALPHANUMEXT)");
+
+echo "\n8. The answer-key scrub - behaviour, against a realistic manifest\n";
+
+// V15.5.2. get_manifest() strips the answer key before a learner receives it. That is the
+// whole of FIX-CC-ANSWER-IN-DOM on the server side, and until now nothing exercised it
+// against a manifest shaped the way normalizeCardSchema() actually stores one.
+require_once(__DIR__ . '/../../classes/manifest_storage.php');
+
+$scrubsrc = ['topics' => [['id' => 't1', 'sections' => [[
+    'id' => 'subtopic_0_1',
+    'cards' => [
+        ['cardType' => 'hook-scenario', 'keyTakeaway' => 'Stay behind the barrier.'],
+        ['cardType' => 'decision-point', 'schemaVersion' => 2, 'questions' => [[
+            'question' => 'Which action meets the rule?',
+            'correctIndex' => 0,
+            'options' => [
+                ['text' => 'Record it in the register', 'feedback' => 'Correct! Clause 4 applies.',
+                    'feedbackAudioUrl' => 'https://x/a.ogg', 'correct' => true],
+                ['text' => 'Tell the supervisor', 'feedback' => 'Verbal notice is not the register.',
+                    'feedbackAudioUrl' => 'https://x/b.ogg', 'correct' => false],
+                ['text' => 'Wait for a complaint', 'feedback' => '', 'correct' => false],
+            ],
+        ]]],
+        // The legacy single-question shape, still present in stored manifests.
+        ['cardType' => 'decision-point', 'question' => 'Legacy?', 'correctAnswer' => 1, 'options' => [
+            ['text' => 'No', 'isCorrect' => false],
+            ['text' => 'Yes', 'isCorrect' => true, 'feedback' => 'Correct.'],
+        ]],
+    ],
+]]]]];
+
+$scrubbed = \mod_contentcreator\manifest_storage::strip_answer_key(json_encode($scrubsrc));
+$sd = json_decode($scrubbed, true);
+$sq = $sd['topics'][0]['sections'][0]['cards'][1]['questions'][0] ?? [];
+$sl = $sd['topics'][0]['sections'][0]['cards'][2] ?? [];
+
+$leaks = [];
+foreach (['correctIndex'] as $f) {
+    if (array_key_exists($f, $sq)) {
+        $leaks[] = "question.$f";
+    }
+}
+if (array_key_exists('correctAnswer', $sl)) {
+    $leaks[] = 'legacy card.correctAnswer';
+}
+foreach (($sq['options'] ?? []) as $i => $o) {
+    foreach (['correct', 'isCorrect', 'feedback', 'feedbackAudioUrl'] as $f) {
+        if (array_key_exists($f, $o)) {
+            $leaks[] = "option[$i].$f";
+        }
+    }
+}
+foreach (($sl['options'] ?? []) as $i => $o) {
+    foreach (['correct', 'isCorrect', 'feedback'] as $f) {
+        if (array_key_exists($f, $o)) {
+            $leaks[] = "legacy option[$i].$f";
+        }
+    }
+}
+check('no answer-key field survives the scrub', empty($leaks), 'leaked: ' . implode(', ', $leaks));
+check(
+    'no feedback TEXT survives, which names the answer as surely as a flag does',
+    strpos($scrubbed, 'Correct!') === false && strpos($scrubbed, 'not the register') === false);
+check(
+    'option text and order are untouched - data-oidx depends on the order',
+    ($sq['options'][0]['text'] ?? '') === 'Record it in the register'
+    && ($sq['options'][2]['text'] ?? '') === 'Wait for a complaint');
+check('the question text is kept', ($sq['question'] ?? '') === 'Which action meets the rule?');
+check(
+    'cards that are not challenges are untouched',
+    ($sd['topics'][0]['sections'][0]['cards'][0]['keyTakeaway'] ?? '') === 'Stay behind the barrier.');
+// A manifest it cannot read must come back whole, not blanked - better the answer key
+// than an empty activity.
+check(
+    'unreadable input is returned unchanged rather than blanked',
+    \mod_contentcreator\manifest_storage::strip_answer_key('not json') === 'not json'
+    && \mod_contentcreator\manifest_storage::strip_answer_key('') === ''
+    && \mod_contentcreator\manifest_storage::strip_answer_key('{"a":1}') === '{"a":1}');
+
+echo "\n9. Server-side grading - every answer-key shape that exists in the wild\n";
+
+/**
+ * Wrap cards in a one-section manifest.
+ *
+ * @param string $id Section id.
+ * @param array $cards Cards for that section.
+ * @return array A manifest.
+ */
+function cc_sec(string $id, array $cards): array {
+    return ['topics' => [['id' => 't1', 'sections' => [['id' => $id, 'cards' => $cards]]]]];
+}
+
+$shapes = [
+    'per-option correct' => [cc_sec('s1', [['cardType' => 'decision-point', 'questions' => [
+        ['question' => 'q', 'options' => [['text' => 'a'], ['text' => 'b', 'correct' => true], ['text' => 'c']]]]]]), 1],
+    'per-option isCorrect' => [cc_sec('s1', [['cardType' => 'decision-point', 'questions' => [
+        ['question' => 'q', 'options' => [['text' => 'a'], ['text' => 'b'], ['text' => 'c', 'isCorrect' => true]]]]]]), 2],
+    'question-level correctIndex' => [cc_sec('s1', [['cardType' => 'decision-point', 'questions' => [
+        ['question' => 'q', 'correctIndex' => 0, 'options' => [['text' => 'a'], ['text' => 'b']]]]]]), 0],
+    'legacy single-question card' => [cc_sec('s1', [['cardType' => 'decision-point', 'question' => 'q',
+        'options' => [['text' => 'a'], ['text' => 'b', 'correct' => true]]]]), 1],
+];
+$shapebad = [];
+foreach ($shapes as $name => $pair) {
+    [$m, $want] = $pair;
+    $q = \mod_contentcreator\evidence::question_at($m, 's1', 0);
+    $got = $q === null ? null : \mod_contentcreator\evidence::correct_index($q['options'], $q);
+    if ($got !== $want) {
+        $shapebad[] = "$name: resolved " . var_export($got, true) . ", expected $want";
+    }
+}
+check(
+    count($shapes) . ' answer-key shapes all resolve to the right option',
+    empty($shapebad),
+    implode("\n         ", $shapebad));
+
+$nonemarked = cc_sec('s1', [['cardType' => 'decision-point', 'questions' => [
+    ['question' => 'q', 'options' => [['text' => 'a'], ['text' => 'b']]]]]]);
+$nq = \mod_contentcreator\evidence::question_at($nonemarked, 's1', 0);
+check(
+    'a question with nothing marked correct resolves to null, not option 0',
+    \mod_contentcreator\evidence::correct_index($nq['options'], $nq) === null);
+check(
+    'a correctIndex past the end of the options is ignored',
+    \mod_contentcreator\evidence::correct_index([['text' => 'a']], ['correctIndex' => 7]) === null);
+check(
+    'a question index past the end returns null',
+    \mod_contentcreator\evidence::question_at($nonemarked, 's1', 9) === null);
+check(
+    'an unknown section returns null',
+    \mod_contentcreator\evidence::question_at($nonemarked, 'nope', 0) === null);
+
+// THE DEADLOCK. The player renders each decision-point card as its own challenge and
+// numbers its questions from zero inside it. The first version of challenge_sections()
+// accumulated across cards: a section with two cards of three questions demanded six
+// answers that the learner could never supply, so the activity could never complete - and
+// question 0 of the second card would have been graded against question 0 of the first.
+$twocards = cc_sec('s1', [
+    ['cardType' => 'decision-point', 'questions' => [
+        ['question' => 'A1', 'options' => [['text' => 'a', 'correct' => true]]],
+        ['question' => 'A2', 'options' => [['text' => 'a', 'correct' => true]]],
+        ['question' => 'A3', 'options' => [['text' => 'a', 'correct' => true]]]]],
+    ['cardType' => 'decision-point', 'questions' => [
+        ['question' => 'B1', 'options' => [['text' => 'b', 'correct' => true]]],
+        ['question' => 'B2', 'options' => [['text' => 'b', 'correct' => true]]],
+        ['question' => 'B3', 'options' => [['text' => 'b', 'correct' => true]]]]],
+]);
+check(
+    'two challenge cards require 3 answers, not 6 - the completion deadlock',
+    (\mod_contentcreator\evidence::challenge_sections($twocards)['s1'] ?? 0) === 3,
+    'required ' . (\mod_contentcreator\evidence::challenge_sections($twocards)['s1'] ?? 0)
+        . ' answers, which a learner could never supply');
+check(
+    'question 0 is the first card\'s, matching what the player rendered',
+    (\mod_contentcreator\evidence::question_at($twocards, 's1', 0)['question'] ?? '') === 'A1');
+check(
+    'an index past the first card is out of range rather than the second card\'s',
+    \mod_contentcreator\evidence::question_at($twocards, 's1', 3) === null);
+
+$disabled = cc_sec('s1', [['cardType' => 'decision-point', 'questions' => [
+    ['question' => 'q', 'options' => [['text' => 'a', 'correct' => true]]]]]]);
+$disabled['activitySettings'] = ['enabled' => false];
+check(
+    'challenges switched off require no answers at all',
+    \mod_contentcreator\evidence::challenge_sections($disabled) === []);
+
+echo "\n10. The answer tally - the arithmetic completion depends on\n";
+
+// V15.5.4. evidence::apply_answer() decides whether a learner's challenge can ever be
+// completed. Three of its rules are only obvious once written down, and none of them had
+// a test.
+$tallybad = [];
+
+/**
+ * Assert one tally outcome.
+ *
+ * @param string $why What is being checked.
+ * @param array $got The result of apply_answer().
+ * @param int $answered Expected answered count.
+ * @param int $correct Expected correct count.
+ * @return void
+ */
+function cc_tally(string $why, array $got, int $answered, int $correct): void {
+    global $tallybad;
+    if ($got['answered'] !== $answered || $got['correct'] !== $correct) {
+        $tallybad[] = "$why: got {$got['answered']}/{$got['correct']}, expected $answered/$correct";
+    }
+}
+
+$a = \mod_contentcreator\evidence::apply_answer(null, 0, true, 3);
+cc_tally('first answer', $a, 1, 1);
+$a = \mod_contentcreator\evidence::apply_answer($a['mask'], 1, false, 3);
+cc_tally('second answer, wrong', $a, 2, 1);
+$a = \mod_contentcreator\evidence::apply_answer($a['mask'], 2, true, 3);
+cc_tally('third answer completes the challenge', $a, 3, 2);
+
+// Re-answering REPLACES. Without this, answered climbs past total and the comparison in
+// all_challenges_answered() would pass for the wrong reason.
+$b = \mod_contentcreator\evidence::apply_answer($a['mask'], 1, true, 3);
+cc_tally('re-answering replaces rather than accumulating', $b, 3, 3);
+$b = \mod_contentcreator\evidence::apply_answer($b['mask'], 1, false, 3);
+cc_tally('and can downgrade the same question again', $b, 3, 2);
+check(
+    'the tally is correct across a full challenge, including re-answers',
+    empty($tallybad),
+    implode("\n         ", $tallybad));
+
+// The invariant completion rests on.
+$spam = null;
+for ($i = 0; $i < 20; $i++) {
+    $spam = \mod_contentcreator\evidence::apply_answer($spam, $i, true, 3)['mask'];
+}
+$spamfinal = \mod_contentcreator\evidence::apply_answer($spam, 0, true, 3);
+check(
+    'questionsanswered can never exceed questiontotal, however many answers arrive',
+    $spamfinal['answered'] === 3,
+    'twenty answers to a three-question challenge tallied ' . $spamfinal['answered']);
+
+// An author edits a five-question challenge down to three. Answers to the questions that
+// no longer exist must not hold the learner at 5-of-3 forever.
+$five = null;
+for ($i = 0; $i < 5; $i++) {
+    $five = \mod_contentcreator\evidence::apply_answer($five, $i, true, 5)['mask'];
+}
+$shrunk = \mod_contentcreator\evidence::apply_answer($five, 0, true, 3);
+check(
+    'answers to questions an author has since deleted are dropped, not carried',
+    $shrunk['answered'] === 3 && count((array)json_decode($shrunk['mask'], true)) === 3,
+    'tallied ' . $shrunk['answered'] . ' against a total of 3 - the learner would be stuck');
+
+$defensive = [
+    'a corrupt mask' => \mod_contentcreator\evidence::apply_answer('not json', 0, true, 3)['answered'] === 1,
+    'a mask that decodes to a scalar' => \mod_contentcreator\evidence::apply_answer('42', 0, true, 3)['answered'] === 1,
+    'an empty mask' => \mod_contentcreator\evidence::apply_answer('', 0, false, 3)['answered'] === 1,
+    'a negative question index' => \mod_contentcreator\evidence::apply_answer(null, -1, true, 3)['answered'] === 0,
+    'an index equal to the total' => \mod_contentcreator\evidence::apply_answer(null, 3, true, 3)['answered'] === 0,
+    'a zero total' => \mod_contentcreator\evidence::apply_answer(null, 0, true, 0)['answered'] === 0,
+];
+$defbad = array_keys(array_filter($defensive, function ($v) {
+    return !$v;
+}));
+check(
+    count($defensive) . ' malformed inputs are handled rather than fatal',
+    empty($defbad),
+    'mishandled: ' . implode(', ', $defbad));
+
+// The mask must survive json_decode(..., true) as an array with its keys intact.
+$sparse = \mod_contentcreator\evidence::apply_answer(null, 2, true, 3);
+$sparse = \mod_contentcreator\evidence::apply_answer($sparse['mask'], 0, false, 3);
+$decoded = json_decode($sparse['mask'], true);
+check(
+    'a sparse mask round-trips with its keys, rather than collapsing to a list',
+    is_array($decoded) && ($decoded['0'] ?? null) === 0 && ($decoded['2'] ?? null) === 1,
+    $sparse['mask']);
+
+echo "\n11. The scrub across a real-sized manifest - PHP reference safety\n";
+
+// The strip_answer_key() function uses `foreach (... as &$x)` at three nesting levels.
+// PHP leaves the
+// last reference dangling after such a loop, and a later write through it silently
+// overwrites the final element with an earlier one. The failure is INVISIBLE with one
+// topic, one section and one card - which is what section 8 uses. Three of each here.
+$big = ['topics' => []];
+for ($t = 0; $t < 3; $t++) {
+    $sections = [];
+    for ($sx = 0; $sx < 3; $sx++) {
+        $cards = [];
+        for ($c = 0; $c < 3; $c++) {
+            $cards[] = ['cardType' => 'concept-explainer', 'heading' => "t{$t}s{$sx}c{$c}"];
+            $cards[] = ['cardType' => 'decision-point', 'questions' => [[
+                'question' => "q-t{$t}s{$sx}c{$c}", 'correctIndex' => 1, 'options' => [
+                    ['text' => "A-t{$t}s{$sx}c{$c}", 'feedback' => 'wrong', 'correct' => false],
+                    ['text' => "B-t{$t}s{$sx}c{$c}", 'feedback' => 'Correct!', 'correct' => true,
+                        'feedbackAudioUrl' => 'https://x/y.ogg'],
+                ],
+            ]]];
+        }
+        $sections[] = ['id' => "t{$t}_s{$sx}", 'cards' => $cards];
+    }
+    $big['topics'][] = ['id' => "t{$t}", 'sections' => $sections];
+}
+$bigraw = json_encode($big);
+$bigout = \mod_contentcreator\manifest_storage::strip_answer_key($bigraw);
+$bigdec = json_decode($bigout, true);
+
+$biglabels = [];
+$bigleaks = [];
+$options = 0;
+foreach (($bigdec['topics'] ?? []) as $ti => $topic) {
+    foreach (($topic['sections'] ?? []) as $si => $section) {
+        if (($section['id'] ?? '') !== "t{$ti}_s{$si}") {
+            $bigleaks[] = "section id at [$ti][$si] is '" . ($section['id'] ?? '') . "'";
+        }
+        foreach (($section['cards'] ?? []) as $ci => $card) {
+            if (($card['cardType'] ?? '') === 'concept-explainer') {
+                $biglabels[] = $card['heading'];
+                continue;
+            }
+            $q = $card['questions'][0];
+            $biglabels[] = $q['question'];
+            if (array_key_exists('correctIndex', $q)) {
+                $bigleaks[] = "correctIndex at [$ti][$si][$ci]";
+            }
+            foreach ($q['options'] as $oi => $o) {
+                $options++;
+                foreach (['correct', 'isCorrect', 'feedback', 'feedbackAudioUrl'] as $f) {
+                    if (array_key_exists($f, $o)) {
+                        $bigleaks[] = "$f at [$ti][$si][$ci][$oi]";
+                    }
+                }
+                $biglabels[] = $o['text'] ?? '';
+            }
+        }
+    }
+}
+check(
+    'the answer key is stripped from all 27 challenge cards and 54 options',
+    empty($bigleaks) && $options === 54,
+    $options . ' options; leaked: ' . implode(', ', array_slice($bigleaks, 0, 5)));
+check(
+    'no element was duplicated by a dangling reference',
+    count($biglabels) === count(array_unique($biglabels)),
+    'duplicates: ' . implode(', ', array_diff_assoc($biglabels, array_unique($biglabels))));
+check(
+    'the LAST topic, section and card are intact rather than copies of earlier ones',
+    ($bigdec['topics'][2]['sections'][2]['cards'][4]['heading'] ?? '') === 't2s2c2'
+    && strpos($bigout, 'B-t2s2c2') !== false);
+check(
+    'scrubbing an already-scrubbed manifest is a no-op, not a corruption',
+    \mod_contentcreator\manifest_storage::strip_answer_key($bigout) === $bigout);
+
+echo "\n12. Backup covers every evidence column\n";
+
+// A column missing from the backup element is dropped silently on a course copy, and
+// nobody finds out until a restored learner's completion is recomputed from rows that are
+// short a field.
+$evstart = strpos($xmlsrc ?? ($xmlsrc = file_get_contents('db/install.xml')),
+    '<TABLE NAME="contentcreator_evidence"');
+$evblock = substr($xmlsrc, $evstart, strpos($xmlsrc, '</TABLE>', $evstart) - $evstart);
+preg_match_all('/<FIELD NAME="([^"]+)"/', $evblock, $evm);
+$evcolumns = array_values(array_diff($evm[1], ['id']));
+
+$bksrc = file_get_contents('backup/moodle2/backup_contentcreator_stepslib.php');
+$bkstart = strpos($bksrc, "\$evidence = new backup_nested_element(");
+$bkblock = substr($bksrc, $bkstart, strpos($bksrc, ');', strpos($bksrc, '[', $bkstart)) - $bkstart);
+preg_match_all("/'([a-z]+)',/", $bkblock, $bkm);
+$bkfields = array_values(array_diff($bkm[1], ['evidence', 'id']));
+
+check(
+    'every evidence column appears in the backup element',
+    empty(array_diff($evcolumns, $bkfields)),
+    'missing: ' . implode(', ', array_diff($evcolumns, $bkfields)));
+check(
+    'the backup element declares no field that is not a column',
+    empty(array_diff($bkfields, $evcolumns)),
+    'phantom: ' . implode(', ', array_diff($bkfields, $evcolumns)));
+
+$rssrc = file_get_contents('backup/moodle2/restore_contentcreator_stepslib.php');
+$rshandler = strpos($rssrc, 'function process_contentcreator_evidence') === false ? ''
+    : substr($rssrc, strpos($rssrc, 'function process_contentcreator_evidence'), 600);
+check(
+    'the restore handler remaps cmid, remaps userid and discards the old primary key',
+    strpos($rssrc, "'/activity/contentcreator/evidences/evidence'") !== false
+    && strpos($rshandler, '$data->cmid = $this->task->get_moduleid();') !== false
+    && strpos($rshandler, "get_mappingid('user', \$data->userid)") !== false
+    && strpos($rshandler, 'unset($data->id);') !== false,
+    'a restored row would carry the SOURCE course module id or the source user id');
+check(
+    'userid is annotated, so the users are included in the backup file',
+    strpos($bksrc, "\$evidence->annotate_ids('user', 'userid');") !== false);
+
+echo "\n13. The learner on-demand gate - the switch that stops learners spending credits\n";
+
+// V15.5.4. \mod_contentcreator\ondemand sits in front of all three credit-spending calls a
+// learner can originate. It had no test, and two of its rules are the kind that get
+// "simplified" later by someone who has not read the history:
+//
+//   - UNSET must read as ENABLED. get_config() returns false for a setting that was never
+//     written, which on upgrade is every existing site. A falsy-means-off reading would
+//     switch voiceover off for every site in the world on the upgrade that added it.
+//   - The CAPABILITY is checked first, and is not waived by the switch being on.
+//
+// The stubs below are guarded so this file stays inert if it is ever loaded somewhere that
+// already has Moodle's own functions.
+if (!function_exists('get_config')) {
+    /**
+     * Stand in for Moodle's get_config().
+     *
+     * @param string $plugin Plugin name.
+     * @param string $name Setting name.
+     * @return mixed The value set by the harness.
+     */
+    function get_config($plugin, $name = null) {
+        global $ccfakeconfig;
+        return array_key_exists($name, $ccfakeconfig) ? $ccfakeconfig[$name] : false;
+    }
+}
+if (!function_exists('has_capability')) {
+    /**
+     * Stand in for Moodle's has_capability().
+     *
+     * @param string $cap Capability name.
+     * @param mixed $context Ignored.
+     * @return bool Whether the harness granted it.
+     */
+    function has_capability($cap, $context = null) {
+        global $ccfakecaps;
+        return !empty($ccfakecaps[$cap]);
+    }
+}
+if (!function_exists('require_capability')) {
+    /**
+     * Stand in for Moodle's require_capability().
+     *
+     * @param string $cap Capability name.
+     * @param mixed $context Ignored.
+     * @return void
+     * @throws Exception When the harness did not grant it.
+     */
+    function require_capability($cap, $context = null) {
+        if (!has_capability($cap)) {
+            throw new Exception('nocapability:' . $cap);
+        }
+    }
+}
+if (!class_exists('moodle_exception')) {
+    /**
+     * Stand in for Moodle's moodle_exception.
+     */
+    class moodle_exception extends Exception {
+        /**
+         * Construct with a language string key.
+         *
+         * @param string $key Language string key.
+         * @param string $component Component name.
+         */
+        public function __construct($key, $component = '') {
+            parent::__construct($key);
+        }
+    }
+}
+if (!class_exists('context')) {
+    /**
+     * Stand in for Moodle's context base class.
+     */
+    class context {
+    }
+}
+
+require_once(__DIR__ . '/../../classes/ondemand.php');
+
+/**
+ * Run the gate and report what happened.
+ *
+ * @param mixed $setting Value get_config() should return for learnerondemand.
+ * @param array $caps Capabilities the user holds.
+ * @return string 'allowed', 'nocapability' or 'switchedoff'.
+ */
+function cc_gate($setting, array $caps): string {
+    global $ccfakeconfig, $ccfakecaps;
+    $ccfakeconfig = ['learnerondemand' => $setting];
+    $ccfakecaps = $caps;
+    try {
+        \mod_contentcreator\ondemand::require_can_generate(new context());
+        return 'allowed';
+    } catch (moodle_exception $e) {
+        return 'switchedoff';
+    } catch (Exception $e) {
+        return 'nocapability';
+    }
+}
+
+$learner = ['mod/contentcreator:generateondemand' => true];
+$teacher = ['mod/contentcreator:generateondemand' => true, 'mod/contentcreator:manage' => true];
+$reviewer = ['mod/contentcreator:generateondemand' => true, 'mod/contentcreator:review' => true];
+
+$gatecases = [
+    // Unset and empty string are what every existing site looks like on upgrade.
+    'a site that has never saved the setting keeps working' => [cc_gate(false, $learner), 'allowed'],
+    'an empty setting value keeps working' => [cc_gate('', $learner), 'allowed'],
+    'explicitly on' => [cc_gate('1', $learner), 'allowed'],
+    'explicitly on as an integer' => [cc_gate(1, $learner), 'allowed'],
+    'switched off stops a learner' => [cc_gate('0', $learner), 'switchedoff'],
+    'switched off as an integer stops a learner' => [cc_gate(0, $learner), 'switchedoff'],
+    'switched off does NOT stop a teacher' => [cc_gate('0', $teacher), 'allowed'],
+    'switched off does NOT stop a reviewer' => [cc_gate('0', $reviewer), 'allowed'],
+    'the capability is still required when the switch is on' => [cc_gate('1', []), 'nocapability'],
+    'the capability is still required when the switch is off' => [cc_gate('0', []), 'nocapability'],
+    'a teacher without the capability is still refused' => [
+        cc_gate('1', ['mod/contentcreator:manage' => true]), 'nocapability'],
+];
+$gatebad = [];
+foreach ($gatecases as $why => $pair) {
+    if ($pair[0] !== $pair[1]) {
+        $gatebad[] = "$why: got {$pair[0]}, expected {$pair[1]}";
+    }
+}
+check(
+    count($gatecases) . ' on-demand gate outcomes are correct',
+    empty($gatebad),
+    implode("\n         ", $gatebad));
+
+check(
+    'an unconfigured site reads as ENABLED, so the upgrade changes nothing',
+    (function () {
+        global $ccfakeconfig;
+        $ccfakeconfig = [];
+        return \mod_contentcreator\ondemand::learner_generation_enabled() === true;
+    })(),
+    'every existing site would lose learner voiceover on upgrade');
+
+echo "\n14. Whole-plugin integrity - not just the code this release touched\n";
+
+// V15.5.5. Everything above grew out of a specific defect. These are a sweep of the plugin
+// as a whole, and the first one found a live bug on its first run: two declarations of
+// errorsectionnotfound, the later silently overriding the earlier, so a learner hitting a
+// missing section got a message written for a teacher editing a slide.
+
+// --- 14a. Duplicate language keys -----------------------------------------------------
+$langall = file_get_contents('lang/en/contentcreator.php');
+preg_match_all("/^\\\$string\\['([A-Za-z0-9_:]+)'\\]/m", $langall, $keym);
+$keycounts = array_count_values($keym[1]);
+$dupekeys = [];
+foreach ($keycounts as $k => $c) {
+    if ($c > 1) {
+        $dupekeys[] = "$k (x$c)";
+    }
+}
+check(
+    count($keym[1]) . ' language keys, none declared twice',
+    empty($dupekeys),
+    'a later declaration silently overrides the earlier one: ' . implode(', ', $dupekeys));
+
+// --- 14b. Web service classes exist and are complete -----------------------------------
+$svsrc = file_get_contents('db/services.php');
+preg_match_all("/'classname' => '([^']+)'/", $svsrc, $clsm);
+$wsbad = [];
+foreach ($clsm[1] as $cls) {
+    $rel = str_replace(['mod_contentcreator\\', '\\'], ['classes/', '/'], $cls) . '.php';
+    if (!file_exists($rel)) {
+        $wsbad[] = "$cls: no file at $rel";
+        continue;
+    }
+    $body = file_get_contents($rel);
+    foreach (['execute', 'execute_parameters', 'execute_returns'] as $fn) {
+        if (strpos($body, "function $fn(") === false) {
+            $wsbad[] = "$cls: missing $fn()";
+        }
+    }
+}
+check(
+    count($clsm[1]) . ' web service classes exist and declare all three required methods',
+    empty($wsbad),
+    implode("\n         ", $wsbad));
+
+// --- 14c. Every table touched in PHP is declared ---------------------------------------
+preg_match_all('/<TABLE NAME="([^"]+)"/', file_get_contents('db/install.xml'), $tabm);
+$phpblob = '';
+foreach (plugin_php_files() as $f) {
+    $phpblob .= file_get_contents($f) . "\n";
+}
+preg_match_all(
+    "/(?:get_record|get_records|insert_record|update_record|delete_records|get_field|set_field"
+        . "|delete_records_select|get_records_select|count_records|record_exists)\\(\\s*'(contentcreator[a-z_]*)'/",
+    $phpblob,
+    $usem
+);
+$undeclaredtables = array_diff(array_unique($usem[1]), $tabm[1]);
+check(
+    count(array_unique($usem[1])) . ' tables are read or written in PHP, all declared in install.xml',
+    empty($undeclaredtables),
+    'not in install.xml: ' . implode(', ', $undeclaredtables));
+
+// --- 14d. Every AMD module referenced by name exists ------------------------------------
+$jsblob = '';
+foreach (glob('amd/src/*.js') as $f) {
+    $jsblob .= file_get_contents($f) . "\n";
+}
+foreach (['view.php', 'index.php'] as $f) {
+    if (file_exists($f)) {
+        $jsblob .= file_get_contents($f) . "\n";
+    }
+}
+preg_match_all("~'mod_contentcreator/([A-Za-z0-9_.\\-/]+)'~", $jsblob, $amdm);
+$missingmods = [];
+foreach (array_unique($amdm[1]) as $mod) {
+    if (substr($mod, -1) === '.' || substr($mod, -1) === '/') {
+        continue;
+    }
+    if (!file_exists("amd/src/$mod.js")) {
+        $missingmods[] = $mod;
+    }
+}
+check(
+    count(array_unique($amdm[1])) . ' AMD module references all resolve to a source file',
+    empty($missingmods),
+    'referenced but absent: ' . implode(', ', $missingmods));
+
+// --- 14e. Source and build are in step --------------------------------------------------
+$srcnames = array_map(function ($p2) {
+    return basename($p2, '.js');
+}, glob('amd/src/*.js'));
+$buildnames = array_map(function ($p2) {
+    return basename($p2, '.min.js');
+}, glob('amd/build/*.min.js'));
+check(
+    count($srcnames) . ' modules have both a source and a build, with nothing orphaned either way',
+    empty(array_diff($buildnames, $srcnames)) && empty(array_diff($srcnames, $buildnames)),
+    'built with no source: ' . implode(', ', array_diff($buildnames, $srcnames))
+        . '; source with no build: ' . implode(', ', array_diff($srcnames, $buildnames)));
+
+// --- 14f. Capabilities have language strings --------------------------------------------
+preg_match_all("/'(mod\\/contentcreator:[a-z]+)'\\s*=>/", file_get_contents('db/access.php'), $capdecl);
+$capnostring = [];
+foreach (array_unique($capdecl[1]) as $c) {
+    $key = 'contentcreator:' . substr($c, strrpos($c, ':') + 1);
+    if (strpos($langall, "\$string['$key']") === false) {
+        $capnostring[] = $c;
+    }
+}
+check(
+    count(array_unique($capdecl[1])) . ' capabilities all have a language string',
+    empty($capnostring),
+    'a missing one shows the raw key in Define Roles: ' . implode(', ', $capnostring));
 
 echo "\n" . ($failures ? "FAILED $failures of $checks" : "PASSED all $checks static checks") . "\n";
 exit($failures ? 1 : 0);

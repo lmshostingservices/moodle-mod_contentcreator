@@ -145,6 +145,13 @@ define([
         'msgcontextvettitle', 'msgcontextvetsubtitle', 'msgunitofcompetency', 'msgfetchingtga',
         'msgtgafetchfailed', 'msgfillfieldsfirst', 'msgselectindustryfirst',
         'msgsectorhint', 'msgjobrolehint', 'msgchatgptprompt', 'msgchatgptreview',
+        // v15.5.0: the worked "tailor it" example shown under the ChatGPT steps.
+        'msgtailortitle', 'msgtailorintro', 'msgtailorvet', 'msgtailorwp',
+        'msgtailorpolicy', 'msgtailoruni', 'msgtailorpd', 'msgtailorgeneral',
+        'msgtailortopicstext',
+        'msgtailorcopy', 'msgtailorcopied', 'msgtailorleadvet', 'msgtailorleadwp',
+        'msgtailorleadpolicy', 'msgtailorleaduni', 'msgtailorleadpd',
+        'msgtailorleadgeneral', 'msgtailorleadtopicstext',
         'msgchatgptpastecontinue', 'msgcontextwptitle', 'msgcontextwpsubtitle',
         'msguploadpolicyhint', 'msgdraganddrop', 'msgextractingdoc', 'msgtrainingcontexthint',
         'msgmajortopicwphint', 'msgselecttrainingtype', 'msgcontextunititle',
@@ -429,6 +436,30 @@ define([
         msgjobrolehint: 'Naming the role makes every scenario speak to that learner. Leave blank to let the AI choose.',
         msgchatgptprompt: 'Or use the ChatGPT prompt for more control (optional)',
         msgchatgptreview: 'Review and refine the ChatGPT output until you are happy with it',
+        // v15.5.0: the downloaded prompt tells ChatGPT what to build. It does not tell it
+        // how the writing should sound, at what reading level, or which sources to cite by
+        // number - and those are the three things that decide whether the content lands
+        // with a particular cohort. Teachers were left to work out on their own that they
+        // could add instructions of their own, so most did not. Each route now shows one
+        // worked example, written for that route's subject matter.
+        msgtailortitle: 'Tailor it to your learners',
+        msgtailorintro: 'The downloaded prompt tells ChatGPT what to build. It does not tell it who the learners are, how plainly to write, or which sources to cite by number. Add your own brief underneath it.',
+        msgtailorcopy: 'Copy example',
+        msgtailorcopied: 'Copied',
+        msgtailorleadvet: 'For a civil construction WHS unit, for example, you might add:',
+        msgtailorleadwp: 'For an induction built from your own procedures, for example, you might add:',
+        msgtailorleadpolicy: 'For a code of conduct or compliance policy, for example, you might add:',
+        msgtailorleaduni: 'For an undergraduate unit, for example, you might add:',
+        msgtailorleadpd: 'For a leadership or communication course, for example, you might add:',
+        msgtailorleadgeneral: 'For a general adult-learning subject, for example, you might add:',
+        msgtailorleadtopicstext: 'For a short explanatory course, for example, you might add:',
+        msgtailorvet: 'Australia-wide, not state-specific.\nUse WHS terminology only throughout the learner content.\nUse the model WHS Act and model WHS Regulations when giving specific sections or regulations, clearly identified as model-law references rather than pretending there is one national WHS Act.\nWritten for an entry-level or trainee civil construction worker, including someone on their very first day.\nVery simple, easy-to-understand English, while still teaching the correct WHS terminology.\nPlenty of real civil construction examples: excavators, trucks, reversing plant, trenches, underground services, roadworks, traffic control, exclusion zones, concrete work, tools and site access.\nExplain what the worker is personally responsible for, not just what the PCBU, supervisor or principal contractor does.\nExplain the worker\'s rights, including receiving information, instruction and training, consultation, raising hazards, and the circumstances around ceasing unsafe work.\nMake duty of care practical: "What do I actually have to do when I arrive on site tomorrow?"\nExplain safe work practices through actual site situations, rather than generic statements such as "follow safe procedures".\nClearly distinguish what a new worker can do themselves and when they must stop and escalate to a supervisor or other responsible person.\nUse realistic consequences without exaggerating them.\nTeach the law in plain English first, then connect it to the relevant model WHS Act section or model WHS Regulation where supported.\nKeep the scenarios connected across each seven-card sequence, and make the decision questions genuinely test whether the learner understands the WHS requirement.',
+        msgtailorwp: 'Use our own site names, shifts, equipment and job titles rather than generic examples.\nQuote our procedure numbers, form names and document titles exactly as they appear in the uploaded document.\nWritten for a new starter in their first week, including someone who has never worked in this industry.\nVery simple, easy-to-understand English, while still teaching the correct terminology we use on site.\nName the role that performs each step — operator, supervisor, coordinator — rather than "the worker" in general.\nExplain what this person is personally responsible for, not just what the organisation undertakes to do.\nMake it practical: "What do I actually do when I start my shift tomorrow?"\nExplain our procedures through real situations that happen here, rather than generic statements such as "follow the procedure".\nClearly distinguish what a new starter can do themselves and when they must stop and escalate to a supervisor.\nWhere our procedure is stricter than the legal minimum, say so and say why.\nUse realistic consequences without exaggerating them.\nTeach the practical step in plain English first, then connect it to the clause of our procedure it comes from.\nKeep the scenarios connected across each seven-card sequence, and make the decision questions test whether the learner understands our procedure rather than general common sense.',
+        msgtailorpolicy: 'Quote the policy\'s own clause numbers and wording — never paraphrase an obligation into something looser or stricter than it is.\nWritten for a staff member who has to apply this policy, not for the person who wrote it.\nVery simple, easy-to-understand English, while using the policy\'s defined terms exactly as the policy defines them.\nBe explicit about what is mandatory, what is recommended, and what is left to the staff member\'s discretion.\nExplain what this staff member is personally responsible for, not just what the organisation commits to.\nPlenty of realistic examples of the decisions staff actually face, including the awkward borderline ones.\nMake it practical: "What do I do when this situation lands on my desk on Monday?"\nName who to escalate to, and the point at which escalation stops being optional.\nClearly distinguish what a staff member can decide themselves and what must go to a manager, delegate or committee.\nState the consequences of a breach as the policy itself states them, without exaggerating.\nTeach the requirement in plain English first, then cite the clause it comes from.\nWhere the policy is silent on something, say so rather than inventing an obligation to fill the gap.\nKeep the scenarios connected across each sequence, and make the decision questions test whether the learner can apply the clause rather than recall it.',
+        msgtailoruni: 'Written for second-year undergraduates who have completed an introductory unit and no more.\nClear academic English — precise, but not padded with jargon for its own sake.\nName the theorists, models and frameworks explicitly rather than describing them in general terms.\nCite sources in APA 7, and only sources that genuinely exist.\nInclude at least one point where the literature genuinely disagrees, with both positions stated fairly.\nDistinguish established findings from contested ones, and both from your own interpretation.\nPlenty of real case studies and worked examples from the discipline rather than invented illustrations.\nExplain the method, not only the conclusion — how researchers know what they claim to know.\nWhere the topic has an ethical dimension, treat it as a substantive issue rather than a closing disclaimer.\nDefine every technical term the first time it appears, then use it consistently.\nMake the assessment connection explicit: what a student would be expected to do with this in an essay or exam.\nKeep the case material connected across each seven-card sequence, and make the decision questions test analysis rather than recall.',
+        msgtailorpd: 'Written for working professionals with real experience, limited time and no patience for filler.\nSimple, direct English. Respect their expertise without talking down to them.\nPlenty of realistic workplace scenarios: a difficult conversation, a missed deadline, a scope change mid-project, a team member who has disengaged.\nName the models and frameworks you draw on rather than presenting techniques as self-evident.\nMake every technique concrete enough to use on Monday morning — actual words, actual steps, actual order.\nExplain what this person can change themselves and what needs their manager, HR or the wider organisation.\nInclude what to do when the technique does not work, because in practice it often will not.\nUse realistic consequences and realistic timeframes; change of this kind is slow.\nDistinguish what the evidence supports from what is common practice or personal style.\nAvoid motivational language — the learner is here for a method, not encouragement.\nKeep the scenarios connected across each seven-card sequence, and make the decision questions test judgement in an ambiguous situation rather than recall of a definition.',
+        msgtailorgeneral: 'Written for an adult learner with no background in this subject, including someone meeting it for the first time.\nPlain, everyday English with no jargon. Where a technical term is genuinely needed, define it the first time and then use it consistently.\nPlenty of concrete, realistic examples drawn from ordinary life rather than abstract illustrations.\nState numbers, thresholds, dates and names explicitly rather than describing them in general terms.\nExplain what the learner can do themselves and when they need a professional or a qualified person.\nMake it practical: "What do I actually do with this tomorrow?"\nAddress the common misunderstandings about this subject directly, naming them as misunderstandings.\nUse realistic consequences without exaggerating or alarming.\nDistinguish settled fact from contested opinion, and say which is which.\nWhere the answer differs by country, state or circumstance, say so rather than giving one answer as though it were universal.\nKeep the examples connected across each seven-card sequence, and make the decision questions test understanding rather than recall.',
+        msgtailortopicstext: 'Written for a reader learning this subject from scratch, in a short course they will work through in order.\nSimple, clear English. Finish explaining each idea before moving on to the next.\nPlenty of concrete worked examples — show the thing happening, then name what happened.\nDefine every term the first time it appears, then use that same term consistently for the rest of the course.\nBuild each subtopic on the ones before it, and say explicitly when you are relying on something covered earlier.\nCover the subject in as many subtopics as it genuinely has. Do not pad it out or compress it to fit a number.\nState numbers, thresholds and names explicitly rather than describing them in general terms.\nWhere a point is commonly misunderstood, address the misunderstanding directly.\nExplain the reasoning, not just the rule, so the reader can work out the next case themselves.\nDistinguish what is settled from what is contested or still changing.\nMake the decision questions test whether the reader can apply what the subtopic taught, not whether they remember a phrase from it.',
         msgchatgptpastecontinue: 'Paste the output below, then click Continue to generate your slides',
         msgcontextwptitle: 'Learning Context - Workplace Training',
         msgcontextwpsubtitle: 'Upload your company documents and provide context. AI will extract topics and build interactive training content.',
@@ -5720,6 +5751,74 @@ define([
         `;
     };
 
+
+    /**
+     * v15.5.0: the "tailor it to your learners" example shown under the ChatGPT steps.
+     *
+     * The downloaded prompt file says what to build - the card contract, the route's
+     * structure, the word floors. It says nothing about who the learners are, how
+     * plainly to write for them, or which sources to cite by number, and those are the
+     * three things that decide whether the content lands with a particular cohort.
+     * Teachers were left to discover on their own that they could add a brief of their
+     * own; most did not, and generated generic content as a result.
+     *
+     * Each route gets one worked brief written for its own subject matter, stored as
+     * newline-separated lines and rendered as a list. The copy button matters: these
+     * run to a dozen lines or more, and selecting that by hand out of a scrolling panel
+     * is exactly the friction that stops someone using it.
+     *
+     * @param {String} leadKey Language key for the one-line "for example" lead.
+     * @param {String} bodyKey Language key for the newline-separated brief.
+     * @param {String} id DOM id stem, unique per panel.
+     * @returns {String} HTML.
+     */
+    /**
+     * v15.5.0: last-resort clipboard write for browsers or contexts where the async
+     * Clipboard API is unavailable - an http:// site, or a document that has lost focus.
+     *
+     * @param {String} text Text to place on the clipboard.
+     * @param {Function} onDone Called when the write succeeded.
+     * @returns {void}
+     */
+    const copyViaTextarea = (text, onDone) => {
+        const scratch = document.createElement('textarea');
+        scratch.value = text;
+        scratch.setAttribute('readonly', 'readonly');
+        scratch.setAttribute('aria-hidden', 'true');
+        scratch.style.position = 'fixed';
+        scratch.style.opacity = '0';
+        scratch.style.pointerEvents = 'none';
+        document.body.appendChild(scratch);
+        try {
+            scratch.select();
+            if (document.execCommand('copy') && onDone) { onDone(); }
+        } catch (e) {
+            ccWarn('[CC] clipboard copy unavailable', e);
+        } finally {
+            document.body.removeChild(scratch);
+        }
+    };
+
+    const renderTailorExample = (leadKey, bodyKey, id) => {
+        const lines = String(s(bodyKey) || '').split('\n').filter(Boolean);
+        if (!lines.length) { return ''; }
+        const items = lines.map((line) => '<li style="margin-bottom:4px;">' + escapeHtml(line) + '</li>').join('');
+        return '<div style="font-size:12px;line-height:1.6;margin-bottom:12px;padding:10px 12px;'
+            + 'background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">'
+            + '<div style="font-weight:600;color:#1e40af;">' + escapeHtml(s('msgtailortitle')) + '</div>'
+            + '<button type="button" class="cc-tailor-copy" data-tailor-key="' + escapeHtml(bodyKey) + '" '
+            + 'id="' + escapeHtml(id) + '" style="flex-shrink:0;background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;'
+            + 'border-radius:4px;padding:3px 8px;font-size:11px;font-weight:600;cursor:pointer;">'
+            + escapeHtml(s('msgtailorcopy')) + '</button>'
+            + '</div>'
+            + '<div style="color:#374151;margin-bottom:6px;">' + escapeHtml(s('msgtailorintro')) + '</div>'
+            + '<div style="color:#1f2937;font-weight:600;margin-bottom:4px;">' + escapeHtml(s(leadKey)) + '</div>'
+            + '<ul style="margin:0;padding-left:18px;color:#1f2937;max-height:220px;overflow-y:auto;">'
+            + items + '</ul>'
+            + '</div>';
+    };
+
     const renderStep2 = () => {
         if (selectedMode === 'vet') {
             return renderStep2VET();
@@ -6095,6 +6194,7 @@ define([
                                 <span>${s('msgchatgptpastecontinue')}</span>
                             </div>
                         </div>
+                        ${renderTailorExample('msgtailorleadvet', 'msgtailorvet', 'cc-tailor-copy-vet')}
                         <button type="button" id="cc-download-vet-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-vet-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             ${s('msgdownloadchatgptcontext')}
@@ -6647,6 +6747,9 @@ define([
                                 <span>${s('msgchatgptpastecontinue')}</span>
                             </div>
                         </div>
+                        ${selectedMode === 'policy'
+                            ? renderTailorExample('msgtailorleadpolicy', 'msgtailorpolicy', 'cc-tailor-copy-wp')
+                            : renderTailorExample('msgtailorleadwp', 'msgtailorwp', 'cc-tailor-copy-wp')}
                         <button type="button" id="cc-download-wp-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-wp-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#3b82f6;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             ${s('msgdownloadchatgptcontext')}
@@ -6865,6 +6968,7 @@ define([
                                 <span>${s('msgchatgptpastegenerate')}</span>
                             </div>
                         </div>
+                        ${renderTailorExample('msgtailorleaduni', 'msgtailoruni', 'cc-tailor-copy-uni')}
                         <button type="button" id="cc-download-uni-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-uni-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#8b5cf6;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             ${s('msgdownloadchatgpt')}
@@ -7102,6 +7206,11 @@ define([
                                 <span>${s('msgchatgptpastegenerate')}</span>
                             </div>
                         </div>
+                        ${selectedMode === 'general'
+                            ? renderTailorExample('msgtailorleadgeneral', 'msgtailorgeneral', 'cc-tailor-copy-pd')
+                            : (selectedMode === 'topicstext'
+                                ? renderTailorExample('msgtailorleadtopicstext', 'msgtailortopicstext', 'cc-tailor-copy-pd')
+                                : renderTailorExample('msgtailorleadpd', 'msgtailorpd', 'cc-tailor-copy-pd'))}
                         <button type="button" class="cc-btn cc-btn-primary" id="cc-download-pd-prompt" data-testid="button-download-pd-prompt" style="margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:16px;height:16px;">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -8588,6 +8697,30 @@ define([
             downloadDynamicPrompt(selectedMode === 'policy' ? 'policy' : 'workplace');
         });
         container.querySelector('#cc-download-vet-prompt')?.addEventListener('click', () => downloadDynamicPrompt('vet'));
+
+        // v15.5.0: copy the route's tailoring brief. Only one of these is ever in the
+        // DOM at a time - each route renders its own step - but querySelectorAll keeps
+        // this correct if a future step ever shows two.
+        container.querySelectorAll('.cc-tailor-copy').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const text = String(s(btn.getAttribute('data-tailor-key')) || '');
+                if (!text) { return; }
+                const confirmCopied = () => {
+                    const original = btn.textContent;
+                    btn.textContent = s('msgtailorcopied');
+                    setTimeout(() => { btn.textContent = original; }, 1600);
+                };
+                // navigator.clipboard is undefined on an http:// site and rejects when
+                // the document is not focused, so the textarea fallback is not optional.
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(confirmCopied).catch(() => {
+                        copyViaTextarea(text, confirmCopied);
+                    });
+                    return;
+                }
+                copyViaTextarea(text, confirmCopied);
+            });
+        });
         // v13.94.3: the #cc-download-pd-prompt button is rendered by the shared step that
         // serves BOTH the PD route and Route 5 (Topics and Text). Hard-coding 'pd' here
         // meant Route 5 users downloaded the PD prompt file, and the topicstext template
@@ -9935,39 +10068,72 @@ define([
                 topicsHeader += 'YOUR ELEMENT & PERFORMANCE CRITERIA TO COVER\n';
                 topicsHeader += '====================================================================\n\n';
                 topicsHeader += 'The teacher has selected the following element and its performance criteria.\n';
-                topicsHeader += 'This is ONE element only. Label it as Element ' + elNum + ' at the top.\n';
-                topicsHeader += 'Generate a COMPLETE seven-card sequence for EACH PC below.\n';
-                topicsHeader += 'Use the numbering format: PC ' + elNum + '.1, PC ' + elNum + '.2, PC ' + elNum + '.3, etc. All PCs belong to Element ' + elNum + '.\n';
-                topicsHeader += 'Do NOT create additional element headers. Do NOT skip any PCs.\n\n';
+                // v15.5.0 FIX-CC-ENVELOPE-AMBIGUITY: the labelling line used to say
+                // "at the top" / "label each sub topic", with no field named for it,
+                // while the system prompt above it says to return only JSON. A model
+                // resolved that however it liked and the label was usually lost. It now
+                // names the envelope field the prompt defines - see CC_ENVELOPE_BLOCK.
+                topicsHeader += 'This is ONE element only: Element ' + elNum + '. Every PC below belongs to it.\n';
+                topicsHeader += 'Generate a COMPLETE seven-card sequence for EACH PC below, in order.\n';
+                topicsHeader += 'Put the PC number in the "subtopicLabel" field of that block\'s JSON\n';
+                topicsHeader += 'envelope, using the format PC ' + elNum + '.1, PC ' + elNum + '.2, PC ' + elNum + '.3 and so on:\n';
+                topicsHeader += '  { "subtopicLabel": "PC ' + elNum + '.1", "cards": [ ... ] }\n';
+                topicsHeader += 'Do NOT write an element heading or a PC heading anywhere outside the JSON,\n';
+                topicsHeader += 'and do NOT repeat the PC number inside a card. Do NOT skip any PCs.\n\n';
             } else if (mode === 'workplace') {
                 topicsHeader += 'YOUR SUB TOPICS TO COVER\n';
                 topicsHeader += '====================================================================\n\n';
                 topicsHeader += 'The teacher has selected the following sub topics.\n';
                 topicsHeader += 'Generate a COMPLETE card sequence for EACH sub topic below.\n';
-                topicsHeader += 'Label each sub topic using JUST the letter: A, B, C, etc. Do NOT prefix with "Sub Topic".\n';
-                topicsHeader += 'Do NOT use numbers. Do NOT skip any sub topics.\n\n';
+                // v15.5.0 FIX-CC-ENVELOPE-AMBIGUITY: the labelling line used to say
+                // "at the top" / "label each sub topic", with no field named for it,
+                // while the system prompt above it says to return only JSON. A model
+                // resolved that however it liked and the label was usually lost. It now
+                // names the envelope field the prompt defines - see CC_ENVELOPE_BLOCK.
+                topicsHeader += 'Put the sub topic\'s letter in the "subtopicLabel" field of that block\'s\n';
+                topicsHeader += 'JSON envelope, as JUST the letter - A, B, C - with no "Sub Topic" prefix\n';
+                topicsHeader += 'and no numbers:\n';
+                topicsHeader += '  { "subtopicLabel": "A", "cards": [ ... ] }\n';
+                topicsHeader += 'Do NOT write a sub topic heading anywhere outside the JSON. Do NOT skip any.\n\n';
             } else if (mode === 'topicstext') {
                 topicsHeader += 'YOUR SUB TOPICS TO COVER\n';
                 topicsHeader += '====================================================================\n\n';
                 topicsHeader += 'The teacher has defined the following sub topics.\n';
                 topicsHeader += 'Produce ONE JSON object for EACH sub topic below, in this order.\n';
                 topicsHeader += 'Separate consecutive sub topics with a line containing only === NEXT ===\n';
+                topicsHeader += 'Put the sub topic\'s name in the "subtopicLabel" field of each block\'s envelope:\n';
+                topicsHeader += '  { "subtopicLabel": "<the sub topic name>", "cards": [ ... ] }\n';
                 topicsHeader += 'Do NOT combine sub topics. Do NOT skip any. Do NOT add commentary between blocks.\n\n';
             } else if (mode === 'pd') {
                 topicsHeader += 'YOUR SUB TOPICS TO COVER\n';
                 topicsHeader += '====================================================================\n\n';
                 topicsHeader += 'The teacher has defined the following sub topics for this PD course.\n';
                 topicsHeader += 'Generate a COMPLETE six-card sequence for EACH sub topic below.\n';
-                topicsHeader += 'Label each sub topic using JUST the letter: A, B, C, etc. Do NOT prefix with "Sub Topic".\n';
+                // v15.5.0 FIX-CC-ENVELOPE-AMBIGUITY: the labelling line used to say
+                // "at the top" / "label each sub topic", with no field named for it,
+                // while the system prompt above it says to return only JSON. A model
+                // resolved that however it liked and the label was usually lost. It now
+                // names the envelope field the prompt defines - see CC_ENVELOPE_BLOCK.
+                topicsHeader += 'Put the sub topic\'s letter in the "subtopicLabel" field of that block\'s\n';
+                topicsHeader += 'JSON envelope, as JUST the letter - A, B, C:\n';
+                topicsHeader += '  { "subtopicLabel": "A", "cards": [ ... ] }\n';
                 topicsHeader += 'Content should be practical, skills-focused, and directly applicable.\n';
-                topicsHeader += 'Do NOT use numbers. Do NOT skip any sub topics.\n\n';
+                topicsHeader += 'Do NOT write a sub topic heading outside the JSON. Do NOT skip any.\n\n';
             } else {
                 topicsHeader += 'YOUR SUB TOPICS TO COVER\n';
                 topicsHeader += '====================================================================\n\n';
                 topicsHeader += 'The teacher has defined the following sub topics.\n';
                 topicsHeader += 'Generate a COMPLETE card sequence for EACH sub topic below.\n';
-                topicsHeader += 'Label each sub topic using JUST the letter: A, B, C, etc. Do NOT prefix with "Sub Topic".\n';
-                topicsHeader += 'Do NOT use numbers. Do NOT skip any sub topics.\n\n';
+                // v15.5.0 FIX-CC-ENVELOPE-AMBIGUITY: the labelling line used to say
+                // "at the top" / "label each sub topic", with no field named for it,
+                // while the system prompt above it says to return only JSON. A model
+                // resolved that however it liked and the label was usually lost. It now
+                // names the envelope field the prompt defines - see CC_ENVELOPE_BLOCK.
+                topicsHeader += 'Put the sub topic\'s letter in the "subtopicLabel" field of that block\'s\n';
+                topicsHeader += 'JSON envelope, as JUST the letter - A, B, C - with no "Sub Topic" prefix\n';
+                topicsHeader += 'and no numbers:\n';
+                topicsHeader += '  { "subtopicLabel": "A", "cards": [ ... ] }\n';
+                topicsHeader += 'Do NOT write a sub topic heading anywhere outside the JSON. Do NOT skip any.\n\n';
             }
             topicsHeader += topicsText.trim() + '\n\n';
             topicsHeader += '====================================================================\n\n';
@@ -11808,7 +11974,7 @@ define([
                                     _qFd.append('voice', voiceName);
                                     var _qResp = await ccPost(_qFd, 'quiz feedback TTS');
                                     if (!_qResp.ok) { throw new Error('TTS returned ' + _qResp.status); }
-                                    var _qData = await _qResp.json();
+                                    var _qData = await CcState.readJson(_qResp, 'quiz feedback TTS');
                                     var _qRl = ccRateLimitInfo(_qData);
                                     if (_qRl) {
                                         if (!_voRateLimited) { _voRateLimited = _qRl; }
@@ -11830,7 +11996,7 @@ define([
                                     _qpFd.append('audiotype', _qData.audioType || 'audio/ogg');
                                     var _qpResp = await ccPost(_qpFd, 'quiz feedback persist');
                                     if (_qpResp.ok) {
-                                        var _qpData = await _qpResp.json();
+                                        var _qpData = await CcState.readJson(_qpResp, 'quiz feedback persist');
                                         if (_qpData.success && _qpData.url) {
                                             opt.feedbackAudioUrl = _qpData.url;
                                             ccLog('%c[QUIZ VOICE] section ' + section.id + ' option ' + oi
@@ -11886,7 +12052,7 @@ define([
                                 clearTimeout(_clipTimer);
                             }
                             if (!response.ok) { throw new Error('Voice API returned ' + response.status); }
-                            const data = await response.json();
+                            const data = await CcState.readJson(response, 'voiceover clip');
                             // v15.4.3: a refusal is not a failure to retry. Tagged and raised
                             // so every retry loop above can recognise it and stop, and the run
                             // can be halted once rather than failing section by section.
@@ -11913,7 +12079,7 @@ define([
                                 _fd.append('audiotype', data.audioType || 'audio/ogg');
                                 var _resp = await ccPost(_fd, 'voiceover persist');
                                 if (_resp.ok) {
-                                    var _d = await _resp.json();
+                                    var _d = await CcState.readJson(_resp, 'voiceover persist');
                                     if (_d.success && _d.url) {
                                         return {url: _d.url, wordCount: wordCount};
                                     }
@@ -12177,7 +12343,7 @@ define([
                                 }
                                 
                                 if (!response.ok) throw new Error('Voice API returned ' + response.status);
-                                const data = await response.json();
+                                const data = await CcState.readJson(response, 'voiceover section');
                                 var _sectionDur = ((Date.now() - _sectionStart) / 1000).toFixed(1);
                                 
                                 if (data.success && data.audioContent) {
@@ -12205,7 +12371,7 @@ define([
                                         _ppFd.append('audiotype', data.audioType || 'audio/ogg');
                                         var _ppResp = await ccPost(_ppFd, 'voiceover persist');
                                         if (_ppResp.ok) {
-                                            var _ppData = await _ppResp.json();
+                                            var _ppData = await CcState.readJson(_ppResp, 'voiceover persist');
                                             if (_ppData.success && _ppData.url) {
                                                 section.voiceoverUrl = _ppData.url;
                                                 section.voiceoverStatus = 'complete';
@@ -12507,7 +12673,7 @@ define([
                                                         _cfd.append('voice', voiceName);
                                                         var _cr = await ccPost(_cfd, 'multilanguage card TTS');
                                                         if (!_cr.ok) { throw new Error('HTTP ' + _cr.status); }
-                                                        var _cd = await _cr.json();
+                                                        var _cd = await CcState.readJson(_cr, 'multilanguage card TTS');
                                                         var _cdRl = ccRateLimitInfo(_cd);
                                                         if (_cdRl) {
                                                             if (!_voRateLimited) { _voRateLimited = _cdRl; }
@@ -12533,7 +12699,7 @@ define([
                                                         _pfd.append('audiotype', _cd.audioType || 'audio/ogg');
                                                         var _pr = await ccPost(_pfd, 'multilanguage card persist');
                                                         if (!_pr.ok) { throw new Error('persist HTTP ' + _pr.status); }
-                                                        var _pd = await _pr.json();
+                                                        var _pd = await CcState.readJson(_pr, 'multilanguage card persist');
                                                         if (!_pd.success || !_pd.url) {
                                                             throw new Error(_pd.error || 'persist returned no url');
                                                         }
@@ -12613,7 +12779,7 @@ define([
                                                 fd.append('voice', voiceName);
                                                 var r = await ccPost(fd, 'multilanguage TTS');
                                                 if (!r.ok) throw new Error(r.status);
-                                                var d = await r.json();
+                                                var d = await CcState.readJson(r, 'multilanguage TTS');
                                                 if (d.success && d.audioContent) {
                                                     // FIX-CC-MULTILANG-PERSIST (v12.68): Previously this stored a
                                                     // data:audio base64 URL on the section. saveManifestSilent's
@@ -12641,7 +12807,7 @@ define([
                                                     _persistFd.append('audiotype', d.audioType || 'audio/ogg');
                                                     var _persistResp = await ccPost(_persistFd, 'multilanguage persist');
                                                     if (!_persistResp.ok) throw new Error('persist HTTP ' + _persistResp.status);
-                                                    var _persistData = await _persistResp.json();
+                                                    var _persistData = await CcState.readJson(_persistResp, 'multilanguage persist');
                                                     if (!_persistData.success || !_persistData.url) throw new Error(_persistData.error || 'persist returned no url');
                                                     section.voiceoverUrl = _persistData.url;
                                                     section.voiceoverStatus = 'complete';

@@ -1497,6 +1497,45 @@ assessment condition. Remove unsupported specificity. Check that no qualificatio
 the source disappeared. Check that scenario details did not alter the technical facts. Check that
 mandatory, organisational, competency and recommended requirements are worded at the correct level.`;
 
+    // ===========================================================================
+    // v15.5.0 FIX-CC-ENVELOPE-AMBIGUITY
+    //
+    // Every system prompt opens with "Return ONLY valid JSON", and the downloaded
+    // prompt file then appends a topics header telling the model to "Label it as
+    // Element 1 at the top" or to "Label each sub topic using JUST the letter: A, B,
+    // C". Those two instructions contradict each other and the contradiction was never
+    // resolved anywhere: there is no field named for the label, so "at the top" can
+    // only mean a heading line ABOVE the JSON - which the first instruction forbids.
+    //
+    // A model handed that resolves it however it likes. In practice it does one of
+    // four things, and three of them lose the label: it writes a heading line above the
+    // object (parseChatGPTJSONBlocks starts at the first "{", so the line is silently
+    // discarded), it folds the label into the first card's title (where it reads as
+    // content the author did not write), it repeats it in the body text, or it drops it.
+    // The teacher asked for numbering and got, at best, luck.
+    //
+    // This block names the field. The label goes in the envelope beside "cards", it is
+    // used to confirm block order, and it is not learner-facing - which is what the
+    // instruction always meant and never said.
+    // ===========================================================================
+    const CC_ENVELOPE_BLOCK = `WHERE THE JSON STARTS AND ENDS:
+Nothing may appear outside the JSON object. No heading line above it, no title, no
+commentary, no explanation after it, no markdown code fences. The first character of your
+reply is "{" and the last is "}". When you are asked for several blocks, the only thing
+permitted between them is the separator line you were given.
+
+WHERE A LABEL GOES:
+If you have been asked to label what you are writing - "Element 1", "PC 1.2", "A", "B",
+a sub topic name - that label belongs in the envelope's "subtopicLabel" field and NOWHERE
+else:
+
+  { "subtopicLabel": "PC 1.2", "cards": [ ... ] }
+
+"subtopicLabel" is a plain string. It is used only to confirm the blocks arrived in the
+order they were asked for; it is never shown to the learner. Do not put it in a heading
+line, do not fold it into a card's "title" or "heading", and do not open the body text
+with it. If you were not asked to label anything, omit "subtopicLabel" altogether.`;
+
     const CC_SHARED_QUALITY_RULES = CC_SOURCE_FIDELITY_BLOCK + '\n\n' +
         CC_LEARNING_BLUEPRINT_BLOCK + '\n\n' +
         CC_INSTRUCTIONAL_MODEL_ROUTER_BLOCK + '\n\n' +
@@ -1515,6 +1554,8 @@ mandatory, organisational, competency and recommended requirements are worded at
     const VET_SYSTEM_PROMPT = `You are a VET workplace content designer generating competency-based learning for an Australian unit of competency.
 
 Return ONLY valid JSON: { "cards": [...] }  -  exactly 7 cards. If fewer or more than 7 cards are returned, the output is invalid. No markdown, no code fences.
+
+${CC_ENVELOPE_BLOCK}
 
 FIELDS: All fields must be returned exactly as specified. Do not rename, omit, or reorder fields.
 
@@ -1752,6 +1793,8 @@ const UNIVERSITY_SYSTEM_PROMPT = `You are generating university-level academic l
 
 Return ONLY valid JSON: { "cards": [...] }  -  exactly 7 cards. If fewer or more than 7 cards are returned, the output is invalid. No markdown, no code fences.
 
+${CC_ENVELOPE_BLOCK}
+
 FIELDS: All fields must be returned exactly as specified. Do not rename, omit, or reorder fields.
 
 REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve theory names, researcher names, and case study specifics  -  do NOT replace with generic equivalents.
@@ -1905,6 +1948,8 @@ how research is designed.
 const WORKPLACE_SYSTEM_PROMPT = `You are generating structured workplace training aligned to policy, SOP, or performance expectations.
 
 Return ONLY valid JSON: { "cards": [...] }  -  exactly 7 cards. If fewer or more than 7 cards are returned, the output is invalid. No markdown, no code fences.
+
+${CC_ENVELOPE_BLOCK}
 
 FIELDS: All fields must be returned exactly as specified. Do not rename, omit, or reorder fields.
 
@@ -2217,6 +2262,8 @@ a pack about a different subject and still make sense.
 
 Return ONLY valid JSON: { "cards": [...] }  -  exactly 7 cards. If fewer or more than 7 cards are returned, the output is invalid. No markdown, no code fences.
 
+${CC_ENVELOPE_BLOCK}
+
 FIELDS: All fields must be returned exactly as specified. Do not rename, omit, or reorder fields.
 
 REFERENCE MATERIAL: When present, use it as the PRIMARY source. Preserve named frameworks, professional interactions, and context  -  do NOT replace with generic equivalents.
@@ -2479,6 +2526,8 @@ const POLICY_SYSTEM_PROMPT = `You are an expert compliance-training designer tur
 
 Return ONLY valid JSON: { "cards": [...] } - exactly 6 cards, in the order below. No markdown and no code fences.
 
+${CC_ENVELOPE_BLOCK}
+
 LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
 authoritative. Hit every one of them.
 ${ccCardBudgetLine('policy')}
@@ -2578,6 +2627,8 @@ Do NOT return a voiceoverText field on any card.
 const GENERAL_SYSTEM_PROMPT = `You are an expert instructional designer and learning storyteller generating high-quality adult learning that is not formal VET, organisation-specific Workplace training, or University academic study.
 
 Return ONLY valid JSON: { "cards": [...] } - exactly 7 cards, in the order below. No markdown and no code fences.
+
+${CC_ENVELOPE_BLOCK}
 
 LENGTH  -  NOT NEGOTIABLE: the per-field word ranges below are the specification, and they are
 authoritative. Hit every one of them.
@@ -2747,6 +2798,8 @@ Do not return voiceoverText. Visible card content is the narration.
     const TOPICSTEXT_SYSTEM_PROMPT = `You are an expert writer of short-course learning content. You write clear, compact explanatory prose for adults.
 
 Return ONLY valid JSON: { "cards": [...] }. No markdown, no code fences.
+
+${CC_ENVELOPE_BLOCK}
 
 HOW MANY CARDS: Break the topic into the subtopics it actually has - a MINIMUM of 6 and a
 MAXIMUM of 10 - and return one "subtopic" card for each, in teaching order, followed by

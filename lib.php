@@ -117,6 +117,8 @@ function contentcreator_delete_instance($id) {
         $DB->delete_records('contentcreator_progress', ['cmid' => $cm->id]);
         // The checklist table is also keyed by cmid; it was previously orphaned on delete.
         $DB->delete_records('contentcreator_checklist', ['cmid' => $cm->id]);
+        // V15.5.0: The server-side completion evidence is keyed by cmid too.
+        $DB->delete_records('contentcreator_evidence', ['cmid' => $cm->id]);
 
         // Remove the module's stored files: the pre-generated voiceovers, which are the only
         // audio this activity actually owns.
@@ -344,6 +346,7 @@ function contentcreator_reset_userdata($data) {
             [$cmsql, $cmparams] = $DB->get_in_or_equal($cmids);
             $DB->delete_records_select('contentcreator_progress', "cmid $cmsql", $cmparams);
             $DB->delete_records_select('contentcreator_checklist', "cmid $cmsql", $cmparams);
+            $DB->delete_records_select('contentcreator_evidence', "cmid $cmsql", $cmparams);
         }
     }
 

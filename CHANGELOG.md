@@ -1,5 +1,566 @@
 # Changelog
 
+## 15.5.5 - 2026-09-18
+
+The release pipeline found four things, all but one of them in `tests/php/static-checks.php`
+— the file this plugin's own checks had been told to skip. That exclusion was the mistake,
+and removing it is most of this release. A whole-plugin sweep then found a live language
+defect that had nothing to do with any of it.
+
+### The blocker, and why it existed
+
+`tests/php/static-checks.php` used an unfiltered parameter type. It does not — it *names*
+one, in a regular expression, because checking for it is its job. The first version wrote
+the token out literally and therefore had to exempt itself from its own sweep, and the
+harness promptly became the only file in the plugin with an unjustified usage. A check that
+cannot see itself is not a check.
+
+The token is now **built at runtime** rather than written out, so the file no longer
+contains the string it looks for, and **the exclusion is gone**. The harness is swept like
+every other file.
+
+### FIX-CC-DUPLICATE-LANG-KEY: a live defect the sweep found on its first run
+
+`errorsectionnotfound` was declared **twice** in `lang/en/contentcreator.php`. PHP takes the
+later declaration, so the wording added in v15.5.0 for `check_answer` and
+`record_section_view` was dead, and a learner whose section could not be resolved was shown
+*"That slide could not be found in the stored content."* — a message written for a teacher
+editing a slide.
+
+The pre-existing key keeps its meaning and its owner. The v15.5.0 usages moved to
+`errorsectionnotinactivity`. **1,516 keys, now verified unique on every run.**
+
+### The comment rule was wrong, not just under-applied
+
+The pipeline reported a lowercase comment in `lang/en` that this plugin's own check had
+declared clean for three releases. The check only looked at lines that **begin** with `//`.
+The pipeline counts a **trailing** comment — a `//` after code on the same line — as its own
+block, and there was one sitting at line 1339. Now checked, and the mutation that
+reintroduces it fails the suite.
+
+### One rule implemented exactly, one deliberately not
+
+`function(` without a space is now checked, with a lookbehind: `register_shutdown_function(`
+ends in the same eight characters, and a plain substring match reported it in `ajax.php` as
+a defect that was not there.
+
+**"Multi-line calls: opening paren last on line" is NOT implemented**, and the reasoning is
+recorded in the file rather than left implicit. One reported sample is not enough to write
+the rule without false positives, and these two shapes could not be told apart from the
+evidence:
+
+    if (preg_match_all(            <- reported
+    if (has_capability($a, $b)     <- not reported, and perfectly good code
+        || has_capability($c, $d)) {
+
+A first draft flagged four lines, three of them correct code. It was removed rather than
+tuned on guesswork. The instance the pipeline found is fixed; if the rule is ever published,
+there is a marked place to implement it.
+
+### A whole-plugin sweep, not just the code this release touched
+
+Everything in sections 6 to 13 grew out of a specific defect. Section 14 checks the plugin
+as a whole, and runs every release:
+
+- **Duplicate language keys** — the one above.
+- **Every web service class** named in `db/services.php` exists and declares `execute`,
+  `execute_parameters` and `execute_returns`. Nine of them.
+- **Every table** read or written in PHP is declared in `install.xml`. Five.
+- **Every AMD module** referenced by name resolves to a source file. Fifteen.
+- **Source and build in step**, nothing orphaned either way.
+- **Every capability has a language string**, or it shows as a raw key in Define Roles.
+
+Each mutation-tested: a reintroduced duplicate key, a service pointing at a class that does
+not exist, and a lowercase trailing comment all fail the suite.
+
+`tests/php/static-checks.php` is now **60 checks across fourteen sections**, and it checks
+itself.
+
+Verified: 40/40 PHP files lint clean, 0 eslint errors, 11/11 JavaScript suites, 60/60
+plugin static checks, `grunt amd` reproducible, version mirror 3/3.
+
+**Still not smoke tested against a live generation.**
+
+## 15.5.4 - 2026-09-18
+
+A second self-audit of the 15.5.x work. No new defects in shipped behaviour this time —
+the first audit found the one that mattered — but four pieces of new code still had no
+behavioural coverage, and two of them decide whether a learner can ever finish an activity.
+
+### Checked and found sound
+
+- **A scrubbed manifest can never be written back over the real one.** All three manifest
+  writes (`save_manifest`, `save_manifest_chunk`, `save_slide_edit`) require
+  `mod/contentcreator:manage`, and `:manage` is exempt from the scrub — so a user who can
+  save always holds the full answer key. There is no path to silent, permanent data loss.
+- **`db/install.xml` and `db/upgrade.php` build the same table.** Compared field by field
+  on type, length, NOTNULL and DEFAULT, plus indexes on name, uniqueness and columns, and
+  key count. A divergence here is the classic Moodle defect that surfaces months later on
+  one site and not another.
+
+### Now tested rather than reasoned about
+
+**The answer tally** (`evidence::apply_answer`, extracted from `record_answer` so it can be
+tested without a database). This arithmetic decides whether a challenge can be completed,
+and three of its rules are only obvious once written down: re-answering **replaces** rather
+than accumulating; answers to questions an author has since deleted are **dropped**; and
+`questionsanswered` can never exceed `questiontotal`. Twenty answers to a three-question
+challenge tally three. A five-question challenge edited down to three does not strand the
+learner at 5-of-3 forever. Six malformed inputs — a corrupt mask, a scalar, a negative
+index, a zero total — are handled rather than fatal.
+
+One real improvement fell out of writing it: the mask is now cast to an object before
+encoding. Without that, `json_encode()` emitted a **list** when the answered questions
+happened to be sequential and an **object** when they were not — the same data in two
+shapes depending on which questions a learner answered.
+
+**The scrub at real size.** `strip_answer_key()` uses `foreach (... as &$x)` at three
+nesting levels. PHP leaves the last reference dangling after such a loop, and the
+corruption it causes is **invisible with one topic, one section and one card** — which is
+exactly what the first test used. Three of each now: 27 challenge cards, 54 options, every
+label asserted unique and in place, the last topic/section/card asserted intact rather than
+a copy of an earlier one, and the scrub asserted idempotent.
+
+**Backup coverage.** Every column of `contentcreator_evidence` appears in the backup
+element, no phantom fields, the restore handler remaps `cmid` and `userid` and discards the
+source primary key, and `userid` is annotated so the users travel with the backup. A column
+missing here is dropped silently on a course copy and nobody finds out until a restored
+learner's completion is recomputed.
+
+**The learner on-demand gate.** Eleven outcomes across the setting being unset, empty,
+on, off, and the user being a learner, a teacher, a reviewer, or holding no capability at
+all. The rule that matters: an **unconfigured site reads as enabled**, because
+`get_config()` returns false for a setting never written — which on upgrade is every
+existing site. A falsy-means-off reading would have switched learner voiceover off
+site-wide, everywhere, on the upgrade that introduced the switch.
+
+### Every new check was mutation-tested
+
+Letting re-answers accumulate, removing the stale-answer prune, duplicating an element the
+way a dangling reference would, dropping a column from the backup element, making an
+unconfigured site read as disabled, and exempting staff before the capability check — all
+six fail the suite. One attempted mutation was a no-op and is recorded as such: removing an
+`unset()` between two by-reference loops over different arrays is harmless, so there was
+nothing there to catch.
+
+`tests/php/static-checks.php` is now 53 checks across thirteen sections, and its own
+comment-capitalisation rule caught a comment added in this release.
+
+Verified: 40/40 PHP files lint clean, 0 eslint errors, 11/11 JavaScript suites, 53/53
+plugin static checks, `grunt amd` reproducible, version mirror 3/3.
+
+**Still not smoke tested against a live generation.**
+
+## 15.5.3 - 2026-09-18
+
+A self-audit of everything added in 15.5.0 through 15.5.2, done by testing it rather than
+re-reading it. One real defect found, and the two halves of this work that had no
+behavioural coverage now have it.
+
+### FIX-CC-CHALLENGE-COUNT-DEADLOCK: my own bug, and it would have locked learners out
+
+`evidence::challenge_sections()` counted the questions in **every** decision-point card in
+a section and added them together. `evidence::question_at()` flattened them into one list
+the same way. Both were wrong, and together they would have been unrecoverable for a
+learner.
+
+The player renders **each** decision-point card as its own challenge, and each one numbers
+its questions from zero inside its own container. So on a section with two such cards:
+
+- the learner answering the second card's first question sends `questionindex=0`, which the
+  server resolved to the **first** card's first question — the wrong question graded; and
+- the server required six answers while the learner could only ever supply three, so
+  `all_challenges_answered()` could never be satisfied and **the activity could never be
+  completed**, permanently, with no error anywhere.
+
+No route produces a second decision-point card — the seven-card schema, Policy's six and
+Topics & Text all specify exactly one, and player5's own `_proseGridClosed` guard exists
+because "nothing in the pipeline should produce one". But a hand-edited manifest can, and
+the code had explicitly gone out of its way to accommodate the case in the one way that
+breaks it. Both functions now scope to the first decision-point card, which is exact for
+every pack the plugin builds and leaves an extra card unscored rather than blocking a
+learner.
+
+### The new server code now has behavioural tests, not just static ones
+
+`tests/php/static-checks.php` gained sections 8 and 9, running against the real classes:
+
+- **The answer-key scrub**, against a manifest shaped the way `normalizeCardSchema()`
+  actually stores one — including the legacy single-question card. Every stripped field,
+  the feedback *text* (which names the answer as surely as a flag does), option text and
+  order preserved, and unreadable input returned whole rather than blanked.
+- **Server-side grading**, across all four answer-key shapes that exist in stored
+  manifests: per-option `correct`, per-option `isCorrect`, question-level `correctIndex`,
+  and the legacy card-is-the-question form. Plus the cases that must NOT resolve — nothing
+  marked correct, an index past the end, an unknown section — and the deadlock above.
+
+Each was mutation-tested: reverting the flatten-across-cards logic, removing `feedback`
+from the strip list, and making `correct_index()` guess option 0 all fail the suite.
+
+### The standalone decision-point card is now covered in a real browser
+
+`tests/js/test-standalone-dp-runtime.js`, 27 checks. The three-activity challenge already
+had a Chromium suite; the fallback renderer — reached when a pack yields neither flip cards
+nor sort items — did not, and it is the half with the harder path.
+
+It keeps **Try Again**, which the challenge quiz dropped in v15.4.6. The handler is
+asynchronous now, so Try Again re-enables a question that has already been through one
+server round trip. If the reset and the grading path disagree — a feedback node removed on
+the first attempt and expected on the second, a lock not cleared, a second request never
+sent — the card looks live and does nothing. The suite answers wrongly, presses Try Again,
+answers again, and asserts the second request actually reaches the server and its feedback
+renders. It also covers the right answer, and a failed grading call putting the question
+back rather than closing it.
+
+### Also checked, and found sound
+
+- **The parser's bookkeeping cannot leak into a stored manifest.** `ccSubtopicLabel`,
+  `ccStartIndex` and `ccEndIndex` are properties on an array rather than elements, and
+  `JSON.stringify` does not serialise those. Proven rather than assumed.
+- **The export and print paths** read `opt.correct` and `opt.feedback` in eight places.
+  All are inside `if (this.canEdit)`, and staff receive the unscrubbed manifest, so the
+  scrub cannot empty a teacher's export.
+- **`feedbackAudioUrl` is always a persisted file-store URL**, never a `data:` URI, so
+  `PARAM_URL` on the grading response is safe.
+- **The five legacy activity renderers** in `cc-activities.js` keep their answers, because
+  the scrub only touches `cardType === 'decision-point'`. That is the documented remaining
+  gap, and it is consistent rather than half-applied.
+
+Verified: 40/40 PHP files lint clean, 0 eslint errors, 11/11 JavaScript suites, 38/38
+plugin static checks, `grunt amd` reproducible, version mirror 3/3.
+
+**Still not smoke tested against a live generation.** Two Chromium suites and behavioural
+PHP tests are a great deal more than reasoning, and still not a real VET build on a real
+site.
+
+## 15.5.2 - 2026-09-18
+
+Release-pipeline blocker, plus the defect underneath it that mattered more than the
+blocker did.
+
+### FIX-CC-UNSAFE-SECTION-ID: the blocker, and what it was actually pointing at
+
+The pipeline refused v15.5.1: `check_answer.php` declared its section id as an unfiltered
+parameter type. The first instinct was to annotate it and move on — the value is only ever
+compared for equality against ids in the stored manifest, never interpolated into HTML or
+SQL. That would have been the wrong fix, and the blocker was right to refuse it.
+
+A subtopic's id is taken **verbatim from vendor output** when one is supplied
+(`planner.js`: `aiSubtopic?.id || ...`). It was never constrained. It then travels to three
+places that assume it is tame:
+
+1. `data-section-id="..."` in the rendered markup. Escaped, so not an XSS — but a quote
+   still ends the attribute early.
+2. **Ten jQuery selectors built by string concatenation**, `.find('[data-section-id="' +
+   sid + '"]')`. A quote, a bracket or a backslash makes that an invalid selector, which
+   **throws** and takes the surrounding handler down with it. One of the ten already
+   carried a `.replace(/"/g, '')` band-aid, which is the tell that this was known and
+   patched locally rather than fixed.
+3. A web service parameter. An id that needs an unfiltered type to survive the trip is an
+   id that should never have been allowed to contain those characters.
+
+So ids are now constrained **where they are created**. `CcState.safeSectionId()` reduces a
+vendor-supplied id to `[A-Za-z0-9_-]` — the PARAM_ALPHANUMEXT character set, so an id that
+has been through it survives the transport unchanged — and falls back to the plugin's own
+generated id if nothing usable survives. `check_answer` takes `PARAM_ALPHANUMEXT`.
+
+Manifests generated before this release can still hold an unconstrained id.
+`evidence::resolve_section_id()` handles those: exact match first, then the challenge
+slide's `<sectionid>_learning` spelling, then a normalised comparison with **both sides put
+through the same function**. A normalised comparison matching more than one section is
+refused rather than guessed at — grading the wrong section is worse than not grading.
+It returns the manifest's own spelling, so the question lookup, the question count and the
+evidence row are all keyed on a value the server chose rather than one the client sent.
+
+### Coding-style warning: comment blocks beginning lowercase
+
+Thirteen across the plugin, not the two the pipeline named — it reports a sample. All
+capitalised. Three of those were mangled by the first mechanical pass, which upper-cased
+the first letter it found and turned `$strict` into `$Strict`, `preg_replace()` into
+`Preg_replace()`, and `v13.93's` into `v13.93'S`. Rewritten by hand so the sentence reads
+properly and the identifier is left alone.
+
+### Language strings are one line each
+
+Eleven `$string` values held literal newlines inside single-quoted strings. Valid PHP,
+identical at runtime, and wrong: AMOS and every lang-file parser expect one string per
+line. Converted to double-quoted single-line declarations with `\n` escapes. Four of the
+eleven predate this release. Verified by loading the file and comparing line counts,
+apostrophes and embedded double quotes — every runtime value is unchanged.
+
+### The pipeline's rules are now checked before the zip is built
+
+Three findings in three releases, every one of them mechanical and every one caught after
+packaging. `tests/php/static-checks.php` gained a section 6:
+
+- Every `PARAM_RAW` / `PARAM_RAW_TRIMMED` carries a justification **on the same line** — a
+  comment block above the line does not count, which is precisely how v15.5.1 shipped.
+- No comment block begins with a lowercase letter.
+- No language string spans more than one physical line.
+- The section id character set agrees across `cc-state.js`, `evidence.php` and
+  `check_answer.php` — if those three drift, a legitimate id stops resolving and a
+  learner's answer cannot be graded.
+
+**Each of the four was mutation-tested.** The first version of the PARAM-type check passed
+a mutation that changed the real parameter type, because the token it searched for was
+still sitting in a comment three lines above; it is now anchored on the declaration itself.
+A check that cannot fail is worth nothing, and that one could not.
+
+Verified: 40/40 PHP files lint clean, 0 eslint errors, 10/10 JavaScript suites, 21/21
+plugin static checks, `grunt amd` reproducible, version mirror 3/3.
+
+## 15.5.1 - 2026-09-18
+
+Two live defects, both silent, both found the same afternoon. Neither was introduced by
+15.5.0 — the first has been there since the paste feature shipped, the second since
+v15.4.31 fixed only half of what it should have.
+
+### FIX-CC-PASTE-BLOCKS-DROPPED: two thirds of a paste discarded without a word
+
+Reported from a live VET build. A teacher pasted three performance criteria of ChatGPT
+output and the plugin used one. PC 1.2 and PC 1.3 were discarded, and both were then
+regenerated with paid AI calls — the exact opposite of what the downloaded prompt file
+promises: *"Your slides are built from it directly - no second AI call."*
+
+`parseChatGPTJSONBlocks` split the paste on a line of three or more equals signs, then took
+the **first** `{` in each segment and bracket-matched to its close. The model had separated
+its blocks with a bare `1.2` and `1.3` rather than the `=== NEXT ===` the prompt asked for,
+so the whole paste was one segment and everything after the first object was never looked
+at. No error, no warning, no count. The only way to notice was to compare the built cards
+against what you had read in ChatGPT.
+
+Depending on a separator the model may or may not emit was the defect. The paste is now
+scanned for **every** top-level object carrying a `cards` array, in order, whatever sits
+between them — equals signs, a bare PC number, a heading, or nothing at all.
+
+Two things the old brace counter got wrong and the new one does not:
+
+- **It counted braces inside strings.** Card text legitimately contains `{` and `}`, and
+  one of them closed the envelope early and truncated the block.
+- **A stray `{` in a preamble swallowed the rest of the paste.** "use { to open" left every
+  real block unbalanced from that point. A candidate that fails to parse now resumes the
+  search one character in rather than skipping past everything it tentatively matched.
+
+Labels are recovered too. Output written before the envelope defined `subtopicLabel` puts
+the label on a heading line — `PC 1.2: Duty of care requirements are identified.` — which
+was previously discarded with everything else outside the JSON. Recognised shapes are read
+back: `PC 1.2`, `Element 1`, a bare `1.2` or `A`. Arbitrary prose above a block is still not
+a label; guessing one would be worse than having none. An envelope label always wins.
+
+The console now says what it found: `3 block(s): 1=PC 1.1 (7 cards), 2=PC 1.2 (7 cards),
+3=PC 1.3 (7 cards)`. A truncated final block is reported rather than dropped quietly.
+
+### FIX-CC-VOICE-HTML-BODY: the voiceover path never got the v15.4.31 fix
+
+Reported from a live site: forty identical `Unexpected token '<', "<!DOCTYPE "... is not
+valid JSON` lines, every card, three attempts each, no diagnosis.
+
+v15.4.31 taught the plugin that a server answering an AJAX POST with an HTML page and
+HTTP 200 is a fatal transport fault, not a transient one worth retrying. That fix went into
+`generator.js` — the generation path — as a **private copy** of the predicate.
+`builder.js`, which carries the voiceover path, had ten `.json()` calls and no guard at
+all, inside a three-attempt-per-card retry loop.
+
+A private copy is how one half of a codebase gets a fix and the other half waits three
+releases for it. The predicate now lives in `cc-state.js`, which both modules already
+depend on, alongside a shared `readJson()` that reads the body as text, refuses an HTML
+document, and reports the first 160 characters of whatever actually came back. All ten
+reads in `builder.js` go through it. `test-transport-fatal.js` now asserts that neither
+module has grown a private copy again, and that no bare `response.json()` is left in
+`builder.js`.
+
+The error it raises says what it is: *"the server returned an HTML page instead of JSON,
+with HTTP 200. This is not a plugin fault — something in front of Moodle answered the
+request. Usual causes are bot protection, a web application firewall, or a reverse-proxy
+error page."* It is tagged `ccFatal`, so the retry ladders stop rather than making sixty
+more requests that look to the blocking proxy like more of the traffic it is blocking.
+
+Worth stating for the record: `ajax.php` declares `AJAX_SCRIPT` and every response goes
+through `mod_contentcreator_response()`, which `json_encode`s. An HTML body arriving at the
+browser therefore cannot have come from Moodle or from the LMS Labs API through it —
+something between the browser and Moodle answered. That is a hosting matter, not a plugin
+or vendor one, and the plugin now says so instead of printing a parse error.
+
+### Suites
+
+`test-envelope-contract.js` grew a section 5 (63 checks total) built on the verbatim shape
+that failed: headings above each block, bare PC numbers between them, not one equals sign
+anywhere. It also covers braces and escaped quotes inside card text, a stray brace in a
+preamble, markdown fences, a truncated tail, and prose that is not card JSON at all.
+
+Verified: 40/40 PHP files lint clean, 0 eslint errors, 10/10 JavaScript suites, 15/15
+plugin static checks, `grunt amd` reproducible, version mirror 3/3.
+
+**Still not smoke tested on a live site.** Both fixes above were found by running the real
+parser and reading the real transport code against real reported output — which is a great
+deal better than reasoning, and still not the same as a generation run.
+
+## 15.5.0 - 2026-09-18
+
+The first release in this series that changes what the plugin *trusts*. Three of the
+four items left open in the 15.4.30 audit as "product decisions, not defects to patch
+silently" are decided here, plus two things a teacher asked for.
+
+### FIX-CC-COMPLETION-FORGEABLE: the browser decided whether a compliance module was complete
+
+`ajax.php`'s `save_completion` took `completed` off the POST body and handed it to
+`completion_info::update_state()`. One crafted request marked a module complete without
+a slide being opened. `mod_contentcreator_save_attempt` did the same thing through the
+web service layer. And `mod_contentcreator_record_section_view` — the endpoint that
+*looks* like the evidence trail behind all this — validated its parameters, returned
+`success: true`, and wrote nothing at all.
+
+There is a new table, `contentcreator_evidence`, written only by the plugin's own
+endpoints and only after the server has checked the claim against the manifest it holds.
+`\mod_contentcreator\evidence` is the single place completion is decided, and both custom
+completion rules now read it.
+
+Worth being precise about what a server can and cannot prove here, because the two halves
+are not worth the same:
+
+- **Challenge answers are proved.** The answer key is on the server. A client cannot mark
+  a challenge passed at all now, whatever it sends. For an RTO this is the half that
+  matters: the learner demonstrably answered the questions.
+- **Section views are attested, not proved.** No server can know a human read a slide;
+  SCORM does not either. What changed is that a view is a discrete event recorded against
+  a section id checked against the manifest, and completion is computed from those rows
+  rather than from a boolean. A claim naming a section that is not in the manifest is
+  dropped, and the count can never exceed the number of sections that exist.
+
+**Existing completions are preserved.** The evidence table starts empty, so recomputing
+without a sticky rule would revoke every completion on the site the moment the upgrade
+ran — including ones already reported to a funding body. `evidence::is_complete()` reads
+the existing `contentcreator_attempts.completed` flag first for exactly that reason. From
+here on a *new* completion has to be earned.
+
+The table is covered by the Privacy API in all seven places, deleted with the module and
+on course reset, and carried through backup and restore — a course copy taken with user
+data would otherwise restore a learner's progress but not the evidence their completion
+now rests on, and mark every one of them incomplete in the copy.
+
+### FIX-CC-ANSWER-IN-DOM: the answer was in the page before the learner clicked
+
+`cc-card-slots.js` wrote `data-correct="true"` onto the winning option, put every option's
+feedback text beside it, flagged the right one with a badge, and carried the URL of every
+option's feedback narration. `get_manifest.php` then sent the whole manifest, answer key
+included, to every learner. The plugin's own v15.4.6 note had already conceded the point —
+"that last one is not an assessment, the answer is on screen".
+
+Grading moved to the server. `mod_contentcreator_check_answer` re-reads the option list
+from the stored manifest, decides the verdict there, records it, and returns only what the
+learner has now earned the right to see: whether they were right, the feedback for the
+option they actually chose, and — once they have committed — which option was correct and
+why. The renderer emits the option text and its manifest index and nothing else, and
+`manifest_storage::strip_answer_key()` takes `correct`, `isCorrect`, `correctIndex`,
+`correctAnswer`, `feedback` and `feedbackAudioUrl` out of the payload for anyone who is not
+staff. Taking it out of the markup while leaving it in the network tab would have been
+theatre.
+
+Three details that are easy to get wrong and were got right:
+
+- The shuffle now carries each option's **manifest** index through to `data-oidx`. Grading
+  on the display index would have marked the wrong option correct on roughly three cards
+  in four.
+- The option set locks **before** the round trip, not after. The verdict now takes time to
+  arrive and an impatient learner can tap twice inside that window — which was impossible
+  while the handler ran synchronously.
+- A failed grading call **unlocks** the question and says so, rather than closing it. A
+  dropped connection must not cost a learner a question they cannot retake.
+
+Behaviour a learner sees is unchanged: same reveal on a wrong answer, same badge, same
+feedback, and v15.4.27's rule that they hear their own answer's clip or nothing.
+
+**Not covered, and said plainly:** the five legacy activity renderers in
+`cc-activities.js` — best-response, task-sequencing, escalation-decision, what-went-wrong,
+scenario-branching — still carry `data-correct` in their markup. No current prompt
+generates them; they appear only in manifests built before the seven-card schema. Closing
+them means teaching the server five more activity shapes, and none of it can be smoke
+tested from here. It is a real remaining gap, not a closed one.
+
+### Learner-initiated generation now has an off switch an administrator can find
+
+`mod/contentcreator:generateondemand` has gated learner voiceover and document-example
+generation since v13.85, and it is granted to the student archetype. A capability default
+applies when the plugin is installed, so on an existing site the student role already
+carries it and the only way to stop learners drawing on the paid balance was to edit the
+student role definition — which is neither obvious nor reachable from the plugin's own
+settings page. On one live site that is 36 learners who can each spend site credits.
+
+`\mod_contentcreator\ondemand` puts a single site-level switch in front of the capability,
+enforced at all three credit-spending entry points. Staff are exempt. It defaults to on,
+so upgrading changes nothing.
+
+### Dead code removed
+
+24 files, 3,256 lines of source: `amd/src/activities/` (five activity modules),
+`scorm.exporter.js`, and `document_generator/`. Referenced from nowhere in any `.js`,
+`.php`, `.mustache` or language file — only from their own `@module` tags and from
+CHANGELOG prose, which is what the v15.4.21 audit found and this release acts on.
+
+One correction to that audit: it also listed "the VET category tables". There are four
+tables in `db/install.xml` and all four are in use. That part of the claim was wrong.
+
+### Each route now shows a worked example of how to tailor the ChatGPT prompt
+
+The downloaded prompt file says what to build — the card contract, the route's structure,
+the word floors. It says nothing about who the learners are, how plainly to write for them,
+or which sources to cite by number, and those are the three things that decide whether the
+content lands with a particular cohort. Teachers were left to work out on their own that
+they could add a brief; most did not.
+
+Every route's ChatGPT step now carries a worked brief written for its own subject matter,
+with a **Copy example** button. VET's is a civil construction WHS brief: Australia-wide,
+model WHS Act and Regulations cited as model law rather than as one national Act, written
+for a trainee on their first day, real site examples, what the worker is personally
+responsible for as against the PCBU, and their rights including ceasing unsafe work. The
+other six are written to the same shape for their own material. The two shared panels
+branch by route, so Policy gets the Policy brief and Topics & Text gets its own rather
+than PD's.
+
+### FIX-CC-ENVELOPE-AMBIGUITY: two instructions that contradicted each other
+
+Every system prompt opens with "Return ONLY valid JSON". The downloaded prompt file then
+appended "Label it as Element 1 at the top" and "Label each sub topic using JUST the
+letter". No field was ever named for that label, so "at the top" could only mean a heading
+line above the object — which the first instruction forbids.
+
+Nothing crashed, which is why it survived: `parseChatGPTJSONBlocks` starts at the first
+`{`, so a heading line was silently eaten. A model that instead folded the label into the
+first card's title put text on screen the author never wrote. Either way the PC numbering
+a teacher asked for did not survive.
+
+The envelope now defines `subtopicLabel`, a plain string beside `cards`, used to confirm
+block order and never shown to a learner. All seven system prompts carry the definition,
+every topics header names the field and shows a worked envelope, and the parser reads it
+and logs the labels it found. Output from a prompt file saved before this release still
+parses, unlabelled, which is the honest answer — that heading line was never
+machine-readable.
+
+### Suites
+
+Three new, and one re-anchored:
+
+- `test-answer-authority.js` — 42 checks that the answer is not in the markup, that both
+  handlers ask the server, that the manifest is scrubbed for learners and not for staff,
+  and that no endpoint grants completion on an unverified flag.
+- `test-envelope-contract.js` — 52 checks across all seven prompts, the four topics
+  headers and the parser, including that older unlabelled output still works.
+- `test-builder-strings.js` — the suite the v15.4.5 CHANGELOG said existed and which did
+  not. 1,194 checks that every `s()` key is prefetched and declared. It immediately found
+  a real one: `msgphuniexample` sat last in the prefetch array with no trailing comma.
+- `test-quiz-feedback.js` section 6b asserted that the answer *was* in the markup. That is
+  now the defect rather than the contract, and the nine checks there were rewritten
+  against the new one.
+
+Verified: 40/40 PHP files lint clean, 0 eslint errors, 11/11 JavaScript suites, 15/15
+plugin static checks, `grunt amd` reproducible, version mirror 3/3.
+
+**Not smoke tested.** Nothing in this release has been run against a real generation on a
+live site. Everything above is static analysis and stubs. The completion and grading
+changes touch the learner path on every route and should have one VET section, one Topics
+and Text and one Workplace put through them, including a challenge block, before this goes
+anywhere near a cohort.
+
 ## 15.4.32 - 2026-09-17
 
 Coding-standard and plugin-review cleanup only. **No behavioural change of any

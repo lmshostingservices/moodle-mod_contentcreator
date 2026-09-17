@@ -71,7 +71,7 @@ define([], function() {
     // so that never fired either.
     //
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.4.32';
+    var CC_VERSION = '15.5.5';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was
@@ -1862,8 +1862,139 @@ define([], function() {
         return 'cck_' + Date.now().toString(36) + '_' + rand.slice(0, 24);
     }
 
+    // =======================================================================
+    // v15.5.1 FIX-CC-VOICE-HTML-BODY
+    //
+    // A server that answers an AJAX POST with an HTML page and HTTP 200 breaks every
+    // caller that goes straight to response.json(). It is not hypothetical: a live site
+    // sat behind bot protection that returned a "One moment, please" interstitial with a
+    // 200, and the plugin read it as a transient JSON fault and retried.
+    //
+    // v15.4.31 fixed that for the GENERATION path, in generator.js, with a private copy
+    // of this predicate. The VOICEOVER path in builder.js never got it: ten .json() calls
+    // with no guard, inside a three-attempt retry loop, per card. One misconfigured proxy
+    // produced forty identical "Unexpected token '<'" lines and no usable diagnosis.
+    //
+    // The predicate lives here now, in the module both of them already depend on, so
+    // there is one copy rather than two that can drift apart. tests/js/test-transport-fatal.js
+    // asserts that neither builder.js nor generator.js has grown a private one again.
+    // =======================================================================
+
+    /**
+     * Constrain a manifest section or topic id to characters that are safe everywhere it is used.
+     *
+     * V15.5.2 FIX-CC-UNSAFE-SECTION-ID. A subtopic's id is taken verbatim from AI output
+     * when the vendor supplies one (planner.js: `aiSubtopic?.id || ...`). It was never
+     * constrained, and it then travels to three places that assume it is tame:
+     *
+     *   1. `data-section-id="..."` in the rendered markup. Escaped, so not an XSS, but a
+     *      quote still ends the attribute early and mangles the element.
+     *   2. Ten jQuery selectors built by string concatenation -
+     *      `.find('[data-section-id="' + sid + '"]')`. A quote, a bracket or a backslash
+     *      makes that an invalid selector, which THROWS and takes the surrounding handler
+     *      down with it. One of the ten already carried a `.replace(/"/g, '')` band-aid,
+     *      which is the tell.
+     *   3. A web service parameter. Moodle's PARAM_ types exist to stop exactly this, and
+     *      an id that needs PARAM_RAW to survive the trip is an id that should never have
+     *      been allowed to contain those characters in the first place.
+     *
+     * The character set is the one PARAM_ALPHANUMEXT accepts, so an id that has been
+     * through here survives the transport unchanged. Empty input, or input with nothing
+     * usable in it, returns '' and the caller keeps its own generated id.
+     *
+     * @param {String} id Candidate id.
+     * @return {String} The id reduced to [A-Za-z0-9_-], or '' when nothing survives.
+     */
+    function safeSectionId(id) {
+        return String(id === undefined || id === null ? '' : id)
+            .trim()
+            .replace(/[^A-Za-z0-9_-]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .slice(0, 190);
+    }
+
+    /**
+     * Is this response body an HTML document rather than the JSON we asked for?
+     *
+     * Anchored at the start of the body, after a BOM and leading whitespace. A JSON
+     * payload that merely CONTAINS markup inside a string - which generated card content
+     * legitimately does - starts with { or [ and is not matched.
+     *
+     * @param {String} body Raw response text.
+     * @return {Boolean} True when the body is an HTML or XML document.
+     */
+    function looksLikeHtml(body) {
+        var head = String(body || '').replace(/^\uFEFF/, '').trimStart().slice(0, 200).toLowerCase();
+        return head.indexOf('<!doctype') === 0
+            || head.indexOf('<html') === 0
+            || head.indexOf('<head') === 0
+            || head.indexOf('<?xml') === 0;
+    }
+
+    /**
+     * Build the fatal error raised when a server answers with a page instead of JSON.
+     *
+     * Tagged ccFatal so retry loops can tell it apart from a genuine transient fault.
+     * Retrying is not merely useless here - it is harmful. Three attempts per card
+     * against an interstitial is how one misconfigured proxy generated sixty requests,
+     * each of them looking to the proxy like more of the traffic it was blocking.
+     *
+     * @param {String} label What was being fetched, for the message.
+     * @param {String} body The raw body, for the excerpt.
+     * @param {Number} status HTTP status the server sent.
+     * @return {Error} The tagged error.
+     */
+    function htmlBodyError(label, body, status) {
+        var excerpt = String(body || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+        var err = new Error(
+            label + ': the server returned an HTML page instead of JSON, with HTTP ' + status
+            + '. This is not a plugin fault - something in front of Moodle answered the '
+            + 'request. Usual causes are bot protection, a web application firewall, or a '
+            + 'reverse-proxy error page. First 160 characters: ' + excerpt
+        );
+        err.ccFatal = true;
+        err.ccHtmlBody = true;
+        return err;
+    }
+
+    /**
+     * Read a fetch Response as JSON, refusing an HTML body rather than choking on it.
+     *
+     * Reads the body as text first. That costs nothing - the bytes have already arrived -
+     * and it is the only way to see what actually came back, because response.json()
+     * throws away the body along with the parse error.
+     *
+     * @param {Object} response A fetch Response.
+     * @param {String} label What was being fetched, for error messages.
+     * @return {Promise<Object>} The parsed JSON.
+     */
+    async function readJson(response, label) {
+        var text = await response.text();
+        if (looksLikeHtml(text)) {
+            throw htmlBodyError(label || 'request', text, response.status);
+        }
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            var excerpt = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+            var err = new Error(
+                (label || 'request') + ': the response was not JSON (HTTP ' + response.status
+                + '). First 160 characters: ' + excerpt
+            );
+            err.ccBadJson = true;
+            throw err;
+        }
+    }
+
     return {
         CC_VERSION: CC_VERSION,
+        // v15.5.1: one copy of the HTML-body guard, shared by builder.js and
+        // generator.js. Two copies is how the voiceover path went three releases
+        // without the fix the generation path already had.
+        safeSectionId: safeSectionId,
+        looksLikeHtml: looksLikeHtml,
+        htmlBodyError: htmlBodyError,
+        readJson: readJson,
         createLogger: createLogger,
         newBillingKey: newBillingKey,
         fetchWithDeadline: fetchWithDeadline,

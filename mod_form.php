@@ -109,7 +109,7 @@ class mod_contentcreator_mod_form extends moodleform_mod {
      * @return bool True if one or more rules is enabled, false if none are.
      */
     public function completion_rule_enabled($data) {
-        // V15.4.31: must read the same suffixed keys add_completion_rules() wrote.
+        // V15.4.31: Must read the same suffixed keys add_completion_rules() wrote.
         $suffix = method_exists($this, 'get_suffix') ? $this->get_suffix() : '';
         return !empty($data['completionviewallslides' . $suffix])
             || !empty($data['completionallactivities' . $suffix]);

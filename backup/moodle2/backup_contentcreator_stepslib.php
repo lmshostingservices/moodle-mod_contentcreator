@@ -87,6 +87,28 @@ class backup_contentcreator_activity_structure_step extends backup_activity_stru
             ]
         );
 
+        // V15.5.0: The server-side completion evidence. Without this a course copy
+        // taken with user data would restore learners' progress but not the evidence
+        // their completion now rests on, and every one of them would be marked
+        // incomplete in the copy.
+        $evidences = new backup_nested_element('evidences');
+        $evidence = new backup_nested_element(
+            'evidence',
+            ['id'],
+            [
+                'cmid',
+                'userid',
+                'sectionkey',
+                'viewed',
+                'questiontotal',
+                'questionsanswered',
+                'questionscorrect',
+                'answermask',
+                'timecreated',
+                'timemodified',
+            ]
+        );
+
         $checklists = new backup_nested_element('checklists');
         $checklist = new backup_nested_element(
             'checklist',
@@ -107,6 +129,8 @@ class backup_contentcreator_activity_structure_step extends backup_activity_stru
         $progresses->add_child($progress);
         $contentcreator->add_child($checklists);
         $checklists->add_child($checklist);
+        $contentcreator->add_child($evidences);
+        $evidences->add_child($evidence);
 
         $contentcreator->set_source_table('contentcreator', ['id' => backup::VAR_ACTIVITYID]);
 
@@ -132,11 +156,21 @@ class backup_contentcreator_activity_structure_step extends backup_activity_stru
                  WHERE cm.instance = ?',
                 [backup::VAR_PARENTID]
             );
+
+            $evidence->set_source_sql(
+                '
+                SELECT ce.*
+                  FROM {contentcreator_evidence} ce
+                  JOIN {course_modules} cm ON cm.id = ce.cmid
+                 WHERE cm.instance = ?',
+                [backup::VAR_PARENTID]
+            );
         }
 
         $attempt->annotate_ids('user', 'userid');
         $progress->annotate_ids('user', 'userid');
         $checklist->annotate_ids('user', 'userid');
+        $evidence->annotate_ids('user', 'userid');
 
         $contentcreator->annotate_files('mod_contentcreator', 'intro', null);
 

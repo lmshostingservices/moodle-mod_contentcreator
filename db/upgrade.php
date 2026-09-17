@@ -276,5 +276,61 @@ function xmldb_contentcreator_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2026090511, 'contentcreator');
     }
 
+    if ($oldversion < 2026091800) {
+        // V15.5.0 FIX-CC-COMPLETION-FORGEABLE.
+        //
+        // Completion was asserted by the browser. save_attempt took a `completed`
+        // parameter straight from the client, wrote it to contentcreator_attempts and
+        // called completion_info::update_state() on it. One web service call marked a
+        // compliance module complete without a single slide being opened, and
+        // record_section_view - the endpoint that was supposed to be the evidence -
+        // validated its arguments and returned success without writing anything at all.
+        //
+        // This table is the evidence. Only the plugin's own endpoints write to it, and
+        // only after checking the claim against the manifest stored on the server.
+        $table = new xmldb_table('contentcreator_evidence');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('sectionkey', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('viewed', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('questiontotal', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('questionsanswered', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('questionscorrect', XMLDB_TYPE_INTEGER, '4', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('answermask', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('userid', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+        $table->add_key('cmid', XMLDB_KEY_FOREIGN, ['cmid'], 'course_modules', ['id']);
+        $table->add_index(
+            'cmid_userid_sectionkey',
+            XMLDB_INDEX_UNIQUE,
+            ['cmid', 'userid', 'sectionkey']
+        );
+        $table->add_index('cmid_userid', XMLDB_INDEX_NOTUNIQUE, ['cmid', 'userid']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Learners who already hold a completion keep it. The evidence table starts
+        // empty, so recomputing from it would revoke every completion on the site the
+        // moment this upgrade ran - including completions a learner genuinely earned
+        // under the old code, and including ones an RTO has already reported. The
+        // sticky rule in \mod_contentcreator\evidence::is_complete() reads the existing
+        // contentcreator_attempts.completed flag first for exactly this reason. From
+        // here on, a NEW completion has to be earned against this table.
+        upgrade_log(
+            UPGRADE_LOG_NORMAL,
+            'mod_contentcreator',
+            'Added contentcreator_evidence. Completion is now computed on the server from '
+                . 'section views and challenge answers the server itself recorded, rather '
+                . 'than from a flag the browser sent. Existing completions are preserved.'
+        );
+
+        upgrade_mod_savepoint(true, 2026091800, 'contentcreator');
+    }
+
     return true;
 }

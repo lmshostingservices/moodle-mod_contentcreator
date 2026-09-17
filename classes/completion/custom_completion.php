@@ -49,6 +49,11 @@ class custom_completion extends activity_custom_completion {
         $cm = $this->cm;
 
         if ($rule === 'completionviewallslides') {
+            // V15.5.0 FIX-CC-COMPLETION-FORGEABLE: this read contentcreator_attempts
+            // .completed, which ajax.php wrote from a POST parameter. The flag is now
+            // consulted only as the sticky record of a completion earned before this
+            // release - \mod_contentcreator\evidence::is_complete() checks it first -
+            // and a new completion has to be supported by rows the server wrote itself.
             $attempt = $DB->get_record(
                 'contentcreator_attempts',
                 [
@@ -58,6 +63,10 @@ class custom_completion extends activity_custom_completion {
             );
 
             if ($attempt && $attempt->completed) {
+                return COMPLETION_COMPLETE;
+            }
+
+            if (\mod_contentcreator\evidence::all_sections_viewed($cm, $userid)) {
                 return COMPLETION_COMPLETE;
             }
             return COMPLETION_INCOMPLETE;

@@ -137,7 +137,7 @@ if ($canmanage && (!$islocked || $editmode)) {
     $rawenablevoice = get_config('mod_contentcreator', 'enablevoice');
     $enablevoice = ($rawenablevoice === false || $rawenablevoice === '') ? 1 : (int)$rawenablevoice;
     $voicelanguage = get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU';
-    // V15.1.5: site pronunciation list, applied to narration only. See cc-state.js.
+    // V15.1.5: Site pronunciation list, applied to narration only. See cc-state.js.
     $pronunciations = (string)(get_config('mod_contentcreator', 'pronunciations') ?: '');
 
     $PAGE->requires->js_call_amd(
@@ -153,7 +153,7 @@ if ($canmanage && (!$islocked || $editmode)) {
 } else {
     // Show the player for students, and for teachers when content is locked and edit mode is off.
     $requirefocus = get_config('mod_contentcreator', 'requirefocus') ?: 0;
-    // V15.1.5: the player re-derives narration for staleness checks and on-demand speech,
+    // V15.1.5: The player re-derives narration for staleness checks and on-demand speech,
     // so it needs the same list the builder used or the two would disagree on every hash.
     $pronunciations = (string)(get_config('mod_contentcreator', 'pronunciations') ?: '');
 
@@ -172,7 +172,7 @@ if ($canmanage && (!$islocked || $editmode)) {
             'isTeacher' => (bool)$isstaff,
             'requireFocus' => (bool)$requirefocus,
             'pronunciations' => $pronunciations,
-            // V15.1.8: the pronunciation list applies only to this language's narration.
+            // V15.1.8: The pronunciation list applies only to this language's narration.
             'voiceLanguage' => get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU',
             'courseUrl' => (new moodle_url('/course/view.php', ['id' => $cm->course]))->out(false),
         ]]

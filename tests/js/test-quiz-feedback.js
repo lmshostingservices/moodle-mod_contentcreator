@@ -428,6 +428,19 @@ console.log('\n6b. The rendered card - the learner-facing end of the same claim'
 // the correct option, nothing on the distractors. The claim being tested is that such a
 // pack - one already in a customer's database, which no upgrade can rewrite - still gives
 // the learner something when they answer wrong.
+//
+// v15.5.0 FIX-CC-ANSWER-IN-DOM inverted what "gives the learner something" means here.
+// Until this release the renderer put the answer in the markup - data-correct on the
+// winning option, the "Correct answer" badge beside it, and the feedback text itself -
+// and the four assertions below checked that it did. That is now the defect, not the
+// contract: the answer reached the learner before they had clicked anything.
+//
+// The rendered card must now carry NOTHING that identifies the correct option. Every
+// option gets the same empty, hidden feedback node and the same empty badge; the handler
+// in player5.js fills whichever the server names, after the learner commits. The
+// wrong-answer reveal the v15.4.19 fix delivered still happens - it is just that the text
+// arrives from mod_contentcreator_check_answer rather than having been sitting in the
+// page all along. tests/js/test-answer-authority.js checks the other end of it.
 const Slots = loadAmd('cc-card-slots.js', []);
 Slots.init({
     getLabel: function(k) { return k === 'correctAnswerLabel' ? 'Correct answer' : k; },
@@ -448,18 +461,32 @@ const rendered = Slots.renderDecisionChallenge(savedManifestCard,
 
 check('the challenge quiz rendered at all',
     /cc5-quiz-question/.test(rendered) && /cc5-dp-option/.test(rendered));
-check('exactly one option is marked correct',
-    (rendered.match(/data-correct="true"/g) || []).length === 1,
+check('NO option is marked correct in the markup (v15.5.0)',
+    (rendered.match(/data-correct="true"/g) || []).length === 0,
     (rendered.match(/data-correct="true"/g) || []).length + ' found');
-check('the "Correct answer" badge is rendered once, on the correct option only',
-    (rendered.match(/cc5-dp-correct-flag/g) || []).length === 1);
-check('the correct option carries a feedback element for the reveal to show',
-    /data-correct="true"[\s\S]{0,400}?cc5-dp-feedback/.test(rendered));
-check('the bare distractors carry no feedback element (nothing to show - this is the defect)',
-    (rendered.match(/cc5-dp-feedback/g) || []).length === 1,
+check('no option carries feedback text, not even the correct one',
+    rendered.indexOf(RIGHT.feedback) === -1,
+    'the correct option\'s feedback line is still in the markup');
+check('every option carries its manifest index for the server to grade on',
+    (rendered.match(/data-oidx="/g) || []).length === 3,
+    (rendered.match(/data-oidx="/g) || []).length + ' of 3 options carry data-oidx');
+check('the three manifest indices are 0, 1 and 2 regardless of display order',
+    ['0', '1', '2'].every(function(i) {
+        return rendered.indexOf('data-oidx="' + i + '"') !== -1;
+    }));
+check('every option carries an empty hidden feedback node for the handler to fill',
+    (rendered.match(/cc5-dp-feedback/g) || []).length === 3
+        && (rendered.match(/class="cc5-dp-feedback"[^>]*><\/div>/g) || []).length === 3,
     (rendered.match(/cc5-dp-feedback/g) || []).length + ' feedback elements for 3 options');
+check('every option carries an empty badge, so the revealed one is not identifiable',
+    (rendered.match(/cc5-dp-correct-flag/g) || []).length === 3
+        && rendered.indexOf('>Correct answer<') === -1);
 check('the badge is inside the option body, where the reveal styling scopes it',
     /cc5-dp-option-body[\s\S]{0,300}?cc5-dp-correct-flag/.test(rendered));
+check('the option TEXT is still rendered - only the answer key is gone',
+    rendered.indexOf(RIGHT.text) !== -1
+        && rendered.indexOf(BARE_1.text) !== -1
+        && rendered.indexOf(BARE_2.text) !== -1);
 
 console.log('\n6c. The industry pickers - three lists that must never drift apart');
 

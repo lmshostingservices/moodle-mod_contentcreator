@@ -48,6 +48,7 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
             $paths[] = new restore_path_element('contentcreator_attempt', '/activity/contentcreator/attempts/attempt');
             $paths[] = new restore_path_element('contentcreator_progress', '/activity/contentcreator/progresses/progress');
             $paths[] = new restore_path_element('contentcreator_checklist', '/activity/contentcreator/checklists/checklist');
+            $paths[] = new restore_path_element('contentcreator_evidence', '/activity/contentcreator/evidences/evidence');
         }
 
         return $this->prepare_activity_structure($paths);
@@ -103,6 +104,28 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
         $data->userid = $this->get_mappingid('user', $data->userid);
 
         $DB->insert_record('contentcreator_progress', $data);
+    }
+
+    /**
+     * Restore one server-side completion evidence record.
+     *
+     * V15.5.0. Keyed by cmid, like progress and checklist, so the new module's id is
+     * substituted rather than the backed-up one. sectionkey is a manifest section id and
+     * is carried across unchanged - the restored manifest is the same manifest.
+     *
+     * @param array $data Parsed element data.
+     * @return void
+     */
+    protected function process_contentcreator_evidence($data) {
+        global $DB;
+
+        $data = (object)$data;
+        unset($data->id);
+
+        $data->cmid = $this->task->get_moduleid();
+        $data->userid = $this->get_mappingid('user', $data->userid);
+
+        $DB->insert_record('contentcreator_evidence', $data);
     }
 
     /**
@@ -222,7 +245,7 @@ class restore_contentcreator_activity_structure_step extends restore_activity_st
             $manifest
         );
 
-        // V15.4.31: preg_replace() returns NULL on a PCRE failure (backtrack or JIT
+        // V15.4.31: The preg_replace() call returns NULL on a PCRE failure (backtrack or JIT
         // stack limit), and this subject is a whole manifest - documented elsewhere in
         // this file as 6-10 MB. The null check used to sit BELOW the second call, so a
         // null from the first was passed straight in as the subject, coerced to '',

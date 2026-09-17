@@ -73,6 +73,23 @@ class get_manifest extends external_api {
         // Version 11.48 FIX BUG-CC-DBWRITE: decompress manifest if stored compressed (gz: prefix).
         $rawmanifest = \mod_contentcreator\manifest_storage::decompress($contentcreator->manifestjson ?? '');
 
+        // V15.5.0 FIX-CC-ANSWER-IN-DOM. This is the choke point. The player fetches the
+        // whole manifest through here, and until this release that manifest carried the
+        // answer key: which option is correct, every option's feedback, and the URL of
+        // every option's pre-generated feedback narration. Taking the answer out of the
+        // rendered markup would have been theatre while a learner could still read it in
+        // the network tab, so it comes out of the payload too.
+        //
+        // Staff keep the whole thing. The builder, the slide editor, the print view and
+        // the Excel export all read the answer key directly, and all of them are gated on
+        // :manage or :review.
+        $isstaff = has_capability('mod/contentcreator:manage', $context)
+            || has_capability('mod/contentcreator:review', $context);
+
+        if (!$isstaff) {
+            $rawmanifest = \mod_contentcreator\manifest_storage::strip_answer_key($rawmanifest);
+        }
+
         return [
             'success' => true,
             'manifest' => $rawmanifest,

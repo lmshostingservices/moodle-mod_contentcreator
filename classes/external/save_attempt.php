@@ -85,6 +85,36 @@ class save_attempt extends external_api {
 
         require_capability('mod/contentcreator:view', $context);
 
+        // V15.5.0 FIX-CC-COMPLETION-FORGEABLE. `completed` arrived as a web service
+        // parameter and was written straight into contentcreator_attempts.completed,
+        // which is what custom_completion read - so one call to this function marked a
+        // compliance module complete without a slide being opened. The parameter is
+        // kept, because removing it would break the mobile app's call signature, but it
+        // is now a request rather than a verdict: the server grants completion only when
+        // its own evidence rows support it.
+        $manifest = \mod_contentcreator\evidence::manifest($cm);
+
+        // The responses blob is the learner's resume state and is stored as sent, but
+        // the sections it claims to have finished are reconciled against the manifest
+        // and recorded as evidence. Claims naming a section that does not exist are
+        // dropped. Challenge results are never taken from here - only
+        // mod_contentcreator_check_answer writes those, after grading server-side.
+        $decodedresponses = json_decode($params['responses'], true);
+        if (is_array($decodedresponses) && !empty($decodedresponses['sections'])) {
+            $claimed = [];
+            foreach ($decodedresponses['sections'] as $skey => $sval) {
+                if (is_array($sval) && (!empty($sval['complete']) || !empty($sval['contentComplete']))) {
+                    $claimed[] = $skey;
+                }
+            }
+            if (!empty($claimed)) {
+                \mod_contentcreator\evidence::record_views((int)$cm->id, (int)$USER->id, $manifest, $claimed);
+            }
+        }
+
+        $granted = $params['completed']
+            && \mod_contentcreator\evidence::is_complete($cm, (int)$USER->id, $manifest);
+
         $existing = $DB->get_record(
             'contentcreator_attempts',
             [
@@ -96,7 +126,8 @@ class save_attempt extends external_api {
         $record = new \stdClass();
         $record->contentcreatorid = $cm->instance;
         $record->userid = $USER->id;
-        $record->completed = $params['completed'];
+        // Never downgrade an existing completion: a mid-module save must not revoke one.
+        $record->completed = ($granted || ($existing && !empty($existing->completed))) ? 1 : 0;
         $record->responses = $params['responses'];
         $record->timemodified = time();
 
@@ -108,7 +139,7 @@ class save_attempt extends external_api {
             $DB->insert_record('contentcreator_attempts', $record);
         }
 
-        if ($params['completed']) {
+        if ($granted) {
             $completion = new \completion_info(get_course($cm->course));
             if ($completion->is_enabled($cm)) {
                 $completion->update_state($cm, COMPLETION_COMPLETE, $USER->id);
@@ -117,7 +148,7 @@ class save_attempt extends external_api {
 
         return [
             'success' => true,
-            'message' => $params['completed']
+            'message' => $granted
                 ? get_string('modulecompleted', 'mod_contentcreator')
                 : get_string('progresssaved', 'mod_contentcreator'),
         ];

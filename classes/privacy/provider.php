@@ -77,6 +77,21 @@ class provider implements
         );
 
         $collection->add_database_table(
+            'contentcreator_evidence',
+            [
+                'userid' => 'privacy:metadata:contentcreator_evidence:userid',
+                'sectionkey' => 'privacy:metadata:contentcreator_evidence:sectionkey',
+                'viewed' => 'privacy:metadata:contentcreator_evidence:viewed',
+                'questionsanswered' => 'privacy:metadata:contentcreator_evidence:questionsanswered',
+                'questionscorrect' => 'privacy:metadata:contentcreator_evidence:questionscorrect',
+                'answermask' => 'privacy:metadata:contentcreator_evidence:answermask',
+                'timecreated' => 'privacy:metadata:contentcreator_evidence:timecreated',
+                'timemodified' => 'privacy:metadata:contentcreator_evidence:timemodified',
+            ],
+            'privacy:metadata:contentcreator_evidence'
+        );
+
+        $collection->add_database_table(
             'contentcreator_checklist',
             [
                 'userid' => 'privacy:metadata:contentcreator_checklist:userid',
@@ -158,6 +173,22 @@ class provider implements
                   FROM {context} ctx
                   JOIN {course_modules} cm ON cm.id = ctx.instanceid AND ctx.contextlevel = :contextlevel
                   JOIN {modules} m ON m.id = cm.module AND m.name = :modname
+                  JOIN {contentcreator_evidence} ce ON ce.cmid = cm.id
+                 WHERE ce.userid = :userid";
+
+        $contextlist->add_from_sql(
+            $sql,
+            [
+                'contextlevel' => CONTEXT_MODULE,
+                'modname' => 'contentcreator',
+                'userid' => $userid,
+            ]
+        );
+
+        $sql = "SELECT ctx.id
+                  FROM {context} ctx
+                  JOIN {course_modules} cm ON cm.id = ctx.instanceid AND ctx.contextlevel = :contextlevel
+                  JOIN {modules} m ON m.id = cm.module AND m.name = :modname
                   JOIN {contentcreator_checklist} ck ON ck.cmid = cm.id
                  WHERE ck.userid = :userid";
 
@@ -205,6 +236,18 @@ class provider implements
         $sql = "SELECT cp.userid
                   FROM {contentcreator_progress} cp
                  WHERE cp.cmid = :cmid";
+
+        $userlist->add_from_sql(
+            'userid',
+            $sql,
+            [
+                'cmid' => $context->instanceid,
+            ]
+        );
+
+        $sql = "SELECT ce.userid
+                  FROM {contentcreator_evidence} ce
+                 WHERE ce.cmid = :cmid";
 
         $userlist->add_from_sql(
             'userid',
@@ -298,6 +341,34 @@ class provider implements
                 );
             }
 
+            $evidence = $DB->get_records(
+                'contentcreator_evidence',
+                [
+                    'cmid' => $cm->id,
+                    'userid' => $user->id,
+                ],
+                'sectionkey ASC'
+            );
+
+            if ($evidence) {
+                $evidencedata = [];
+                foreach ($evidence as $row) {
+                    $evidencedata[] = (object)[
+                        'sectionkey' => $row->sectionkey,
+                        'viewed' => transform::yesno($row->viewed),
+                        'questionsanswered' => $row->questionsanswered,
+                        'questionscorrect' => $row->questionscorrect,
+                        'answermask' => $row->answermask,
+                        'timecreated' => transform::datetime($row->timecreated),
+                        'timemodified' => transform::datetime($row->timemodified),
+                    ];
+                }
+                writer::with_context($context)->export_data(
+                    [get_string('privacy:metadata:contentcreator_evidence', 'mod_contentcreator')],
+                    (object)['evidence' => $evidencedata]
+                );
+            }
+
             $checklist = $DB->get_records(
                 'contentcreator_checklist',
                 [
@@ -345,6 +416,7 @@ class provider implements
         $DB->delete_records('contentcreator_attempts', ['contentcreatorid' => $cm->instance]);
         $DB->delete_records('contentcreator_progress', ['cmid' => $cm->id]);
         $DB->delete_records('contentcreator_checklist', ['cmid' => $cm->id]);
+        $DB->delete_records('contentcreator_evidence', ['cmid' => $cm->id]);
     }
 
     /**
@@ -388,6 +460,13 @@ class provider implements
             );
             $DB->delete_records(
                 'contentcreator_checklist',
+                [
+                    'cmid' => $cm->id,
+                    'userid' => $userid,
+                ]
+            );
+            $DB->delete_records(
+                'contentcreator_evidence',
                 [
                     'cmid' => $cm->id,
                     'userid' => $userid,
@@ -440,6 +519,13 @@ class provider implements
         $params = array_merge(['cmid' => $cm->id], $inparams);
         $DB->delete_records_select(
             'contentcreator_checklist',
+            "cmid = :cmid AND userid $insql",
+            $params
+        );
+
+        $params = array_merge(['cmid' => $cm->id], $inparams);
+        $DB->delete_records_select(
+            'contentcreator_evidence',
             "cmid = :cmid AND userid $insql",
             $params
         );

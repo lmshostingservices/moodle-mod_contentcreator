@@ -2363,13 +2363,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
      * @param {String} body Raw response text.
      * @return {Boolean} True when the body is an HTML document.
      */
-    function ccLooksLikeHtml(body) {
-        var head = String(body || '').replace(/^\uFEFF/, '').trimStart().slice(0, 200).toLowerCase();
-        return head.indexOf('<!doctype') === 0
-            || head.indexOf('<html') === 0
-            || head.indexOf('<head') === 0
-            || head.indexOf('<?xml') === 0;
-    }
+    // v15.5.1: this WAS a private copy. builder.js needed the same predicate for the
+    // voiceover path and did not have it, so a live site retried three times per card
+    // against a bot-protection interstitial. Two copies is how that happens; there is one
+    // now, in cc-state.js, which both modules already depend on.
+    var ccLooksLikeHtml = CcState.looksLikeHtml;
 
     // -- Async job poller: used by callAI after it starts a generate_slide_async job --
     // Polls GET ajax.php?action=poll_job&jobId=xxx every 3s (first poll after 2s).
@@ -6875,49 +6873,185 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
 
         // Bracket-matching JSON extractor: finds the outermost {...} containing
         // a "cards" key and returns parsed cards[], or null on failure.
-        const extractCards = (s) => {
-            const start = s.indexOf('{');
-            if (start === -1) return null;
+        // v15.5.1 FIX-CC-PASTE-BLOCKS-DROPPED
+        //
+        // Reported from a live VET build: a teacher pasted three PCs of ChatGPT output and
+        // got one. PC 1.2 and PC 1.3 were discarded in silence, and the plugin then
+        // regenerated both with paid AI calls - the exact opposite of what the prompt file
+        // promises ("Your slides are built from it directly - no second AI call").
+        //
+        // The cause was the separator. This function split the paste on a line of three or
+        // more equals signs, then took the FIRST "{" in each segment and bracket-matched to
+        // its close. ChatGPT had separated its blocks with a bare "1.2" and "1.3" rather
+        // than the "=== NEXT ===" the prompt asked for, so the whole paste was one segment
+        // and everything after the first object was never looked at. No error, no warning,
+        // no count: the only way to notice was to compare the built cards against what you
+        // had read in ChatGPT.
+        //
+        // Depending on a separator the model may or may not emit is the defect. The paste
+        // is now scanned for EVERY top-level object carrying a "cards" array, in order,
+        // whatever sits between them - equals signs, a bare PC number, a heading, or
+        // nothing at all.
+        //
+        // Two things the old brace counter got wrong and this one does not:
+        //   - It counted braces inside strings. Card text legitimately contains "{" and
+        //     "}", and one of them closed the object early and truncated the block.
+        //   - A stray "{" in a preamble swallowed the rest of the paste. A candidate that
+        //     fails to parse now resumes the search one character in rather than skipping
+        //     past everything it had tentatively matched.
+
+        /**
+         * Find the matching close brace, respecting strings and escapes.
+         *
+         * @param {String} text The text to scan.
+         * @param {Number} from Index of the opening brace.
+         * @return {Number} Index of the matching close brace, or -1 if unbalanced.
+         */
+        const matchBrace = (text, from) => {
             let depth = 0;
-            let end = -1;
-            for (let i = start; i < s.length; i++) {
-                const ch = s[i];
-                if (ch === '{') depth++;
-                else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
-            }
-            if (end === -1) return null;
-            const jsonStr = s.slice(start, end + 1);
-            const tryParse = (str) => {
-                try {
-                    const p = JSON.parse(str);
-                    if (p && Array.isArray(p.cards) && p.cards.length >= 1) return p.cards;
-                } catch (e) {
-                    // Expected: this is one of several speculative parse attempts on a
-                    // possibly truncated AI response. The caller falls back to the next
-                    // candidate string, so a parse failure here is not an error.
+            let inString = false;
+            let escaped = false;
+            for (let i = from; i < text.length; i++) {
+                const ch = text[i];
+                if (inString) {
+                    if (escaped) { escaped = false; } else if (ch === '\\') { escaped = true; } else if (ch === '"') { inString = false; }
+                    continue;
                 }
-                return null;
-            };
-            return tryParse(jsonStr) ||
-                   tryParse(jsonStr.replace(/,\s*([}\]])/g, '$1')) ||
-                   null;
+                if (ch === '"') { inString = true; continue; }
+                if (ch === '{') { depth++; } else if (ch === '}') {
+                    depth--;
+                    if (depth === 0) { return i; }
+                }
+            }
+            return -1;
         };
 
-        // Split on any === ... === separator line (3+ equals signs on each side)
-        const segments = norm.split(/^={3,}[^\n]*$/m)
-            .map(s => s.trim())
-            .filter(s => s.length > 0);
+        /**
+         * Parse one candidate object and return its cards, or null.
+         *
+         * @param {String} str Candidate JSON text.
+         * @return {Array|null} The cards array, carrying ccSubtopicLabel when the envelope
+         *                      declared one.
+         */
+        const tryParse = (str) => {
+            try {
+                const parsed = JSON.parse(str);
+                if (parsed && Array.isArray(parsed.cards) && parsed.cards.length >= 1) {
+                    // v15.5.0 FIX-CC-ENVELOPE-AMBIGUITY: carry the envelope's label through
+                    // with the cards. Set as a property on the returned array rather than
+                    // changing the return shape: every caller indexes these as card arrays,
+                    // and an array is an object, so .length and [i] are untouched.
+                    if (typeof parsed.subtopicLabel === 'string' && parsed.subtopicLabel.trim()) {
+                        parsed.cards.ccSubtopicLabel = parsed.subtopicLabel.trim();
+                    }
+                    return parsed.cards;
+                }
+            } catch (e) {
+                // Expected: a speculative parse on a candidate that may not be JSON at all,
+                // or may be a truncated tail. The caller moves on.
+            }
+            return null;
+        };
+
+        /**
+         * Recover a block's label from the text sitting above it.
+         *
+         * v15.5.1. Output produced before the envelope defined "subtopicLabel" puts the
+         * label on a heading line instead - "PC 1.2: Duty of care requirements are
+         * identified." - which this function used to discard along with everything else
+         * outside the JSON. Reading it back turns block-to-subtopic matching from an
+         * assumption about ordering into something that can be checked and logged.
+         *
+         * Only recognised shapes are accepted. Arbitrary prose above a block is not a
+         * label, and guessing one would be worse than having none.
+         *
+         * @param {String} preamble Text between the previous block and this one.
+         * @return {String} The label, or '' when the preamble carries none.
+         */
+        const labelFromPreamble = (preamble) => {
+            const lines = String(preamble || '').split('\n')
+                .map(function(l) { return l.trim(); })
+                .filter(Boolean);
+            // Nearest line wins: the heading immediately above the object is its own.
+            for (let i = lines.length - 1; i >= 0; i--) {
+                const line = lines[i];
+                if (line.length > 200) { continue; }
+                const pc = line.match(/^(PC\s*\d+(?:\.\d+)*)\s*[:.-]?/i);
+                if (pc) { return pc[1].replace(/\s+/g, ' ').trim(); }
+                const el = line.match(/^(Element\s*\d+)\s*[:.-]?/i);
+                if (el) { return el[1].replace(/\s+/g, ' ').trim(); }
+                // A bare "1.2" or "A" on its own line, which is how a model separates
+                // blocks when it does not use the separator it was given.
+                if (/^\d+(\.\d+)+$/.test(line) || /^[A-Z]$/.test(line)) { return line; }
+            }
+            return '';
+        };
 
         const result = [];
-        for (const seg of segments) {
-            const cards = extractCards(seg);
-            if (cards) result.push(cards);
+        let cursor = 0;
+        // Index of the first brace that had no matching close, or -1. It is NOT necessarily
+        // a truncated response: a stray "{" in prose above the JSON - "use { to open" -
+        // leaves every real block after it unbalanced from that point, and breaking there
+        // would discard the whole paste over one character of commentary. So the scan keeps
+        // going, and this is only reported at the end if nothing parsed after it.
+        let unmatchedAt = -1;
+        while (cursor < norm.length) {
+            const open = norm.indexOf('{', cursor);
+            if (open === -1) { break; }
+            const close = matchBrace(norm, open);
+            if (close === -1) {
+                if (unmatchedAt === -1) { unmatchedAt = open; }
+                cursor = open + 1;
+                continue;
+            }
+            const candidate = norm.slice(open, close + 1);
+            const cards = tryParse(candidate)
+                || tryParse(candidate.replace(/,\s*([}\]])/g, '$1'));
+            if (cards) {
+                if (!cards.ccSubtopicLabel) {
+                    const preamble = norm.slice(
+                        result.length ? result[result.length - 1].ccEndIndex || 0 : 0,
+                        open
+                    );
+                    const recovered = labelFromPreamble(preamble);
+                    if (recovered) { cards.ccSubtopicLabel = recovered; }
+                }
+                cards.ccStartIndex = open;
+                cards.ccEndIndex = close + 1;
+                result.push(cards);
+                cursor = close + 1;
+            } else {
+                // Not a card envelope - a stray brace in a preamble, or prose. Resume one
+                // character in rather than skipping the whole tentatively matched span.
+                cursor = open + 1;
+            }
         }
 
-        // If no separators yielded results, treat whole text as single block
-        if (result.length === 0) {
-            const cards = extractCards(norm);
-            if (cards) result.push(cards);
+        // Only a genuine truncation: an unmatched brace with no complete block after it,
+        // in text that was trying to be a card envelope.
+        const _reallyTruncated = unmatchedAt !== -1
+            && !result.some(function(c) { return c.ccStartIndex >= unmatchedAt; })
+            && /"cards"\s*:/.test(norm.slice(unmatchedAt));
+        if (_reallyTruncated) {
+            ccWarn('[FAST-PARSE-JSON] the paste ends inside an unclosed JSON object. '
+                + 'The last block was cut off - ' + result.length + ' complete block(s) were '
+                + 'read. Ask ChatGPT to continue, and paste the rest.');
+        }
+
+        // v15.5.0: say what came back. A teacher who followed the labelling instruction and
+        // still sees blocks land on the wrong subtopic has, until now, had nothing in the
+        // console to look at.
+        const _labelled = result.filter(function(c) { return c.ccSubtopicLabel; });
+        if (result.length) {
+            ccLog('[FAST-PARSE-JSON] ' + result.length + ' block(s): '
+                + result.map(function(c, i) {
+                    return (i + 1) + '=' + (c.ccSubtopicLabel || '(unlabelled)')
+                        + ' (' + c.length + ' cards)';
+                }).join(', '));
+        }
+        if (!_labelled.length && result.length > 1) {
+            ccWarn('[FAST-PARSE-JSON] ' + result.length + ' blocks and not one carries a '
+                + 'label. Blocks will be matched to subtopics by ORDER alone.');
         }
 
         return result;
@@ -8009,6 +8143,11 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         // v13.75: exposed so the vendor-schema aliasing can be verified directly
         // against real API payloads. Not used by the plugin at runtime.
         normalizeCardSchema: normalizeCardSchema,
+        // v15.5.0: exported so the suite can assert the envelope contract directly -
+        // that a labelled block carries its label through, that an unlabelled one still
+        // parses, and that a heading line above the JSON (what a model produced when the
+        // instruction had no field to name) is still tolerated rather than fatal.
+        parseChatGPTJSONBlocks: parseChatGPTJSONBlocks,
         // v15.3.11: exported so builder.js can put SUGGESTED TOPIC TITLES through the
         // same regional-spelling pass the card content already gets. Until now the
         // country selector reached the generation prompt and the card normaliser, but

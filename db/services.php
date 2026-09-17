@@ -51,6 +51,17 @@ $functions = [
         'ajax' => true,
         'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
     ],
+    // V15.5.0: Grades one challenge answer on the server. The only writer of challenge
+    // results into contentcreator_evidence, which is what completion reads.
+    'mod_contentcreator_check_answer' => [
+        'classname' => 'mod_contentcreator\\external\\check_answer',
+        'methodname' => 'execute',
+        'description' => 'Grade a challenge answer against the manifest held on the server',
+        'type' => 'write',
+        'capabilities' => 'mod/contentcreator:view',
+        'ajax' => true,
+        'services' => [MOODLE_OFFICIAL_MOBILE_SERVICE],
+    ],
     'mod_contentcreator_record_section_view' => [
         'classname' => 'mod_contentcreator\\external\\record_section_view',
         'methodname' => 'execute',

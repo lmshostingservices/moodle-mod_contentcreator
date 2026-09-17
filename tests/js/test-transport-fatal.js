@@ -6,22 +6,33 @@
  * pollJob() counted each one as a transient failure, retried five times, then
  * abandoned a job that had already been submitted and charged.
  *
- * These tests exercise ccLooksLikeHtml() directly, because that predicate is what
- * decides retry-vs-fail. Extracted from amd/src/generator.js so the test cannot
- * drift from the shipped implementation.
+ * These tests exercise the predicate directly, because it is what decides
+ * retry-vs-fail. Extracted from the shipped source so the test cannot drift from it.
+ *
+ * v15.5.1: the predicate moved to cc-state.js. It lived in generator.js as a private
+ * copy, which is exactly why the VOICEOVER path in builder.js went three releases
+ * without it - ten .json() calls with no guard, inside a three-attempt-per-card retry
+ * loop. A live site answered every one of them with a bot-protection page and produced
+ * forty identical parse errors and no diagnosis.
+ *
+ * So this file now also asserts that NEITHER builder.js NOR generator.js has grown a
+ * private copy again. One predicate, in the module both of them already depend on.
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
-const SRC = path.join(__dirname, '..', '..', 'amd', 'src', 'generator.js');
+const AMD = path.join(__dirname, '..', '..', 'amd', 'src');
+const SRC = path.join(AMD, 'generator.js');
+const STATE = path.join(AMD, 'cc-state.js');
+const BUILDER = path.join(AMD, 'builder.js');
 
-/** Pull ccLooksLikeHtml out of generator.js without executing the whole module. */
+/** Pull looksLikeHtml out of cc-state.js without executing the whole module. */
 function loadPredicate() {
-    const src = fs.readFileSync(SRC, 'utf8');
-    const start = src.indexOf('function ccLooksLikeHtml(');
-    if (start === -1) { throw new Error('ccLooksLikeHtml() not found in generator.js'); }
+    const src = fs.readFileSync(STATE, 'utf8');
+    const start = src.indexOf('function looksLikeHtml(');
+    if (start === -1) { throw new Error('looksLikeHtml() not found in cc-state.js'); }
     let i = src.indexOf('{', start);
     let depth = 0;
     let end = i;
@@ -30,7 +41,7 @@ function loadPredicate() {
         else if (src[end] === '}') { depth--; if (depth === 0) { end++; break; } }
     }
     // eslint-disable-next-line no-new-func
-    return new Function(src.slice(start, end) + '; return ccLooksLikeHtml;')();
+    return new Function(src.slice(start, end) + '; return looksLikeHtml;')();
 }
 
 // The verbatim body Octec's server returned, truncated as it appeared in the console.
@@ -87,7 +98,24 @@ module.exports = function run() {
         ['the submit path checks the body before JSON.parse',
             src.indexOf('ccLooksLikeHtml(rawText)') !== -1],
         ['the poll path checks the body before JSON.parse',
-            src.indexOf('ccLooksLikeHtml(pollText)') !== -1]
+            src.indexOf('ccLooksLikeHtml(pollText)') !== -1],
+
+        // v15.5.1: one predicate, not two. A private copy in either module is how the
+        // voiceover path missed the v15.4.31 fix entirely.
+        ['generator.js uses the shared predicate rather than a private copy',
+            src.indexOf('var ccLooksLikeHtml = CcState.looksLikeHtml;') !== -1
+            && src.indexOf('function ccLooksLikeHtml(') === -1],
+        ['cc-state.js exports it',
+            fs.readFileSync(STATE, 'utf8').indexOf('looksLikeHtml: looksLikeHtml,') !== -1],
+        ['builder.js has no private copy either',
+            fs.readFileSync(BUILDER, 'utf8').indexOf('function ccLooksLikeHtml(') === -1],
+
+        // The voiceover path is the one that was exposed. Every JSON read in builder.js
+        // must go through the shared reader.
+        ['builder.js reads responses through CcState.readJson',
+            fs.readFileSync(BUILDER, 'utf8').indexOf('CcState.readJson(') !== -1],
+        ['no bare response.json() is left in builder.js',
+            (fs.readFileSync(BUILDER, 'utf8').match(/await\s+\w*[Rr]esp\w*\.json\(\)/g) || []).length === 0]
     ];
     structural.forEach(function (s) {
         if (s[1]) { pass++; } else { failures.push({ name: s[0], err: 'not found in generator.js' }); }

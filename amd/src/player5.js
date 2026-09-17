@@ -2293,6 +2293,77 @@ define([
         },
 
         /**
+         * v15.5.0 FIX-CC-ANSWER-IN-DOM: ask the server whether an option is correct.
+         *
+         * The renderer no longer knows. cc-card-slots.js emits the option text and its
+         * manifest index and nothing else, so the verdict, the feedback and the identity
+         * of the correct option all come from here - after the learner has committed,
+         * never before.
+         *
+         * The option carries data-oidx, its index in the MANIFEST. data-idx is its index
+         * on screen, which the shuffle has already changed; grading on that would mark
+         * the wrong option right on roughly three cards in four.
+         *
+         * @param {Object} $opt jQuery-wrapped .cc5-dp-option that was chosen.
+         * @param {Function} done Called with (error, result).
+         * @returns {void}
+         */
+        ccGradeAnswer: function($opt, done) {
+            var $qBlock = $opt.closest('.cc5-quiz-question');
+            var sectionId = $opt.closest('[data-section-id]').attr('data-section-id') || '';
+            var qIndex = parseInt($qBlock.attr('data-q'), 10);
+            if (isNaN(qIndex) || qIndex < 0) { qIndex = 0; }
+            var oIndex = parseInt($opt.attr('data-oidx'), 10);
+            if (isNaN(oIndex) || oIndex < 0) {
+                // No data-oidx means a card rendered by a build older than this one, or a
+                // renderer that has drifted. Falling back to the DISPLAY index would grade
+                // a shuffled card wrongly and silently, so refuse rather than guess.
+                ccWarn('[CC] option has no data-oidx; cannot grade');
+                done(new Error('no manifest index on option'));
+                return;
+            }
+            if (!sectionId) {
+                ccWarn('[CC] no data-section-id above this option; cannot grade');
+                done(new Error('no section id'));
+                return;
+            }
+            Ajax.call([{
+                methodname: 'mod_contentcreator_check_answer',
+                args: {
+                    cmid: this.cmid,
+                    sectionid: sectionId,
+                    questionindex: qIndex,
+                    optionindex: oIndex
+                }
+            }])[0].then(function(result) {
+                done(null, result);
+                return result;
+            }).catch(function(error) {
+                ccWarn('[CC] check_answer failed: ' + ((error && error.message) || error));
+                done(error || new Error('check_answer failed'));
+            });
+        },
+
+        /**
+         * v15.5.0: put a question back in play after a failed grading call.
+         *
+         * A dropped connection must not close a question. The handlers lock the option
+         * set BEFORE the round trip so a double tap cannot submit twice; this undoes
+         * that lock so the learner can press again.
+         *
+         * @param {Object} $options jQuery-wrapped .cc5-dp-options container.
+         * @returns {void}
+         */
+        ccUnlockOptions: function($options) {
+            $options.attr('data-answered', 'false').data('answered', false);
+            $options.find('.cc5-dp-option').attr('aria-disabled', 'false').attr('aria-pressed', 'false');
+            showErrorToast(
+                getLabel('answerNotChecked'),
+                'checkAnswer'
+            );
+        },
+
+        /**
          * Save progress to Moodle database
          */
         saveMoodleProgress: function() {
@@ -12174,7 +12245,25 @@ define([
                 var $options = $option.closest('.cc5-dp-options');
                 if ($options.data('answered') === true || $options.attr('data-answered') === 'true') return;
                 e.preventDefault();
-                var isCorrect = ($option.attr('data-correct') === 'true');
+                // v15.5.0 FIX-CC-ANSWER-IN-DOM: lock BEFORE the round trip, not after.
+                // The verdict now takes a request to arrive, and an impatient learner can
+                // tap twice inside that window - which used to be impossible, because the
+                // answer was in the markup and the whole handler ran synchronously.
+                $options.attr('data-answered', 'true').data('answered', true);
+                $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
+                self.ccGradeAnswer($option, function(err, result) {
+                if (err || !result || result.success !== true) {
+                    self.ccUnlockOptions($options);
+                    return;
+                }
+                var isCorrect = !!result.iscorrect;
+                // Feedback comes back with the verdict now rather than sitting in the DOM.
+                var $fb = $option.find('.cc5-dp-feedback');
+                if (result.feedback) {
+                    $fb.text(result.feedback);
+                } else {
+                    $fb.remove();
+                }
                 // Mark the chosen option
                 $option.attr('data-selected', isCorrect ? 'correct' : 'incorrect');
                 // v13.86: announce the result in text, and reflect the locked state, so a
@@ -12184,9 +12273,7 @@ define([
                 $option.find('.cc5-dp-result-text').text(isCorrect ? 'Correct' : 'Incorrect');
                 // Show its feedback
                 $option.find('.cc5-dp-feedback').show();
-                // Lock the options container
-                $options.attr('data-answered', 'true').data('answered', true);
-                $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
+                // v15.5.0: the lock moved above, before the grading call.
                 // For keyboard: focus the chosen option for accessibility
                 $option.focus();
                 // v10.63: Play audio feedback
@@ -12203,6 +12290,7 @@ define([
                 if (!isCorrect) {
                     _tryAgainFor($option).show();
                 }
+                });
             });
 
             // -- v10.43b: Try Again  -  completely reset the decision-point card --
@@ -12298,14 +12386,27 @@ define([
                 var $options = $opt.closest('.cc5-dp-options');
                 if ($options.data('answered') === true || $options.attr('data-answered') === 'true') return;
                 e.preventDefault();
-                var isCorrect = ($opt.attr('data-correct') === 'true');
+                // v15.5.0 FIX-CC-ANSWER-IN-DOM: lock before the round trip. See the
+                // standalone handler above for why the order matters now.
+                $options.attr('data-answered', 'true').data('answered', true);
+                $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
+                self.ccGradeAnswer($opt, function(err, result) {
+                if (err || !result || result.success !== true) {
+                    self.ccUnlockOptions($options);
+                    return;
+                }
+                var isCorrect = !!result.iscorrect;
+                var $chosenFb = $opt.find('.cc5-dp-feedback');
+                if (result.feedback) {
+                    $chosenFb.text(result.feedback);
+                } else {
+                    $chosenFb.remove();
+                }
                 $opt.attr('data-selected', isCorrect ? 'correct' : 'incorrect');
                 // v13.86: same accessibility treatment as the standalone card above.
                 $opt.attr('aria-pressed', 'true');
                 $opt.find('.cc5-dp-result-text').text(isCorrect ? 'Correct' : 'Incorrect');
                 $opt.find('.cc5-dp-feedback').show();
-                $options.attr('data-answered', 'true').data('answered', true);
-                $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
                 // FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19): reveal the right answer
                 // when the learner got it wrong.
                 //
@@ -12335,10 +12436,26 @@ define([
                 // "Correct answer" badge on BOTH. Revealing only the first left the second
                 // badged and dimmed at 42%, which reads as a rendering fault. Rare, and a
                 // dropped `.first()` is the whole cost of not having it.
-                if (!isCorrect) {
-                    var $right = $options.find('.cc5-dp-option[data-correct="true"]').not($opt);
+                if (!isCorrect && result.graded && result.correctindex >= 0) {
+                    // v15.5.0: selected by the MANIFEST index the server returned, not by
+                    // a data-correct attribute that no longer exists. This also retires
+                    // the v15.4.20 note below: the server resolves one correct index, so
+                    // two options can no longer both be flagged and one of them left
+                    // badged and dimmed.
+                    var $right = $options.find('.cc5-dp-option[data-oidx="' + result.correctindex + '"]').not($opt);
                     $right.addClass('cc5-dp-reveal');
-                    $right.find('.cc5-dp-feedback').show();
+                    // The flag and the explanation are rendered empty and filled here,
+                    // because until this response arrived the browser had no way to know
+                    // which option they belonged to.
+                    $right.find('.cc5-dp-correct-flag')
+                        .text(getLabel('correctAnswerLabel'))
+                        .css('display', '');
+                    var $rightFb = $right.find('.cc5-dp-feedback');
+                    if (result.correctfeedback) {
+                        $rightFb.text(result.correctfeedback).show();
+                    } else {
+                        $rightFb.remove();
+                    }
                     // getLabel, not a literal: FIX-CC-AMD-HARDCODED-STRINGS took the
                     // English out of this file once already, and this string is announced
                     // to a screen reader on a card whose every other word is translated.
@@ -12396,7 +12513,12 @@ define([
                     // story, and the ear is not lied to. When the pack DOES carry a reason
                     // for that distractor (every pack generated from v15.4.20's prompt
                     // onward), its own clip plays, which is what was asked for.
-                    var _fbUrl = $opt.attr('data-feedback-audio');
+                    // v15.5.0: the clip URL used to sit on every option in the markup, so
+                    // a learner could play all of them and hear which one opens "Correct!".
+                    // It is stripped from the learner's manifest and returned here for the
+                    // one option they chose - so v15.4.27's rule is unchanged: the learner
+                    // hears their OWN answer's feedback, or nothing.
+                    var _fbUrl = result.feedbackaudiourl || '';
                     // v15.4.27: ANSWERING SILENCES THE NARRATION, CLIP OR NO CLIP.
                     //
                     // v13.94.6 put this inside the "has a clip" branch, because at the time
@@ -12520,6 +12642,7 @@ define([
                     // matches nothing and costs a no-op selector lookup.
                     _tryAgainFor($opt).hide();
                 }
+                });
             });
 
             // v15.4.6: the challenge-quiz Try Again handler is REMOVED with its button.

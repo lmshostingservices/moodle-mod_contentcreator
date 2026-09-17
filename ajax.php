@@ -1224,7 +1224,9 @@ try {
         // no administrative control short of switching voice off entirely. The new
         // capability is granted to student by default, so nothing changes until a site
         // chooses to prohibit it.
-        require_capability('mod/contentcreator:generateondemand', $context);
+        // V15.5.0: now routed through \mod_contentcreator\ondemand so the site-level
+        // learnerondemand switch applies as well as the capability.
+        \mod_contentcreator\ondemand::require_can_generate($context);
         mod_contentcreator_check_ratelimit('voice', 2500, HOURSECS);
 
         if (empty($siteid) || empty($apikey)) {
@@ -1400,13 +1402,48 @@ try {
             $DB->insert_record('contentcreator_progress', (object)$data);
         }
 
-        // Re-evaluate the completionallactivities rule whenever progress is saved: the
-        // custom_completion class reads the progress JSON for challengeComplete flags.
+        // V15.5.0 FIX-CC-COMPLETION-FORGEABLE. The `completed` parameter above is no
+        // longer what decides anything. It was: this endpoint took it straight off the
+        // POST body and handed it to completion_info::update_state(), so one crafted
+        // request marked a compliance module complete without a slide being opened.
+        //
+        // The progress blob is still stored verbatim - it is the learner's resume state
+        // and the player needs it back exactly as it was saved - but it is now ALSO
+        // reconciled against the manifest: every section the client claims to have
+        // opened is checked against the section ids the server holds, and the ones that
+        // exist are recorded as evidence. Claims naming a section that is not in the
+        // manifest are dropped, so the recorded view count can never exceed the number
+        // of sections there are.
+        //
+        // Challenge results are deliberately NOT taken from this payload at any price.
+        // They are written only by mod_contentcreator_check_answer, which grades against
+        // the answer key on the server.
+        $manifest = \mod_contentcreator\evidence::manifest($cm);
+        $claimedsections = [];
+        foreach (($progressdata['sections'] ?? []) as $skey => $sval) {
+            if (!is_array($sval)) {
+                continue;
+            }
+            // Only a section the client says is finished counts as an attested view.
+            if (!empty($sval['complete']) || !empty($sval['contentComplete'])) {
+                $claimedsections[] = $skey;
+            }
+        }
+        if (!empty($claimedsections)) {
+            \mod_contentcreator\evidence::record_views($cmid, $USER->id, $manifest, $claimedsections);
+        }
+
+        // Re-evaluate the completion rules whenever progress is saved. Both custom rules
+        // now read the evidence table via \mod_contentcreator\evidence.
         $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
         $completion = new \completion_info($course);
         if ($completion->is_enabled($cm)) {
             $completion->update_state($cm, COMPLETION_UNKNOWN, $USER->id);
         }
+
+        // The client asking for completion is a request, not a verdict. The server
+        // grants it only when its own evidence supports it.
+        $completed = $completed && \mod_contentcreator\evidence::is_complete($cm, $USER->id, $manifest);
 
         // If fully completed, mark the activity as complete.
         if ($completed) {
@@ -1521,7 +1558,7 @@ try {
             try {
                 $DB->insert_record('contentcreator_checklist', $record);
             } catch (\dml_exception $e) {
-                // V15.4.31: was catch (\Throwable) with an unconditional success:true
+                // V15.4.31: Was catch (\Throwable) with an unconditional success:true
                 // below. The comment says it absorbs "the table does not exist yet", but
                 // it swallowed unique-index violations, column-length overflow (topicid is
                 // PARAM_TEXT and unbounded against a CHAR(255) column) and connection
@@ -1830,7 +1867,7 @@ try {
         mod_contentcreator_require_manage($context, $cm);
 
         $audiodata = base64_decode($audiocontent, true);
-        // V15.4.31: $strict. base64_decode() WITHOUT it never returns false - it silently
+        // V15.4.31: The $strict flag. base64_decode() WITHOUT it never returns false - it silently
         // discards invalid characters - so the === false arm was dead and only the length
         // check did any work. Any NUL-free rubbish of 1000+ bytes was stored as .ogg.
         if ($audiodata === false || strlen($audiodata) < 1000) {

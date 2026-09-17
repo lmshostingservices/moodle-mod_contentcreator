@@ -130,6 +130,9 @@ if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
 }
 const handlerSource = playerSrc.slice(startIdx, endIdx).trimEnd();
 
+// The fixture the fake server answers from - the same array the markup was rendered from.
+const fixtureJson = JSON.stringify(card.questions[0].options);
+
 const page_html = `<!doctype html><html><head><meta charset="utf-8">
 <style>${fs.readFileSync(path.join(ROOT, 'styles', 'player5.css'), 'utf8')}</style>
 <script>${fs.readFileSync(JQUERY, 'utf8')}</script>
@@ -139,8 +142,54 @@ const page_html = `<!doctype html><html><head><meta charset="utf-8">
 // Stubs for everything the handler reaches outside itself. Nothing here influences the
 // behaviour under test - they only stop it throwing.
 var narration = {paused: false, pause: function() { this.paused = true; }};
+// v15.5.0 FIX-CC-ANSWER-IN-DOM: the handler no longer knows the answer, so this harness
+// has to play the server. ccGradeAnswer below is a FAITHFUL stand-in for
+// mod_contentcreator_check_answer: it is handed the option element, reads the manifest
+// index off data-oidx exactly as the real one does, looks that index up in the SAME
+// fixture the markup was rendered from, and returns the same response shape.
+//
+// That is what makes this test worth running. If a future edit grades on the display
+// index instead of the manifest index, the shuffle puts them out of step and this fake
+// server returns the wrong verdict - which is precisely what would happen in production.
 var self = {quizVoiceEnabled: true, currentAudio: narration, _quizFbAudio: null,
-    stopNarrationForActivities: function() {}, scrollElementToTop: function() {}};
+    stopNarrationForActivities: function() {}, scrollElementToTop: function() {},
+    cmid: 1,
+    ccGradeAnswer: function($opt, done) {
+        var oidx = parseInt($opt.attr('data-oidx'), 10);
+        window.__graded.push(oidx);
+        if (isNaN(oidx) || !window.__OPTIONS[oidx]) {
+            done(new Error('no manifest index on option'));
+            return;
+        }
+        var correctIndex = -1;
+        window.__OPTIONS.forEach(function(o, i) { if (o.correct) { correctIndex = i; } });
+        var chosen = window.__OPTIONS[oidx];
+        var isCorrect = (oidx === correctIndex);
+        var result = {
+            success: true,
+            graded: correctIndex >= 0,
+            iscorrect: isCorrect,
+            correctindex: correctIndex,
+            feedback: chosen.feedback || '',
+            correctfeedback: (!isCorrect && correctIndex >= 0)
+                ? (window.__OPTIONS[correctIndex].feedback || '') : '',
+            feedbackaudiourl: chosen.feedbackAudioUrl || ''
+        };
+        // A real web service call is a network round trip. Resolving on a microtask keeps
+        // the asynchrony without making every test wait.
+        Promise.resolve().then(function() { done(null, result); });
+    },
+    ccUnlockOptions: function($options) {
+        window.__unlocked++;
+        $options.attr('data-answered', 'false').data('answered', false);
+        $options.find('.cc5-dp-option').attr('aria-disabled', 'false');
+    }};
+window.__graded = [];
+window.__unlocked = 0;
+// 6b swaps ccGradeAnswer for a failing one and then needs the working one back.
+window.self = self;
+window.__realGrade = self.ccGradeAnswer;
+window.__OPTIONS = ${fixtureJson};
 window.__narration = narration;
 // Capture every clip the handler tries to play. The question this answers is not "does
 // audio work" - it is "WHOSE feedback is the learner hearing".
@@ -208,7 +257,10 @@ async function snapshot(page) {
             var flag = el.querySelector('.cc5-dp-correct-flag');
             var cs = getComputedStyle(el);
             out.push({
-                correct: el.getAttribute('data-correct'),
+                // v15.5.0: data-correct is gone from the markup by design. Identity is
+                // now the manifest index, and which one is correct is knowledge the TEST
+                // holds (from its fixture) rather than something the page discloses.
+                oidx: el.getAttribute('data-oidx'),
                 selected: el.getAttribute('data-selected'),
                 revealed: el.classList.contains('cc5-dp-reveal'),
                 opacity: cs.opacity,
@@ -233,6 +285,31 @@ async function snapshot(page) {
         });
         return {options: out, calls: window.__calls};
     });
+}
+
+// v15.5.0: options are addressed by their MANIFEST index now. These mirror the fixture
+// above: 0 is correct, 1 and 2 are bare distractors, 3 is the distractor that carries its
+// own reason and its own clip.
+const CORRECT_OIDX = 0;
+const Q = '.cc5-quiz-question.cc5-active .cc5-dp-option';
+const RIGHT_ANSWER = Q + '[data-oidx="0"]';
+const WRONG_BARE = Q + '[data-oidx="1"]';
+const WRONG_WITH_CLIP = Q + '[data-oidx="3"]';
+
+/**
+ * Wait for the verdict to come back.
+ *
+ * v15.5.0: the handler used to run to completion inside the click. It now waits on a
+ * response, so every assertion after a click has to wait for the DOM the response
+ * produces. Without this the tests read the page mid-flight and fail intermittently -
+ * the worst possible outcome for a suite whose job is to catch exactly that.
+ *
+ * @param {Object} page Playwright page.
+ * @return {Promise<void>} Resolves once an option has been scored.
+ */
+async function settle(page) {
+    await page.waitForSelector('.cc5-quiz-question.cc5-active .cc5-dp-option[data-selected]',
+        {timeout: 5000});
 }
 
 (async function run() {
@@ -263,15 +340,16 @@ async function snapshot(page) {
         before.options.every(function(o) { return !o.feedbackVisible && !o.flagVisible && !o.revealed; }),
         JSON.stringify(before.options));
 
-    // :not([data-feedback-audio]) is load-bearing. shuffleOptions() randomises the order, so
-    // "the first wrong option" is sometimes the distractor that DOES carry its own clip -
-    // which then plays, correctly, and failed this check about two runs in five. The bug was
-    // in the selector, not the player: an audio assertion has to name WHICH option it clicks.
-    await page.click('.cc5-quiz-question.cc5-active '
-        + '.cc5-dp-option[data-correct="false"]:not([data-feedback-audio])');
+    // v15.5.0: selected by MANIFEST index. shuffleOptions() randomises display order, so
+    // "the first wrong option" used to be whichever one happened to land first - sometimes
+    // the distractor that carries its own clip, which failed the audio check about two
+    // runs in five. data-oidx makes the choice deterministic: index 1 is the bare
+    // distractor with no reason and no clip of its own.
+    await page.click(WRONG_BARE);
+    await settle(page);
     const after = await snapshot(page);
     const chosen = after.options.find(function(o) { return o.selected === 'incorrect'; });
-    const right = after.options.find(function(o) { return o.correct === 'true'; });
+    const right = after.options.find(function(o) { return o.oidx === String(CORRECT_OIDX); });
 
     check('no JavaScript error was thrown', pageErrors.length === 0, pageErrors.join('\n'));
     check('the chosen wrong option is marked incorrect', !!chosen);
@@ -292,7 +370,9 @@ async function snapshot(page) {
     check('the revealed option is NOT dimmed by the answered-state rule',
         !!right && parseFloat(right.opacity) === 1, right && right.opacity);
     check('the other unchosen option IS dimmed, so the reveal stands out',
-        after.options.some(function(o) { return o.correct === 'false' && !o.selected && parseFloat(o.opacity) < 0.5; }),
+        after.options.some(function(o) {
+            return o.oidx !== String(CORRECT_OIDX) && !o.selected && parseFloat(o.opacity) < 0.5;
+        }),
         JSON.stringify(after.options.map(function(o) { return o.opacity; })));
     check('in light mode the revealed answer carries a green border and the chosen one red',
         !!right && !!chosen
@@ -316,8 +396,7 @@ async function snapshot(page) {
     await page.goto('file://' + tmp);
     await page.evaluate(function() { window.__openQuiz(); });
     // The distractor carrying its own feedback and its own clip.
-    await page.click('.cc5-quiz-question.cc5-active .cc5-dp-option[data-feedback-audio]'
-        + '[data-correct="false"]');
+    await page.click(WRONG_WITH_CLIP);
     await page.waitForTimeout(500);
     const playedOwn = await page.evaluate(function() { return window.__played; });
     check('exactly one clip plays, and it is the WRONG answer\'s own',
@@ -325,14 +404,15 @@ async function snapshot(page) {
         JSON.stringify(playedOwn));
     const stateOwn = await snapshot(page);
     check('...and the correct answer is still revealed beside it',
-        stateOwn.options.some(function(o) { return o.correct === 'true' && o.revealed; }));
+        stateOwn.options.some(function(o) { return o.oidx === String(CORRECT_OIDX) && o.revealed; }));
 
     console.log('\n2. Clicking the RIGHT answer is unchanged');
     await page.goto('file://' + tmp);
     await page.evaluate(function() { window.__openQuiz(); });
-    await page.click('.cc5-quiz-question.cc5-active .cc5-dp-option[data-correct="true"]');
+    await page.click(RIGHT_ANSWER);
+    await settle(page);
     const ok = await snapshot(page);
-    const okRight = ok.options.find(function(o) { return o.correct === 'true'; });
+    const okRight = ok.options.find(function(o) { return o.oidx === String(CORRECT_OIDX); });
     check('the chosen correct option shows its own feedback',
         !!okRight && okRight.selected === 'correct' && okRight.feedbackVisible === true);
     check('nothing is "revealed" - there was nothing to reveal',
@@ -343,16 +423,18 @@ async function snapshot(page) {
     console.log('\n3. The keyboard path takes the same route');
     await page.goto('file://' + tmp);
     await page.evaluate(function() { window.__openQuiz(); });
-    await page.focus('.cc5-quiz-question.cc5-active .cc5-dp-option[data-correct="false"]');
+    await page.focus(WRONG_BARE);
     await page.keyboard.press('Enter');
+    await settle(page);
     const kb = await snapshot(page);
     check('Enter on a wrong option reveals the correct one',
-        (kb.options.find(function(o) { return o.correct === 'true'; }) || {}).revealed === true);
+        (kb.options.find(function(o) { return o.oidx === String(CORRECT_OIDX); }) || {}).revealed === true);
 
     console.log('\n4. A second click cannot re-score or re-reveal');
     await page.goto('file://' + tmp);
     await page.evaluate(function() { window.__openQuiz(); });
-    await page.click('.cc5-quiz-question.cc5-active .cc5-dp-option[data-correct="false"]');
+    await page.click(WRONG_BARE);
+    await settle(page);
     await page.evaluate(function() {
         // pointer-events:none stops a real click, so dispatch straight at the element -
         // the handler's own answered-guard is what must refuse it.
@@ -370,9 +452,10 @@ async function snapshot(page) {
     await page.goto('file://' + tmp);
     await page.evaluate(function() { window.__openQuiz(); });
     await page.evaluate(function() { document.getElementById('player').classList.add('dark-mode'); });
-    await page.click('.cc5-quiz-question.cc5-active .cc5-dp-option[data-correct="false"]');
+    await page.click(WRONG_BARE);
+    await settle(page);
     const dark = await snapshot(page);
-    const darkRight = dark.options.find(function(o) { return o.correct === 'true'; });
+    const darkRight = dark.options.find(function(o) { return o.oidx === String(CORRECT_OIDX); });
     const darkWrong = dark.options.find(function(o) { return o.selected === 'incorrect'; });
     const rgb = function(s) { return (s.match(/\d+/g) || [0, 0, 0]).map(Number); };
     check('in dark mode the revealed answer still carries a GREEN border',
@@ -383,6 +466,67 @@ async function snapshot(page) {
         darkWrong && darkWrong.borderColor);
     check('the revealed feedback is visible in dark mode too',
         !!darkRight && darkRight.feedbackVisible === true);
+
+    console.log('\n6. v15.5.0: the two failure modes server grading introduced');
+
+    // 6a. Grading must use the MANIFEST index, not the display index.
+    //
+    // shuffleOptions() randomises display order, so the two diverge on nearly every
+    // render. If a future edit sends data-idx, this check fails: the index handed to the
+    // server would be the on-screen position rather than the option's place in the
+    // manifest, and the server would score a different option than the learner clicked.
+    await page.goto('file://' + tmp);
+    await page.evaluate(function() { window.__openQuiz(); });
+    await page.click(WRONG_WITH_CLIP);
+    await settle(page);
+    const graded = await page.evaluate(function() { return window.__graded; });
+    check('the index sent to the server is the option\'s MANIFEST index',
+        graded.length === 1 && graded[0] === 3,
+        'sent ' + JSON.stringify(graded) + ', expected [3]');
+    const displayIndex = await page.evaluate(function() {
+        var el = document.querySelector('.cc5-quiz-question.cc5-active .cc5-dp-option[data-oidx="3"]');
+        return el ? el.getAttribute('data-idx') : null;
+    });
+    check('...and the two really are different identifiers, not the same number twice',
+        displayIndex !== null, 'display index was ' + displayIndex + ', manifest index 3');
+
+    // 6b. A failed grading call must PUT THE QUESTION BACK, not close it.
+    //
+    // The verdict is a network round trip now. A learner on a dropped connection who
+    // loses a question they cannot retake is a worse outcome than anything this release
+    // fixed, so the failure path is asserted rather than reasoned about.
+    await page.goto('file://' + tmp);
+    await page.evaluate(function() { window.__openQuiz(); });
+    await page.evaluate(function() {
+        window.self.ccGradeAnswer = function($opt, done) {
+            Promise.resolve().then(function() { done(new Error('network down')); });
+        };
+    });
+    await page.click(WRONG_BARE);
+    await page.waitForTimeout(300);
+    const failed = await page.evaluate(function() {
+        var $set = document.querySelector('.cc5-quiz-question.cc5-active .cc5-dp-options');
+        return {
+            unlocked: window.__unlocked,
+            answered: $set.getAttribute('data-answered'),
+            selected: $set.querySelectorAll('.cc5-dp-option[data-selected]').length,
+            revealed: $set.querySelectorAll('.cc5-dp-reveal').length
+        };
+    });
+    check('a failed grading call unlocks the question rather than closing it',
+        failed.unlocked === 1 && failed.answered === 'false', JSON.stringify(failed));
+    check('...and scores nothing: no option marked, nothing revealed',
+        failed.selected === 0 && failed.revealed === 0, JSON.stringify(failed));
+
+    // The learner can now answer again, which is the point of unlocking.
+    await page.evaluate(function() { window.self.ccGradeAnswer = window.__realGrade; });
+    await page.click(WRONG_BARE);
+    await settle(page);
+    const retried = await snapshot(page);
+    check('the learner can answer again after the failure, and it scores normally',
+        retried.options.filter(function(o) { return o.selected; }).length === 1
+        && retried.options.some(function(o) { return o.oidx === String(CORRECT_OIDX) && o.revealed; }),
+        JSON.stringify(retried.options.map(function(o) { return o.selected; })));
 
     await browser.close();
     console.log('\n' + (failures ? 'FAILED ' + failures + ' of ' + checks : 'PASSED all ' + checks + ' runtime checks'));

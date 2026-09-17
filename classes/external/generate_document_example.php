@@ -187,7 +187,9 @@ class generate_document_example extends external_api {
         // administrative control beyond disabling the feature site-wide. The new
         // capability is granted to student by default, so behaviour is unchanged until a
         // site chooses to prohibit it for a role, course or cohort.
-        require_capability('mod/contentcreator:generateondemand', $context);
+        // V15.5.0: now routed through \mod_contentcreator\ondemand so the site-level
+        // learnerondemand switch applies as well as the capability.
+        \mod_contentcreator\ondemand::require_can_generate($context);
 
         // This endpoint spends site credits and is available to any user who can view the
         // activity, so abuse control is enforced by a per-user sliding-window rate limit

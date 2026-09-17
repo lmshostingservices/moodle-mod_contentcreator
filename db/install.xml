@@ -79,5 +79,29 @@
         <INDEX NAME="cmid_userid" UNIQUE="true" FIELDS="cmid,userid"/>
       </INDEXES>
     </TABLE>
+    <TABLE NAME="contentcreator_evidence" COMMENT="Server-recorded evidence of learner progress. Written only by the plugin's own endpoints after the server has checked the claim against the stored manifest; never written from a client-supplied payload.">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="sectionkey" TYPE="char" LENGTH="255" NOTNULL="true" COMMENT="Section id as it appears in the manifest"/>
+        <FIELD NAME="viewed" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" COMMENT="1 once the server has confirmed this section exists and the learner opened it"/>
+        <FIELD NAME="questiontotal" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" COMMENT="Questions the manifest holds for this section's challenge"/>
+        <FIELD NAME="questionsanswered" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="questionscorrect" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="answermask" TYPE="text" NOTNULL="false" COMMENT="JSON map of question index to 1 or 0, so a re-answer replaces rather than double-counts"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="cmid" TYPE="foreign" FIELDS="cmid" REFTABLE="course_modules" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="cmid_userid_sectionkey" UNIQUE="true" FIELDS="cmid,userid,sectionkey"/>
+        <INDEX NAME="cmid_userid" UNIQUE="false" FIELDS="cmid,userid"/>
+      </INDEXES>
+    </TABLE>
   </TABLES>
 </XMLDB>

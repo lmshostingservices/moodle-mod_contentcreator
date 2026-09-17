@@ -62,6 +62,8 @@ class record_section_view extends external_api {
      * @return array Result structure as described by execute_returns().
      */
     public static function execute(int $cmid, int $topicindex, int $sectionindex): array {
+        global $USER;
+
         $params = self::validate_parameters(
             self::execute_parameters(),
             [
@@ -76,6 +78,28 @@ class record_section_view extends external_api {
         self::validate_context($context);
 
         require_capability('mod/contentcreator:view', $context);
+
+        // V15.5.0 FIX-CC-COMPLETION-FORGEABLE: this method validated its parameters,
+        // returned success and wrote nothing. It was named as though it were the
+        // evidence trail behind completion, and completion was in fact decided by a
+        // `completed` flag the browser POSTed to ajax.php. It now records the view -
+        // against the section id the server resolves from its own manifest, not from
+        // anything the caller supplies beyond a pair of indices that have to be in range.
+        $manifest = \mod_contentcreator\evidence::manifest($cm);
+        $section = $manifest['topics'][$params['topicIndex']]['sections'][$params['sectionIndex']] ?? null;
+        $sectionid = is_array($section) ? (string)($section['id'] ?? '') : '';
+
+        if ($sectionid === '') {
+            // Out of range, or a section with no id. Nothing to attach evidence to, and
+            // failing the call would break a player that is merely ahead of a manifest
+            // edit, so report the no-op honestly instead.
+            return [
+                'success' => false,
+                'message' => get_string('errorsectionnotinactivity', 'mod_contentcreator'),
+            ];
+        }
+
+        \mod_contentcreator\evidence::record_view((int)$cm->id, (int)$USER->id, $sectionid);
 
         return [
             'success' => true,

@@ -72,7 +72,19 @@ define([], function() {
      * option order so the correct answer is not always Option B.
      */
     function shuffleOptions(arr) {
-        var a = arr.slice();
+        // v15.5.0 FIX-CC-ANSWER-IN-DOM: the option's position in the MANIFEST has to
+        // survive the shuffle, because that is the only identifier the server can grade
+        // against. Display order is deliberately not manifest order - that is the whole
+        // point of shuffling - so the rendered index is no use for grading, and sending
+        // the option's text instead would put the answer back on the wire.
+        //
+        // Copied rather than annotated in place: these objects are the manifest's own
+        // and a teacher re-rendering the same card must not accumulate bookkeeping on it.
+        var a = (arr || []).map(function(opt, i) {
+            var copy = (opt && typeof opt === 'object') ? Object.assign({}, opt) : {text: String(opt || '')};
+            copy._ccIndex = i;
+            return copy;
+        });
         for (var i = a.length - 1; i > 0; i--) {
             var j = Math.floor(Math.random() * (i + 1));
             var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
@@ -1057,22 +1069,28 @@ define([], function() {
             html += '<div class="cc5-dp-options" data-answered="false">';
             opts.forEach(function(opt, idx) {
                 var letter = letters[idx] || String.fromCharCode(65 + idx);
-                var isCorrect = !!(opt.correct || opt.isCorrect);
                 // v13.86: correctness was conveyed by a background colour plus a CSS ::after
                 // glyph on a permanently empty span, on a div with no aria-pressed, no
                 // aria-disabled once locked, and feedback in no live region.
-                // v13.93: URL of this option's feedback narration, pre-generated at build
-                // time in the author's chosen Chirp 3 HD voice. Carried on the element so
-                // the click handler needs no lookup back into the manifest.
-                var _fbAudio = opt.feedbackAudioUrl ? ' data-feedback-audio="' + escapeHtml(opt.feedbackAudioUrl) + '"' : '';
-                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '"' + _fbAudio + ' role="button" tabindex="0" aria-pressed="false">';
+                // v15.5.0 FIX-CC-ANSWER-IN-DOM. This element used to carry
+                // data-correct="true" on the winning option, the "Correct answer" flag
+                // beside it, every option's feedback text, and the URL of every
+                // option's feedback narration. All four named the answer, in the
+                // markup, before the learner had clicked anything: Elements panel,
+                // Ctrl-U, or a screen reader walking the card would all give it away.
+                // The plugin's own v15.4.6 note conceded the point - "that last one is
+                // not an assessment - the answer is on screen".
+                //
+                // What ships now is the option text and its manifest index. The
+                // verdict, the feedback and the identity of the correct option come
+                // back from mod_contentcreator_check_answer after the learner commits,
+                // and the handler in player5.js fills the empty nodes below.
+                var _oidx = (typeof opt._ccIndex === 'number') ? opt._ccIndex : idx;
+                html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-oidx="' + _oidx + '" role="button" tabindex="0" aria-pressed="false">';
                 html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
                 html += '<div class="cc5-dp-option-body">';
                 html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';
-                if (opt.feedback) {
-                    html += '<div class="cc5-dp-feedback" role="status" aria-live="polite">' +
-                        escapeHtml(fixGrammar(opt.feedback)) + '</div>';
-                }
+                html += '<div class="cc5-dp-feedback" role="status" aria-live="polite" style="display:none;"></div>';
                 html += '</div>';
                 html += '<span class="cc5-dp-result-icon" aria-hidden="true"></span>';
                 html += '<span class="cc5-sr-only cc5-dp-result-text"></span>';
@@ -1490,29 +1508,34 @@ define([], function() {
                 html += '<div class="cc5-dp-options" data-answered="false">';
                 opts.forEach(function(opt, idx) {
                     var letter = letters[idx] || String.fromCharCode(65 + idx);
-                    var isCorrect = !!(opt.correct || opt.isCorrect);
                     // v13.86: correctness was conveyed by a background colour plus a CSS ::after
                     // glyph on a permanently empty span, on a div with no aria-pressed, no
                     // aria-disabled once locked, and feedback in no live region.
-                    // v13.93: URL of this option's feedback narration, pre-generated at build
-                    // time in the author's chosen Chirp 3 HD voice. Carried on the element so
-                    // the click handler needs no lookup back into the manifest.
-                    var _fbAudio = opt.feedbackAudioUrl ? ' data-feedback-audio="' + escapeHtml(opt.feedbackAudioUrl) + '"' : '';
-                    html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-correct="' + isCorrect + '"' + _fbAudio + ' role="button" tabindex="0" aria-pressed="false">';
+                    // v15.5.0 FIX-CC-ANSWER-IN-DOM. This element used to carry
+                    // data-correct="true" on the winning option, the "Correct answer" flag
+                    // beside it, every option's feedback text, and the URL of every
+                    // option's feedback narration. All four named the answer, in the
+                    // markup, before the learner had clicked anything: Elements panel,
+                    // Ctrl-U, or a screen reader walking the card would all give it away.
+                    // The plugin's own v15.4.6 note conceded the point - "that last one is
+                    // not an assessment - the answer is on screen".
+                    //
+                    // What ships now is the option text and its manifest index. The
+                    // verdict, the feedback and the identity of the correct option come
+                    // back from mod_contentcreator_check_answer after the learner commits,
+                    // and the handler in player5.js fills the empty nodes below.
+                    // FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19) is preserved: the flag
+                    // that names the right answer when the learner did not pick it is still
+                    // rendered here, but empty and hidden. The handler fills and reveals it
+                    // on the option the SERVER names, which also retires the v15.4.20
+                    // two-options-flagged-correct problem - the server returns one index.
+                    var _oidx = (typeof opt._ccIndex === 'number') ? opt._ccIndex : idx;
+                    html += '<div class="cc5-dp-option" data-idx="' + idx + '" data-oidx="' + _oidx + '" role="button" tabindex="0" aria-pressed="false">';
                     html += '<span class="cc5-dp-option-letter">' + letter + '</span>';
                     html += '<div class="cc5-dp-option-body">';
                     html += '<span class="cc5-dp-option-text">' + escapeHtml(fixGrammar(opt.text || '')) + '</span>';
-                    // FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19): the flag that names
-                    // the right answer when the learner did not pick it. Hidden by CSS
-                    // until the player adds .cc5-dp-reveal - see the handler in player5.js.
-                    if (isCorrect) {
-                        html += '<span class="cc5-dp-correct-flag">'
-                             +  escapeHtml(getLabel('correctAnswerLabel')) + '</span>';
-                    }
-                    if (opt.feedback) {
-                        html += '<div class="cc5-dp-feedback" role="status" aria-live="polite">' +
-                            escapeHtml(fixGrammar(opt.feedback)) + '</div>';
-                    }
+                    html += '<span class="cc5-dp-correct-flag" style="display:none;"></span>';
+                    html += '<div class="cc5-dp-feedback" role="status" aria-live="polite" style="display:none;"></div>';
                     html += '</div>';
                     html += '<span class="cc5-dp-result-icon" aria-hidden="true"></span>';
                     html += '<span class="cc5-sr-only cc5-dp-result-text"></span>';
