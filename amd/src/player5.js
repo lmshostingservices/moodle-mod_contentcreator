@@ -12787,9 +12787,12 @@ define([
                     // onward), its own clip plays, which is what was asked for.
                     // v15.5.0: the clip URL used to sit on every option in the markup, so
                     // a learner could play all of them and hear which one opens "Correct!".
-                    // It is stripped from the learner's manifest and returned here for the
-                    // one option they chose - so v15.4.27's rule is unchanged: the learner
-                    // hears their OWN answer's feedback, or nothing.
+                    // v15.6.1 note: this used to say the clip URL was stripped from the
+                    // learner's manifest and returned by the server. That stopped being
+                    // true when grading moved back into the browser - the manifest is whole
+                    // again and the URL is read from it locally. v15.4.27's rule is
+                    // unchanged either way: the learner hears their OWN answer's feedback,
+                    // or nothing.
                     var _fbUrl = result.feedbackaudiourl || '';
                     // v15.4.27: ANSWERING SILENCES THE NARRATION, CLIP OR NO CLIP.
                     //

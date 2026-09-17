@@ -257,6 +257,8 @@ define([
         'msgupdatedesc', 'msgapplyupdatesbtn', 'msgreasonnostamp', 'msgreasonolderbuild', 'msgreasonstalesection', 'msgreasonstalesections',
         // v15.6.4: quiz feedback clips that predate the spoken verdict.
         'msgreasonnoverdictclip', 'msgreasonnoverdictclips',
+        // v15.6.6: additional languages whose quiz feedback was never narrated.
+        'msgreasonmlsilent', 'msgreasonmlsilents',
         // FIX-CC-AMD-HARDCODED-STRINGS pass 3 (v13.95.3): button labels, short form
         // labels, the reading-time list, and sentences carrying a {$a} value.
         'msgselectoptional', 'msgothercustom', 'msgcreditspersubtopic', 'msginitializing',
@@ -11963,8 +11965,24 @@ define([
                         // Failures are deliberately non-fatal: a missing clip makes that one
                         // feedback silent, which is far better than failing the whole build,
                         // and the player never substitutes another voice.
-                        const pregenQuizFeedback = async(section) => {
+                        const pregenQuizFeedback = async(section, langCode, keyPrefix) => {
+                            // v15.6.6: serves BOTH the primary pack and every additional
+                            // language. Until now it was called only from the primary path,
+                            // so a Japanese or German pack had section narration, card
+                            // narration, and total silence on every quiz answer - and
+                            // nothing said so. The player logs "no pre-generated feedback
+                            // clip - silent by design", which is true of the code and was
+                            // never true of the author's intent.
+                            //
+                            // langCode / keyPrefix are what differ. The clip key MUST carry
+                            // the language, exactly as the card path does
+                            // (langCode + '_' + section.id + '_cN'), because the translated
+                            // section keeps the SAME id as the primary one - without the
+                            // prefix the German clip would overwrite the English one in the
+                            // file store and both languages would play German.
                             if (_voSkipRequested) return;
+                            var _qLang = langCode || voiceLanguage;
+                            var _qKey = (keyPrefix || '') + String(section.id) + '_dpfb';
                             var dp = (section.cards || []).filter(function(c) {
                                 return c && c.cardType === 'decision-point';
                             })[0];
@@ -12023,7 +12041,7 @@ define([
                                 // times four options - so this is the loop most likely to meet
                                 // the ceiling, and the one where carrying on after a refusal
                                 // does the most damage.
-                                if (_voSkipRequested || _voRateLimited) return;
+                                if (_voSkipRequested || _voRateLimited || _voFatal) return;
                                 var opt = _dpOpts[oi].opt;
                                 var fbRaw = (opt && opt.feedback ? String(opt.feedback) : '').trim();
                                 if (!fbRaw) { continue; }
@@ -12042,9 +12060,9 @@ define([
                                     _qFd.append('action', 'generate_voice');
                                     _qFd.append('cmid', cmid);
                                     _qFd.append('text', fbText);
-                                    _qFd.append('sectionid', String(section.id) + '_dpfb' + oi);
+                                    _qFd.append('sectionid', _qKey + oi);
                                     _qFd.append('subtopickey', section.billingKey || '');
-                                    _qFd.append('language', voiceLanguage);
+                                    _qFd.append('language', _qLang);
                                     _qFd.append('voice', voiceName);
                                     var _qResp = await ccPost(_qFd, 'quiz feedback TTS');
                                     if (!_qResp.ok) { throw new Error('TTS returned ' + _qResp.status); }
@@ -12052,8 +12070,8 @@ define([
                                     var _qRl = ccRateLimitInfo(_qData);
                                     if (_qRl) {
                                         if (!_voRateLimited) { _voRateLimited = _qRl; }
-                                        ccWarn('[QUIZ VOICE] rate limited on section ' + section.id
-                                            + '  -  stopping quiz feedback rather than retrying.');
+                                        ccWarn('[QUIZ VOICE] rate limited on ' + _qLang + ' section '
+                                            + section.id + '  -  stopping quiz feedback rather than retrying.');
                                         return;
                                     }
                                     if (!_qData.success || !_qData.audioContent) {
@@ -12065,7 +12083,7 @@ define([
                                     _qpFd.append('sesskey', M.cfg.sesskey);
                                     _qpFd.append('action', 'save_voiceover_file');
                                     _qpFd.append('cmid', cmid);
-                                    _qpFd.append('sectionid', String(section.id) + '_dpfb' + oi);
+                                    _qpFd.append('sectionid', _qKey + oi);
                                     _qpFd.append('audiocontent', _qData.audioContent);
                                     _qpFd.append('audiotype', _qData.audioType || 'audio/ogg');
                                     var _qpResp = await ccPost(_qpFd, 'quiz feedback persist');
@@ -12078,13 +12096,24 @@ define([
                                             // it apart from a pre-v15.6.4 clip and would
                                             // either re-bill it forever or never fix it.
                                             opt.feedbackVerdictSpoken = true;
-                                            ccLog('%c[QUIZ VOICE] section ' + section.id + ' option ' + oi
-                                                + ' -> ' + _qpData.url, 'color:#10b981');
+                                            ccLog('%c[QUIZ VOICE] ' + _qLang + ' section ' + section.id
+                                                + ' option ' + oi + ' -> ' + _qpData.url, 'color:#10b981');
                                         }
                                     }
                                 } catch (_qErr) {
-                                    ccWarn('[QUIZ VOICE] section ' + section.id + ' option ' + oi
-                                        + ' failed: ' + _qErr.message + '  -  that feedback will be silent');
+                                    // v15.6.6: a transport refusal is not a per-option
+                                    // failure. Left unhandled, twelve options would each
+                                    // make their own refused request against a WAF or a
+                                    // 413, which is the burst v15.6.2 exists to stop.
+                                    if (_qErr && _qErr.ccFatal) {
+                                        if (!_voFatal) { _voFatal = _qErr; }
+                                        ccError('[QUIZ VOICE] transport refused ' + _qLang + ' section '
+                                            + section.id + '  -  stopping. ' + _qErr.message);
+                                        return;
+                                    }
+                                    ccWarn('[QUIZ VOICE] ' + _qLang + ' section ' + section.id
+                                        + ' option ' + oi + ' failed: ' + _qErr.message
+                                        + '  -  that feedback will be silent');
                                 }
                             }
                         };
@@ -12847,6 +12876,19 @@ define([
                                                         section.voiceoverWordCount = voText.split(/\s+/).filter(Boolean).length;
                                                         section.voiceoverSchemaVersion = CcState.VOICEOVER_SCHEMA_VERSION;
                                                         section.voiceoverTextHash = CcState.voiceoverTextHash(voText);
+                                                        // v15.6.6: and its quiz feedback, in
+                                                        // this language. Narrated here rather
+                                                        // than in a pass of its own so that a
+                                                        // section's card clips and its answer
+                                                        // clips are made together, under the
+                                                        // same rate-limit and refusal checks -
+                                                        // a build that stops halfway leaves a
+                                                        // section wholly silent rather than
+                                                        // half narrated.
+                                                        if (activitiesEnabled) {
+                                                            await pregenQuizFeedback(section, langCode,
+                                                                langCode + '_');
+                                                        }
                                                         _mlDone++;
                                                         document.getElementById('cc-gen-progress').style.width =
                                                             Math.round((_mlDone / (_mlSections.length || 1)) * 100) + '%';
@@ -12868,6 +12910,17 @@ define([
                                                         + 'the slide as one file.');
                                                     section.voiceoverPerCard = true;
                                                     section.voiceoverStatus = 'pending';
+                                                    // v15.6.6: still narrate the answers, exactly
+                                                    // as the primary path does on a partial
+                                                    // section (`activitiesEnabled && _madeCount
+                                                    // && !_voRateLimited`). A learner who reaches
+                                                    // a quiz whose cards were only half narrated
+                                                    // should not also meet silent feedback, and
+                                                    // the clips are cheap next to the cards.
+                                                    if (activitiesEnabled && _mlMade && !_voRateLimited && !_voFatal) {
+                                                        await pregenQuizFeedback(section, langCode,
+                                                            langCode + '_');
+                                                    }
                                                     _mlDone++;
                                                     document.getElementById('cc-gen-progress').style.width =
                                                         Math.round((_mlDone / (_mlSections.length || 1)) * 100) + '%';
@@ -12920,6 +12973,16 @@ define([
                                                     section.voiceoverSchemaVersion = CcState.VOICEOVER_SCHEMA_VERSION;
                                                     section.voiceoverTextHash = CcState.voiceoverTextHash(voText);
                                                     ccLog('%c[VOICEOVER BUILDER v12.68] MULTI-LANG PERSIST OK ' + langCode + ' sec ' + section.id + ' -> ' + _persistData.url, 'color:#10b981');
+                                                    // v15.6.6: the primary path narrates quiz
+                                                    // feedback after the whole-section clip too
+                                                    // (a section can carry a decision-point card
+                                                    // while still falling back to one file), so
+                                                    // this mirrors it rather than leaving the two
+                                                    // languages with different coverage.
+                                                    if (activitiesEnabled) {
+                                                        await pregenQuizFeedback(section, langCode,
+                                                            langCode + '_');
+                                                    }
                                                 } else {
                                                     var _mlRl = ccRateLimitInfo(d);
                                                     if (_mlRl) { throw ccRateLimitError(_mlRl); }
@@ -13216,6 +13279,44 @@ define([
         if (mutedVerdicts > 0) {
             reasons.push(s(mutedVerdicts === 1 ? 'msgreasonnoverdictclip' : 'msgreasonnoverdictclips')
                 .split('{$a}').join(mutedVerdicts));
+        }
+
+        // v15.6.6: additional languages whose quiz feedback was never narrated.
+        //
+        // Until this release pregenQuizFeedback ran for the primary pack only, so every
+        // German, Japanese or Thai module ever built has silent quiz feedback - and the
+        // author was never told, because the player's log line ("no pre-generated feedback
+        // clip - silent by design") is not something an author reads.
+        //
+        // Walked separately rather than by widening forEachSection, which only ever visits
+        // m.topics. Widening it would also change what staleSections counts and what
+        // "Apply updates" clears, and clearing an additional language's section audio is a
+        // far larger charge than this line is worth.
+        let silentMlFeedback = 0;
+        ((m && m.multiLanguage) || []).forEach((entry) => {
+            ((entry && entry.topics) || []).forEach((topic) => {
+                ((topic && topic.sections) || []).forEach((section) => {
+                    ((section && section.cards) || []).forEach((card) => {
+                        if (!card || card.cardType !== 'decision-point') { return; }
+                        const questions = (Array.isArray(card.questions) && card.questions.length)
+                            ? card.questions : [card];
+                        questions.forEach((q) => {
+                            ((q && q.options) || []).forEach((o) => {
+                                // Only options that HAVE something to say. An option the
+                                // pack never explained is silent by design, in every
+                                // language, and counting it would overstate the work.
+                                if (o && o.feedback && !o.feedbackAudioUrl) {
+                                    silentMlFeedback++;
+                                }
+                            });
+                        });
+                    });
+                });
+            });
+        });
+        if (silentMlFeedback > 0) {
+            reasons.push(s(silentMlFeedback === 1 ? 'msgreasonmlsilent' : 'msgreasonmlsilents')
+                .split('{$a}').join(silentMlFeedback));
         }
 
         if (!reasons.length) { return null; }

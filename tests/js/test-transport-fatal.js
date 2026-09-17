@@ -208,8 +208,13 @@ module.exports = function run() {
         // console came from.
         ['the builder has a fatal-transport flag',
             builderSrc.indexOf('var _voFatal = null;') !== -1],
-        ['all three voiceover retry loops honour ccFatal',
-            (builderSrc.match(/\.ccFatal\) \{/g) || []).length === 3],
+        // v15.6.6: four now. The three voiceover retry loops, plus the quiz-feedback
+        // option loop, which additional languages reach for the first time this release -
+        // twelve options per section, each of which would otherwise make its own refused
+        // request against a WAF or a 413.
+        ['every voiceover loop honours ccFatal, quiz feedback included',
+            (builderSrc.match(/\.ccFatal\) \{/g) || []).length === 4,
+            'found ' + (builderSrc.match(/\.ccFatal\) \{/g) || []).length + ', expected 4'],
         ['a fatal transport error stops new work being enqueued',
             (builderSrc.match(/&& !_voFatal\)/g) || []).length >= 3],
         ['and is reported once, with the fix, rather than per card',

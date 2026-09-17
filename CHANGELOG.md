@@ -1,5 +1,74 @@
 # Changelog
 
+## 15.6.6 - 2026-09-19
+
+**Additional languages now narrate their quiz feedback. Every translated module ever built
+has been silent on every quiz answer.**
+
+### FIX-CC-ML-QUIZ-FEEDBACK-NEVER-NARRATED
+
+`pregenQuizFeedback` was called from three places, all in the primary path. A German,
+Japanese or Thai pack therefore got section narration, card narration, and **nothing at all
+when a learner answered a question** — and nothing said so. The player's log line, *"no
+pre-generated feedback clip - silent by design"*, was true of the code and never true of the
+author's intent.
+
+It now runs for every language, from three matching call sites in the additional-language
+path (per-card success, partial cards, whole-section fallback), so the two paths have the
+same coverage rather than differing by accident.
+
+Three things had to be got right, and each would have shipped silently:
+
+**1. The clip key carries the language.** A translated section keeps the *same id* as the
+primary one, so an unprefixed key would have overwritten the English clip in the file store
+and both languages would have played German. The key follows the convention the card path
+already uses — `langCode + '_' + section.id + '_dpfb' + n` — which is
+FIX-CC-ML-SECTIONID-COLLISION (v13.5) applied one level down.
+
+**2. The translation payload strips option audio.** v15.4.2 widened the strip to the *cards*
+when narration moved onto them, and stopped there. Decision-point **options** carry
+`feedbackAudioUrl` too, and nobody met the consequence because nothing had ever generated it
+for an additional language. This release makes it live: a translated option would have
+arrived carrying the English clip's URL *and* the `feedbackVerdictSpoken` marker added in
+15.6.4 — so the builder would have skipped it as already current, and a German learner would
+have answered a German question and heard English feedback, with the build reporting
+success. Exactly the failure v15.4.2 describes for cards. Both fields are now stripped, in
+both card shapes.
+
+**3. The verdict is spoken in the pack's language**, because `useNarrationLanguage(langCode)`
+already runs before the section's clips are built and the quiz feedback is generated inside
+that same window.
+
+A fatal transport refusal now stops the option loop too. Twelve options per section would
+otherwise each have made their own refused request against a WAF or a 413 — the burst
+v15.6.2 exists to prevent.
+
+### Existing translated modules
+
+Every one of them has silent quiz feedback, and generating it costs credits. The completion
+screen's update panel now counts the affected answers and says so, rather than letting an
+author discover it on the bill. Only options that actually *have* feedback are counted — an
+option the pack never explained is silent by design, in every language.
+
+### Tests
+
+- `tests/js/test-ml-quiz-feedback.js` (new, 32 checks): the call sites, the key convention,
+  the stop conditions, the narration-language ordering, and the author-facing report. The
+  strip is **lifted out of `generator.js` and run** against a section carrying English clips
+  on every option of a two-question card and a legacy single-question card — static checks
+  prove the lines exist, this proves they do the job. Seven mutations caught, including the
+  two that would have re-introduced the English-audio inheritance.
+- `tests/js/test-transport-fatal.js`: the loop count is 4, not 3, and says why.
+
+### Also
+
+A comment in `player5.js` still claimed the feedback clip URL was stripped from the
+learner's manifest and returned by the server. That stopped being true in 15.6.1 when
+grading moved back into the browser. Corrected — a stale comment about a security property
+that no longer exists is worse than none.
+
+**Not smoke tested against a live generation.**
+
 ## 15.6.5 - 2026-09-19
 
 **Self-audit of 15.6.1–15.6.4. Two real defects found in my own work, both of the same

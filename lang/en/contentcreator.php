@@ -1450,6 +1450,8 @@ $string['msgreasonstalesection'] = '{$a} section hold voiceover produced by an o
 $string['msgreasonstalesections'] = '{$a} sections hold voiceover produced by an older narration engine.';
 $string['msgreasonnoverdictclip'] = '{$a} quiz feedback clip does not say "Correct" or "Incorrect". It will be regenerated the next time you pre-generate voiceover.';
 $string['msgreasonnoverdictclips'] = '{$a} quiz feedback clips do not say "Correct" or "Incorrect". They will be regenerated the next time you pre-generate voiceover.';
+$string['msgreasonmlsilent'] = '{$a} quiz answer in an additional language has no narration. Additional languages did not get quiz feedback narration before this version; pre-generating voiceover will create it.';
+$string['msgreasonmlsilents'] = '{$a} quiz answers in additional languages have no narration. Additional languages did not get quiz feedback narration before this version; pre-generating voiceover will create it.';
 
 // Builder button labels, short form labels and {$a} sentences (v13.95.3):
 // third and final migration pass out of amd/src/builder.js.

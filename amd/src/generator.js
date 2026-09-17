@@ -8004,6 +8004,32 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                 delete c.voiceoverTextHash;
                 delete c.voiceoverWordCount;
                 delete c.voiceoverSchemaVersion;
+
+                // v15.6.6: the same strip, one level deeper.
+                //
+                // v15.4.2 above widened this to the cards when narration moved onto them,
+                // and stopped there. Decision-point OPTIONS carry audio too -
+                // feedbackAudioUrl, the clip of that option's feedback - and it was never
+                // stripped, for the simple reason that nothing had ever generated quiz
+                // feedback for an additional language, so nobody met the consequence.
+                //
+                // This release generates it, which makes the omission live: a translated
+                // option would arrive carrying the ENGLISH clip's URL and, since v15.6.4,
+                // the feedbackVerdictSpoken marker saying that clip is current. The
+                // builder skips an option that has both - so a German learner would answer
+                // a German question and hear the English feedback, and the build would
+                // report success. Exactly the failure v15.4.2 describes for cards.
+                //
+                // The clips do not survive translation because the words do not.
+                var questions = (Array.isArray(c.questions) && c.questions.length)
+                    ? c.questions : [c];
+                questions.forEach(function(q) {
+                    ((q && q.options) || []).forEach(function(o) {
+                        if (!o) { return; }
+                        delete o.feedbackAudioUrl;
+                        delete o.feedbackVerdictSpoken;
+                    });
+                });
             });
 
             const userPrompt =

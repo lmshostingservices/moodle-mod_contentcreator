@@ -109,7 +109,7 @@ try {
         value: {writeText: function(t) { copied = t; return Promise.resolve(); }}
     });
 } catch (e) { /* If it cannot be overridden, the textarea fallback still records. */ }
-var CcState = {CC_VERSION: '15.6.5'};
+var CcState = {CC_VERSION: '15.6.6'};
 function ccWarn() {}
 var container = document.getElementById('container');
 ${lift('ccCollectTopicProblems')}
@@ -244,7 +244,7 @@ const failedTopic = {
         copyText && /HTTP 413/.test(copyText) && /card count 5/.test(copyText),
         String(copyText).slice(0, 200));
     check('...and stamps the plugin version, so a pasted report identifies the build',
-        copyText && copyText.indexOf('15.6.5') !== -1);
+        copyText && copyText.indexOf('15.6.6') !== -1);
 
     await page.click('#cc-fail-dismiss');
     check('it closes', (await page.locator('#cc-fail-report').count()) === 0);
