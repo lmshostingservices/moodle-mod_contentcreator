@@ -75,6 +75,30 @@ let Slots;
     vm.runInContext(fs.readFileSync(path.join(SRC, 'cc-card-slots.js'), 'utf8'), sandbox, {filename: 'cc-card-slots.js'});
     Slots = sandbox._m;
 })();
+/**
+ * v15.6.4: the SHIPPED withVerdict, lifted out of cc-state.js.
+ *
+ * Not a stub. The whole point of the helper is that builder.js and player5.js produce the
+ * same string, so a harness that reimplemented it would prove nothing about what ships.
+ *
+ * @returns {Function} The real withVerdict.
+ */
+function loadWithVerdict() {
+    const src = fs.readFileSync(path.join(SRC, 'cc-state.js'), 'utf8');
+    const start = src.indexOf('function withVerdict(');
+    if (start === -1) { throw new Error('withVerdict() not found in cc-state.js'); }
+    let depth = 0;
+    let end = src.indexOf('{', start);
+    for (; end < src.length; end++) {
+        if (src[end] === '{') { depth++; } else if (src[end] === '}') {
+            depth--;
+            if (depth === 0) { end++; break; }
+        }
+    }
+    return src.slice(start, end);
+}
+const WITH_VERDICT_SRC = loadWithVerdict();
+
 Slots.init({
     getLabel: function(k) { return k === 'correctAnswerLabel' ? 'Correct answer' : k; },
     escapeHtml: function(t) { return String(t === undefined || t === null ? '' : t)
@@ -142,11 +166,14 @@ const page_html = `<!doctype html><html><head><meta charset="utf-8">
 // Stubs for everything the handler reaches outside itself. Nothing here influences the
 // behaviour under test - they only stop it throwing.
 var narration = {paused: false, pause: function() { this.paused = true; }};
-// v15.5.0 FIX-CC-ANSWER-IN-DOM: the handler no longer knows the answer, so this harness
-// has to play the server. ccGradeAnswer below is a FAITHFUL stand-in for
-// mod_contentcreator_check_answer: it is handed the option element, reads the manifest
-// index off data-oidx exactly as the real one does, looks that index up in the SAME
-// fixture the markup was rendered from, and returns the same response shape.
+// v15.5.0: the handler no longer knows the answer - it is handed a verdict. ccGradeAnswer
+// below is a FAITHFUL stand-in for the real one: it is given the option element, reads the
+// manifest index off data-oidx exactly as the real one does, looks that index up in the
+// SAME fixture the markup was rendered from, and returns the same response shape.
+//
+// v15.6.1 moved the real grader back into the browser, so this calls back synchronously,
+// as the shipped one does. tests/js/test-local-grading.js is what proves the real grader
+// and the server agree; this file proves the handler does the right thing with a verdict.
 //
 // That is what makes this test worth running. If a future edit grades on the display
 // index instead of the manifest index, the shuffle puts them out of step and this fake
@@ -175,9 +202,7 @@ var self = {quizVoiceEnabled: true, currentAudio: narration, _quizFbAudio: null,
                 ? (window.__OPTIONS[correctIndex].feedback || '') : '',
             feedbackaudiourl: chosen.feedbackAudioUrl || ''
         };
-        // A real web service call is a network round trip. Resolving on a microtask keeps
-        // the asynchrony without making every test wait.
-        Promise.resolve().then(function() { done(null, result); });
+        done(null, result);
     },
     ccUnlockOptions: function($options) {
         window.__unlocked++;
@@ -206,7 +231,16 @@ function playUnlockSound() { calls.unlock++; }
 function showActivityMiniCelebration() { calls.celebration++; }
 function haptic() {}
 function ccWarn() {}
-function getLabel(k) { return k === 'correctAnswerLabel' ? 'Correct answer' : k; }
+// v15.6.4: the real withVerdict, and verdict words getLabel can resolve. A learner sees
+// "Correct." / "Incorrect." at the head of the feedback now, and the clip says the same.
+${WITH_VERDICT_SRC}
+var CcState = {withVerdict: withVerdict};
+function getLabel(k) {
+    if (k === 'correctAnswerLabel') { return 'Correct answer'; }
+    if (k === 'correct_pos') { return 'Correct'; }
+    if (k === 'correct_neg') { return 'Incorrect'; }
+    return k;
+}
 var _tryAgainFor = function($opt) {
     var $q = $opt.closest('.cc5-quiz-question');
     if ($q.length) { return $q.find('.cc5-dp-try-again'); }
@@ -467,7 +501,7 @@ async function settle(page) {
     check('the revealed feedback is visible in dark mode too',
         !!darkRight && darkRight.feedbackVisible === true);
 
-    console.log('\n6. v15.5.0: the two failure modes server grading introduced');
+    console.log('\n6. The two failure modes that survive the v15.6.1 revert');
 
     // 6a. Grading must use the MANIFEST index, not the display index.
     //
@@ -480,7 +514,7 @@ async function settle(page) {
     await page.click(WRONG_WITH_CLIP);
     await settle(page);
     const graded = await page.evaluate(function() { return window.__graded; });
-    check('the index sent to the server is the option\'s MANIFEST index',
+    check('the index the grader is given is the option\'s MANIFEST index',
         graded.length === 1 && graded[0] === 3,
         'sent ' + JSON.stringify(graded) + ', expected [3]');
     const displayIndex = await page.evaluate(function() {
@@ -490,16 +524,19 @@ async function settle(page) {
     check('...and the two really are different identifiers, not the same number twice',
         displayIndex !== null, 'display index was ' + displayIndex + ', manifest index 3');
 
-    // 6b. A failed grading call must PUT THE QUESTION BACK, not close it.
+    // 6b. A question that cannot be graded must PUT THE QUESTION BACK, not close it.
     //
-    // The verdict is a network round trip now. A learner on a dropped connection who
-    // loses a question they cannot retake is a worse outcome than anything this release
-    // fixed, so the failure path is asserted rather than reasoned about.
+    // v15.6.1: no longer a dropped connection - the verdict never touches the network.
+    // This is the unresolvable question: a card rendered by a build that predates
+    // data-oidx, or a manifest replaced under the player. A learner who loses a question
+    // they cannot retake is a worse outcome than anything either release fixed, so the
+    // path is asserted rather than reasoned about. The failing grader answers on a
+    // microtask, to prove the handler still copes with a late callback.
     await page.goto('file://' + tmp);
     await page.evaluate(function() { window.__openQuiz(); });
     await page.evaluate(function() {
         window.self.ccGradeAnswer = function($opt, done) {
-            Promise.resolve().then(function() { done(new Error('network down')); });
+            Promise.resolve().then(function() { done(new Error('question not found in manifest')); });
         };
     });
     await page.click(WRONG_BARE);
@@ -513,7 +550,7 @@ async function settle(page) {
             revealed: $set.querySelectorAll('.cc5-dp-reveal').length
         };
     });
-    check('a failed grading call unlocks the question rather than closing it',
+    check('an ungradeable question is unlocked rather than closed',
         failed.unlocked === 1 && failed.answered === 'false', JSON.stringify(failed));
     check('...and scores nothing: no option marked, nothing revealed',
         failed.selected === 0 && failed.revealed === 0, JSON.stringify(failed));

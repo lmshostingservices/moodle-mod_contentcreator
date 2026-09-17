@@ -111,15 +111,20 @@ define([], function() {
             proseHowItWorks: 'How It Works',
             // v13.94.3
             progressNotSaved: 'Your progress could not be saved. Please check your connection and revisit the last slide.',
-            // v15.5.0: answers are graded on the server now, so a dropped connection is a
-            // failure mode a challenge question did not previously have. The question is
-            // put back in play rather than closed, and this says so.
+            // v15.5.0 added this when grading moved to the server and a dropped connection
+            // became a failure mode a challenge question did not previously have.
+            //
+            // v15.6.1 moved grading back into the browser, so the connection is no longer
+            // the cause and the old wording sent the learner to check something that was
+            // never the problem. What remains is a question the player cannot resolve in
+            // the manifest it is holding - rare, and not the learner's to fix - so the
+            // question is put back in play and this says who to tell.
             //
             // English only for the moment. getLabel() ends
             // `labels[key] || UI_LABELS['en'][key] || key`, so the other 52 languages show
             // this sentence in English rather than a raw key. That is the intended
             // fallback and it is honest; inventing 52 translations would not be.
-            answerNotChecked: 'Your answer could not be checked. Please check your connection and try again.',
+            answerNotChecked: 'This question could not be checked. Please try again, and tell your trainer if it keeps happening.',
             popupBlockedHtmlFallback: 'Your browser blocked the print window, so the content was downloaded as an HTML file instead.',
             // Activity Badges
             escalationDecisions: 'Escalation Decisions',

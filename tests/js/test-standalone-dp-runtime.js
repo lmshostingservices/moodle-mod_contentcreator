@@ -78,6 +78,30 @@ let Slots;
         {filename: 'cc-card-slots.js'});
     Slots = sandbox._m;
 })();
+/**
+ * v15.6.4: the SHIPPED withVerdict, lifted out of cc-state.js.
+ *
+ * Not a stub. The whole point of the helper is that builder.js and player5.js produce the
+ * same string, so a harness that reimplemented it would prove nothing about what ships.
+ *
+ * @returns {Function} The real withVerdict.
+ */
+function loadWithVerdict() {
+    const src = fs.readFileSync(path.join(SRC, 'cc-state.js'), 'utf8');
+    const start = src.indexOf('function withVerdict(');
+    if (start === -1) { throw new Error('withVerdict() not found in cc-state.js'); }
+    let depth = 0;
+    let end = src.indexOf('{', start);
+    for (; end < src.length; end++) {
+        if (src[end] === '{') { depth++; } else if (src[end] === '}') {
+            depth--;
+            if (depth === 0) { end++; break; }
+        }
+    }
+    return src.slice(start, end);
+}
+const WITH_VERDICT_SRC = loadWithVerdict();
+
 Slots.init({
     getLabel: function(k) { return k === 'correctAnswerLabel' ? 'Correct answer' : k; },
     escapeHtml: function(t) {
@@ -157,7 +181,16 @@ var OPTIONS = ${JSON.stringify(OPTIONS)};
 window.__graded = [];
 window.__unlocked = 0;
 function ccWarn() {}
-function getLabel(k) { return k === 'correctAnswerLabel' ? 'Correct answer' : k; }
+// v15.6.4: the real withVerdict, and verdict words getLabel can resolve. A learner sees
+// "Correct." / "Incorrect." at the head of the feedback now, and the clip says the same.
+${WITH_VERDICT_SRC}
+var CcState = {withVerdict: withVerdict};
+function getLabel(k) {
+    if (k === 'correctAnswerLabel') { return 'Correct answer'; }
+    if (k === 'correct_pos') { return 'Correct'; }
+    if (k === 'correct_neg') { return 'Incorrect'; }
+    return k;
+}
 function playDecisionCorrectSound() { window.__sounds.correct++; }
 function playDecisionIncorrectSound() { window.__sounds.incorrect++; }
 window.__sounds = {correct: 0, incorrect: 0};
@@ -167,8 +200,10 @@ var _tryAgainFor = function($opt) {
     if ($q.length) { return $q.find('.cc5-dp-try-again'); }
     return $opt.closest('.cc5-decision-challenge').find('.cc5-dp-try-again');
 };
-// A faithful stand-in for mod_contentcreator_check_answer: it reads data-oidx exactly as
-// the real ccGradeAnswer does and answers from the same fixture the markup was built from.
+// A faithful stand-in for the real ccGradeAnswer: it reads data-oidx exactly as that does
+// and answers from the same fixture the markup was built from. v15.6.1 made the verdict
+// local, so it now calls back SYNCHRONOUSLY, which is the ordering that ships - the
+// callback contract still allows an asynchronous grader, and section 5 exercises one.
 var self = {
     quizVoiceEnabled: false, currentAudio: null, _quizFbAudio: null, cmid: 1,
     ccGradeAnswer: function($opt, done) {
@@ -179,13 +214,11 @@ var self = {
         OPTIONS.forEach(function(o, i) { if (o.correct) { correctIndex = i; } });
         var chosen = OPTIONS[oidx];
         var isCorrect = (oidx === correctIndex);
-        Promise.resolve().then(function() {
-            done(null, {
-                success: true, graded: true, iscorrect: isCorrect, correctindex: correctIndex,
-                feedback: chosen.feedback || '',
-                correctfeedback: (!isCorrect ? (OPTIONS[correctIndex].feedback || '') : ''),
-                feedbackaudiourl: ''
-            });
+        done(null, {
+            success: true, graded: true, iscorrect: isCorrect, correctindex: correctIndex,
+            feedback: chosen.feedback || '',
+            correctfeedback: (!isCorrect ? (OPTIONS[correctIndex].feedback || '') : ''),
+            feedbackaudiourl: ''
         });
     },
     ccUnlockOptions: function($options) {
@@ -290,6 +323,18 @@ function snapshot(p) {
         JSON.stringify(await p.evaluate(function() { return window.__graded; })) === '[0]');
     check('the screen reader is told the result',
         /Incorrect/.test((s.find(function(o) { return o.oidx === '0'; }) || {}).srText));
+    // v15.6.4: and so is everyone else. The word used to arrive inside the vendor's
+    // feedback string; when the prompts stopped producing it, a learner was left to infer
+    // the verdict from a border colour. The plugin owns it now.
+    //
+    // This option is the vendor's empty distractor - the v2 shape puts one feedback line
+    // on the correct option and leaves the others blank - so before this release it showed
+    // NOTHING at all. The verdict alone is what it has to say, and it says it.
+    const wrongFb = (s.find(function(o) { return o.oidx === '0'; }) || {}).feedbackText || '';
+    check('an empty distractor still shows its verdict rather than nothing',
+        wrongFb === 'Incorrect.', 'got: [' + wrongFb + ']');
+    check('...and it is visible, not merely present',
+        (s.find(function(o) { return o.oidx === '0'; }) || {}).feedbackVisible === true);
     check('the incorrect sound fired and the correct one did not',
         JSON.stringify(await p.evaluate(function() { return window.__sounds; })) === '{"correct":0,"incorrect":1}');
     check('the correct answer is NOT revealed - this card keeps Try Again',
@@ -313,15 +358,22 @@ function snapshot(p) {
     await p.click(WRONG_WITH_REASON);
     await settle(p);
     s = await snapshot(p);
-    check('a SECOND answer is sent to the server after Try Again',
+    check('a SECOND answer is graded after Try Again',
         JSON.stringify(await p.evaluate(function() { return window.__graded; })) === '[0,2]',
         JSON.stringify(await p.evaluate(function() { return window.__graded; })));
     check('the second answer is scored',
         (s.find(function(o) { return o.oidx === '2'; }) || {}).selected === 'incorrect');
-    check('its own reason is shown, from the server response',
+    check('its own reason is shown, from that answer\'s own verdict',
         /Moving a barrier changes a control/.test(
             (s.find(function(o) { return o.oidx === '2'; }) || {}).feedbackText || ''),
         (s.find(function(o) { return o.oidx === '2'; }) || {}).feedbackText);
+    // v15.6.4: this distractor HAS feedback, so the verdict leads it and the explanation
+    // follows. Both halves, in that order - the word alone would lose the teaching, and
+    // the explanation alone is what this release exists to fix.
+    const reasonFb = (s.find(function(o) { return o.oidx === '2'; }) || {}).feedbackText || '';
+    check('...led by the verdict, with the explanation after it',
+        /^Incorrect\. Moving a barrier changes a control/.test(reasonFb),
+        'got: [' + reasonFb + ']');
     check('and it is actually visible, not just present',
         (s.find(function(o) { return o.oidx === '2'; }) || {}).feedbackVisible === true);
 
@@ -332,7 +384,9 @@ function snapshot(p) {
     s = await snapshot(p);
     const right = s.find(function(o) { return o.oidx === '1'; });
     check('the correct option is marked correct', right && right.selected === 'correct');
-    check('its feedback comes back from the server and is shown',
+    check('a right answer opens with the positive verdict',
+        /^Correct\. /.test((right && right.feedbackText) || ''), right && right.feedbackText);
+    check('its feedback comes back with the verdict and is shown',
         right && right.feedbackVisible === true
         && /The worker duty applies to your own movement/.test(right.feedbackText || ''),
         right && right.feedbackText);
@@ -343,11 +397,18 @@ function snapshot(p) {
             return b ? getComputedStyle(b).display : 'none';
         })) === 'none');
 
-    console.log('\n5. A failed grading call must not close the question');
+    // v15.6.1: this no longer happens on a dropped connection - the verdict never touches
+    // the network. It happens when the question cannot be resolved in the loaded manifest:
+    // a card rendered by a build that predates data-oidx, or a manifest replaced under the
+    // player. Rare, but a learner who loses a question they cannot retake is a worse
+    // outcome than anything either release fixed, so the path is asserted rather than
+    // reasoned about. The failing grader is asynchronous on purpose, to prove the handler
+    // still copes with a callback that arrives later.
+    console.log('\n5. A question that cannot be graded must not close');
     await p.goto('file://' + tmp);
     await p.evaluate(function() {
         window.self2.ccGradeAnswer = function($opt, done) {
-            Promise.resolve().then(function() { done(new Error('network down')); });
+            Promise.resolve().then(function() { done(new Error('question not found in manifest')); });
         };
     });
     await p.click(WRONG_BARE);

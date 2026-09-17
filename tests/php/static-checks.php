@@ -443,83 +443,49 @@ check(
     "got '" . \mod_contentcreator\evidence::normalise_section_id('pc 1.1')
         . "', expected 'pc11' - it must mirror clean_param(PARAM_ALPHANUMEXT)");
 
-echo "\n8. The answer-key scrub - behaviour, against a realistic manifest\n";
+echo "\n8. The answer-key scrub is gone and must stay gone\n";
 
-// V15.5.2. get_manifest() strips the answer key before a learner receives it. That is the
-// whole of FIX-CC-ANSWER-IN-DOM on the server side, and until now nothing exercised it
-// against a manifest shaped the way normalizeCardSchema() actually stores one.
+// V15.6.1 REVERT-CC-ANSWER-IN-DOM. V15.5.0 stripped the answer key out of what a learner
+// received, which forced every answer through a web service call before the learner was
+// told anything. The concealment bought little - the activity is unscored and the answer
+// appears after one click either way - and it made a formative knowledge check fail
+// closed on a bad network.
+//
+// Grading is local again, and it reads the answer key out of the manifest the player
+// already holds. So a reinstated scrub would not merely restore the old trade-off, it
+// would break every challenge on the site silently: ccGradeLocally() would find no
+// correct option and return graded:false for every question, and nothing would say why.
+// These checks exist so that reinstating it fails here instead.
 require_once(__DIR__ . '/../../classes/manifest_storage.php');
 
-$scrubsrc = ['topics' => [['id' => 't1', 'sections' => [[
-    'id' => 'subtopic_0_1',
-    'cards' => [
-        ['cardType' => 'hook-scenario', 'keyTakeaway' => 'Stay behind the barrier.'],
-        ['cardType' => 'decision-point', 'schemaVersion' => 2, 'questions' => [[
-            'question' => 'Which action meets the rule?',
-            'correctIndex' => 0,
-            'options' => [
-                ['text' => 'Record it in the register', 'feedback' => 'Correct! Clause 4 applies.',
-                    'feedbackAudioUrl' => 'https://x/a.ogg', 'correct' => true],
-                ['text' => 'Tell the supervisor', 'feedback' => 'Verbal notice is not the register.',
-                    'feedbackAudioUrl' => 'https://x/b.ogg', 'correct' => false],
-                ['text' => 'Wait for a complaint', 'feedback' => '', 'correct' => false],
-            ],
-        ]]],
-        // The legacy single-question shape, still present in stored manifests.
-        ['cardType' => 'decision-point', 'question' => 'Legacy?', 'correctAnswer' => 1, 'options' => [
-            ['text' => 'No', 'isCorrect' => false],
-            ['text' => 'Yes', 'isCorrect' => true, 'feedback' => 'Correct.'],
-        ]],
-    ],
-]]]]];
+$gmsrc = file_get_contents('classes/external/get_manifest.php');
+$mssrc = file_get_contents('classes/manifest_storage.php');
 
-$scrubbed = \mod_contentcreator\manifest_storage::strip_answer_key(json_encode($scrubsrc));
-$sd = json_decode($scrubbed, true);
-$sq = $sd['topics'][0]['sections'][0]['cards'][1]['questions'][0] ?? [];
-$sl = $sd['topics'][0]['sections'][0]['cards'][2] ?? [];
+check(
+    'get_manifest does not strip the answer key',
+    strpos($gmsrc, 'strip_answer_key') === false);
+check(
+    'get_manifest does not vary its payload by capability',
+    strpos($gmsrc, '$isstaff') === false
+    && strpos($gmsrc, ":manage'") === false);
+check(
+    'get_manifest returns the decompressed manifest unchanged',
+    preg_match("/'manifest' => \\\$rawmanifest,/", $gmsrc) === 1);
+check(
+    'manifest_storage no longer defines the scrub helpers',
+    !method_exists('\mod_contentcreator\manifest_storage', 'strip_answer_key')
+    && strpos($mssrc, 'strip_question_answer_key') === false);
+check(
+    'manifest_storage still compresses and decompresses',
+    method_exists('\mod_contentcreator\manifest_storage', 'decompress'));
 
-$leaks = [];
-foreach (['correctIndex'] as $f) {
-    if (array_key_exists($f, $sq)) {
-        $leaks[] = "question.$f";
-    }
-}
-if (array_key_exists('correctAnswer', $sl)) {
-    $leaks[] = 'legacy card.correctAnswer';
-}
-foreach (($sq['options'] ?? []) as $i => $o) {
-    foreach (['correct', 'isCorrect', 'feedback', 'feedbackAudioUrl'] as $f) {
-        if (array_key_exists($f, $o)) {
-            $leaks[] = "option[$i].$f";
-        }
-    }
-}
-foreach (($sl['options'] ?? []) as $i => $o) {
-    foreach (['correct', 'isCorrect', 'feedback'] as $f) {
-        if (array_key_exists($f, $o)) {
-            $leaks[] = "legacy option[$i].$f";
-        }
-    }
-}
-check('no answer-key field survives the scrub', empty($leaks), 'leaked: ' . implode(', ', $leaks));
+// Completion did not move. The server still re-reads the stored manifest and decides for
+// itself, so the evidence row stays unforgeable whatever the browser believes.
+$casrc = file_get_contents('classes/external/check_answer.php');
 check(
-    'no feedback TEXT survives, which names the answer as surely as a flag does',
-    strpos($scrubbed, 'Correct!') === false && strpos($scrubbed, 'not the register') === false);
-check(
-    'option text and order are untouched - data-oidx depends on the order',
-    ($sq['options'][0]['text'] ?? '') === 'Record it in the register'
-    && ($sq['options'][2]['text'] ?? '') === 'Wait for a complaint');
-check('the question text is kept', ($sq['question'] ?? '') === 'Which action meets the rule?');
-check(
-    'cards that are not challenges are untouched',
-    ($sd['topics'][0]['sections'][0]['cards'][0]['keyTakeaway'] ?? '') === 'Stay behind the barrier.');
-// A manifest it cannot read must come back whole, not blanked - better the answer key
-// than an empty activity.
-check(
-    'unreadable input is returned unchanged rather than blanked',
-    \mod_contentcreator\manifest_storage::strip_answer_key('not json') === 'not json'
-    && \mod_contentcreator\manifest_storage::strip_answer_key('') === ''
-    && \mod_contentcreator\manifest_storage::strip_answer_key('{"a":1}') === '{"a":1}');
+    'check_answer still resolves the correct option from the stored manifest',
+    strpos($casrc, 'evidence::correct_index') !== false
+    && strpos($casrc, 'evidence::record_answer') !== false);
 
 echo "\n9. Server-side grading - every answer-key shape that exists in the wild\n";
 
@@ -697,81 +663,36 @@ check(
     is_array($decoded) && ($decoded['0'] ?? null) === 0 && ($decoded['2'] ?? null) === 1,
     $sparse['mask']);
 
-echo "\n11. The scrub across a real-sized manifest - PHP reference safety\n";
+echo "\n11. Nothing anywhere still calls the removed scrub\n";
 
-// The strip_answer_key() function uses `foreach (... as &$x)` at three nesting levels.
-// PHP leaves the
-// last reference dangling after such a loop, and a later write through it silently
-// overwrites the final element with an earlier one. The failure is INVISIBLE with one
-// topic, one section and one card - which is what section 8 uses. Three of each here.
-$big = ['topics' => []];
-for ($t = 0; $t < 3; $t++) {
-    $sections = [];
-    for ($sx = 0; $sx < 3; $sx++) {
-        $cards = [];
-        for ($c = 0; $c < 3; $c++) {
-            $cards[] = ['cardType' => 'concept-explainer', 'heading' => "t{$t}s{$sx}c{$c}"];
-            $cards[] = ['cardType' => 'decision-point', 'questions' => [[
-                'question' => "q-t{$t}s{$sx}c{$c}", 'correctIndex' => 1, 'options' => [
-                    ['text' => "A-t{$t}s{$sx}c{$c}", 'feedback' => 'wrong', 'correct' => false],
-                    ['text' => "B-t{$t}s{$sx}c{$c}", 'feedback' => 'Correct!', 'correct' => true,
-                        'feedbackAudioUrl' => 'https://x/y.ogg'],
-                ],
-            ]]];
-        }
-        $sections[] = ['id' => "t{$t}_s{$sx}", 'cards' => $cards];
+// The helpers were public and lived on a class half the plugin includes. A call left
+// behind in a route that is only exercised on a live site would be a fatal error the
+// tests would never see, so sweep the whole tree rather than the two files that used it.
+$scrubcallers = [];
+$sweep = new RecursiveIteratorIterator(new RecursiveDirectoryIterator('.'));
+foreach ($sweep as $f) {
+    if (!$f->isFile()) {
+        continue;
     }
-    $big['topics'][] = ['id' => "t{$t}", 'sections' => $sections];
-}
-$bigraw = json_encode($big);
-$bigout = \mod_contentcreator\manifest_storage::strip_answer_key($bigraw);
-$bigdec = json_decode($bigout, true);
-
-$biglabels = [];
-$bigleaks = [];
-$options = 0;
-foreach (($bigdec['topics'] ?? []) as $ti => $topic) {
-    foreach (($topic['sections'] ?? []) as $si => $section) {
-        if (($section['id'] ?? '') !== "t{$ti}_s{$si}") {
-            $bigleaks[] = "section id at [$ti][$si] is '" . ($section['id'] ?? '') . "'";
-        }
-        foreach (($section['cards'] ?? []) as $ci => $card) {
-            if (($card['cardType'] ?? '') === 'concept-explainer') {
-                $biglabels[] = $card['heading'];
-                continue;
-            }
-            $q = $card['questions'][0];
-            $biglabels[] = $q['question'];
-            if (array_key_exists('correctIndex', $q)) {
-                $bigleaks[] = "correctIndex at [$ti][$si][$ci]";
-            }
-            foreach ($q['options'] as $oi => $o) {
-                $options++;
-                foreach (['correct', 'isCorrect', 'feedback', 'feedbackAudioUrl'] as $f) {
-                    if (array_key_exists($f, $o)) {
-                        $bigleaks[] = "$f at [$ti][$si][$ci][$oi]";
-                    }
-                }
-                $biglabels[] = $o['text'] ?? '';
-            }
-        }
+    $path = $f->getPathname();
+    if (!preg_match('/\.(php|js)$/', $path) || strpos($path, '/amd/build/') !== false) {
+        continue;
+    }
+    // The test tree names the removed helpers on purpose - the checks above, and the
+    // JS suite that asserts get_manifest has not started stripping again. What matters
+    // is that no shipped code calls them.
+    if (strpos($path, '/tests/') !== false) {
+        continue;
+    }
+    $body = file_get_contents($path);
+    if (preg_match('/strip_answer_key|strip_question_answer_key/', $body)) {
+        $scrubcallers[] = $path;
     }
 }
 check(
-    'the answer key is stripped from all 27 challenge cards and 54 options',
-    empty($bigleaks) && $options === 54,
-    $options . ' options; leaked: ' . implode(', ', array_slice($bigleaks, 0, 5)));
-check(
-    'no element was duplicated by a dangling reference',
-    count($biglabels) === count(array_unique($biglabels)),
-    'duplicates: ' . implode(', ', array_diff_assoc($biglabels, array_unique($biglabels))));
-check(
-    'the LAST topic, section and card are intact rather than copies of earlier ones',
-    ($bigdec['topics'][2]['sections'][2]['cards'][4]['heading'] ?? '') === 't2s2c2'
-    && strpos($bigout, 'B-t2s2c2') !== false);
-check(
-    'scrubbing an already-scrubbed manifest is a no-op, not a corruption',
-    \mod_contentcreator\manifest_storage::strip_answer_key($bigout) === $bigout);
+    'no file references strip_answer_key() or strip_question_answer_key()',
+    empty($scrubcallers),
+    implode(', ', $scrubcallers));
 
 echo "\n12. Backup covers every evidence column\n";
 

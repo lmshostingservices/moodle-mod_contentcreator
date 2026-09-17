@@ -71,7 +71,7 @@ define([], function() {
     // so that never fired either.
     //
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.6.0';
+    var CC_VERSION = '15.6.4';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was
@@ -1757,7 +1757,11 @@ define([], function() {
         return fetchWithDeadline(ajaxUrl(),
             {method: 'POST', body: body, credentials: 'same-origin'}, 'The request to ' + endpoint)
             .then(function(response) {
-                return response.json();
+                // v15.6.2: this is the GENERATOR's transport. v15.4.31 built the HTML guard
+                // and v15.5.1 moved it here so both callers could use it - and then routed
+                // builder.js through it and left this one reading raw. Every "Unexpected
+                // token '<'" a generation produced came through this line.
+                return readJson(response, 'The request to ' + endpoint);
             })
             .then(function(data) {
                 if (!data || data.success !== true) {
@@ -1791,7 +1795,9 @@ define([], function() {
         return fetchWithDeadline(ajaxUrl(),
             {method: 'POST', body: body, credentials: 'same-origin'}, 'The upload to ' + endpoint)
             .then(function(response) {
-                return response.json();
+                // v15.6.2: a 20 MB document upload is the request most likely to hit a
+                // web-server body limit, so this is where naming HTTP 413 matters most.
+                return readJson(response, 'The upload to ' + endpoint);
             })
             .then(function(data) {
                 if (!data || data.success !== true) {
@@ -1825,7 +1831,12 @@ define([], function() {
             .then(function(response) {
                 var type = response.headers.get('Content-Type') || '';
                 if (type.indexOf('application/json') !== -1) {
-                    return response.json().then(function(data) {
+                    // v15.6.2: the last raw read in the plugin, and it stays a read of an
+                    // ERROR body - a download that succeeds returns a blob and never gets
+                    // here. Routed through readJson anyway, so that a server which answers
+                    // with an HTML page while claiming application/json produces the named
+                    // transport error rather than a parse exception inside the error path.
+                    return readJson(response, 'The download from ' + endpoint).then(function(data) {
                         throw vendorError(data, 'Download failed');
                     });
                 }
@@ -1958,6 +1969,109 @@ define([], function() {
     }
 
     /**
+     * Prefix a feedback line with its verdict: "Correct. ..." or "Incorrect. ...".
+     *
+     * v15.6.4 FIX-CC-VERDICT-MISSING-FROM-FEEDBACK. The activity used to say it. The word
+     * came from the VENDOR, inside the feedback string - "Correct! Construction guidance
+     * requires..." - so when the generation prompts were tightened and that lead-in stopped
+     * coming back, the verdict silently disappeared from every route at once. Nothing in
+     * the plugin had ever owned it, so nothing noticed.
+     *
+     * It is the plugin's now. A learner should not have to infer from a border colour
+     * whether they got it right, and a learner using a screen reader or listening to the
+     * narration never saw the border at all.
+     *
+     * Shared rather than written twice because the SAME string is both displayed and
+     * spoken: builder.js synthesises the feedback clip from this, player5.js renders it.
+     * Two copies would drift, and the drift would be a clip that says one thing while the
+     * screen says another - the kind of fault nobody reports because each half looks right.
+     *
+     * @param {String} label The resolved verdict word, already in the right language.
+     * @param {String} feedback The option's feedback text.
+     * @return {String} The feedback with its verdict in front, or unchanged when it
+     *                  already opens with one.
+     */
+    function withVerdict(label, feedback) {
+        var text = String(feedback === undefined || feedback === null ? '' : feedback).trim();
+        var word = String(label || '').trim();
+        if (!text || !word) { return text; }
+        // Older packs, and any vendor that still sends the lead-in, already open with the
+        // verdict. Doubling it - "Correct. Correct! ..." - reads and sounds worse than
+        // never having added it, so an existing one is left alone. Matched on the leading
+        // word only: the vendor's separator has been a full stop, an exclamation mark, a
+        // colon and a dash at various times.
+        var head = text.slice(0, word.length + 1).toLowerCase();
+        if (head === word.toLowerCase() || head === word.toLowerCase() + '.'
+            || head === word.toLowerCase() + '!' || head === word.toLowerCase() + ':'
+            || head === word.toLowerCase() + ',' || head === word.toLowerCase() + ' ') {
+            return text;
+        }
+        // "Incorrect" starts with "In", and a label of "Correct" must not match the
+        // "Incorrect" a pack may already carry. Checked explicitly rather than relying on
+        // the prefix test above, which would pass "correct" against "Correct answer...".
+        if (/^(correct|incorrect)\b/i.test(text)) { return text; }
+        return word + '. ' + text;
+    }
+
+    /**
+     * Build the fatal error raised when the transport rejects a request outright.
+     *
+     * v15.6.2 FIX-CC-413-LOOKS-LIKE-A-CONTENT-FAILURE. A live site's web server answered
+     * `generate_slide` with HTTP 413 and an EMPTY body. Empty is not HTML, so
+     * htmlBodyError() did not fire; it is not JSON either, so the read threw a generic
+     * "response was not JSON" which nothing recognised as fatal. The card retried, at the
+     * same size, three times, failed, and the section fell through to
+     * getFailedCardSequence() - which stamps "One or more cards failed generation - open
+     * the module and check this topic" on a topic whose content was never the problem and
+     * which the author cannot fix by looking at it.
+     *
+     * So these statuses are named, and named as NOT the plugin's fault, with the thing to
+     * actually change. Retrying any of them is useless by definition: the request that was
+     * refused is byte-for-byte the request a retry sends.
+     *
+     * @param {String} label What was being fetched, for the message.
+     * @param {Number} status HTTP status the server sent.
+     * @param {String} body The raw body, for the excerpt when there is one.
+     * @return {Error} The tagged error, ccFatal when retrying cannot help.
+     */
+    function transportStatusError(label, status, body) {
+        var excerpt = String(body || '').replace(/\s+/g, ' ').trim().slice(0, 160);
+        var tail = excerpt ? ' First 160 characters: ' + excerpt : ' The body was empty.';
+        var advice = {
+            413: 'the request was rejected as too large before it reached Moodle. This is a '
+                + 'web-server limit, not a plugin fault: raise the request body limit '
+                + '(nginx `client_max_body_size`, or LimitRequestBody on Apache) to at '
+                + 'least 24m and reload. Generation cannot succeed until that is changed, '
+                + 'so it has been stopped rather than retried.',
+            401: 'the request was rejected as unauthenticated before it reached Moodle. '
+                + 'Something in front of the site is asking for credentials.',
+            403: 'the request was refused. This is usually bot protection or a web '
+                + 'application firewall rule, not a plugin fault.',
+            404: 'the endpoint was not found. The plugin may be partially installed, or a '
+                + 'rewrite rule in front of Moodle is swallowing the request.',
+            405: 'the method was not allowed. Something in front of Moodle is rewriting or '
+                + 'restricting the request.',
+            431: 'the request headers were rejected as too large before reaching Moodle.',
+            501: 'the server does not implement what was asked of it.'
+        };
+        var known = advice[status];
+        var err = new Error(
+            label + ': HTTP ' + status + ' - '
+            + (known || 'the server refused the request before Moodle could answer it.')
+            + tail
+        );
+        err.ccStatus = status;
+        if (known) {
+            // Retrying cannot change the outcome, and on 413 in particular it is actively
+            // harmful: the same oversized body is sent again, and the operator sees a
+            // burst of identical refusals instead of one clear message.
+            err.ccFatal = true;
+            err.ccTransport = true;
+        }
+        return err;
+    }
+
+    /**
      * Read a fetch Response as JSON, refusing an HTML body rather than choking on it.
      *
      * Reads the body as text first. That costs nothing - the bytes have already arrived -
@@ -1976,6 +2090,14 @@ define([], function() {
         try {
             return JSON.parse(text);
         } catch (e) {
+            // v15.6.2: an unparseable body on a FAILED status is a transport refusal, not
+            // a malformed answer. Checked here rather than before the parse on purpose -
+            // several endpoints return a perfectly good JSON error payload with a non-2xx
+            // status, and pollJob() reads it. Only when the body is not JSON at all does
+            // the status get to decide what this was.
+            if (!response.ok) {
+                throw transportStatusError(label || 'request', response.status, text);
+            }
             var excerpt = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 160);
             var err = new Error(
                 (label || 'request') + ': the response was not JSON (HTTP ' + response.status
@@ -1993,6 +2115,14 @@ define([], function() {
         // without the fix the generation path already had.
         safeSectionId: safeSectionId,
         looksLikeHtml: looksLikeHtml,
+        transportStatusError: transportStatusError,
+        withVerdict: withVerdict,
+        // v15.6.4: the verdict word in the language the caller has registered, so
+        // builder.js can narrate the same string player5.js renders. _lbl carries the
+        // English fallback, which is what a build-time path gets before a resolver exists.
+        verdictLabel: function(isCorrect) {
+            return isCorrect ? _lbl('correct_pos', 'Correct') : _lbl('correct_neg', 'Incorrect');
+        },
         htmlBodyError: htmlBodyError,
         readJson: readJson,
         createLogger: createLogger,

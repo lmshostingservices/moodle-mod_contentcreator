@@ -1,5 +1,271 @@
 # Changelog
 
+## 15.6.4 - 2026-09-19
+
+**"Correct." and "Incorrect." are back — on screen and in the narration.**
+
+### FIX-CC-VERDICT-MISSING-FROM-FEEDBACK
+
+The activity used to say it. The word came from the **vendor**, inside the feedback string
+— *"Correct! Construction guidance requires..."* — so when the generation prompts were
+tightened and that lead-in stopped coming back, the verdict disappeared from every route at
+once. Nothing in the plugin had ever owned it, so nothing noticed and no test failed. A
+learner was left to infer whether they were right from a border colour.
+
+It is the plugin's now:
+
+- **On screen.** The chosen option's feedback opens with the verdict; so does the correct
+  answer when it is revealed after a wrong one (always the positive verdict — it is the
+  right answer being shown, whatever the learner picked).
+- **Aloud.** `builder.js` synthesises the feedback clip from the *same* string, through the
+  same helper, so the clip and the line cannot say different things. Correctness now travels
+  with the option through the flattening, read from the three answer-key shapes in the same
+  order `player5.js` and `\mod_contentcreator\evidence` read them.
+- **An empty distractor now says something.** The vendor's v2 shape puts one feedback line
+  on the correct option and leaves the others blank, so those options previously showed a
+  red border and no words at all. They now carry the verdict, which is the whole of what
+  there is to say.
+
+**Never doubled.** Older packs, and any vendor still sending the lead-in, already open with
+the word — `withVerdict()` leaves those alone, across every separator the vendor has used
+(`!`, `.`, `:`, `,`, `-`), in any case. It also will not prefix "Correct." onto text that
+already reads "Incorrect", and will not mistake "Correctly identifying..." for the verdict.
+
+**Translated.** `correct_pos` / `correct_neg` already existed in both label tables for all
+53 languages, so no new strings were needed. The two hard-coded English literals in
+`player5.js` — the screen-reader announcement, left alone by FIX-CC-AMD-HARDCODED-STRINGS
+because *"changing what a scored answer announces is a separate change"* — are now resolved
+through `getLabel`. This release is that separate change: the same two words are shown to
+everyone, so they must be translated for everyone.
+
+### Existing clips
+
+A feedback clip generated before this release still plays, in the right voice, saying the
+right words about the right option — it just does not open with the verdict. Those clips are
+regenerated on the next voiceover run, **and that costs credits**, so the completion screen's
+update panel now tells the author how many will be regenerated rather than letting them find
+it on the bill. `feedbackVerdictSpoken` marks a clip that already carries the verdict, so it
+is never re-billed twice.
+
+### Tests
+
+- `tests/js/test-verdict-feedback.js` (new, 33 checks): runs the shipped `withVerdict()` over
+  every vendor separator, both cases, the cross-verdict trap and degenerate input; asserts
+  both label tables are paired across all languages and that both callers use the one helper.
+  Five mutations caught.
+- Both Chromium suites now carry the **real** `withVerdict` lifted from `cc-state.js` rather
+  than a stub — a reimplementation would prove nothing about what ships — and assert the
+  verdict is visible, leads the explanation, and appears on an empty distractor. Three
+  mutations caught.
+- `tests/js/test-builder-strings.js`: the key scan now sees `s(cond ? 'a' : 'b')`. It did
+  not, and two singular/plural keys shipped unregistered while this release was written
+  with the suite still reporting full coverage.
+
+**Not smoke tested against a live generation.**
+
+## 15.6.3 - 2026-09-19
+
+**"Needs review" is gone. A topic either passes, or it tells you exactly what broke and
+what to do about it.**
+
+### FIX-CC-NEEDS-REVIEW-SAYS-NOTHING
+
+The completion screen had one way of reporting trouble: a red **Needs review** badge and
+the sentence *"One or more cards failed generation - open the module and check this
+topic"*. That was the entirety of what an author was told, for every cause — a web-server
+refusal, a firewall page, a rate limit, a vendor timeout, a malformed card. Only the last
+of those is something an author can act on by opening the module.
+
+The detail was never missing. Every failed card already carried `failureReason`,
+`qualityAction` and `failedAt`, and the structural validator writes its own issue list into
+it. It was thrown away one line before it reached the screen.
+
+**Now, when a build finishes with a placeholder card in it, a report opens by itself.** Per
+card, it gives:
+
+- the topic, the section and the card type;
+- the cause in plain English — *"The request was refused before it reached Moodle"* is a
+  different sentence from *"The generated card was incomplete or the wrong shape"*;
+- **the underlying message verbatim**, monospaced and wrapped rather than truncated,
+  because that is what identifies the fault in a support ticket;
+- what to do — for HTTP 413, *"this is a web-server limit, not a fault in this module. Ask
+  your administrator to raise the request body limit (nginx `client_max_body_size`, or
+  LimitRequestBody on Apache) to at least 24m."*
+
+**Copy report** puts the whole thing on the clipboard as plain text, stamped with the
+plugin version, ready to paste to whoever administers the server. The badge remains as the
+way back into the report once it has been dismissed.
+
+### "Needs review" now passes
+
+`needsReview` marks a **salvaged** section: it exhausted its attempts, but every card in it
+carries real content, so it was kept rather than replaced with placeholders. Since v15.3.18
+that is a stronger statement than it sounds — the salvage is refused outright if *any* card
+in the section is empty, so a section that reaches `needsReview` has a full set of
+renderable cards by construction.
+
+There is nothing for a learner to hit and nothing for the author to repair, so:
+
+- the topic shows **Valid**, not a red badge;
+- no report opens for it;
+- **Regenerate Failed** no longer offers to spend credits regenerating it. A placeholder
+  card is a defect. A card that failed a structural assertion while carrying its content
+  is not.
+
+Only a placeholder — a card reading *"AI generation failed for X"*, which a learner
+actually sees — fails a topic now.
+
+### Tests
+
+- `tests/js/test-failure-report-runtime.js` (new, 25 checks, Chromium): runs the shipped
+  collector, classifier and popup against real DOM. Asserts a salvaged section reports
+  nothing, a placeholder opens the report, two different causes produce two different
+  messages, the verbatim reason survives, Copy produces pasteable text, Escape and the
+  backdrop close it, and opening twice leaves one dialog.
+- All four escaping sites are mutation-tested individually. The first version of the XSS
+  check used an injected `<script>`, which `innerHTML` never executes — so it passed with
+  the escaping removed. It now uses `img`/`onerror`, which does fire, and all four
+  mutations are caught.
+- `tests/js/test-builder-strings.js`: +13 checks covering keys reached **indirectly**, via
+  `ccClassifyFailure()`'s return values. The literal `s('key')` scan cannot see those, and
+  two invented keys (`msgclose`, `msgcopied` — neither exists) got as far as a running
+  build while this was written.
+
+**Not smoke tested against a live generation.**
+
+## 15.6.2 - 2026-09-19
+
+**"One or more cards failed generation" no longer appears when the fault was never the
+content.**
+
+### FIX-CC-413-LOOKS-LIKE-A-CONTENT-FAILURE
+
+A site reported the **Needs review** badge — *"One or more cards failed generation - open
+the module and check this topic"* — on a topic whose content was fine. The author could
+not fix it by looking at it, because there was nothing there to fix.
+
+Behind it: the web server refused `generate_slide` with **HTTP 413** and an empty body,
+because the request exceeded its body limit. Three things then went wrong in sequence:
+
+1. **The fault was anonymous.** Empty is not HTML, so the v15.4.31 guard did not fire; it
+   is not JSON either, so the read threw a generic *"the response was not JSON"* that
+   nothing recognised as fatal.
+2. **It was retried** — three times, at byte-for-byte the same size, which cannot succeed.
+3. **It was reported as a content failure**, sending the author to inspect a topic instead
+   of naming the one setting that would fix it.
+
+Now: `transportStatusError()` names 413, 401, 403, 404, 405, 431 and 501, marks them fatal,
+and says what to change — for 413, *"raise the request body limit (nginx
+`client_max_body_size`, or LimitRequestBody on Apache) to at least 24m"*. A status with no
+known cause (500, 502, 503, 504, 429) is still reported but stays retryable, because those
+are worth retrying.
+
+The status is consulted **in the parse failure path, not before it**, so endpoints that
+return a proper JSON error payload with a non-2xx status still have it read — `pollJob()`
+depends on that.
+
+### FIX-CC-UNGUARDED-READS, everywhere this time
+
+v15.4.31 built the HTML guard. v15.5.1 moved it into `cc-state.js` *so that both callers
+could use it* — then routed `builder.js` through it and left `vendorFetch()`, **the
+generator's own transport**, reading raw. Every `Unexpected token '<'` a generation
+produced came through that one line.
+
+All fourteen remaining raw `.json()` reads are now routed through `readJson()`:
+`vendorFetch`, `vendorUpload`, `vendorDownload`, and eleven in `player5.js`.
+
+### FIX-CC-FATAL-TRANSPORT-RETRIED-IN-BUILDER
+
+The three voiceover retry loops only knew about `ccRateLimited`. A fatal transport error
+was caught, found to carry no rate-limit info, and retried — three attempts per card. That
+is where forty identical parse errors in one console came from. They now honour `ccFatal`,
+stop enqueuing new work, and report **once**, with the fix, instead of once per card.
+
+### Also
+
+- Learner-facing toast reworded: it no longer tells a learner to check a connection that
+  was never the problem.
+- `tools/package.sh` (new): builds the release zip with its name **computed** from
+  `$plugin->component` and `$plugin->release`, runs every gate, and verifies from inside
+  the zip. v15.6.1 was hand-named `mod_contentcreator-v15.6.1.zip` and the release pipeline
+  rejected it for the hyphen. The name can no longer be typed. `npm run package`.
+
+### Tests
+
+- `tests/js/test-transport-status.js` (new, 52 checks): runs the shipped
+  `transportStatusError()` and `readJson()` — every fatal status, every retryable one, an
+  empty 413, an HTML 413, a JSON error body on a failed status, and a malformed body on a
+  *successful* one. Three mutations caught, including the tempting one of checking the
+  status before the parse.
+- `tests/js/test-transport-fatal.js`: +10 checks, including a **sweep of all of `amd/src`
+  for any bare `.json()`** — written as a sweep precisely because the defect was a file
+  nobody thought to check. Four mutations caught.
+
+**Not smoke tested against a live generation.**
+
+## 15.6.1 - 2026-09-19
+
+**The learner is told the answer instantly again. The completion record is still the
+server's to write.**
+
+### REVERT-CC-ANSWER-IN-DOM
+
+A live site reported `Your answer could not be checked. Please check your connection and
+try again.` on every challenge question. Nothing was broken: v15.5.0 had made the verdict
+a web service round trip, and that site's requests were being intercepted. Three
+activities that had worked for years stopped working, and no amount of retrying helped.
+
+v15.5.0 had coupled two goals that do not belong together:
+
+| | needs the server? |
+|---|---|
+| **completion integrity** — an RTO cannot have a learner forging completion of a compliance module | **yes** |
+| **answer concealment** — the correct option must not be readable before the learner commits | no |
+
+Only the first is worth anything here. The challenge carries no score into the gradebook,
+and v15.4.6 had already accepted that the answer appears on screen when it removed Try
+Again from the quiz — a learner who wants the answer clicks once and reads it. What the
+concealment cost was the reliability of the only thing that does matter.
+
+So:
+
+- `get_manifest` returns the manifest whole again. `manifest_storage::strip_answer_key()`
+  and `strip_question_answer_key()` are removed.
+- `player5.js` grades locally — `ccGradeLocally()` and `ccFindQuestion()` read the three
+  answer-key shapes that exist in stored manifests, in the same order
+  `\mod_contentcreator\evidence::correct_index()` reads them — and shows the verdict
+  before anything touches the network.
+- `ccReportAnswer()` then calls `mod_contentcreator_check_answer` in the background, three
+  attempts with a widening backoff. That endpoint is unchanged: it re-reads the answer key
+  from the *stored* manifest and decides for itself, so the evidence row stays unforgeable.
+  A failure there costs the learner nothing they can see.
+- When the two disagree, the server is right about the record and the browser has already
+  told the learner, so the disagreement is logged rather than acted on. It means the player
+  is rendering from a manifest the server has since replaced.
+
+`ccUnlockOptions()` stays, but is now reached only when a question cannot be resolved in
+the loaded manifest — a card rendered by a build predating `data-oidx`, or a manifest
+replaced under the player. A dropped connection no longer gets there.
+
+### Tests
+
+- `tests/js/test-local-grading.js` (new, 123 checks): runs the shipped `ccGradeLocally()`
+  and the shipped `\mod_contentcreator\evidence` over 75 identical probes — all four
+  answer-key shapes, no key at all, a per-option flag contradicting `correctIndex`, two
+  challenge cards, the `_learning` suffix, an id `PARAM_ALPHANUMEXT` mangles — and asserts
+  every verdict agrees. Four deliberate mutations of the shipped grader were each caught.
+- `tests/js/test-answer-authority.js`: the scrub assertions are inverted — reinstating the
+  scrub would now break every challenge silently, because the local grader would find no
+  correct option — and the player section asserts the verdict is delivered *before* the
+  report is sent.
+- `tests/php/static-checks.php` sections 8 and 11 rewritten: the scrub is gone from
+  `get_manifest`, the helpers are gone from `manifest_storage`, no shipped file references
+  either, and `check_answer` still resolves from the stored manifest.
+- Both Chromium suites now grade synchronously, as the shipped code does, and keep an
+  asynchronous failing grader to prove the handler still copes with a late callback.
+
+**Not smoke tested against a live generation.**
+
 ## 15.6.0 - 2026-09-19
 
 **Learners can no longer spend site credits. There is no setting for it.**

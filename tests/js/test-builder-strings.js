@@ -45,6 +45,17 @@ while ((m = useRe.exec(builder)) !== null) {
     used.add(m[1] || m[2]);
 }
 
+// v15.6.4: keys chosen INSIDE the call - s(count === 1 ? 'one' : 'many'). The scan above
+// requires the quote to follow the paren, so it sees neither branch, and a singular/plural
+// pair could be added with no lang string and no prefetch entry and still report full
+// coverage. That happened while this release was being written: two keys shipped
+// unregistered and the suite passed.
+const ternaryRe = /\bs\(\s*[^)'"]*\?\s*'([A-Za-z0-9_]+)'\s*:\s*'([A-Za-z0-9_]+)'\s*\)/g;
+while ((m = ternaryRe.exec(builder)) !== null) {
+    used.add(m[1]);
+    used.add(m[2]);
+}
+
 // The prefetch array, read between its declaration and its closing bracket. Matching
 // on a trailing comma alone would miss the last entry, which is exactly the entry a
 // careless edit is most likely to get wrong - msgphuniexample sat there when this
@@ -94,6 +105,38 @@ if (missingprefetch.length) {
 if (missinglang.length) {
     fail(missinglang.length + ' key(s) used by s() but not declared in lang/en: '
         + missinglang.sort().join(', '));
+}
+
+// v15.6.3: keys reached INDIRECTLY, which the s('literal') scan above cannot see.
+//
+// ccClassifyFailure() returns lang-string keys out of an object literal and the popup
+// calls s(cls.key). A typo there produces a panel that renders the raw key name to the
+// author - and the scan above would report full coverage, because the key never appears
+// inside an s() call. Two keys were in fact invented while this feature was written
+// (msgclose, msgcopied, neither of which exists); the scan did not catch them either,
+// because they WERE inside s() - it caught them only once they were also in the prefetch
+// list. So both directions need checking, and this is the direction with no cover.
+const indirect = [];
+const classify = builder.slice(builder.indexOf('const ccClassifyFailure ='));
+const classifyEnd = classify.indexOf('\n    };');
+const classifyBody = classifyEnd === -1 ? classify : classify.slice(0, classifyEnd);
+const indirectRe = /(?:key|advice):\s*'([A-Za-z0-9_]+)'/g;
+while ((m = indirectRe.exec(classifyBody)) !== null) {
+    indirect.push(m[1]);
+}
+
+checks++;
+if (indirect.length < 10) {
+    fail('ccClassifyFailure returns only ' + indirect.length + ' keys; expected a cause and '
+        + 'an advice key for every branch. Has the classifier moved or been renamed?');
+}
+const indirectMissing = indirect.filter(function(k) {
+    return !declared.has(k) || !prefetched.has(k);
+});
+checks += indirect.length;
+if (indirectMissing.length) {
+    fail(indirectMissing.length + ' failure-report key(s) returned by ccClassifyFailure but '
+        + 'missing from lang/en or the prefetch list: ' + indirectMissing.sort().join(', '));
 }
 
 // The v15.5.0 "tailor it" example must be present for all seven routes, because the

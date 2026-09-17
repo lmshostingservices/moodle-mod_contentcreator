@@ -1,21 +1,26 @@
 /**
- * The answer key must not reach a learner, and the client must not decide anything.
+ * Completion is the server's to decide, and the verdict on screen is not.
  *
- * v15.5.0 FIX-CC-ANSWER-IN-DOM and FIX-CC-COMPLETION-FORGEABLE. Before this release:
+ * v15.5.0 FIX-CC-COMPLETION-FORGEABLE. Before that release:
  *
- *   - cc-card-slots.js wrote data-correct="true" onto the winning option, put every
- *     option's feedback text beside it, flagged the correct one with a span, and carried
- *     the URL of every option's feedback narration. The answer was readable in the
- *     Elements panel before the learner clicked.
- *   - get_manifest.php sent the whole manifest, answer key included, to every learner.
  *   - ajax.php's save_completion took `completed` off the POST body and handed it to
  *     completion_info::update_state().
  *   - record_section_view validated its parameters and wrote nothing at all.
  *
+ * v15.6.1 REVERT-CC-ANSWER-IN-DOM. v15.5.0 also stripped the answer key out of what a
+ * learner receives and made every challenge answer a web service round trip. The
+ * concealment bought almost nothing - the activity is unscored and v15.4.6 had already
+ * put the answer on screen after one click - and it put the network on the learner's
+ * critical path, which on one live site produced "Your answer could not be checked" for
+ * every question. The verdict is local again; the completion record is not, and
+ * check_answer still re-reads the stored manifest and decides for itself.
+ *
+ * So this suite now asserts BOTH halves: that the player answers the learner without
+ * waiting on the network, and that nothing the browser says about completion is believed.
+ *
  * These are static checks over the source. They cannot prove the runtime behaviour - only
- * a real generation can - but each one fails loudly if a future edit puts the answer back
- * in the markup or lets the browser assert its own completion, which is the regression
- * worth a suite of its own.
+ * a real generation can - but each one fails loudly if a future edit lets the browser
+ * assert its own completion, or puts the verdict back behind the network.
  *
  * @package    mod_contentcreator
  * @copyright  2025 AI Grader
@@ -97,37 +102,71 @@ ok(/_ccIndex/.test(dpRenderRegion), 'the renderers do not read _ccIndex');
 ok(!/cc5-dp-feedback[^]{0,200}escapeHtml\(fixGrammar\(opt\.feedback/.test(slotscode),
     'option feedback is still written into the markup from the manifest');
 
-// --- 2. The player must ask the server -------------------------------------------
+// --- 2. The player must answer the learner without waiting on the network ---------
 console.log('  player');
 
-ok(/mod_contentcreator_check_answer/.test(playercode),
-    'player5 never calls check_answer');
-ok(/ccGradeAnswer:\s*function/.test(playercode),
-    'ccGradeAnswer is missing');
+ok(/ccGradeAnswer:\s*function/.test(playercode), 'ccGradeAnswer is missing');
+ok(/ccGradeLocally:\s*function/.test(playercode), 'ccGradeLocally is missing');
+ok(/ccFindQuestion:\s*function/.test(playercode), 'ccFindQuestion is missing');
+ok(/ccReportAnswer:\s*function/.test(playercode), 'ccReportAnswer is missing');
 ok(/ccUnlockOptions:\s*function/.test(playercode),
-    'ccUnlockOptions is missing, so a dropped connection would close a question for good');
+    'ccUnlockOptions is missing, so an unresolvable question would close for good');
 
 // Both interactive handlers must route through it. Two call sites: standalone card and
 // challenge quiz.
 const gradeCalls = (playercode.match(/self\.ccGradeAnswer\(/g) || []).length;
 ok(gradeCalls === 2, 'expected 2 ccGradeAnswer call sites, found ' + gradeCalls);
 
-// Neither handler may still read the attribute that no longer exists. Those two reads
+// The verdict must be delivered from the local grade, and it must be delivered BEFORE
+// anything is sent. If done() moved below ccReportAnswer the learner would be waiting on
+// the network again, which is the whole regression this release exists to undo.
+const grade = playercode.indexOf('ccGradeAnswer: function(');
+ok(grade !== -1, 'ccGradeAnswer not found');
+if (grade !== -1) {
+    const body = playercode.slice(grade, playercode.indexOf('ccGradeLocally: function('));
+    const local = body.indexOf('self.ccGradeLocally(');
+    const deliver = body.indexOf('done(null, graded)');
+    const report = body.indexOf('self.ccReportAnswer(');
+    ok(local !== -1 && deliver !== -1 && report !== -1,
+        'ccGradeAnswer no longer grades locally, delivers and reports');
+    ok(deliver < report,
+        'ccGradeAnswer reports to the server before telling the learner');
+    ok(body.indexOf('Ajax.call') === -1,
+        'ccGradeAnswer calls the network itself; the verdict must not wait on it');
+}
+
+// The report must never change what the learner was told. It may log a disagreement; it
+// may not re-render one.
+const report = playercode.indexOf('ccReportAnswer: function(');
+ok(report !== -1, 'ccReportAnswer not found');
+if (report !== -1) {
+    const body = playercode.slice(report, playercode.indexOf('ccUnlockOptions: function('));
+    ok(/mod_contentcreator_check_answer/.test(body),
+        'ccReportAnswer does not call check_answer, so no evidence row is ever written');
+    ok(/result\.iscorrect !== localGrade\.iscorrect/.test(body),
+        'ccReportAnswer does not compare the two verdicts');
+    ok(/ccWarn\(/.test(body), 'a disagreement is not logged');
+    ok(body.indexOf('done(') === -1,
+        'ccReportAnswer can still call back into the handler and change the verdict');
+    ok(/attempt \+ 1 < MAX/.test(body), 'ccReportAnswer does not retry');
+}
+
+// Neither handler may read the attribute the renderer does not emit. Those two reads
 // would grade every answer incorrect, silently.
 ok(!/var isCorrect = \(\$option\.attr\('data-correct'\) === 'true'\)/.test(playercode),
     'the standalone handler still reads data-correct');
 ok(!/var isCorrect = \(\$opt\.attr\('data-correct'\) === 'true'\)/.test(playercode),
     'the challenge quiz handler still reads data-correct');
 
-// The verdict comes from the response.
+// The verdict comes from the graded result, whatever produced it.
 ok(/var isCorrect = !!result\.iscorrect;/.test(playercode),
-    'the handlers do not take their verdict from the server response');
+    'the handlers do not take their verdict from the graded result');
 
-// The reveal must select by the index the server named.
+// The reveal must select by the index the grade named, not by a display index.
 ok(/data-oidx="' \+ result\.correctindex \+ '"/.test(playercode),
-    'the wrong-answer reveal does not select by the server-supplied index');
+    'the wrong-answer reveal does not select by the graded index');
 
-// Locking must happen before the request, or a double tap submits twice.
+// Locking must happen before grading, or a double tap submits twice.
 const standalone = playercode.indexOf("if ($option.closest('.cc5-decision-challenge').length) return;");
 ok(standalone !== -1, 'standalone handler not found');
 if (standalone !== -1) {
@@ -138,21 +177,19 @@ if (standalone !== -1) {
         'the standalone handler locks after the grading call, not before it');
 }
 
-// --- 3. The manifest must be scrubbed for learners --------------------------------
+// --- 3. The manifest must reach the learner whole ---------------------------------
 console.log('  manifest');
 
-ok(/strip_answer_key/.test(getmanifest), 'get_manifest does not strip the answer key');
-ok(/mod\/contentcreator:manage/.test(getmanifest) && /mod\/contentcreator:review/.test(getmanifest),
-    'get_manifest does not exempt staff, so the builder and print view would break');
-ok(/if \(!\$isstaff\)/.test(getmanifest), 'the scrub is not gated on staff');
-
-ok(/function strip_answer_key/.test(storage), 'strip_answer_key is not defined');
-['correct', 'isCorrect', 'feedback', 'feedbackAudioUrl'].forEach((field) => {
-    ok(new RegExp("'" + field + "'").test(storage), 'strip_answer_key does not remove ' + field);
-});
-ok(/correctIndex/.test(storage), 'strip_answer_key does not remove correctIndex');
-// A manifest it cannot parse must come back untouched rather than empty.
-ok(/return \$rawmanifest;/.test(storage), 'strip_answer_key has no unchanged-input path');
+// The scrub is gone, and must stay gone: local grading reads the answer key out of the
+// manifest the player already holds, so a reinstated scrub would silently break every
+// challenge on the site - ccGradeLocally would find no correct option and return
+// graded:false for every question.
+ok(!/strip_answer_key/.test(getmanifest), 'get_manifest strips the answer key again');
+ok(!/\$isstaff/.test(getmanifest), 'get_manifest is gating the payload on staff again');
+ok(!/strip_answer_key|strip_question_answer_key/.test(storage),
+    'manifest_storage still carries the scrub helpers');
+ok(/'manifest' => \$rawmanifest/.test(getmanifest),
+    'get_manifest no longer returns the decompressed manifest unchanged');
 
 // --- 4. Completion must be server-decided -----------------------------------------
 console.log('  completion');

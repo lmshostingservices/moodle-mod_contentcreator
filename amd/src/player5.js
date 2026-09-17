@@ -2228,10 +2228,7 @@ define([
             })
             .then(function(response) {
                 clearTimeout(timeoutId);
-                    if (!response.ok) {
-                        throw new Error('Server returned ' + response.status);
-                    }
-                    return response.json();
+                    return CcState.readJson(response, 'The request to the server');
                 })
                 .then(function(data) {
                     // v9.78 FIX (A-06): Apply fetched DB progress to player state.
@@ -2330,6 +2327,7 @@ define([
          * @returns {void}
          */
         ccGradeAnswer: function($opt, done) {
+            var self = this;
             var $qBlock = $opt.closest('.cc5-quiz-question');
             var sectionId = $opt.closest('[data-section-id]').attr('data-section-id') || '';
             var qIndex = parseInt($qBlock.attr('data-q'), 10);
@@ -2348,6 +2346,143 @@ define([
                 done(new Error('no section id'));
                 return;
             }
+
+            var graded = self.ccGradeLocally(sectionId, qIndex, oIndex);
+            if (!graded) {
+                ccWarn('[CC] could not resolve ' + sectionId + ' q' + qIndex + ' o' + oIndex
+                    + ' in the manifest; cannot grade');
+                done(new Error('question not found in manifest'));
+                return;
+            }
+
+            // The verdict is on screen before anything touches the network.
+            done(null, graded);
+
+            // ...and the server is told separately, for the completion record only.
+            self.ccReportAnswer(sectionId, qIndex, oIndex, 0);
+        },
+
+        /**
+         * v15.6.1: decide the verdict from the manifest already in memory.
+         *
+         * Returns the same shape mod_contentcreator_check_answer returns, so the two
+         * handlers that consume it did not have to change when grading moved back here.
+         *
+         * Three answer-key shapes exist in stored manifests and all three are read: a
+         * per-option `correct`, a per-option `isCorrect`, and a question-level
+         * `correctIndex`. The server's \mod_contentcreator\evidence::correct_index() reads
+         * the same three in the same order - tests/js/test-local-grading.js asserts the two
+         * agree on one set of fixtures, because a disagreement would mean the learner is
+         * told one thing and the completion record holds another.
+         *
+         * @param {String} sectionId Section id from the slide wrapper.
+         * @param {Number} qIndex Zero-based question index within this section's challenge.
+         * @param {Number} oIndex The chosen option's index in the MANIFEST, not on screen.
+         * @returns {Object|null} The verdict, or null when the question cannot be resolved.
+         */
+        ccGradeLocally: function(sectionId, qIndex, oIndex) {
+            var question = this.ccFindQuestion(sectionId, qIndex);
+            if (!question || !Array.isArray(question.options) || !question.options.length) {
+                return null;
+            }
+            var options = question.options;
+            if (oIndex < 0 || oIndex >= options.length) { return null; }
+
+            var correctIndex = -1;
+            for (var i = 0; i < options.length; i++) {
+                if (options[i] && (options[i].correct || options[i].isCorrect)) {
+                    correctIndex = i;
+                    break;
+                }
+            }
+            if (correctIndex === -1 && typeof question.correctIndex === 'number'
+                && question.correctIndex >= 0 && question.correctIndex < options.length) {
+                correctIndex = question.correctIndex;
+            }
+
+            var chosen = options[oIndex] || {};
+            var isCorrect = (correctIndex >= 0 && oIndex === correctIndex);
+            return {
+                success: true,
+                graded: correctIndex >= 0,
+                iscorrect: isCorrect,
+                correctindex: correctIndex,
+                feedback: chosen.feedback || '',
+                correctfeedback: (!isCorrect && correctIndex >= 0 && options[correctIndex])
+                    ? (options[correctIndex].feedback || '') : '',
+                feedbackaudiourl: chosen.feedbackAudioUrl || ''
+            };
+        },
+
+        /**
+         * v15.6.1: find one question of a section's challenge in the loaded manifest.
+         *
+         * Mirrors \mod_contentcreator\evidence::question_at() - the FIRST decision-point
+         * card only, and its questions flattened in the order the learner meets them. The
+         * player renders each decision-point card as its own challenge numbering from
+         * zero, so flattening across cards would resolve the wrong question.
+         *
+         * @param {String} sectionId Section id, possibly carrying the "_learning" suffix
+         *                           the challenge slide's slideId uses.
+         * @param {Number} qIndex Zero-based question index.
+         * @returns {Object|null} The question, or null.
+         */
+        ccFindQuestion: function(sectionId, qIndex) {
+            var topics = (this.manifest && this.manifest.topics) || [];
+            var wanted = String(sectionId || '');
+            var alt = wanted.length > 9 && wanted.slice(-9) === '_learning'
+                ? wanted.slice(0, -9) : '';
+            for (var t = 0; t < topics.length; t++) {
+                var sections = topics[t].sections || [];
+                for (var si = 0; si < sections.length; si++) {
+                    var sid = String(sections[si].id || '');
+                    if (sid !== wanted && (!alt || sid !== alt)) { continue; }
+                    var cards = sections[si].cards || [];
+                    for (var c = 0; c < cards.length; c++) {
+                        if (!cards[c] || cards[c].cardType !== 'decision-point') { continue; }
+                        var qs = Array.isArray(cards[c].questions) && cards[c].questions.length
+                            ? cards[c].questions
+                            : [cards[c]];
+                        return qs[qIndex] || null;
+                    }
+                    return null;
+                }
+            }
+            return null;
+        },
+
+        /**
+         * v15.6.1: tell the server what was answered, out of the learner's way.
+         *
+         * WHY THIS IS SEPARATE FROM THE VERDICT
+         *
+         * v15.5.0 moved grading to the server so that the answer key could be stripped out
+         * of what a learner receives. That worked, and it put the network on the learner's
+         * critical path for a formative, unscored knowledge check: on a site whose requests
+         * were being intercepted, every question came back "Your answer could not be
+         * checked" and the activity was unusable.
+         *
+         * The two goals were coupled and only one of them needed the server. COMPLETION
+         * INTEGRITY does - an RTO cannot have a learner forging completion of a compliance
+         * module, and mod_contentcreator_check_answer still re-reads the answer key from the
+         * stored manifest and decides for itself, so the evidence row remains unforgeable.
+         * ANSWER CONCEALMENT does not: this challenge carries no score into the gradebook,
+         * and v15.4.6 had already accepted that the answer is on screen when it removed Try
+         * Again from the quiz.
+         *
+         * So the verdict is local and instant, and this runs behind it. A failure here
+         * costs the learner nothing they can see - it retries, and if it never lands the
+         * next save_completion reconciles the section anyway.
+         *
+         * @param {String} sectionId Section id.
+         * @param {Number} qIndex Zero-based question index.
+         * @param {Number} oIndex Chosen option index, in manifest order.
+         * @param {Number} attempt Retry counter, starting at 0.
+         * @returns {void}
+         */
+        ccReportAnswer: function(sectionId, qIndex, oIndex, attempt) {
+            var self = this;
+            var MAX = 3;
             Ajax.call([{
                 methodname: 'mod_contentcreator_check_answer',
                 args: {
@@ -2357,20 +2492,40 @@ define([
                     optionindex: oIndex
                 }
             }])[0].then(function(result) {
-                done(null, result);
+                // v15.6.1: the server grades independently. When the two disagree the
+                // server is right about the RECORD - it read the stored manifest, this
+                // browser may be holding a stale one - but the learner has already been
+                // told, so the disagreement is logged rather than acted on. A recurring
+                // one means the player is rendering from a manifest the server has since
+                // replaced, which is worth being able to see in a console.
+                var localGrade = self.ccGradeLocally(sectionId, qIndex, oIndex);
+                if (result && localGrade && result.iscorrect !== localGrade.iscorrect) {
+                    ccWarn('[CC] the server graded ' + sectionId + ' q' + qIndex
+                        + ' differently from this browser. The completion record follows the '
+                        + 'server. This browser may be holding a stale manifest.');
+                }
                 return result;
             }).catch(function(error) {
-                ccWarn('[CC] check_answer failed: ' + ((error && error.message) || error));
-                done(error || new Error('check_answer failed'));
+                if (attempt + 1 < MAX) {
+                    setTimeout(function() {
+                        self.ccReportAnswer(sectionId, qIndex, oIndex, attempt + 1);
+                    }, (attempt + 1) * 4000);
+                    return;
+                }
+                // Out of retries. Nothing the learner needs to know: save_completion
+                // reconciles the section's views, and the answer can be given again.
+                ccWarn('[CC] could not report the answer for ' + sectionId + ' q' + qIndex
+                    + ' after ' + MAX + ' attempts: ' + ((error && error.message) || error));
             });
         },
 
         /**
-         * v15.5.0: put a question back in play after a failed grading call.
+         * v15.5.0: put a question back in play when it could not be graded at all.
          *
-         * A dropped connection must not close a question. The handlers lock the option
-         * set BEFORE the round trip so a double tap cannot submit twice; this undoes
-         * that lock so the learner can press again.
+         * v15.6.1: this is now reached only when the question cannot be resolved in the
+         * loaded manifest - a card rendered from a build that predates data-oidx, or a
+         * manifest edited out from under the player. A network failure no longer gets
+         * here, because the verdict never waits on the network.
          *
          * @param {Object} $options jQuery-wrapped .cc5-dp-options container.
          * @returns {void}
@@ -2403,10 +2558,7 @@ define([
                 body: formData
             })
             .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error('Server returned ' + response.status);
-                    }
-                    return response.json();
+                    return CcState.readJson(response, 'The request to the server');
                 })
                 .then(function(data) {
                     // v13.94.3: this used to be an empty handler. A server-side failure
@@ -2866,8 +3018,7 @@ define([
                 })
                 .then(function(response) {
                     clearTimeout(_preTimeoutId);
-                    if (!response.ok) throw new Error('Server returned ' + response.status);
-                    return response.json();
+                    return CcState.readJson(response, 'The narration request');
                 })
                 .then(function(data) {
                     delete section._preloadAbortCtrl;
@@ -3204,8 +3355,7 @@ define([
                 body: formData
             })
             .then(function(response) {
-                if (!response.ok) throw new Error('Server returned ' + response.status);
-                return response.json();
+                return CcState.readJson(response, 'The narration request');
             })
             .then(function(data) {
                 delete self.voiceoverLoading[currentSection.id];
@@ -9641,8 +9791,7 @@ define([
                 body: formData
             })
             .then(function(response) {
-                if (!response.ok) throw new Error('Server returned ' + response.status);
-                return response.json();
+                return CcState.readJson(response, 'The narration request');
             })
             .then(function(data) {
                 delete self.voiceoverLoading[section.id];
@@ -9879,8 +10028,7 @@ define([
             var ajaxUrl = CcState.ajaxUrl();
             CcState.fetchWithDeadline(ajaxUrl, { method: 'POST', body: formData })
                 .then(function(r) {
-                    if (!r.ok) { throw new Error('HTTP ' + r.status); }
-                    return r.json();
+                    return CcState.readJson(r, 'Saving the narration clip');
                 })
                 .then(function(data) {
                     if (data.success && data.url) {
@@ -12296,10 +12444,11 @@ define([
                 var $options = $option.closest('.cc5-dp-options');
                 if ($options.data('answered') === true || $options.attr('data-answered') === 'true') return;
                 e.preventDefault();
-                // v15.5.0 FIX-CC-ANSWER-IN-DOM: lock BEFORE the round trip, not after.
-                // The verdict now takes a request to arrive, and an impatient learner can
-                // tap twice inside that window - which used to be impossible, because the
-                // answer was in the markup and the whole handler ran synchronously.
+                // v15.5.0: lock BEFORE grading, not after. v15.6.1 made the verdict local
+                // and synchronous again, so the double-tap window this closed is gone for
+                // now - but the callback contract stays asynchronous-tolerant, and the next
+                // thing to sit behind it would reopen that window silently. Locking first
+                // costs nothing and does not depend on which side grades.
                 $options.attr('data-answered', 'true').data('answered', true);
                 $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
                 self.ccGradeAnswer($option, function(err, result) {
@@ -12310,8 +12459,22 @@ define([
                 var isCorrect = !!result.iscorrect;
                 // Feedback comes back with the verdict now rather than sitting in the DOM.
                 var $fb = $option.find('.cc5-dp-feedback');
-                if (result.feedback) {
-                    $fb.text(result.feedback);
+                // v15.6.4: the verdict leads the feedback, in words, for everyone.
+                // CcState.withVerdict is what builder.js also narrates, so the clip and
+                // the line on screen cannot say different things.
+                var verdictWord = getLabel(isCorrect ? 'correct_pos' : 'correct_neg');
+                var fbText = CcState.withVerdict(verdictWord, result.feedback);
+                // v15.6.4: when the pack gives a distractor no feedback at all - the
+                // vendor's v2 shape puts one line on the correct option and leaves every
+                // other one empty - the learner used to get a red border and no words.
+                // The verdict alone is still worth saying, so the element stays and
+                // carries it. It is never narrated in that case: a clip that says only
+                // "Incorrect" is not worth a TTS call per option, and the sound already
+                // plays.
+                if (fbText) {
+                    $fb.text(fbText);
+                } else if (verdictWord) {
+                    $fb.text(verdictWord + '.');
                 } else {
                     $fb.remove();
                 }
@@ -12321,7 +12484,13 @@ define([
                 // screen-reader user gets the same signal the colour and glyph give
                 // everyone else.
                 $option.attr('aria-pressed', 'true');
-                $option.find('.cc5-dp-result-text').text(isCorrect ? 'Correct' : 'Incorrect');
+                // v15.6.4: getLabel, not a literal. These two were the pre-existing
+                // English left alone by FIX-CC-AMD-HARDCODED-STRINGS, and the note at the
+                // reveal below says why: changing what a scored answer announces was a
+                // separate change. This release is that change - the same two words are
+                // now shown to everyone, so they must be translated for everyone.
+                $option.find('.cc5-dp-result-text').text(
+                    getLabel(isCorrect ? 'correct_pos' : 'correct_neg'));
                 // Show its feedback
                 $option.find('.cc5-dp-feedback').show();
                 // v15.5.0: the lock moved above, before the grading call.
@@ -12437,8 +12606,8 @@ define([
                 var $options = $opt.closest('.cc5-dp-options');
                 if ($options.data('answered') === true || $options.attr('data-answered') === 'true') return;
                 e.preventDefault();
-                // v15.5.0 FIX-CC-ANSWER-IN-DOM: lock before the round trip. See the
-                // standalone handler above for why the order matters now.
+                // v15.5.0: lock before grading. See the standalone handler above for why
+                // the order is what it is, and why v15.6.1 left it alone.
                 $options.attr('data-answered', 'true').data('answered', true);
                 $options.find('.cc5-dp-option').attr('aria-disabled', 'true');
                 self.ccGradeAnswer($opt, function(err, result) {
@@ -12448,15 +12617,25 @@ define([
                 }
                 var isCorrect = !!result.iscorrect;
                 var $chosenFb = $opt.find('.cc5-dp-feedback');
-                if (result.feedback) {
-                    $chosenFb.text(result.feedback);
+                // v15.6.4: the verdict leads the feedback, in words, for everyone.
+                // CcState.withVerdict is what builder.js also narrates, so the clip and
+                // the line on screen cannot say different things.
+                var chosenWord = getLabel(isCorrect ? 'correct_pos' : 'correct_neg');
+                var chosenText = CcState.withVerdict(chosenWord, result.feedback);
+                // See the standalone handler above: an empty distractor still gets its
+                // verdict, because a border colour is not a sentence.
+                if (chosenText) {
+                    $chosenFb.text(chosenText);
+                } else if (chosenWord) {
+                    $chosenFb.text(chosenWord + '.');
                 } else {
                     $chosenFb.remove();
                 }
                 $opt.attr('data-selected', isCorrect ? 'correct' : 'incorrect');
                 // v13.86: same accessibility treatment as the standalone card above.
                 $opt.attr('aria-pressed', 'true');
-                $opt.find('.cc5-dp-result-text').text(isCorrect ? 'Correct' : 'Incorrect');
+                $opt.find('.cc5-dp-result-text').text(
+                    getLabel(isCorrect ? 'correct_pos' : 'correct_neg'));
                 $opt.find('.cc5-dp-feedback').show();
                 // FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19): reveal the right answer
                 // when the learner got it wrong.
@@ -12502,17 +12681,19 @@ define([
                         .text(getLabel('correctAnswerLabel'))
                         .css('display', '');
                     var $rightFb = $right.find('.cc5-dp-feedback');
-                    if (result.correctfeedback) {
-                        $rightFb.text(result.correctfeedback).show();
+                    // v15.6.4: the positive verdict, always - this is the RIGHT answer
+                    // being revealed, whatever the learner chose. Its own clip carries the
+                    // same word, because builder.js narrates it from the same helper.
+                    var rightText = CcState.withVerdict(getLabel('correct_pos'),
+                        result.correctfeedback);
+                    if (rightText) {
+                        $rightFb.text(rightText).show();
                     } else {
                         $rightFb.remove();
                     }
                     // getLabel, not a literal: FIX-CC-AMD-HARDCODED-STRINGS took the
                     // English out of this file once already, and this string is announced
                     // to a screen reader on a card whose every other word is translated.
-                    // ('Correct'/'Incorrect' two lines above are pre-existing literals and
-                    // are left alone here - changing what a scored answer announces is a
-                    // separate change from adding a new announcement.)
                     $right.find('.cc5-dp-result-text').text(getLabel('correctAnswerLabel'));
                 }
                 $opt.focus();
@@ -17581,7 +17762,9 @@ define([
                                     method: 'POST',
                                     body: voFormData
                                 })
-                                .then(function(voResp) { return voResp.json(); })
+                                .then(function(voResp) {
+                                    return CcState.readJson(voResp, 'The narration request');
+                                })
                                 .then(function(voData) {
                                     // v12.51 BUG-CC-AUTOGEN-PENDING: PHP mutex returns {pending:true}
                                     // when another PHP process holds the file lock for this sectionId
@@ -18187,8 +18370,7 @@ define([
                 method: 'POST', body: formData, signal: abort.signal
             }).then(function(r) {
                 clearTimeout(timer);
-                if (!r.ok) { throw new Error('Server returned ' + r.status); }
-                return r.json();
+                return CcState.readJson(r, 'The request to the server');
             }).then(function(data) {
                 delete self._cardVoLoading[key];
                 $btn.removeClass('cc5-loading');
@@ -18322,8 +18504,7 @@ define([
                     method: 'POST', body: formData, signal: ctrl.signal
                 }).then(function(r) {
                     clearTimeout(timer);
-                    if (!r.ok) { throw new Error('Server returned ' + r.status); }
-                    return r.json();
+                    return CcState.readJson(r, 'The request to the server');
                 }).then(function(data) {
                     // v15.4.3: one refusal means every remaining card would be refused too.
                     // Walking the rest of them takes a slot each and pushes the reset further
@@ -18369,7 +18550,12 @@ define([
             formData.append('audiocontent', audioContent);
             formData.append('audiotype', audioType || 'audio/ogg');
             fetch(CcState.ajaxUrl(), {method: 'POST', body: formData})
-                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(r) {
+                    // Best-effort cache write: a failure here costs the learner nothing, so
+                    // it stays null-on-failure rather than throwing. It reads through
+                    // readJson so an HTML body is not parsed as if it were an answer.
+                    return r.ok ? CcState.readJson(r, 'Saving the narration clip') : null;
+                })
                 .then(function(d) {
                     if (d && d.success && d.url) { card.voiceoverUrl = d.url; }
                 })
@@ -18945,10 +19131,7 @@ define([
             })
             .then(function(response) {
                     clearTimeout(_odTimeoutId);
-                    if (!response.ok) {
-                        throw new Error('Server returned ' + response.status);
-                    }
-                    return response.json();
+                    return CcState.readJson(response, 'The narration request');
                 })
                 .then(function(data) {
                     var _onDemandDur = ((Date.now() - _onDemandStart) / 1000).toFixed(1);

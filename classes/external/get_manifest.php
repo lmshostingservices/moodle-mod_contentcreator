@@ -73,23 +73,22 @@ class get_manifest extends external_api {
         // Version 11.48 FIX BUG-CC-DBWRITE: decompress manifest if stored compressed (gz: prefix).
         $rawmanifest = \mod_contentcreator\manifest_storage::decompress($contentcreator->manifestjson ?? '');
 
-        // V15.5.0 FIX-CC-ANSWER-IN-DOM. This is the choke point. The player fetches the
-        // whole manifest through here, and until this release that manifest carried the
-        // answer key: which option is correct, every option's feedback, and the URL of
-        // every option's pre-generated feedback narration. Taking the answer out of the
-        // rendered markup would have been theatre while a learner could still read it in
-        // the network tab, so it comes out of the payload too.
+        // V15.6.1 REVERT-CC-ANSWER-IN-DOM. V15.5.0 stripped the answer key from this payload
+        // for non-staff, which forced every challenge answer through a web service call to
+        // be graded. That coupled two things which do not belong together, and the coupling
+        // cost more than it bought: a learner whose network hiccupped was told their answer
+        // could not be checked, on an activity that had worked offline-tolerantly for years.
         //
-        // Staff keep the whole thing. The builder, the slide editor, the print view and
-        // the Excel export all read the answer key directly, and all of them are gated on
-        // :manage or :review.
-        $isstaff = has_capability('mod/contentcreator:manage', $context)
-            || has_capability('mod/contentcreator:review', $context);
-
-        if (!$isstaff) {
-            $rawmanifest = \mod_contentcreator\manifest_storage::strip_answer_key($rawmanifest);
-        }
-
+        // What the concealment bought was near nothing. This challenge carries no score into
+        // the gradebook, and v15.4.6 had already accepted that the answer is on screen when
+        // it removed Try Again from the quiz - a learner who wants the answer clicks and
+        // reads it. What it cost was the reliability of the only thing that does matter.
+        //
+        // Completion integrity is unaffected and still lives on the server. The player
+        // grades locally for the verdict it shows, then reports the answer in the background
+        // to mod_contentcreator_check_answer, which re-reads the answer key from the stored
+        // manifest and decides for itself. The evidence row stays unforgeable; only the
+        // message on screen is now instant and local.
         return [
             'success' => true,
             'manifest' => $rawmanifest,

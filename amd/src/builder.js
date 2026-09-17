@@ -108,7 +108,12 @@ define([
         'errsuggesttopics', 'errexcelvetonly', 'errexcelnotga', 'errexcelnotopics',
         'errtopicstructure', 'errpastedtext', 'errsavecontent', 'errsaveregenerated',
         'errfiletoolarge', 'errfiletype', 'errnotopicplan', 'errnotopicssuggested',
-        'msgneedsreview', 'msgqafailedhint',
+        'msgneedsreview', 'msgqafailedhint', 'msgqafailedcount',
+        // v15.6.3: the failure report. The badge alone said nothing an author could act on.
+        'msgfailreporttitle', 'msgfailreportintro', 'msgfailcopy', 'msgfailclose',
+        'msgfailcausetransport', 'msgfailcauselimit', 'msgfailcausetimeout',
+        'msgfailcausestructure', 'msgfailcauseunknown',
+        'msgfailadvice413', 'msgfailadvicetransport', 'msgfailadvicelimit', 'msgfailadviceretry',
         'errneedcoursetitle', 'errneedtrainingtopic', 'errneedunitcodefirst',
         'errneedunitcode', 'errneedunittext', 'errselectpdf', 'errselectmode',
         'erruploadpdf', 'errtgaunavailable', 'errunitevidencemissing',
@@ -250,6 +255,8 @@ define([
         'errgentimeoutload', 'errgentimeout', 'errgenfailedretry',
         'msgcontexttopicstitle', 'msgcontextpdtitle',
         'msgupdatedesc', 'msgapplyupdatesbtn', 'msgreasonnostamp', 'msgreasonolderbuild', 'msgreasonstalesection', 'msgreasonstalesections',
+        // v15.6.4: quiz feedback clips that predate the spoken verdict.
+        'msgreasonnoverdictclip', 'msgreasonnoverdictclips',
         // FIX-CC-AMD-HARDCODED-STRINGS pass 3 (v13.95.3): button labels, short form
         // labels, the reading-time list, and sentences carrying a {$a} value.
         'msgselectoptional', 'msgothercustom', 'msgcreditspersubtopic', 'msginitializing',
@@ -327,6 +334,20 @@ define([
         errneedtrainingtopic: 'Please enter a training topic first, or upload a document.',
         msgneedsreview: 'Needs review',
         msgqafailedhint: 'One or more cards failed generation - open the module and check this topic',
+        msgfailreporttitle: 'Generation problems',
+        msgfailreportintro: 'These cards could not be generated and are showing placeholder text to learners. Everything else in this module is complete and ready to use.',
+        msgfailcausetransport: 'The request was refused before it reached Moodle.',
+        msgfailcauselimit: 'The speech or content limit for this site was reached.',
+        msgfailcausetimeout: 'The request took too long and was abandoned.',
+        msgfailcausestructure: 'The generated card was incomplete or the wrong shape.',
+        msgfailcauseunknown: 'Generation did not complete.',
+        msgfailadvice413: 'This is a web-server limit, not a fault in this module. Ask your administrator to raise the request body limit (nginx client_max_body_size, or LimitRequestBody on Apache) to at least 24m. Then use Regenerate Failed.',
+        msgfailadvicetransport: 'This is usually bot protection, a firewall, or a proxy in front of Moodle. Send the message above to whoever administers the server, then use Regenerate Failed.',
+        msgfailadvicelimit: 'Wait for the limit to reset, or ask an administrator to raise it in the Content Creator settings, then use Regenerate Failed.',
+        msgfailadviceretry: 'Use Regenerate Failed to generate this card again. If it fails a second time, copy this report and send it to support.',
+        msgqafailedcount: '{$a} card(s) could not be generated',
+        msgfailcopy: 'Copy report',
+        msgfailclose: 'Close',
         errneedunitcodefirst: 'Please enter a unit code first.',
         errneedunitcode: 'Please enter a unit code.',
         errneedunittext: 'Please paste the unit text before processing.',
@@ -5290,12 +5311,22 @@ define([
         let failedCount = 0;
         existingManifest.topics?.forEach(topic => {
             (topic.sections || []).forEach(section => {
-                // v13.90.1: needsReview is set by generator.js when a section exhausted its
-                // attempts but carried enough real content to keep rather than replace with
-                // placeholders. The content renders, but the section still needs the author's
-                // attention and must stay retryable, so it counts here alongside failed cards.
+                // v13.90.1 counted needsReview here alongside failed. v15.6.3 does not.
+                //
+                // needsReview marks a SALVAGED section: it exhausted its attempts, but every
+                // card in it carries real content, so it was kept rather than replaced with
+                // placeholders. Since v15.3.18 that is a stronger statement than it sounds -
+                // the salvage is refused outright if ANY card in the section is empty, so a
+                // section that reaches needsReview has a full set of renderable cards by
+                // construction. There is nothing for a learner to hit and nothing for the
+                // author to repair.
+                //
+                // Counting it here meant "Regenerate Failed" offered to spend credits
+                // re-generating content that was already complete and already showing. A
+                // placeholder card is a defect; a card that merely failed a structural
+                // assertion while carrying its content is not.
                 if (section.generated === false
-                    || (section.cards && section.cards.some(c => c.failed || c.needsReview))) failedCount++;
+                    || (section.cards && section.cards.some(c => c.failed))) failedCount++;
                 if (section.scenario?.generated === false) failedCount++;
                 if (section.outcome?.generated === false) failedCount++;
                 if (section.activity?.generated === false) failedCount++;
@@ -11870,6 +11901,16 @@ define([
                         // `retryafter`, so this is a fact the client can act on rather than a
                         // sentence it would have to parse in 53 languages.
                         var _voRateLimited = null;
+                        // v15.6.2 FIX-CC-FATAL-TRANSPORT-RETRIED-IN-BUILDER. _voRateLimited
+                        // stops the run on a refusal the server explained. A transport
+                        // refusal - a WAF page, or HTTP 413 from the web server - is the
+                        // same situation and was not stopping anything: the three loops
+                        // below caught the error, saw no ccRateLimited on it, and retried.
+                        // That is where the forty identical "<!DOCTYPE" parse errors in
+                        // one console came from, and where a 413 turned into a burst of
+                        // identical oversized requests. CcState marks these ccFatal; this
+                        // is what honours it.
+                        var _voFatal = null;
                         var _voSkipWrap = document.getElementById('cc-vo-skip-wrap');
                         var _voSkipBtn  = document.getElementById('cc-vo-skip-btn');
                         if (_voSkipWrap) _voSkipWrap.style.display = '';
@@ -11942,13 +11983,37 @@ define([
                             // Flattened rather than nested so the clip index stays a single
                             // running number: sectionid carries it, and restarting at 0 on
                             // question two would have overwritten question one's clips.
+                            // v15.6.4: correctness travels with the option now.
+                            //
+                            // The clip has to OPEN with "Correct" or "Incorrect", the same
+                            // word the player puts on screen, so the flattening can no
+                            // longer throw away which option won its question. The three
+                            // answer-key shapes are read in the same order
+                            // player5.js:ccGradeLocally and \mod_contentcreator\evidence
+                            // read them, because a clip that disagrees with the verdict on
+                            // screen is worse than no clip at all.
                             var _dpOpts = [];
-                            if (Array.isArray(dp.questions) && dp.questions.length) {
-                                dp.questions.forEach(function(q) {
-                                    (q.options || []).forEach(function(o) { _dpOpts.push(o); });
+                            var _pushQuestion = function(q) {
+                                var opts = (q && q.options) || [];
+                                var right = -1;
+                                for (var ci = 0; ci < opts.length; ci++) {
+                                    if (opts[ci] && (opts[ci].correct || opts[ci].isCorrect)) {
+                                        right = ci;
+                                        break;
+                                    }
+                                }
+                                if (right === -1 && q && typeof q.correctIndex === 'number'
+                                    && q.correctIndex >= 0 && q.correctIndex < opts.length) {
+                                    right = q.correctIndex;
+                                }
+                                opts.forEach(function(o, ci) {
+                                    _dpOpts.push({opt: o, correct: ci === right});
                                 });
+                            };
+                            if (Array.isArray(dp.questions) && dp.questions.length) {
+                                dp.questions.forEach(_pushQuestion);
                             } else if (Array.isArray(dp.options)) {
-                                _dpOpts = dp.options;
+                                _pushQuestion(dp);
                             }
                             if (!_dpOpts.length) return;
 
@@ -11959,9 +12024,18 @@ define([
                                 // the ceiling, and the one where carrying on after a refusal
                                 // does the most damage.
                                 if (_voSkipRequested || _voRateLimited) return;
-                                var opt = _dpOpts[oi];
-                                var fbText = (opt && opt.feedback ? String(opt.feedback) : '').trim();
-                                if (!fbText || opt.feedbackAudioUrl) { continue; }
+                                var opt = _dpOpts[oi].opt;
+                                var fbRaw = (opt && opt.feedback ? String(opt.feedback) : '').trim();
+                                if (!fbRaw) { continue; }
+                                // An existing clip is kept UNLESS it predates the spoken
+                                // verdict. Regenerating every clip on every module would be
+                                // the largest unasked-for charge this builder could make -
+                                // twelve options per section is already its biggest single
+                                // consumer of the speech allowance - so the marker is what
+                                // decides, not the release number.
+                                if (opt.feedbackAudioUrl && opt.feedbackVerdictSpoken) { continue; }
+                                var fbText = CcState.withVerdict(
+                                    CcState.verdictLabel(_dpOpts[oi].correct), fbRaw);
                                 try {
                                     var _qFd = new FormData();
                                     _qFd.append('sesskey', M.cfg.sesskey);
@@ -11999,6 +12073,11 @@ define([
                                         var _qpData = await CcState.readJson(_qpResp, 'quiz feedback persist');
                                         if (_qpData.success && _qpData.url) {
                                             opt.feedbackAudioUrl = _qpData.url;
+                                            // v15.6.4: this clip opens with the verdict.
+                                            // Without the marker the next build cannot tell
+                                            // it apart from a pre-v15.6.4 clip and would
+                                            // either re-bill it forever or never fix it.
+                                            opt.feedbackVerdictSpoken = true;
                                             ccLog('%c[QUIZ VOICE] section ' + section.id + ' option ' + oi
                                                 + ' -> ' + _qpData.url, 'color:#10b981');
                                         }
@@ -12163,6 +12242,13 @@ define([
                                             ccWarn('[VOICEOVER BUILDER] rate limited on card '
                                                 + part.cardIndex + ' of ' + section.id
                                                 + '  -  stopping rather than retrying.');
+                                            return false;
+                                        }
+                                        if (err && err.ccFatal) {
+                                            if (!_voFatal) { _voFatal = err; }
+                                            ccError('[VOICEOVER BUILDER] transport refused card '
+                                                + part.cardIndex + ' of ' + section.id
+                                                + '  -  stopping rather than retrying. ' + err.message);
                                             return false;
                                         }
                                         ccError('[VOICEOVER BUILDER] card ' + part.cardIndex + ' of '
@@ -12412,8 +12498,16 @@ define([
                                     ccPtVoiceover(section.id, 'failed');
                                     return;
                                 }
+                                if (err && err.ccFatal) {
+                                    if (!_voFatal) { _voFatal = err; }
+                                    ccError('[VOICEOVER BUILDER] transport refused section '
+                                        + (section.id || '?') + '  -  stopping rather than retrying. '
+                                        + err.message);
+                                    ccPtVoiceover(section.id, 'failed');
+                                    return;
+                                }
                                 ccError('[VOICEOVER BUILDER v8.4.11] PRE-GEN FAIL section ' + (section.id || '?') + ' | attempt: ' + attempt + ' | ' + err.message);
-                                if (attempt < 3 && !section.voiceoverUrl && !_voRateLimited) {
+                                if (attempt < 3 && !section.voiceoverUrl && !_voRateLimited && !_voFatal) {
                                     var retryDelay = attempt * 2000;
                                     ccLog('[VOICEOVER BUILDER v8.4.11] RETRY section ' + section.id + ' in ' + (retryDelay/1000) + 's (attempt ' + (attempt+1) + '/3)');
                                     await new Promise(r => setTimeout(r, retryDelay));
@@ -12469,9 +12563,9 @@ define([
                         // iteration yields to the event loop even when fewer than CONCURRENT
                         // are in flight.
                         const promises = [];
-                        while (index < allSections.length && !_voSkipRequested && !_voRateLimited) {
+                        while (index < allSections.length && !_voSkipRequested && !_voRateLimited && !_voFatal) {
                             while (promises.length < CONCURRENT && index < allSections.length
-                                    && !_voSkipRequested && !_voRateLimited) {
+                                    && !_voSkipRequested && !_voRateLimited && !_voFatal) {
                                 const section = allSections[index++];
                                 const p = pregenOne(section, 1).then(() => {
                                     promises.splice(promises.indexOf(p), 1);
@@ -12489,7 +12583,18 @@ define([
                         if (_voSkipWrap) _voSkipWrap.style.display = 'none';
                         var _builderVoDur = ((Date.now() - _builderVoStart) / 1000).toFixed(1);
                         var _withUrl = allSections.filter(s => s.voiceoverUrl).length;
-                        if (_voRateLimited) {
+                        if (_voFatal) {
+                            // v15.6.2: ONE message, and it names the thing to change. The
+                            // author cannot fix this by regenerating, so they are told what
+                            // it is rather than left reading sixty parse errors.
+                            ccError('[VOICEOVER BUILDER] PRE-GEN STOPPED  -  the request was '
+                                + 'refused before Moodle answered it. ' + _withUrl + '/'
+                                + allSections.length + ' sections have audio. ' + _voFatal.message);
+                            document.getElementById('cc-gen-status').textContent =
+                                _voFatal.message + ' ' + _withUrl + ' of ' + allSections.length
+                                + ' slides have audio; the rest can be generated once that is '
+                                + 'fixed.';
+                        } else if (_voRateLimited) {
                             // v15.4.3: ONE message, not sixty. The run stopped on purpose, the
                             // author is told what stopped it and when they can finish, and the
                             // sections that did get audio keep it.
@@ -12511,7 +12616,7 @@ define([
                         } else {
                             ccLog('%c[VOICEOVER BUILDER v8.4.11] PRE-GEN COMPLETE | ' + _builderVoDur + 's | success: ' + _withUrl + '/' + allSections.length + ' sections', 'color: #8b5cf6; font-weight: bold');
                         }
-                        if (_withUrl < allSections.length && !_voSkipRequested && !_voRateLimited) {
+                        if (_withUrl < allSections.length && !_voSkipRequested && !_voRateLimited && !_voFatal) {
                             ccError('[VOICEOVER BUILDER v8.4.11] WARNING: ' + (allSections.length - _withUrl) + ' sections FAILED pre-generation after 3 attempts each.');
                         }
                         
@@ -12829,7 +12934,15 @@ define([
                                                     _mlDone++;
                                                     return;
                                                 }
-                                                if (attempt < 3 && !_voRateLimited) {
+                                                if (e && e.ccFatal) {
+                                                    if (!_voFatal) { _voFatal = e; }
+                                                    ccError('[MULTI-LANG VO] transport refused ' + langCode
+                                                        + ' sec ' + (section.id || '?')
+                                                        + '  -  stopping rather than retrying. ' + e.message);
+                                                    _mlDone++;
+                                                    return;
+                                                }
+                                                if (attempt < 3 && !_voRateLimited && !_voFatal) {
                                                     await new Promise(function(rr) { setTimeout(rr, attempt * 2000); });
                                                     return fn(section, attempt + 1);
                                                 }
@@ -13079,6 +13192,32 @@ define([
                 .split('{$a}').join(staleSections));
         }
 
+        // v15.6.4: quiz feedback clips generated before the spoken verdict.
+        //
+        // They still play, and they are still the right voice saying the right words about
+        // the right option - they simply do not open with "Correct" or "Incorrect" the way
+        // the line on screen now does. The next voiceover run regenerates them, and that
+        // costs credits, so the author is told here rather than finding it on the bill.
+        let mutedVerdicts = 0;
+        forEachSection(m, (section) => {
+            (section.cards || []).forEach((card) => {
+                if (!card || card.cardType !== 'decision-point') { return; }
+                const questions = (Array.isArray(card.questions) && card.questions.length)
+                    ? card.questions : [card];
+                questions.forEach((q) => {
+                    ((q && q.options) || []).forEach((o) => {
+                        if (o && o.feedbackAudioUrl && !o.feedbackVerdictSpoken) {
+                            mutedVerdicts++;
+                        }
+                    });
+                });
+            });
+        });
+        if (mutedVerdicts > 0) {
+            reasons.push(s(mutedVerdicts === 1 ? 'msgreasonnoverdictclip' : 'msgreasonnoverdictclips')
+                .split('{$a}').join(mutedVerdicts));
+        }
+
         if (!reasons.length) { return null; }
         return { builtWith: builtWith, current: current, staleSections: staleSections, reasons: reasons };
     };
@@ -13112,6 +13251,193 @@ define([
         });
         m.builtWithVersion = CcState.CC_VERSION;
         return cleared;
+    };
+
+    /**
+     * v15.6.3 FIX-CC-NEEDS-REVIEW-SAYS-NOTHING.
+     *
+     * The completion screen showed a "Needs review" badge and the sentence "One or more
+     * cards failed generation - open the module and check this topic". That is everything
+     * the author was told, and it is close to useless: it does not say WHICH card, or WHY,
+     * or whether the cause was the content at all.
+     *
+     * It usually was not. A web server refusing the request with HTTP 413, a WAF page, a
+     * rate limit, a vendor timeout and a genuinely malformed card all arrived at the same
+     * six words - and only the last of them is something an author can act on by opening
+     * the module. One site spent a morning inspecting a topic whose content was perfect.
+     *
+     * The detail was never missing. Every failed card already carries `failureReason`,
+     * `qualityAction` and `failedAt`, and the quality gate writes the validator's own
+     * issue list into it. It was simply thrown away one line before it reached the screen.
+     * This collects it.
+     *
+     * @param {Object} topic A manifest topic.
+     * @returns {Array} One entry per problem card: {section, cardType, kind, reason}.
+     */
+    const ccCollectTopicProblems = (topic) => {
+        const problems = [];
+        (topic.sections || []).forEach(function(section) {
+            (section.cards || []).forEach(function(card, index) {
+                if (!card) { return; }
+                // Only a placeholder counts. `needsReview` marks a SALVAGED card - it has
+                // its content, it renders, and a learner meeting it sees a finished card;
+                // since v15.3.18 the salvage is refused outright if any card in the section
+                // is empty, so "salvaged" means a complete set by construction. Reporting
+                // it as a problem sent authors to inspect topics that were ready to ship.
+                if (card.failed !== true && card.qualityAction !== 'FAILED') { return; }
+                problems.push({
+                    section: section.title || section.subtopicLabel || section.id || '',
+                    cardType: card.cardType || ('card ' + (index + 1)),
+                    reason: String(card.failureReason || '').trim()
+                });
+            });
+        });
+        return problems;
+    };
+
+    /**
+     * Classify a failure reason into something the author can act on.
+     *
+     * The reason strings come from three different places - the transport, the structural
+     * validator and the quality gate - and each implies a different next step. Sorting them
+     * here means the popup can say "ask your administrator to change this" rather than
+     * "check this topic" for a fault no author can fix by looking at content.
+     *
+     * Matched on the TRANSPORT MARKERS the errors carry rather than on loose wording, with
+     * prose matching only as a fallback for older manifests whose reasons predate them.
+     *
+     * @param {String} reason The stored failureReason.
+     * @returns {Object} {key, advice} - a lang-string key for the cause and for the remedy.
+     */
+    const ccClassifyFailure = (reason) => {
+        const r = String(reason || '');
+        if (/HTTP 413|client_max_body_size|too large/i.test(r)) {
+            return {key: 'msgfailcausetransport', advice: 'msgfailadvice413'};
+        }
+        if (/HTTP 40[1345]|HTML page instead of JSON|firewall|bot protection/i.test(r)) {
+            return {key: 'msgfailcausetransport', advice: 'msgfailadvicetransport'};
+        }
+        if (/rate limit|ratelimited|429/i.test(r)) {
+            return {key: 'msgfailcauselimit', advice: 'msgfailadvicelimit'};
+        }
+        if (/timed out|timeout|aborted/i.test(r)) {
+            return {key: 'msgfailcausetimeout', advice: 'msgfailadviceretry'};
+        }
+        if (/Structural validation failed|card count|missing|empty|options/i.test(r)) {
+            return {key: 'msgfailcausestructure', advice: 'msgfailadviceretry'};
+        }
+        return {key: 'msgfailcauseunknown', advice: 'msgfailadviceretry'};
+    };
+
+    /**
+     * Build and show the failure report.
+     *
+     * Opened automatically when a build finishes with problems, because an author who has
+     * to click a badge to find out that something broke will not always click it. It is
+     * also reachable from the badge afterwards, so the detail survives the dismissal.
+     *
+     * @param {Array} results topicResults, each with a problems array.
+     * @returns {void}
+     */
+    const ccShowFailureReport = (results) => {
+        const bad = (results || []).filter(function(t) { return t.problems && t.problems.length; });
+        if (!bad.length) { return; }
+
+        const existing = document.getElementById('cc-fail-report');
+        if (existing) { existing.remove(); }
+
+        let rows = '';
+        bad.forEach(function(t) {
+            rows += '<div class="cc-fail-topic">';
+            rows += '<div class="cc-fail-topic-name">' + escapeHtml(t.title) + '</div>';
+            t.problems.forEach(function(pb) {
+                const cls = ccClassifyFailure(pb.reason);
+                rows += '<div class="cc-fail-item">';
+                rows += '<div class="cc-fail-item-head">';
+                if (pb.section) {
+                    rows += '<span class="cc-fail-section">' + escapeHtml(pb.section) + '</span>';
+                }
+                rows += '<span class="cc-fail-card">' + escapeHtml(pb.cardType) + '</span>';
+                rows += '</div>';
+                rows += '<div class="cc-fail-cause">' + s(cls.key) + '</div>';
+                // The raw reason verbatim. It is the only thing that lets an administrator
+                // or a support ticket identify the fault exactly, so it is never summarised
+                // away - just made secondary to the plain-English cause above it.
+                if (pb.reason) {
+                    rows += '<div class="cc-fail-reason">' + escapeHtml(pb.reason) + '</div>';
+                }
+                rows += '<div class="cc-fail-advice">' + s(cls.advice) + '</div>';
+                rows += '</div>';
+            });
+            rows += '</div>';
+        });
+
+        const wrap = document.createElement('div');
+        wrap.id = 'cc-fail-report';
+        wrap.className = 'cc-fail-overlay';
+        wrap.setAttribute('role', 'dialog');
+        wrap.setAttribute('aria-modal', 'true');
+        wrap.setAttribute('aria-labelledby', 'cc-fail-report-title');
+        wrap.innerHTML = '<div class="cc-fail-panel">'
+            + '<div class="cc-fail-head">'
+            + '<h3 class="cc-fail-title" id="cc-fail-report-title">' + s('msgfailreporttitle') + '</h3>'
+            + '<button type="button" class="cc-fail-close" id="cc-fail-close" '
+            + 'aria-label="' + escapeHtml(s('msgfailclose')) + '">&times;</button>'
+            + '</div>'
+            + '<p class="cc-fail-intro">' + s('msgfailreportintro') + '</p>'
+            + '<div class="cc-fail-body">' + rows + '</div>'
+            + '<div class="cc-fail-foot">'
+            + '<button type="button" class="cc-btn cc-btn-secondary" id="cc-fail-copy" '
+            + 'data-testid="button-copy-failure-report">' + s('msgfailcopy') + '</button>'
+            + '<button type="button" class="cc-btn cc-btn-primary" id="cc-fail-dismiss">'
+            + s('msgfailclose') + '</button>'
+            + '</div>'
+            + '</div>';
+        document.body.appendChild(wrap);
+
+        const close = function() { wrap.remove(); };
+        wrap.querySelector('#cc-fail-close').onclick = close;
+        wrap.querySelector('#cc-fail-dismiss').onclick = close;
+        // A click on the backdrop closes; a click inside must not.
+        wrap.onclick = function(e) { if (e.target === wrap) { close(); } };
+        document.addEventListener('keydown', function onEsc(e) {
+            if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+        });
+
+        // Plain text, because this is what gets pasted into a support ticket or an email
+        // to whoever administers the server - which is the whole point of naming the cause.
+        wrap.querySelector('#cc-fail-copy').onclick = function() {
+            const btn = this;
+            let text = s('msgfailreporttitle') + '\n'
+                + CcState.CC_VERSION + '  -  ' + new Date().toISOString() + '\n\n';
+            bad.forEach(function(t) {
+                text += t.title + '\n';
+                t.problems.forEach(function(pb) {
+                    text += '  - ' + (pb.section ? pb.section + ' / ' : '') + pb.cardType + '\n';
+                    text += '    ' + s(ccClassifyFailure(pb.reason).key) + '\n';
+                    if (pb.reason) { text += '    ' + pb.reason + '\n'; }
+                });
+                text += '\n';
+            });
+            const confirmCopied = function() {
+                const original = btn.textContent;
+                btn.textContent = s('msgtailorcopied');
+                setTimeout(function() { btn.textContent = original; }, 1600);
+            };
+            // Same contract as the tailor-example copy above: navigator.clipboard is
+            // undefined on an http:// site and rejects when the document is not focused,
+            // so the textarea fallback is not optional.
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(confirmCopied).catch(function() {
+                    copyViaTextarea(text, confirmCopied);
+                });
+                return;
+            }
+            copyViaTextarea(text, confirmCopied);
+        };
+
+        const first = wrap.querySelector('#cc-fail-close');
+        if (first) { first.focus(); }
     };
 
     const renderLocked = () => {
@@ -13169,11 +13495,22 @@ define([
                     });
                 }
                 if (cards.length > 0) {
-                    const passed = cards.some(function(c) { return c.qualityAction === 'VALIDITY_GATE_PASS'; });
-                    const failed = cards.some(function(c) { return c.qualityAction === 'FAILED'; });
+                    // v15.6.3: a topic passes unless it is carrying a PLACEHOLDER card.
+                    //
+                    // The old test also failed a topic whose cards were merely flagged
+                    // needsReview - salvaged cards, which render, carry their full content
+                    // and are complete to a learner. The author was shown a red badge and
+                    // told to go and check a topic that had nothing wrong with it, which
+                    // is how a real failure elsewhere got lost in the noise.
+                    //
+                    // A placeholder is different in kind: it says "AI generation failed for
+                    // X" where the teaching should be, and a learner sees that. Only that
+                    // fails a topic now.
+                    const problems = ccCollectTopicProblems(topic);
                     topicResults.push({
                         title: topic.title || topic.name || s('msguntitledtopic'),
-                        pass: passed && !failed
+                        pass: !problems.length,
+                        problems: problems
                     });
                 }
             });
@@ -13189,12 +13526,35 @@ define([
                 // structurally incapable of reporting a failure.
                 const badgeClass = t.pass ? 'cc-qa-badge-pass' : 'cc-qa-badge-fail';
                 const badgeLabel = t.pass ? s('msgvalid') : s('msgneedsreview');
+                // v15.6.3: the row now summarises the actual problem instead of repeating
+                // the same six words for every cause. "One or more cards failed generation
+                // - open the module and check this topic" was wrong as often as it was
+                // right: most failures are not the content and cannot be fixed by opening
+                // the module.
+                let rowDetail;
+                if (t.pass) {
+                    rowDetail = s('msgstructurevalidated');
+                } else if (t.problems && t.problems.length) {
+                    const firstReason = (t.problems.find(function(pb) { return pb.reason; }) || {}).reason;
+                    rowDetail = s('msgqafailedcount').split('{$a}').join(String(t.problems.length))
+                        + ' - ' + s(ccClassifyFailure(firstReason).key);
+                } else {
+                    rowDetail = s('msgqafailedhint');
+                }
                 qaResultsHtml += '<div class="cc-qa-topic-row">';
                 qaResultsHtml += '<div class="cc-qa-topic-info">';
                 qaResultsHtml += '<div class="cc-qa-topic-name">' + escapeHtml(t.title) + '</div>';
-                qaResultsHtml += '<div class="cc-qa-topic-scores">' + (t.pass ? s('msgstructurevalidated') : s('msgqafailedhint')) + '</div>';
+                qaResultsHtml += '<div class="cc-qa-topic-scores">' + rowDetail + '</div>';
                 qaResultsHtml += '</div>';
-                qaResultsHtml += '<div class="cc-qa-badge ' + badgeClass + '">' + badgeLabel + '</div>';
+                if (!t.pass) {
+                    // The badge becomes the way back into the detail once the popup has
+                    // been dismissed, so nothing is lost by closing it.
+                    qaResultsHtml += '<button type="button" class="cc-qa-badge ' + badgeClass
+                        + ' cc-qa-badge-btn" data-cc-fail-open="1" '
+                        + 'data-testid="button-open-failure-report">' + badgeLabel + '</button>';
+                } else {
+                    qaResultsHtml += '<div class="cc-qa-badge ' + badgeClass + '">' + badgeLabel + '</div>';
+                }
                 qaResultsHtml += '</div>';
             });
             qaResultsHtml += '</div>';
@@ -13325,6 +13685,17 @@ define([
                 return false;
             });
         });
+
+        // v15.6.3: the badge is now the way back into the detail, and the detail opens by
+        // itself the first time. An author who has to discover that a badge is clickable in
+        // order to learn why their build broke has been told nothing, which is the state
+        // this release is undoing.
+        container.querySelectorAll('[data-cc-fail-open]').forEach(function(btn) {
+            btn.addEventListener('click', function() { ccShowFailureReport(topicResults); });
+        });
+        if (topicResults.some(function(t) { return t.problems && t.problems.length; })) {
+            ccShowFailureReport(topicResults);
+        }
 
         document.getElementById('cc-apply-updates-btn')?.addEventListener('click', () => {
             const btn = document.getElementById('cc-apply-updates-btn');

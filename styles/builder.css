@@ -6786,3 +6786,157 @@ body.dark .cc-mode-need-label, [data-theme="dark"] .cc-mode-need-label,
 [data-bs-theme="dark"] .cc-mode-need-label {
     color: hsl(30 70% 68%);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   GENERATION FAILURE REPORT (v15.6.3)
+
+   Replaces the "Needs review" badge as the way an author is told what went wrong.
+   The badge said "One or more cards failed generation - open the module and check
+   this topic" for every cause, including the ones no author can fix by opening the
+   module: a web-server refusal, a firewall, a rate limit, a timeout. This panel
+   names the cause, quotes the underlying message verbatim, and says what to do.
+
+   Opens by itself when a build finishes with placeholder cards in it, and stays
+   reachable from the badge afterwards.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.cc-fail-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--cc-space-4);
+    background: hsl(0 0% 0% / 0.5);
+}
+.cc-fail-panel {
+    width: 100%;
+    max-width: 640px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--cc-bg);
+    color: var(--cc-fg);
+    border: 1px solid var(--cc-border);
+    border-radius: var(--cc-radius);
+    box-shadow: 0 20px 50px hsl(0 0% 0% / 0.3);
+}
+.cc-fail-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--cc-space-3);
+    padding: var(--cc-space-4);
+    border-bottom: 1px solid var(--cc-border);
+}
+.cc-fail-title {
+    margin: 0;
+    font-size: var(--cc-text-lg);
+    font-weight: 700;
+}
+.cc-fail-close {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    font-size: 22px;
+    line-height: 1;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: var(--cc-fg-muted);
+    cursor: pointer;
+}
+.cc-fail-close:hover {
+    background: var(--cc-bg-subtle);
+    color: var(--cc-fg);
+}
+.cc-fail-intro {
+    margin: 0;
+    padding: var(--cc-space-4) var(--cc-space-4) 0;
+    font-size: var(--cc-text-sm);
+    color: var(--cc-fg-muted);
+    line-height: 1.5;
+}
+.cc-fail-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--cc-space-4);
+}
+.cc-fail-topic-name {
+    font-size: var(--cc-text-sm);
+    font-weight: 700;
+    margin-bottom: var(--cc-space-2);
+}
+.cc-fail-topic + .cc-fail-topic {
+    margin-top: var(--cc-space-4);
+}
+.cc-fail-item {
+    padding: var(--cc-space-3);
+    margin-bottom: var(--cc-space-2);
+    border: 1px solid var(--cc-border);
+    border-left: 4px solid hsl(0 70% 55%);
+    border-radius: 6px;
+    background: var(--cc-bg-subtle);
+}
+.cc-fail-item-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--cc-space-2);
+    margin-bottom: 4px;
+}
+.cc-fail-section {
+    font-size: var(--cc-text-xs);
+    color: var(--cc-fg-muted);
+}
+.cc-fail-card {
+    font-size: var(--cc-text-sm);
+    font-weight: 600;
+}
+.cc-fail-cause {
+    font-size: var(--cc-text-sm);
+    line-height: 1.5;
+}
+/* The verbatim message. Monospaced and wrapped rather than truncated: it is the one
+   thing that lets an administrator or a support ticket identify the fault exactly,
+   and an ellipsis in the middle of it would defeat the purpose of showing it. */
+.cc-fail-reason {
+    margin-top: 6px;
+    padding: 6px 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: var(--cc-text-xs);
+    line-height: 1.45;
+    color: var(--cc-fg-muted);
+    background: var(--cc-bg);
+    border: 1px solid var(--cc-border);
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+}
+.cc-fail-advice {
+    margin-top: 6px;
+    font-size: var(--cc-text-xs);
+    line-height: 1.5;
+    color: var(--cc-fg);
+}
+.cc-fail-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--cc-space-2);
+    padding: var(--cc-space-4);
+    border-top: 1px solid var(--cc-border);
+}
+/* The badge is a button now, so it has to look like one can press it. */
+.cc-qa-badge-btn {
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+.cc-qa-badge-btn:hover {
+    filter: brightness(0.95);
+}
+.cc-qa-badge-btn:focus-visible {
+    outline: 2px solid var(--cc-primary);
+    outline-offset: 2px;
+}

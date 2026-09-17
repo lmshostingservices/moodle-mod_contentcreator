@@ -72,6 +72,43 @@ const cases = [
     { html: false, name: 'whitespace only',                     body: '   \n  ' }
 ];
 
+/**
+ * Every bare .json() left in amd/src, with its file and line.
+ *
+ * Written as a sweep rather than a per-file check because the defect this guards against
+ * was precisely a file nobody thought to check: the guard existed, one module used it, and
+ * the module that mattered did not.
+ *
+ * @returns {Array} Strings of the form "file:line", empty when the tree is clean.
+ */
+function bareJsonCalls() {
+    const dir = path.join(__dirname, '..', '..', 'amd', 'src');
+    const out = [];
+    fs.readdirSync(dir).filter((f) => f.endsWith('.js')).forEach(function (file) {
+        let inBlock = false;
+        fs.readFileSync(path.join(dir, file), 'utf8').split('\n').forEach(function (line, i) {
+            // Comments describe the old behaviour at length in these files, and readJson's
+            // own doc comment names response.json() in prose. Neither is a bare read, so
+            // both line and block comments are stripped before the line is examined.
+            let code = line;
+            if (inBlock) {
+                const close = code.indexOf('*/');
+                if (close === -1) { return; }
+                code = code.slice(close + 2);
+                inBlock = false;
+            }
+            code = code.replace(/\/\*[\s\S]*?\*\//g, '');
+            const open = code.indexOf('/*');
+            if (open !== -1) { code = code.slice(0, open); inBlock = true; }
+            code = code.replace(/\/\/.*$/, '');
+            // readJson() itself must call response.text(), not .json().
+            if (/\breadJson\b/.test(code)) { return; }
+            if (/[\w$)]\s*\.json\(\)/.test(code)) { out.push(file + ':' + (i + 1)); }
+        });
+    });
+    return out;
+}
+
 module.exports = function run() {
     const looksLikeHtml = loadPredicate();
     let pass = 0;
@@ -90,6 +127,10 @@ module.exports = function run() {
 
     // The class the retry ladders check by type rather than by message wording.
     const src = fs.readFileSync(SRC, 'utf8');
+    const stateSrc = fs.readFileSync(STATE, 'utf8');
+    const builderSrc = fs.readFileSync(BUILDER, 'utf8');
+    const playerSrc = fs.readFileSync(PLAYER, 'utf8');
+
     const structural = [
         ['CcFatalTransportError is defined', src.indexOf('function CcFatalTransportError(') !== -1],
         ['it carries the ccFatal marker', /this\.ccFatal\s*=\s*true/.test(src)],
@@ -132,10 +173,50 @@ module.exports = function run() {
         ['all three generate_voice handlers check it before retrying or failing',
             (fs.readFileSync(PLAYER, 'utf8').match(/ccIsStaffOnlyRefusal\(data\)/g) || []).length === 3],
         ['ajax.php sends the flag rather than letting the exception escape',
-            fs.readFileSync(AJAX, 'utf8').indexOf("['staffonly' => true]") !== -1]
+            fs.readFileSync(AJAX, 'utf8').indexOf("['staffonly' => true]") !== -1],
+
+        // v15.6.2 FIX-CC-413-LOOKS-LIKE-A-CONTENT-FAILURE.
+        //
+        // v15.5.1 put the HTML guard in cc-state.js so that BOTH callers could use it, then
+        // routed builder.js through it and left vendorFetch() - the generator's own
+        // transport - reading raw. Every "Unexpected token '<'" a generation produced came
+        // through that one line, and an HTTP 413 with an empty body came through it as a
+        // generic parse failure that nothing recognised as fatal: retried three times at the
+        // same size, then turned into "One or more cards failed generation - open the module
+        // and check this topic" on a topic whose content was never the problem.
+        //
+        // So the rule is now the whole plugin, not one module: NO raw .json() anywhere.
+        ['vendorFetch reads through readJson',
+            /'The request to ' \+ endpoint\);/.test(stateSrc)
+            && stateSrc.indexOf("return readJson(response, 'The request to ' + endpoint);") !== -1],
+        ['vendorUpload reads through readJson',
+            stateSrc.indexOf("return readJson(response, 'The upload to ' + endpoint);") !== -1],
+        ['player5.js reads through CcState.readJson',
+            (playerSrc.match(/CcState\.readJson\(/g) || []).length >= 9],
+        ['no bare .json() survives anywhere in amd/src',
+            bareJsonCalls().length === 0, bareJsonCalls().join(', ')],
+
+        // The named statuses. Retrying any of them sends the identical request again.
+        ['413 is named, and named as a web-server limit rather than a plugin fault',
+            /413: 'the request was rejected as too large/.test(stateSrc)
+            && /client_max_body_size/.test(stateSrc)],
+        ['the status error is only consulted when the body is not JSON',
+            /if \(!response\.ok\) \{\s*\n\s*throw transportStatusError/.test(stateSrc)],
+
+        // The builder retried a fatal error three times per card, because its loops only
+        // knew about ccRateLimited. That is where forty identical parse errors in one
+        // console came from.
+        ['the builder has a fatal-transport flag',
+            builderSrc.indexOf('var _voFatal = null;') !== -1],
+        ['all three voiceover retry loops honour ccFatal',
+            (builderSrc.match(/\.ccFatal\) \{/g) || []).length === 3],
+        ['a fatal transport error stops new work being enqueued',
+            (builderSrc.match(/&& !_voFatal\)/g) || []).length >= 3],
+        ['and is reported once, with the fix, rather than per card',
+            builderSrc.indexOf('PRE-GEN STOPPED  -  the request was ') !== -1]
     ];
     structural.forEach(function (s) {
-        if (s[1]) { pass++; } else { failures.push({ name: s[0], err: 'not found in generator.js' }); }
+        if (s[1]) { pass++; } else { failures.push({ name: s[0], err: s[2] || 'not found' }); }
     });
 
     return {
