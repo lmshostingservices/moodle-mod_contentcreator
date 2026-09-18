@@ -38,8 +38,12 @@ define([
     // v13.96: the downloadable ChatGPT prompt is composed from the real system prompt
     // rather than a hand-maintained copy. prompts.js depends only on legislation and
     // cc-state, so this adds no cycle.
-    'mod_contentcreator/prompts'
-], function(Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator, Translations, Prompts) {
+    'mod_contentcreator/prompts',
+    // v15.7.0: the per-route quality brief shown beside the prompt. Text only, no
+    // dependencies of its own, so this adds no cycle either.
+    'mod_contentcreator/masterbriefs'
+], function(Ajax, Str, Notification, ManifestBuilder, Planner, CcState, Generator, Translations, Prompts,
+    MasterBriefs) {
     'use strict';
 
     // =======================================================================
@@ -154,7 +158,10 @@ define([
         'msgtailortitle', 'msgtailorintro', 'msgtailorvet', 'msgtailorwp',
         'msgtailorpolicy', 'msgtailoruni', 'msgtailorpd', 'msgtailorgeneral',
         'msgtailortopicstext',
-        'msgtailorcopy', 'msgtailorcopied', 'msgtailorleadvet', 'msgtailorleadwp',
+        'msgtailorcopy', 'msgtailorcopied',
+        // v15.7.0: chrome for the per-route quality brief. The brief itself is in
+        // masterbriefs.js and deliberately not in the string table.
+        'msgbrieftitle', 'msgbriefintro', 'msgbriefhover', 'msgbriefcopy', 'msgbriefshow', 'msgtailorleadvet', 'msgtailorleadwp',
         'msgtailorleadpolicy', 'msgtailorleaduni', 'msgtailorleadpd',
         'msgtailorleadgeneral', 'msgtailorleadtopicstext',
         'msgchatgptpastecontinue', 'msgcontextwptitle', 'msgcontextwpsubtitle',
@@ -469,6 +476,11 @@ define([
         msgtailorintro: 'The downloaded prompt tells ChatGPT what to build. It does not tell it who the learners are, how plainly to write, or which sources to cite by number. Add your own brief underneath it.',
         msgtailorcopy: 'Copy example',
         msgtailorcopied: 'Copied',
+        msgbrieftitle: 'Quality brief for ChatGPT',
+        msgbriefintro: 'Paste this into ChatGPT as well as the prompt above, in the same chat. The prompt sets the structure; this sets the teaching quality.',
+        msgbriefhover: 'Add this extra information into ChatGPT as well as the prompt - not instead of it. The prompt tells ChatGPT what shape to return; this brief tells it how to write genuinely good learner content, with real examples, proper explanations and feedback worth reading.',
+        msgbriefcopy: 'Copy brief',
+        msgbriefshow: 'Show the brief',
         msgtailorleadvet: 'For a civil construction WHS unit, for example, you might add:',
         msgtailorleadwp: 'For an induction built from your own procedures, for example, you might add:',
         msgtailorleadpolicy: 'For a code of conduct or compliance policy, for example, you might add:',
@@ -5832,6 +5844,88 @@ define([
         }
     };
 
+    /**
+     * v15.7.0: the quality brief that goes into ChatGPT ALONGSIDE the prompt.
+     *
+     * The prompt the builder hands a teacher gets the SHAPE right - seven cards, the JSON
+     * envelope, the field names - and the fast-parse path depends on that shape exactly.
+     * What it cannot do in the space it has is teach the model how to write good learner
+     * material, and that is where the measured quality gap has always been: option feedback
+     * arriving at five or six words against a thirty-word floor, Performance Criteria
+     * paraphrased back instead of taught, one generic example where three real ones were
+     * asked for.
+     *
+     * So this is the second half, per route, and the hover explains that it is meant to be
+     * pasted in as well as the prompt rather than instead of it - which is the one thing a
+     * teacher could reasonably get wrong here, and would leave the generation with no
+     * structural instructions at all.
+     *
+     * Rendered as a scrollable block rather than a bullet list: it is a structured document
+     * with numbered sections, and flattening it into bullets loses the structure that makes
+     * it readable. The box is deliberately short on screen - nobody reads three thousand
+     * words in a panel - so the Copy button is the primary control and the text behind it
+     * is there for a teacher who wants to check what they are about to paste.
+     *
+     * @param {String} route Route name: vet, workplace, university, pd, policy, general,
+     *                       topicstext.
+     * @param {String} id DOM id for the copy button.
+     * @returns {String} The panel markup, or '' when the route has no brief.
+     */
+    const renderMasterBrief = (route, id) => {
+        const brief = MasterBriefs.forRoute(route);
+        if (!brief) { return ''; }
+
+        // Headings are the numbered section titles and the all-caps banner lines. Detected
+        // rather than marked up in the source, so the brief stays a plain document that a
+        // teacher can read, copy and edit outside this panel.
+        const body = brief.split('\n').map(function(line) {
+            const text = line.trim();
+            if (!text) { return '<div style="height:8px;"></div>'; }
+            const isHeading = /^\d+\.\s+[A-Z]/.test(text)
+                || (/^[A-Z0-9 ,'()\/-]+$/.test(text) && text.length > 12);
+            if (isHeading) {
+                return '<div style="font-weight:700;color:#1e3a8a;margin:10px 0 4px;">'
+                    + escapeHtml(text) + '</div>';
+            }
+            if (text.indexOf('* ') === 0) {
+                return '<div style="padding-left:14px;text-indent:-8px;">&bull; '
+                    + escapeHtml(text.slice(2)) + '</div>';
+            }
+            return '<div style="margin-bottom:4px;">' + escapeHtml(text) + '</div>';
+        }).join('');
+
+        const hover = s('msgbriefhover');
+        return '<div style="font-size:12px;line-height:1.6;margin-bottom:12px;padding:10px 12px;'
+            + 'background:#fefce8;border:1px solid #fde68a;border-radius:6px;" '
+            + 'title="' + escapeHtml(hover) + '">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">'
+            + '<div style="font-weight:600;color:#854d0e;">' + escapeHtml(s('msgbrieftitle'))
+            // The same sentence as the tooltip, as a focusable badge. A tooltip alone is
+            // invisible to a keyboard or touch user, and this is the sentence that stops
+            // someone pasting the brief INSTEAD of the prompt.
+            + ' <span tabindex="0" role="note" aria-label="' + escapeHtml(hover) + '" '
+            + 'title="' + escapeHtml(hover) + '" '
+            + 'style="display:inline-block;margin-left:4px;width:16px;height:16px;line-height:16px;'
+            + 'text-align:center;border-radius:50%;background:#facc15;color:#422006;'
+            + 'font-size:11px;font-weight:700;cursor:help;">i</span>'
+            + '</div>'
+            + '<button type="button" class="cc-tailor-copy" data-brief-route="' + escapeHtml(route) + '" '
+            + 'id="' + escapeHtml(id) + '" style="flex-shrink:0;background:#fef3c7;color:#854d0e;'
+            + 'border:1px solid #fcd34d;border-radius:4px;padding:3px 8px;font-size:11px;'
+            + 'font-weight:600;cursor:pointer;">'
+            + escapeHtml(s('msgbriefcopy')) + '</button>'
+            + '</div>'
+            + '<div style="color:#713f12;margin-bottom:6px;">' + escapeHtml(s('msgbriefintro')) + '</div>'
+            + '<details style="color:#1f2937;">'
+            + '<summary style="cursor:pointer;color:#854d0e;font-weight:600;">'
+            + escapeHtml(s('msgbriefshow')) + '</summary>'
+            + '<div style="max-height:260px;overflow-y:auto;margin-top:6px;padding:8px;'
+            + 'background:#fffbeb;border:1px solid #fde68a;border-radius:4px;">'
+            + body + '</div>'
+            + '</details>'
+            + '</div>';
+    };
+
     const renderTailorExample = (leadKey, bodyKey, id) => {
         const lines = String(s(bodyKey) || '').split('\n').filter(Boolean);
         if (!lines.length) { return ''; }
@@ -6228,6 +6322,7 @@ define([
                             </div>
                         </div>
                         ${renderTailorExample('msgtailorleadvet', 'msgtailorvet', 'cc-tailor-copy-vet')}
+                        ${renderMasterBrief('vet', 'cc-brief-copy-vet')}
                         <button type="button" id="cc-download-vet-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-vet-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#10b981;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             ${s('msgdownloadchatgptcontext')}
@@ -6782,7 +6877,9 @@ define([
                         </div>
                         ${selectedMode === 'policy'
                             ? renderTailorExample('msgtailorleadpolicy', 'msgtailorpolicy', 'cc-tailor-copy-wp')
-                            : renderTailorExample('msgtailorleadwp', 'msgtailorwp', 'cc-tailor-copy-wp')}
+                                + renderMasterBrief('policy', 'cc-brief-copy-wp')
+                            : renderTailorExample('msgtailorleadwp', 'msgtailorwp', 'cc-tailor-copy-wp')
+                                + renderMasterBrief('workplace', 'cc-brief-copy-wp')}
                         <button type="button" id="cc-download-wp-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-wp-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#3b82f6;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             ${s('msgdownloadchatgptcontext')}
@@ -7002,6 +7099,7 @@ define([
                             </div>
                         </div>
                         ${renderTailorExample('msgtailorleaduni', 'msgtailoruni', 'cc-tailor-copy-uni')}
+                        ${renderMasterBrief('university', 'cc-brief-copy-uni')}
                         <button type="button" id="cc-download-uni-prompt" class="cc-btn cc-btn-sm" data-testid="button-download-uni-prompt" style="display:inline-flex;align-items:center;gap:6px;background:#8b5cf6;color:white;border:none;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                             ${s('msgdownloadchatgpt')}
@@ -7241,9 +7339,12 @@ define([
                         </div>
                         ${selectedMode === 'general'
                             ? renderTailorExample('msgtailorleadgeneral', 'msgtailorgeneral', 'cc-tailor-copy-pd')
+                                + renderMasterBrief('general', 'cc-brief-copy-pd')
                             : (selectedMode === 'topicstext'
                                 ? renderTailorExample('msgtailorleadtopicstext', 'msgtailortopicstext', 'cc-tailor-copy-pd')
-                                : renderTailorExample('msgtailorleadpd', 'msgtailorpd', 'cc-tailor-copy-pd'))}
+                                    + renderMasterBrief('topicstext', 'cc-brief-copy-pd')
+                                : renderTailorExample('msgtailorleadpd', 'msgtailorpd', 'cc-tailor-copy-pd')
+                                    + renderMasterBrief('pd', 'cc-brief-copy-pd'))}
                         <button type="button" class="cc-btn cc-btn-primary" id="cc-download-pd-prompt" data-testid="button-download-pd-prompt" style="margin-bottom:12px;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="cc-btn-icon" style="width:16px;height:16px;">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -8736,7 +8837,14 @@ define([
         // this correct if a future step ever shows two.
         container.querySelectorAll('.cc-tailor-copy').forEach((btn) => {
             btn.addEventListener('click', () => {
-                const text = String(s(btn.getAttribute('data-tailor-key')) || '');
+                // v15.7.0: two panels share this handler. The tailor example carries a lang
+                // key; the quality brief carries a route and comes from masterbriefs.js,
+                // which is not in the string table and deliberately so - see the note at
+                // the top of that module.
+                const route = btn.getAttribute('data-brief-route');
+                const text = route
+                    ? String(MasterBriefs.forRoute(route) || '')
+                    : String(s(btn.getAttribute('data-tailor-key')) || '');
                 if (!text) { return; }
                 const confirmCopied = () => {
                     const original = btn.textContent;

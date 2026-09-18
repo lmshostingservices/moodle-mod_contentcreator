@@ -1,5 +1,84 @@
 # Changelog
 
+## 15.7.0 - 2026-09-19
+
+**A full quality brief for ChatGPT, written for each of the seven routes.**
+
+### The gap this fills
+
+The builder already gives a teacher a prompt to paste into ChatGPT. That prompt gets the
+**shape** right — seven cards, the JSON envelope, the field names — and the fast-parse path
+depends on that shape exactly. What it cannot do in the space available is teach the model
+**how to write good learner material**, and that is where every measured quality gap has
+been: option feedback arriving at five or six words against a thirty-word floor, Performance
+Criteria paraphrased back instead of taught, one generic example where three real ones were
+asked for.
+
+### The brief
+
+A second panel now sits beside the prompt on every route, carrying a full instructional
+brief for that route. The teacher pastes it into the same chat **as well as** the prompt.
+
+The hover and the focusable info badge both say exactly that, because pasting it *instead
+of* the prompt is the one mistake available here and it would leave the generation with no
+structural instructions at all.
+
+They are genuinely seven different briefs, not one text with the nouns swapped:
+
+| route | what it is built around |
+|---|---|
+| **VET** | the training product — Elements, Performance Criteria, Knowledge Evidence; model WHS law with jurisdiction handled honestly; legislation integrated into the teaching rather than stacked in front of it |
+| **Workplace** | the organisation's own policies, role boundaries, and the grey-area decision rather than the obvious case |
+| **University** | the learning outcome's verb, theory with its provenance *and its limits*, method made visible, named misconceptions |
+| **Professional Development** | practitioner level from the first line, the hard case, currency of evidence, scope of practice and escalation |
+| **Policy & Compliance** | the supplied document as the sole authority, exact thresholds and timeframes, and teaching *recognition* — the failure is not refusing to comply, it is not noticing the policy applies |
+| **General** | building on prior knowledge, concepts before terminology, honest about what is contested |
+| **Topics and Text** | faithful before fluent — traceable to the source, ambiguity flagged rather than resolved, scope neither broadened nor narrowed |
+
+Every brief carries the rules that address the measured defects: the three-example rule, a
+30–45 word feedback floor with feedback required for **every** option, a never-invent-a-
+citation rule, and a do-not-paraphrase rule.
+
+### Added beyond the supplied VET brief
+
+Three sections that the plugin's own behaviour requires and that no general brief would know
+to include:
+
+- **How this content will be used** — each section becomes a seven-card sequence, so keep
+  one continuing situation running across all seven rather than starting a new unrelated
+  example on every card.
+- **Decision questions and feedback** — the only place a learner is tested. Distractors must
+  be genuinely tempting, and feedback is required for every option at 30–45 words, because
+  wrong-answer feedback is the most valuable teaching moment in a section and has been the
+  weakest field in every pack measured.
+- **This content will be read aloud** — acronyms expanded on first use, no tables, slashes,
+  markdown or ampersands, because a synthetic voice reads them literally or skips them.
+
+### Where the briefs live, and why not in the language file
+
+In `amd/src/masterbriefs.js`, not `lang/en/contentcreator.php`. Seven briefs is around
+100 KB, which would nearly double the language file for a string read by one screen; and
+they are not translatable in any useful sense — the VET brief is about Australian model WHS
+laws, Codes of Practice and RTO obligations, so a machine translation would produce fluent
+Japanese about Australian construction law while quietly corrupting the legal terminology it
+exists to get right. They are machine-facing English instructions; the content language is
+set separately.
+
+The chrome around the brief — heading, explanation, copy button, hover — is in `lang/en` and
+translates normally.
+
+### Tests
+
+`tests/js/test-master-briefs.js` (new, 209 checks): loads the shipped module and asserts
+every route has a brief, that no two are identical, that each contains vocabulary belonging
+to its own route and *not* to the others, that all ten quality rules are present in all
+seven, that each ends with a fill-in block, that none contains a backtick or markdown that
+would break a paste, that all seven are wired into the builder with unique ids, and that the
+hover says "as well as … not instead of". Five mutations caught — including replacing one
+brief with a copy of another, which every weaker check would have passed.
+
+**Not smoke tested against a live generation.**
+
 ## 15.6.6 - 2026-09-19
 
 **Additional languages now narrate their quiz feedback. Every translated module ever built
