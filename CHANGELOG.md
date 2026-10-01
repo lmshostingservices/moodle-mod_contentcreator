@@ -1,5 +1,25 @@
 # Changelog
 
+## 15.7.1 - 2026-10-01
+
+**The VET "Tailor it to your learners" example is now generic.**
+
+The VET route's example brief was written for one unit — civil construction WHS — so it
+named excavators, trenches, PCBUs and the model WHS Act. A teacher building any other unit
+had to rewrite most of it before it was useful. It is now written for any unit of
+competency, with `[square-bracket]` placeholders for the unit code and title, the learner
+group, the industry and the job role, and the lead line tells the teacher to replace them.
+
+The structure of the brief is unchanged: audience, plain English with correct terminology,
+national-not-state framing with jurisdictional differences called out, real workplace
+examples, personal responsibility and rights, escalation boundaries, plain English first
+then the Performance Criterion or legislation it comes from, and connected scenarios. The
+legislation line now names legislation, codes of practice and Australian Standards
+generically and forbids invented section numbers.
+
+Changed: `msgtailorleadvet`, `msgtailorvet` (language file and JS fallback). No other
+routes changed.
+
 ## 15.7.0 - 2026-09-19
 
 **A full quality brief for ChatGPT, written for each of the seven routes.**
