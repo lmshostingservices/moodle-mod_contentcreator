@@ -283,7 +283,12 @@ window.__calls = calls;
 // the quiz panel. This does exactly what that handler does to make the quiz visible - the
 // two lines at player5.js:12525-12526 - so the clicks below land on a panel in the state a
 // learner would see after pressing Start.
+// v15.7.2: sections 1-6 below prove the v15.7.1 behaviour, which is now what the
+// "Require the correct answer to continue" setting gives when it is OFF. Section 7 turns it
+// on. The handler reads self.requireCorrectAnswer at answer time, as the shipped one does.
+window.__requireCorrect = false;
 window.__openQuiz = function() {
+    self.requireCorrectAnswer = window.__requireCorrect;
     var $c = $('.cc5-decision-challenge');
     $c.removeClass('cc5-challenge-at-start');
     $c.find('.cc5-challenge-panel').removeClass('cc5-active');
@@ -594,6 +599,99 @@ async function settle(page) {
         retried.options.filter(function(o) { return o.selected; }).length === 1
         && retried.options.some(function(o) { return o.oidx === String(CORRECT_OIDX) && o.revealed; }),
         JSON.stringify(retried.options.map(function(o) { return o.selected; })));
+
+    console.log('\n7. v15.7.2: "Require the correct answer to continue" ON (the default)');
+    const gateState = async function() {
+        return page.evaluate(function() {
+            var q = document.querySelector('.cc5-quiz-question.cc5-active');
+            var p = q.querySelector('.cc5-quiz-retry-prompt');
+            var nextAct = document.querySelector('.cc5-quiz-next-activity');
+            return {
+                answered: q.getAttribute('data-answered'),
+                firstAttempt: q.getAttribute('data-first-attempt'),
+                correct: q.getAttribute('data-correct'),
+                optionsLocked: q.querySelector('.cc5-dp-options').getAttribute('data-answered'),
+                promptText: p ? p.textContent : null,
+                promptVisible: p ? getComputedStyle(p).display !== 'none' : false,
+                nextDisabled: nextAct ? nextAct.disabled : null,
+                revealed: q.querySelectorAll('.cc5-dp-reveal').length,
+                quizDone: !!$('.cc5-decision-challenge').data('quiz-done'),
+                quizPassed: $('.cc5-decision-challenge').data('quiz-passed')
+            };
+        });
+    };
+    await page.goto('file://' + tmp);
+    await page.evaluate(function() { window.__requireCorrect = true; window.__openQuiz(); });
+    await page.click(WRONG_BARE);
+    await settle(page);
+    await page.waitForTimeout(100);
+    let g = await gateState();
+    check('a wrong answer does NOT reveal the correct option', g.revealed === 0, JSON.stringify(g));
+    check('the try-again prompt is shown', g.promptVisible && g.promptText.length > 0, JSON.stringify(g));
+    check('the question is NOT answered and the learner cannot move on',
+        g.answered !== 'true' && g.nextDisabled === true, JSON.stringify(g));
+    check('the remaining options are back in play', g.optionsLocked === 'false', JSON.stringify(g));
+    check('the first attempt is recorded as incorrect', g.firstAttempt === 'incorrect', JSON.stringify(g));
+    const wrongFb = await snapshot(page);
+    const wrongChosen = wrongFb.options.find(function(o) { return o.oidx === '1'; });
+    check('the wrong option stays marked incorrect', wrongChosen && wrongChosen.selected === 'incorrect');
+    // Keyboard on the option already ruled out must not re-score it.
+    const soundsBefore = wrongFb.calls.incorrectSound;
+    await page.focus(WRONG_BARE);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(100);
+    check('Enter on an option already tried wrong is refused',
+        (await snapshot(page)).calls.incorrectSound === soundsBefore);
+    // A second wrong answer: prompt again, previous explanation collapsed.
+    await page.click(WRONG_WITH_CLIP);
+    await page.waitForTimeout(150);
+    g = await gateState();
+    const twoWrong = await snapshot(page);
+    check('a second wrong answer still cannot move on', g.answered !== 'true' && g.nextDisabled === true,
+        JSON.stringify(g));
+    check('the first wrong answer\'s explanation is collapsed, its own is shown',
+        twoWrong.options.find(function(o) { return o.oidx === '1'; }).feedbackVisible === false
+        && twoWrong.options.find(function(o) { return o.oidx === '3'; }).feedbackVisible === true,
+        JSON.stringify(twoWrong.options.map(function(o) { return [o.oidx, o.feedbackVisible]; })));
+    // Now the right one.
+    await page.click(RIGHT_ANSWER);
+    await page.waitForTimeout(150);
+    g = await gateState();
+    check('the correct answer closes the question', g.answered === 'true', JSON.stringify(g));
+    check('...clears the prompt', !g.promptVisible, JSON.stringify(g));
+    check('...and unlocks Next Activity', g.nextDisabled === false, JSON.stringify(g));
+    check('the SCORE is still first-attempt: not counted correct, quiz not passed',
+        g.correct === 'false' && g.quizDone === true && g.quizPassed === false, JSON.stringify(g));
+
+    console.log('\n7b. Right first time with the gate on');
+    await page.goto('file://' + tmp);
+    await page.evaluate(function() { window.__requireCorrect = true; window.__openQuiz(); });
+    await page.click(RIGHT_ANSWER);
+    await page.waitForTimeout(150);
+    g = await gateState();
+    check('right first time: answered, counted correct, quiz passed, can move on',
+        g.answered === 'true' && g.correct === 'true' && g.quizPassed === true && g.nextDisabled === false,
+        JSON.stringify(g));
+    check('no prompt shown', !g.promptVisible, JSON.stringify(g));
+    console.log('\n7c. Gate on, but the question has NO correct option marked (authoring defect)');
+    // v15.7.2 self-audit, from the independent review: gating a question nobody can get
+    // right locked the learner in for good. The server accepts any answer to such a
+    // question (check_answer.php); the player must let them move on.
+    await page.goto('file://' + tmp);
+    await page.evaluate(function() {
+        window.__OPTIONS.forEach(function(o) { o.correct = false; });
+        window.__requireCorrect = true;
+        window.__openQuiz();
+    });
+    await page.click(WRONG_BARE);
+    await page.waitForTimeout(150);
+    g = await gateState();
+    check('an ungraded question closes on the first answer and the learner can move on',
+        g.answered === 'true' && g.nextDisabled === false && !g.promptVisible, JSON.stringify(g));
+    check('...and it is not scored as passed', g.quizPassed === false, JSON.stringify(g));
+
+    check('no JavaScript error was thrown anywhere in this file', pageErrors.length === 0,
+        pageErrors.join('\n'));
 
     await browser.close();
     console.log('\n' + (failures ? 'FAILED ' + failures + ' of ' + checks : 'PASSED all ' + checks + ' runtime checks'));

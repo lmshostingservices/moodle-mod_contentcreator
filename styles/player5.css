@@ -23772,3 +23772,55 @@ body[data-bs-theme="dark"] .cc5-step-card.cc5-vo-speaking > .cc5-card {
     outline: 2px solid var(--cc5-blue-cta) !important;
     outline-offset: 2px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v15.7.2 FIX-CC-QUIZ-MUST-ANSWER-CORRECTLY / FIX-CC-SORT-MUST-ANSWER-CORRECTLY
+   The "try again" prompt shown when a quiz answer or a sort placement is wrong
+   while "Require the correct answer to continue" is on. Both are live regions
+   rendered empty from the start; they take no space until filled.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cc5-player .cc5-quiz-retry-prompt,
+.cc5-player .cc5-sort-retry-prompt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid hsl(32deg 90% 70%);
+    background: hsl(40deg 100% 96%);
+    /* 4.5:1+ on the pale amber for 0.88rem text. */
+    color: hsl(28deg 85% 28%);
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+.cc5-player .cc5-quiz-retry-prompt:empty,
+.cc5-player .cc5-sort-retry-prompt:empty {
+    display: none;
+}
+.cc5-player .cc5-sort-retry-prompt {
+    justify-content: center;
+}
+/* A wrong option already tried keeps its red mark but steps back, so the options
+   still in play read as the ones to choose from. Its explanation is collapsed by the
+   handler on the next attempt. */
+.cc5-player .cc5-dp-option.cc5-dp-tried {
+    opacity: 0.6;
+}
+.cc5-player .cc5-dp-option[data-selected="incorrect"] {
+    cursor: not-allowed;
+}
+.cc5-player.dark-mode .cc5-quiz-retry-prompt,
+.cc5-player.dark-mode .cc5-sort-retry-prompt,
+body[data-bs-theme="dark"] .cc5-player .cc5-quiz-retry-prompt,
+body[data-bs-theme="dark"] .cc5-player .cc5-sort-retry-prompt,
+[data-theme="dark"] .cc5-player .cc5-quiz-retry-prompt,
+[data-theme="dark"] .cc5-player .cc5-sort-retry-prompt {
+    background: hsl(32deg 40% 14%);
+    border-color: hsl(32deg 60% 38%);
+    color: hsl(40deg 95% 78%);
+}
+@media (prefers-reduced-motion: reduce) {
+    .cc5-player .cc5-dp-option.cc5-dp-tried { transition: none; }
+}

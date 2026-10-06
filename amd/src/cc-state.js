@@ -71,7 +71,7 @@ define([], function() {
     // so that never fired either.
     //
     // CHECK THIS ON EVERY RELEASE: it must match $plugin->release in version.php exactly.
-    var CC_VERSION = '15.7.1';
+    var CC_VERSION = '15.7.3';
 
     // v11.02: Moved from player5.js  -  single source of truth for both builder and player.
     // Any stored voiceover whose voiceoverSchemaVersion !== VOICEOVER_SCHEMA_VERSION was
@@ -2108,6 +2108,155 @@ define([], function() {
         }
     }
 
+    /**
+     * v15.7.2: the ONE place the Excel mapping export payload is assembled.
+     *
+     * The mapping workbook used to be reachable only from the builder, on step 3, before
+     * generation - and once a pack was generated the builder clears its draft, so the
+     * teacher could never download it again. The player now offers it beside the PDF and
+     * text exports. Two callers building the same vendor payload by hand is how the two
+     * halves of a feature drift apart (see MANIFEST_SETTINGS in manifest.builder.js), so
+     * both call this, and tests/js/test-mapping-export.js asserts that a payload built
+     * from the builder's state and one rebuilt from the saved manifest are identical.
+     *
+     * The shape is exactly what builder.js sent to export-mapping-excel up to v15.7.1,
+     * field for field, including both KE/PE spellings (v6.5.19) - the vendor contract is
+     * unchanged.
+     *
+     * Topics may carry their children as `subtopics` (the topic plan, before generation)
+     * or `sections` (the saved manifest, after). The generator spreads each subtopic into
+     * its section (`...section`), so coversMappings, keyPoints, mappings and description
+     * survive generation and are read from either.
+     *
+     * @param {Object} src
+     * @param {String} src.unitCode Unit code.
+     * @param {String} src.unitTitle Unit title.
+     * @param {Object} src.context The generation context (manifest.context).
+     * @param {Array} src.topics Topics, with `subtopics` or `sections`.
+     * @param {Object} src.tgaData Unit data: elements, KE, PE, foundation skills.
+     * @param {String} [src.jobLevel] Display label for the job level(s).
+     * @param {String} [src.generatedDate] ISO date; defaults to now.
+     * @returns {Object} The export-mapping-excel payload.
+     */
+    function buildMappingPayload(src) {
+        var context = (src && src.context) || {};
+        var tga = (src && src.tgaData) || {};
+        var knowledgeEvidence = tga.requiredKnowledge || tga.knowledgeEvidence || [];
+        var performanceEvidence = tga.requiredSkills || tga.performanceEvidence || [];
+        var industries = Array.isArray(context.industries) && context.industries.length
+            ? context.industries : null;
+        var industryText = industries ? industries.join(', ')
+            : (context.industry || context.industrySector || '');
+        return {
+            unitCode: src.unitCode || tga.unitCode || tga.code || context.unitCode || 'Unknown',
+            unitTitle: src.unitTitle || tga.unitTitle || tga.title || context.unitTitle || 'Untitled Unit',
+            generationContext: {
+                generatedDate: src.generatedDate || new Date().toISOString(),
+                mode: 'vet',
+                industry: industryText,
+                industrySector: context.industrySector || '',
+                jobTitle: context.jobTitle || '',
+                jobLevel: (src.jobLevel !== undefined && src.jobLevel !== null)
+                    ? src.jobLevel : (context.jobLevel || ''),
+                jobTasks: context.jobTasks || [],
+                taskEquipment: context.taskEquipment || {},
+                country: context.country || 'AU',
+                state: context.state || ''
+            },
+            topics: (src.topics || []).map(function(topic) {
+                var children = topic.subtopics || topic.sections || [];
+                return {
+                    title: topic.title,
+                    description: topic.description || '',
+                    subtopics: children.map(function(sub) {
+                        var cm = sub.coversMappings;
+                        if (!cm || typeof cm !== 'object' || Array.isArray(cm)) {
+                            cm = {pc: [], ke: [], pe: [], fs: []};
+                        }
+                        return {
+                            title: sub.title,
+                            description: sub.description || '',
+                            keyPoints: sub.keyPoints || [],
+                            coversMappings: cm,
+                            mappings: Array.isArray(sub.mappings) ? sub.mappings : []
+                        };
+                    })
+                };
+            }),
+            tgaData: {
+                elements: tga.elements || [],
+                requiredKnowledge: knowledgeEvidence,
+                requiredSkills: performanceEvidence,
+                knowledgeEvidence: knowledgeEvidence,
+                performanceEvidence: performanceEvidence,
+                foundationSkills: tga.foundationSkills || []
+            },
+            aiContext: nonEmptyObject(src && src.aiContext) || nonEmptyObject(context.aiContext) || null
+        };
+    }
+
+    /**
+     * v15.7.2 self-audit: an empty object is "no AI context", not an AI context.
+     *
+     * builder.js stores `aiContext: CC_AI_CONTEXT || {}` in manifest.context, and nothing in
+     * the current builder ever assigns CC_AI_CONTEXT, so every saved pack carries `{}`. The
+     * builder's own export has always sent `CC_AI_CONTEXT || null` - i.e. null. A plain
+     * `||` treats `{}` as truthy, so the player would have sent `{}` where the builder sends
+     * null, and any vendor branch of the form `if (payload.aiContext)` would take the
+     * Practical Mapping path on nothing. Found by the independent review of this release.
+     *
+     * @param {*} v Candidate.
+     * @returns {Object|null} v when it is an object with at least one key, else null.
+     */
+    function nonEmptyObject(v) {
+        if (!v || typeof v !== 'object') { return null; }
+        if (Array.isArray(v)) { return v.length ? v : null; }
+        return Object.keys(v).length ? v : null;
+    }
+
+    /**
+     * v15.7.2 self-audit: job-level slugs saved by packs built before v15.3.7.
+     *
+     * v15.3.7 started storing context.jobLevel as display labels. Older packs hold the raw
+     * slugs ("entry, worker"), which the builder's export used to translate through
+     * JOB_LEVELS before sending. The player has no JOB_LEVELS, so the mapping downloaded
+     * from an old pack would have read "entry, worker" in the workbook. Labels pass through
+     * untouched; only an exact slug is replaced, with the English label from lang/en.
+     *
+     * @param {String} value context.jobLevel.
+     * @returns {String}
+     */
+    function jobLevelLabel(value) {
+        var map = {entry: 'Entry Level / Trainee', worker: 'Worker / Operator',
+            supervisor: 'Supervisor / Team Leader', manager: 'Manager / Senior',
+            executive: 'Executive / Director'};
+        if (!value) { return ''; }
+        return String(value).split(', ').map(function(v) {
+            return Object.prototype.hasOwnProperty.call(map, v) ? map[v] : v;
+        }).join(', ');
+    }
+
+    /**
+     * v15.7.2: the unit data the mapping needs, cut down to what the export reads.
+     *
+     * Saved into the manifest at generation as `mappingSource`, so the player can build
+     * the workbook later without asking training.gov.au again.
+     *
+     * @param {Object} tga The builder's tgaData.
+     * @returns {Object|null} The snapshot, or null when there is no unit.
+     */
+    function mappingSourceFromTga(tga) {
+        if (!tga || !Array.isArray(tga.elements)) { return null; }
+        return {
+            unitCode: tga.unitCode || tga.code || '',
+            unitTitle: tga.unitTitle || tga.title || '',
+            elements: tga.elements || [],
+            knowledgeEvidence: tga.requiredKnowledge || tga.knowledgeEvidence || [],
+            performanceEvidence: tga.requiredSkills || tga.performanceEvidence || [],
+            foundationSkills: tga.foundationSkills || []
+        };
+    }
+
     return {
         CC_VERSION: CC_VERSION,
         // v15.5.1: one copy of the HTML-body guard, shared by builder.js and
@@ -2159,6 +2308,10 @@ define([], function() {
         ajaxUrl: ajaxUrl,
         vendorFetch: vendorFetch,
         vendorUpload: vendorUpload,
-        vendorDownload: vendorDownload
+        vendorDownload: vendorDownload,
+        // v15.7.2: Excel mapping export, shared by builder.js and player5.js.
+        buildMappingPayload: buildMappingPayload,
+        mappingSourceFromTga: mappingSourceFromTga,
+        jobLevelLabel: jobLevelLabel
     };
 });

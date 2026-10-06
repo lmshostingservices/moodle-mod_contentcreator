@@ -1647,6 +1647,10 @@ define([
         this.voiceoverEnabled = (config.manifest.voiceSettings?.enabled) !== false; // Default true
         this.quizVoiceEnabled = (config.manifest.voiceSettings?.quizEnabled) !== false; // v13.32: Default true (enable quiz feedback narration out of the box)
         this.activitiesEnabled = (config.manifest.activitySettings?.enabled) !== false; // v11.11: Default true
+        // v15.7.2: "Require the correct answer to continue". Absent means ON, so packs built
+        // before the setting existed get it without regenerating; a teacher turns it off in
+        // Behaviour settings. Read by the quiz and Category Sort handlers at answer time.
+        this.requireCorrectAnswer = (config.manifest.activitySettings?.requireCorrectAnswer) !== false;
         this.voiceGender = (config.manifest.voiceSettings?.gender) || 'female';
         // v13.1: resolve voice name — prefer explicit voice, fall back to gender-based default
         this.voiceName = config.manifest.voiceSettings?.voice ||
@@ -2567,7 +2571,11 @@ define([
          */
         ccUnlockOptions: function($options) {
             $options.attr('data-answered', 'false').data('answered', false);
-            $options.find('.cc5-dp-option').attr('aria-disabled', 'false').attr('aria-pressed', 'false');
+            // v15.7.2: not the options already tried and found wrong. With "Require the
+            // correct answer" on, a question can be mid-retry when this runs; those options
+            // stay refused by the click guard, so they must not be announced as available.
+            $options.find('.cc5-dp-option').not('[data-selected]')
+                .attr('aria-disabled', 'false').attr('aria-pressed', 'false');
             showErrorToast(
                 getLabel('answerNotChecked'),
                 'checkAnswer'
@@ -4088,6 +4096,16 @@ define([
                 html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>';
                 html += '<span>' + getLabel('downloadText') + '</span>';
                 html += '</button>';
+
+                // v15.7.2: the Excel mapping, beside the PDF and text exports. VET packs
+                // only - the workbook maps the unit's elements, PCs, KE, PE and foundation
+                // skills to the generated topics, and no other route has a unit to map.
+                if (this.canExportMapping()) {
+                    html += '<button type="button" class="cc5-teacher-btn cc5-teacher-btn-secondary cc5-export-mapping-btn" title="' + getLabel('downloadMapping') + '">';
+                    html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><rect x="8" y="12" width="8" height="6" rx="0.5"/><line x1="8" x2="16" y1="15" y2="15"/><line x1="12" x2="12" y1="12" y2="18"/></svg>';
+                    html += '<span>' + getLabel('downloadMapping') + '</span>';
+                    html += '</button>';
+                }
                 
                 // v6.7.57: Settings button for behavioral settings
                 html += '<button type="button" class="cc5-teacher-btn cc5-teacher-btn-secondary cc5-settings-btn" title="' + getLabel('behaviorSettings') + '">';
@@ -8147,6 +8165,114 @@ define([
         },
 
         /**
+         * v15.7.2: whether this pack can produce the Excel mapping workbook.
+         *
+         * VET packs with a unit code. A pack generated before v15.7.2 has no
+         * `mappingSource`, but its context still names the unit, so the unit is fetched
+         * from training.gov.au again at download time - which is what makes the button
+         * work on content built before this release.
+         *
+         * @returns {Boolean}
+         */
+        canExportMapping: function() {
+            var m = this.manifest || {};
+            var ctx = m.context || {};
+            var isVet = m.mode === 'vet' || ctx.mode === 'vet';
+            var unit = (m.mappingSource && m.mappingSource.unitCode) || ctx.unitCode || '';
+            return !!(this.canEdit && isVet && String(unit).trim());
+        },
+
+        /**
+         * v15.7.2: the unit data for the mapping - from the pack, or fetched again.
+         *
+         * @returns {Promise<Object>} tgaData-shaped unit data.
+         */
+        loadMappingUnit: function() {
+            var m = this.manifest || {};
+            var src = m.mappingSource;
+            if (src && Array.isArray(src.elements) && src.elements.length) {
+                return Promise.resolve(src);
+            }
+            var unitCode = String((src && src.unitCode) || (m.context && m.context.unitCode) || '').trim();
+            return CcState.vendorFetch(this.cmid, 'tgaunit', {unitcode: unitCode}).then(function(data) {
+                // Same unwrap as the builder: the unit is in data.data, not data.unit.
+                var unit = data && (data.data || data.unit);
+                if (!data || !data.success || !unit) {
+                    throw new Error('training.gov.au did not return unit ' + unitCode);
+                }
+                return CcState.mappingSourceFromTga({
+                    unitCode: unit.code,
+                    unitTitle: unit.title,
+                    elements: unit.elements || [],
+                    knowledgeEvidence: unit.knowledgeEvidence || [],
+                    performanceEvidence: unit.performanceEvidence || [],
+                    foundationSkills: unit.foundationSkills || []
+                });
+            });
+        },
+
+        /**
+         * v15.7.2: download the Excel mapping workbook from the player.
+         *
+         * Same vendor endpoint and the same payload the builder sends before generation,
+         * assembled by the same function (CcState.buildMappingPayload), from what the pack
+         * saved: its context, its topics and sections (which keep their coversMappings
+         * through generation), and the unit data.
+         *
+         * @param {Object} $btn The button, disabled while the workbook is built.
+         * @returns {Promise<void>}
+         */
+        exportMappingExcel: function($btn) {
+            var self = this;
+            var m = this.manifest || {};
+            var ctx = m.context || {};
+            if ($btn && $btn.prop('disabled')) { return Promise.resolve(); }
+            if ($btn) { $btn.prop('disabled', true).addClass('cc5-busy'); }
+            return this.loadMappingUnit().then(function(unit) {
+                var payload = CcState.buildMappingPayload({
+                    unitCode: unit.unitCode || ctx.unitCode,
+                    unitTitle: unit.unitTitle || ctx.unitTitle,
+                    context: ctx,
+                    // Old packs store raw slugs; the builder always sent labels.
+                    jobLevel: CcState.jobLevelLabel(ctx.jobLevel),
+                    topics: m.topics || [],
+                    tgaData: unit,
+                    aiContext: ctx.aiContext || null,
+                    generatedDate: m.createdAt || undefined
+                });
+                return CcState.vendorDownload(self.cmid, 'exportmappingexcel', {payload: payload})
+                    .then(function(blob) {
+                        if (!blob || blob.size < 100) {
+                            throw new Error('the server returned an empty workbook');
+                        }
+                        var filename = String(payload.unitCode).replace(/[^A-Za-z0-9_-]/g, '_')
+                            + '_Mapping_Document.xlsx';
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        var dlRoot = document.getElementById('contentcreator-app') || document.body;
+                        dlRoot.appendChild(a);
+                        a.click();
+                        dlRoot.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        Notification.addNotification({
+                            message: getLabel('downloadMapping') + ' - ' + filename,
+                            type: 'success'
+                        });
+                    });
+            }).catch(function(err) {
+                ccWarn('[CC] mapping export failed: ' + ((err && err.message) || err));
+                Notification.addNotification({
+                    message: getLabel('mappingExportFailed') + ' ' + ((err && err.message) || ''),
+                    type: 'error'
+                });
+            }).then(function() {
+                if ($btn) { $btn.prop('disabled', false).removeClass('cc5-busy'); }
+            });
+        },
+
+        /**
          * Export content as text file (v6.6.66)
          * Downloads a .txt file with all learning content
          */
@@ -8955,6 +9081,8 @@ define([
             var quizVoiceEnabled = voiceSettings.quizEnabled !== false; // v13.32: Default true
             var activitySettings = manifest.activitySettings || {};
             var activitiesEnabled = activitySettings.enabled !== false;
+            // v15.7.2: absent means ON - see the constructor.
+            var requireCorrectAnswer = activitySettings.requireCorrectAnswer !== false;
             
             var html = '<div class="cc5-settings-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="cc5-settings-modal-title">';
             html += '<div class="cc5-settings-modal">';
@@ -9089,6 +9217,19 @@ define([
             html += '</label>';
             html += '</div>';
 
+            // v15.7.2: Require the correct answer to continue (quiz + Category Sort).
+            html += '<div class="cc5-settings-section">';
+            html += '<label class="cc5-settings-checkbox">';
+            html += '<input type="checkbox" id="cc5-require-correct-answer"' + (requireCorrectAnswer ? ' checked' : '')
+                + (activitiesEnabled ? '' : ' disabled') + '>';
+            html += '<span class="cc5-checkbox-indicator"></span>';
+            html += '<span class="cc5-checkbox-content">';
+            html += '<span class="cc5-checkbox-title">' + getLabel('requireCorrectAnswer') + '</span>';
+            html += '<span class="cc5-checkbox-desc">' + getLabel('requireCorrectAnswerDesc') + '</span>';
+            html += '</span>';
+            html += '</label>';
+            html += '</div>';
+
             // v13.32: Quiz Voiceover Toggle
             html += '<div class="cc5-settings-section">';
             html += '<label class="cc5-settings-checkbox">';
@@ -9168,6 +9309,14 @@ define([
             $(document).on('change', 'input[name="progressionMode"]', function() {
                 var showTimed = $(this).val() === 'timed';
                 $('.cc5-settings-timed-options').toggleClass('cc5-hidden', !showTimed);
+            });
+
+            // v15.7.2: "Require the correct answer" only means something with activities on.
+            // Disabled rather than hidden, so its saved value survives a round trip.
+            $(document).off('change.cc5reqcorrect').on('change.cc5reqcorrect', '#cc5-activities-enabled', function() {
+                var on = $(this).is(':checked');
+                $('#cc5-require-correct-answer').prop('disabled', !on)
+                    .closest('.cc5-settings-checkbox').toggleClass('cc5-disabled', !on);
             });
 
             // v15.3.0: the per-card dwell only means anything while stepping is on.
@@ -10274,6 +10423,7 @@ define([
             var cardDwellSeconds = _clampDwell($('#cc5-card-dwell').val());
             var voiceoverEnabled = $('#cc5-voiceover-enabled').is(':checked');
             var activitiesEnabled = $('#cc5-activities-enabled').is(':checked');
+            var requireCorrectAnswer = $('#cc5-require-correct-answer').is(':checked');
             var quizVoiceEnabled = $('#cc5-quiz-voice-enabled').is(':checked');
             
             // Clamp slide duration
@@ -10303,6 +10453,7 @@ define([
                 self.manifest.activitySettings = {};
             }
             self.manifest.activitySettings.enabled = activitiesEnabled;
+            self.manifest.activitySettings.requireCorrectAnswer = requireCorrectAnswer; // v15.7.2
             
             // Update instance variables
             self.progressionMode = progressionMode;
@@ -10313,6 +10464,7 @@ define([
             self.voiceoverEnabled = voiceoverEnabled;
             self.quizVoiceEnabled = quizVoiceEnabled; // v13.32
             self.activitiesEnabled = activitiesEnabled;
+            self.requireCorrectAnswer = requireCorrectAnswer; // v15.7.2
             
             // Save manifest via AJAX
             Ajax.call([{
@@ -11258,7 +11410,12 @@ define([
             // Get industry/jobTitle from manifest context if available
             if (this.manifest && this.manifest.context) {
                 if (this.manifest.context.industry) {
-                    params.industry = this.manifest.context.industry;
+                    // v15.7.2: a pack can span several industries now, and `industry` is
+                    // then the joined list. The gallery filters on one industry, so send
+                    // the first rather than a string no image is tagged with.
+                    var _inds = this.manifest.context.industries;
+                    params.industry = (Array.isArray(_inds) && _inds.length) ? _inds[0]
+                        : this.manifest.context.industry;
                 }
                 if (this.manifest.context.jobTitle) {
                     params.jobTitle = this.manifest.context.jobTitle;
@@ -11653,6 +11810,24 @@ define([
             setTimeout(function() { $current.removeClass('cc5-sort-item-enter'); }, 560);
         },
 
+        /**
+         * File the current Category Sort item in the column the learner chose.
+         *
+         * v15.7.2 FIX-CC-SORT-MUST-ANSWER-CORRECTLY: with "Require the correct answer to
+         * continue" on (the default; activitySettings.requireCorrectAnswer), a wrong
+         * column no longer files the item. It shakes red, a "try again" prompt is announced, and the SAME item stays
+         * up until it goes in the right column - the same rule the quiz follows, so the
+         * activities share one idea of what finishing means. The score counts an item
+         * only when it was filed correctly at the FIRST attempt, so a learner who needed
+         * a second go finishes the activity without it being marked passed.
+         *
+         * Both the tap buttons and the drag/keyboard paths arrive here, so this is the
+         * only place the rule lives.
+         *
+         * @param {Object} $challenge The .cc5-decision-challenge block.
+         * @param {String} tapped 'good' or 'bad'.
+         * @returns {void}
+         */
         _handleSortAnswer: function($challenge, tapped) {
             var self = this;
             var $arena = $challenge.find('.cc5-sort-arena');
@@ -11665,38 +11840,97 @@ define([
             var isCorrect = (tapped === correctCat);
             var score = parseInt($arena.data('score'), 10) || 0;
             var streak = parseInt($arena.data('streak'), 10) || 0;
+            // Whether THIS item has already had a wrong attempt. Kept on the data element
+            // so it belongs to the item, not to whatever happens to be showing.
+            var missedBefore = $item.attr('data-missed') === 'true';
 
             var $currentItem = $arena.find('.cc5-sort-current-item');
             var $scoreEl = $arena.find('.cc5-sort-score');
-            if (isCorrect) {
-                score++;
-                streak++;
-                $arena.data('score', score).data('streak', streak);
-                $currentItem.addClass('cc5-sort-correct');
-                playDecisionCorrectSound();
-                haptic(10);
-                if (streak >= 3) {
-                    $scoreEl.addClass('cc5-sort-streak');
-                    setTimeout(function() { $scoreEl.removeClass('cc5-sort-streak'); }, 500);
+            var $prompt = $arena.find('.cc5-sort-retry-prompt');
+            // v15.7.2 self-audit: disabling the focused tap button for the 600ms animation
+            // drops keyboard focus to <body>. With the retry gate a keyboard or
+            // screen-reader user would have to Tab back from the top of the page after
+            // every wrong attempt, so focus is put back where it was.
+            var _focused = document.activeElement;
+            var _refocus = function() {
+                if (_focused && $.contains($arena[0], _focused) && document.body.contains(_focused)
+                        && (document.activeElement === document.body || !document.activeElement)) {
+                    try { _focused.focus({preventScroll: true}); } catch (err) { _focused.focus(); }
                 }
-            } else {
+            };
+            $arena.find('.cc5-sort-tap').prop('disabled', true);
+
+            // Setting off: the pre-v15.7.2 behaviour - a wrong column files the item
+            // there anyway, marked wrong, and the activity moves on.
+            if (!isCorrect && self.requireCorrectAnswer === false) {
                 streak = 0;
                 $arena.data('streak', streak);
                 $currentItem.addClass('cc5-sort-incorrect');
                 playDecisionIncorrectSound();
                 haptic(30);
+                var $wrongZone = $arena.find('.cc5-sort-dropzone[data-category="' + correctCat + '"]');
+                var $wrongDrop = $('<div class="cc5-sort-dropped-item cc5-drop-incorrect">'
+                    + '<span class="cc5-drop-icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>'
+                    + '<span class="cc5-drop-text"></span>'
+                    + '</div>');
+                $wrongDrop.find('.cc5-drop-text').text($item.text());
+                $wrongZone.append($wrongDrop);
+                playSortDropSound();
+                $scoreEl.text(score);
+                setTimeout(function() {
+                    $currentItem.removeClass('cc5-sort-correct cc5-sort-incorrect');
+                    $arena.find('.cc5-sort-tap').prop('disabled', false);
+                    $arena.data('sorting-locked', false);
+                    self._showSortItem($challenge, idx + 1);
+                    if ($arena.find('.cc5-sort-tap-btns').is(':visible')) { _refocus(); }
+                }, 600);
+                return;
             }
 
-            $arena.find('.cc5-sort-tap').prop('disabled', true);
+            if (!isCorrect) {
+                streak = 0;
+                $arena.data('streak', streak);
+                $item.attr('data-missed', 'true');
+                $currentItem.addClass('cc5-sort-incorrect');
+                playDecisionIncorrectSound();
+                haptic(30);
+                // Re-set rather than leave, so a second wrong attempt is announced too.
+                $prompt.text('');
+                setTimeout(function() { $prompt.text(getLabel('sortTryAgainPrompt')); }, 30);
+                // Nothing is dropped and `current` does not move: the same item is put
+                // back in play once the shake has finished.
+                setTimeout(function() {
+                    $currentItem.removeClass('cc5-sort-incorrect');
+                    $arena.find('.cc5-sort-tap').prop('disabled', false);
+                    $arena.data('sorting-locked', false);
+                    _refocus();
+                }, 600);
+                return;
+            }
+
+            $prompt.text('');
+            if (!missedBefore) {
+                score++;
+                streak++;
+            }
+            $arena.data('score', score).data('streak', streak);
+            $currentItem.addClass('cc5-sort-correct');
+            playDecisionCorrectSound();
+            haptic(10);
+            if (streak >= 3 && !missedBefore) {
+                $scoreEl.addClass('cc5-sort-streak');
+                setTimeout(function() { $scoreEl.removeClass('cc5-sort-streak'); }, 500);
+            }
 
             var $dropzone = $arena.find('.cc5-sort-dropzone[data-category="' + correctCat + '"]');
-            var icon = isCorrect
-                ? '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
-                : '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
-            var $dropped = $('<div class="cc5-sort-dropped-item ' + (isCorrect ? 'cc5-drop-correct' : 'cc5-drop-incorrect') + '">'
+            var icon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+            // .text() into the span, not string concatenation: the item text is vendor
+            // content and this is HTML.
+            var $dropped = $('<div class="cc5-sort-dropped-item cc5-drop-correct">'
                 + '<span class="cc5-drop-icon">' + icon + '</span>'
-                + '<span>' + $item.text() + '</span>'
+                + '<span class="cc5-drop-text"></span>'
                 + '</div>');
+            $dropped.find('.cc5-drop-text').text($item.text());
             $dropzone.append($dropped);
             playSortDropSound();
 
@@ -11707,6 +11941,9 @@ define([
                 $arena.find('.cc5-sort-tap').prop('disabled', false);
                 $arena.data('sorting-locked', false);
                 self._showSortItem($challenge, idx + 1);
+                // Only while there is a next item - after the last one the tap buttons are
+                // hidden and See Results takes over.
+                if ($arena.find('.cc5-sort-tap-btns').is(':visible')) { _refocus(); }
             }, 600);
         },
 
@@ -12300,6 +12537,13 @@ define([
                 e.stopPropagation();
                 self.exportAsText();
             });
+
+            // v15.7.2: Excel mapping download after generation.
+            this.container.on('click', '.cc5-export-mapping-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                self.exportMappingExcel($(this));
+            });
             
             // v6.7.57: Settings button click
             this.container.on('click', '.cc5-settings-btn', function(e) {
@@ -12640,7 +12884,17 @@ define([
                 var $challenge = $opt.closest('.cc5-decision-challenge');
                 var $options = $opt.closest('.cc5-dp-options');
                 if ($options.data('answered') === true || $options.attr('data-answered') === 'true') return;
+                // v15.7.2: an option already tried and found wrong cannot be chosen again.
+                // The stylesheet takes pointer events off it, but Enter/Space on a
+                // focused option still lands here.
+                if ($opt.attr('data-selected')) return;
                 e.preventDefault();
+                // v15.7.2: a new attempt collapses the explanation of the previous wrong
+                // one. Its red mark stays, so the learner can still see what they have
+                // ruled out, but only the answer just given is explained on screen.
+                $options.find('.cc5-dp-option[data-selected="incorrect"]').each(function() {
+                    $(this).addClass('cc5-dp-tried').find('.cc5-dp-feedback').hide();
+                });
                 // v15.5.0: lock before grading. See the standalone handler above for why
                 // the order is what it is, and why v15.6.1 left it alone.
                 $options.attr('data-answered', 'true').data('answered', true);
@@ -12651,6 +12905,9 @@ define([
                     return;
                 }
                 var isCorrect = !!result.iscorrect;
+                // v15.7.2: read at answer time, not render time, so a teacher who changes
+                // the Behaviour setting sees it take effect without regenerating anything.
+                var _mustBeRight = self.requireCorrectAnswer !== false;
                 var $chosenFb = $opt.find('.cc5-dp-feedback');
                 // v15.6.4: the verdict leads the feedback, in words, for everyone.
                 // CcState.withVerdict is what builder.js also narrates, so the clip and
@@ -12672,6 +12929,26 @@ define([
                 $opt.find('.cc5-dp-result-text').text(
                     verdictWord(isCorrect));
                 $opt.find('.cc5-dp-feedback').show();
+                // v15.7.2 FIX-CC-QUIZ-MUST-ANSWER-CORRECTLY: with "Require the correct
+                // answer to continue" on (the default), the right answer is NOT revealed
+                // on a wrong attempt.
+                //
+                // Requested: "the student must select the correct option before proceeding
+                // to the next question. If the student selects an incorrect answer, they
+                // should receive a prompt to try again rather than being allowed to
+                // proceed."
+                //
+                // v15.4.19 revealed the correct option - badge, green edge and its
+                // explanation - because at the time a wrong answer CLOSED the question and
+                // the reveal was the learner's only way to find out what was right. Now a
+                // wrong answer leaves the question open, and printing the answer beside
+                // the retry would turn the retry into copying. The learner gets the reason
+                // THEIR choice was wrong (its own feedback, above) and a prompt to try
+                // again; the correct option's explanation arrives when they choose it.
+                //
+                // `correctindex` / `correctfeedback` are still returned by the grader - the
+                // server-side record and tests/js/test-local-grading.js depend on the shape
+                // - they are simply not put on screen by this handler.
                 // FIX-CC-QUIZ-WRONG-ANSWER-NO-FEEDBACK (v15.4.19): reveal the right answer
                 // when the learner got it wrong.
                 //
@@ -12701,7 +12978,10 @@ define([
                 // "Correct answer" badge on BOTH. Revealing only the first left the second
                 // badged and dimmed at 42%, which reads as a rendering fault. Rare, and a
                 // dropped `.first()` is the whole cost of not having it.
-                if (!isCorrect && result.graded && result.correctindex >= 0) {
+                // v15.7.2: only when the "require the correct answer" setting is OFF. With
+                // it on, the question stays open and printing the answer would turn the
+                // retry into copying - see FIX-CC-QUIZ-MUST-ANSWER-CORRECTLY below.
+                if (!_mustBeRight && !isCorrect && result.graded && result.correctindex >= 0) {
                     // v15.5.0: selected by the MANIFEST index the server returned, not by
                     // a data-correct attribute that no longer exists. This also retires
                     // the v15.4.20 note below: the server resolves one correct index, so
@@ -12828,32 +13108,79 @@ define([
                             + 'silent by design. Re-generate the module to add quiz narration.');
                     }
                 }
-                // FIX-CC-QUIZ-GATE-INCONSISTENT (v15.4.6): ANSWERED, not CORRECT, is what
-                // moves the learner on.
+                // FIX-CC-QUIZ-MUST-ANSWER-CORRECTLY (v15.7.2): CORRECT, not merely
+                // ANSWERED, is what moves the learner on - while the Behaviour setting
+                // "Require the correct answer to continue" (activitySettings.
+                // requireCorrectAnswer) is on. Absent means ON, so every pack built before
+                // the setting existed gets it; turned off, this handler behaves exactly
+                // as v15.7.1 did (answered once, right answer revealed, move on).
+                // With it on, this reverses v15.4.6 (FIX-CC-QUIZ-GATE-INCONSISTENT), which
+                // let a wrong answer close the question, on the author's instruction
+                // quoted at the reveal above.
                 //
-                // Reported: "you have a mix of activity completion styles. The MCQ has a
-                // Try Again and requires Try Again to get it right to proceed, then flip
-                // cards, then category sort where if you get 5/6 you can still proceed and
-                // then get a score - it's mixing different styles. I would remove the Try
-                // Again from the MCQ."
+                // What v15.4.6 objected to is kept out:
+                // - the answer is not printed under the retry (no reveal, see above), so
+                //   getting through still means working out which option is right;
+                // - the SCORE is still first-attempt. `data-correct` on the question
+                //   records whether the FIRST answer was right and is never upgraded by a
+                //   later one, so `quiz-passed` - the thing the score ring counts - stays
+                //   meaningful. Without that, everyone who reached the end would score
+                //   100%, which is exactly the "meaningless score" v15.4.6 fixed.
+                // - Category Sort follows the same rule in _handleSortAnswer(), so the
+                //   activities no longer have different ideas of what finishing means.
+                //   Flip & Learn has no wrong answer and is unchanged.
                 //
-                // Right on both counts. Category Sort lets a learner finish with 5 of 6 and
-                // scores them 5 of 6; Flip & Learn is exploration and always passes once
-                // every card is turned. Only the quiz refused to move until the learner had
-                // guessed its way to the right answer - which is not an assessment, it is a
-                // lock with the answer printed underneath, and it made the score
-                // meaningless because everyone who reached the end had scored full marks.
-                //
-                // The quiz now behaves the way Category Sort does: every question is
-                // answered once, the learner always proceeds, and `quiz-passed` is true only
-                // if every question was right FIRST TIME. That is the number the score ring
-                // has been promising all along. The Try Again button is gone from this
-                // panel (cc-card-slots.js) - there is nothing left for it to do.
+                // The server is told about every attempt (ccGradeAnswer reports each one)
+                // and evidence::apply_answer() REPLACES per question, so the completion
+                // record ends on the correct answer the learner had to reach.
                 var $qBlock = $opt.closest('.cc5-quiz-question');
                 var $qSet = $opt.closest('.cc5-quiz-questions');
+                var $retryPrompt = $qBlock.find('.cc5-quiz-retry-prompt');
+                // First attempt decides the score, once. A question with no attempt
+                // recorded yet takes this answer's verdict; a later attempt never changes it.
+                if (!$qBlock.attr('data-first-attempt')) {
+                    $qBlock.attr('data-first-attempt', isCorrect ? 'correct' : 'incorrect');
+                }
+
+                // `result.graded` too: a question with NO option marked correct cannot be
+                // got right, so gating it would lock the learner in for good. The server
+                // already treats that as an authoring defect and accepts any answer
+                // (check_answer.php); the player does the same - it falls through to the
+                // answered path below, exactly as v15.7.1 did. Found by the independent
+                // review of this release (v15.7.2 self-audit).
+                if (!isCorrect && _mustBeRight && result.graded) {
+                    playDecisionIncorrectSound();
+                    haptic(30);
+                    // Put the question back in play, minus the option just ruled out. It
+                    // keeps data-selected="incorrect", its red mark, its feedback and
+                    // aria-disabled - the stylesheet takes pointer events off it and the
+                    // guard at the top of this handler refuses the keyboard.
+                    $options.attr('data-answered', 'false').data('answered', false);
+                    $options.find('.cc5-dp-option').not('[data-selected]')
+                        .attr('aria-disabled', 'false');
+                    $qBlock.attr('data-awaiting-retry', 'true');
+                    // Re-set the text even when it is already showing, so the live region
+                    // announces again on a second wrong attempt.
+                    $retryPrompt.text('');
+                    setTimeout(function() {
+                        // Only if the question is still waiting: a correct answer given
+                        // inside these 30ms has already cleared the prompt and closed it.
+                        if ($qBlock.attr('data-awaiting-retry') === 'true') {
+                            $retryPrompt.text(getLabel('quizTryAgainPrompt'));
+                        }
+                    }, 30);
+                    // Next Question / Next Activity stay exactly as they are: disabled.
+                    return;
+                }
+
+                // Correct - or, with the setting off, answered at all. The question
+                // closes and counts as answered; the score is the first attempt either way.
+                $qBlock.removeAttr('data-awaiting-retry');
+                $retryPrompt.text('');
                 $qBlock.attr('data-answered', 'true');
-                $qBlock.attr('data-correct', isCorrect ? 'true' : 'false');
-                if (isCorrect) { $qBlock.attr('data-passed', 'true'); }
+                $qBlock.attr('data-correct',
+                    $qBlock.attr('data-first-attempt') === 'correct' ? 'true' : 'false');
+                if ($qBlock.attr('data-correct') === 'true') { $qBlock.attr('data-passed', 'true'); }
                 var _qTotal = parseInt($qSet.attr('data-total'), 10) || 1;
                 var _qAnswered = $qSet.find('.cc5-quiz-question[data-answered="true"]').length;
                 var _qCorrect = $qSet.find('.cc5-quiz-question[data-correct="true"]').length;
@@ -12911,9 +13238,11 @@ define([
                             .html('<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>');
                         showActivityMiniCelebration($challenge.find('.cc5-challenge-panel.cc5-active'));
                     }
-                    // v15.4.6: no Try Again on either branch - a question is answered once.
+                    // v15.4.6: no Try Again BUTTON in the challenge quiz. v15.7.2 keeps it
+                    // that way - a wrong answer reopens the question in place with the
+                    // .cc5-quiz-retry-prompt line instead, so there is nothing to press.
                     // The call is kept because _tryAgainFor() also serves the STANDALONE
-                    // decision-point card, which still has one; on a challenge quiz it now
+                    // decision-point card, which still has one; on a challenge quiz it
                     // matches nothing and costs a no-op selector lookup.
                     _tryAgainFor($opt).hide();
                 }

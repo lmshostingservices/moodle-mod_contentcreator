@@ -150,7 +150,9 @@ define(['mod_contentcreator/planner', 'mod_contentcreator/generator', 'mod_conte
         appearanceSettings: function() { return { headerColor: null }; },
         // The Policy & Compliance identity strip - which document this course teaches,
         // who owns it, when it was last reviewed, who to ask. Absent on every other route.
-        policyMeta: function() { return null; }
+        policyMeta: function() { return null; },
+        // v15.7.2: VET unit data for the after-generation Excel mapping download.
+        mappingSource: function() { return null; }
     };
 
     /**

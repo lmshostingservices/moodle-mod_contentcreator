@@ -174,6 +174,8 @@ define([
         'msgprimarycolorhint', 'msgnovoiceoverhint', 'msgadditionallanguages',
         'msgadditionallangshint', 'msgaddimageshint', 'msgapplyimagesall',
         'msgdecisionchallenge', 'msgincludedecision', 'msgnochallengehint',
+        'msgrequirecorrect', 'msgrequirecorrecthint', 'msgdisabled',
+        'msgselectindustries', 'msgselectsectors', 'msgmultiindustryhint',
         'msgprogressionmode', 'msgprogressionhint', 'msgprogressfree', 'msgprogressmintime',
         'msgprogressvoice', 'msgreadingtime', 'msgtopicnavmode', 'msgtopicnavhint',
         'msgtopicnavfree', 'msgtopicnavsequential', 'msgcontentgenerated', 'msginstructionvet',
@@ -528,6 +530,12 @@ define([
         msgdecisionchallenge: 'Decision Challenge Activities',
         msgincludedecision: 'Include Decision Challenge',
         msgnochallengehint: 'When disabled, content will be delivered without interactive challenge activities',
+        msgrequirecorrect: 'Require the correct answer to continue',
+        msgdisabled: 'Disabled',
+        msgselectindustries: 'Select one or more industries',
+        msgselectsectors: 'Select one or more sub-industries',
+        msgmultiindustryhint: 'You can select several - scenarios will be drawn from across them.',
+        msgrequirecorrecthint: 'Learners must choose the correct answer in the quiz and the correct column in Category Sort before moving on. A wrong answer shows its feedback and a prompt to try again. The score still counts first attempts only. Can be changed after generation in Behaviour settings.',
         msgprogressionmode: 'Slide Progression Mode',
         msgprogressionhint: 'Choose how learners progress through the slides',
         msgprogressfree: 'Learners can move freely between slides',
@@ -1608,7 +1616,275 @@ define([
     };
 
     // Bind country/state handlers directly using onchange (event delegation doesn't work in Moodle AMD)
+    // ===========================================================================
+    // v15.7.2: MULTI-SELECT INDUSTRY AND SUB-INDUSTRY
+    //
+    // "Allow multiple select of industry so the teacher can have scenarios from many
+    // industries instead of just one" - and of sub-industries as well.
+    //
+    // The four pickers (#cc-industry, #cc-industry-sector, #cc-wp-industry,
+    // #cc-wp-industry-sector) stay real <select> elements, now `multiple`, and a checkbox
+    // panel drives them. Keeping the native element as the source of truth is deliberate:
+    // about a dozen readers in this file take `.value`, and on a multiple select that is
+    // the FIRST selected option - so every per-industry table lookup (task categories,
+    // equipment, job titles) keeps working unchanged, while the places that describe the
+    // context to the AI read ALL of them through ccMultiValue(). The e2e picker test also
+    // still drives the native element with selectOption().
+    // ===========================================================================
+
+    /**
+     * Every selected value of a picker, placeholder and "_other" excluded.
+     *
+     * @param {String} id Element id.
+     * @return {Array<String>}
+     */
+    const ccMultiValues = (id) => {
+        const el = document.getElementById(id);
+        if (!el) { return []; }
+        const opts = el.selectedOptions ? Array.from(el.selectedOptions)
+            : Array.from(el.options || []).filter(o => o.selected);
+        const seen = {};
+        return opts.map(o => o.value).filter(v => {
+            if (!v || v === '_other' || seen[v]) { return false; }
+            seen[v] = true;
+            return true;
+        });
+    };
+
+    /**
+     * The selected values joined for display and prompts: "Construction, Health".
+     *
+     * @param {String} id Element id.
+     * @return {String}
+     */
+    const ccMultiValue = (id) => ccMultiValues(id).join(', ');
+
+    /**
+     * Sub-industry <option>s for one or several industries.
+     *
+     * One industry: a flat list, exactly as before. Several: one <optgroup> per industry,
+     * so "General" or a shared sector name is not ambiguous about which industry it
+     * belongs to. Values already selected are kept selected when the industry list
+     * changes - adding a second industry must not wipe the sub-industries already picked.
+     *
+     * @param {Array<String>} industries Selected industries.
+     * @param {Array<String>} keep Sub-industry values to keep selected.
+     * @return {String} HTML.
+     */
+    const ccSectorOptionsHtml = (industries, keep) => {
+        const kept = keep || [];
+        const opt = (v) => `<option value="${escapeHtml(v)}"${kept.includes(v) ? ' selected' : ''}>${escapeHtml(v)}</option>`;
+        if (!industries.length) { return ''; }
+        if (industries.length === 1) {
+            return getSubcategoriesForIndustry(industries[0]).map(opt).join('');
+        }
+        return industries.map(ind =>
+            `<optgroup label="${escapeHtml(ind)}">${getSubcategoriesForIndustry(ind).map(opt).join('')}</optgroup>`
+        ).join('');
+    };
+
+    /**
+     * Job titles across every selected industry, de-duplicated, in industry order.
+     *
+     * @param {Array<String>} industries Selected industries.
+     * @return {Array<String>}
+     */
+    const ccJobTitlesForIndustries = (industries) => {
+        const out = [];
+        (industries.length ? industries : ['Other']).forEach(ind => {
+            getJobTitlesForIndustry(ind).forEach(j => { if (!out.includes(j)) { out.push(j); } });
+        });
+        return out;
+    };
+
+    /**
+     * The industry line the AI is given.
+     *
+     * One industry reads exactly as it always has ("Construction - Civil"). Several are
+     * listed with their own sub-industries, and the line says what the teacher chose them
+     * for: scenarios drawn from across them, not one blended workplace.
+     *
+     * @param {Array<String>} industries Selected industries.
+     * @param {Array<String>} sectors Selected sub-industries.
+     * @return {String}
+     */
+    const ccIndustryContextText = (industries, sectors) => {
+        if (industries.length <= 1) {
+            const ind = industries[0] || '';
+            return sectors.length ? `${ind} - ${sectors.join(', ')}` : ind;
+        }
+        const parts = industries.map(ind => {
+            const own = sectors.filter(sec => getSubcategoriesForIndustry(ind).includes(sec));
+            return own.length ? `${ind} (${own.join(', ')})` : ind;
+        });
+        return 'Multiple industries - set each scenario in ONE of these and vary the industry '
+            + 'across slides rather than blending them into one workplace: ' + parts.join('; ');
+    };
+
+    /**
+     * Each selected industry with the sub-industries chosen under it.
+     *
+     * Saved in the context as `industryMap` so prompts.js can give each SECTION one
+     * industry of its own (ccSectionContext) - sections are generated by independent calls,
+     * so an instruction to "vary the industry across slides" given identically to every
+     * call cannot actually make them vary.
+     *
+     * @param {Array<String>} industries Selected industries.
+     * @param {Array<String>} sectors Selected sub-industries.
+     * @return {Object} industry -> its selected sub-industries.
+     */
+    const ccIndustryMap = (industries, sectors) => {
+        const map = {};
+        industries.forEach(ind => {
+            const own = getSubcategoriesForIndustry(ind);
+            map[ind] = sectors.filter(sec => own.includes(sec));
+        });
+        return map;
+    };
+
+    /**
+     * Turn a <select multiple> into a checkbox panel that drives it.
+     *
+     * The native select stays in the DOM (visually hidden, still labelled, still the thing
+     * every reader and test talks to). Ticking a box sets option.selected and dispatches
+     * `change` on the select, so the existing onchange cascades run unmodified. A
+     * MutationObserver rebuilds the panel whenever the select's options are replaced -
+     * which is what the industry cascade does to the sub-industry list.
+     *
+     * @param {HTMLSelectElement} select The picker.
+     * @param {String} placeholder Text shown while nothing is selected.
+     * @return {void}
+     */
+    const ccEnhanceMultiSelect = (select, placeholder) => {
+        if (!select || select._ccMulti) { return; }
+        select._ccMulti = true;
+        select.multiple = true;
+        // The single-select placeholder option has no meaning in a multi-select.
+        Array.from(select.querySelectorAll('option[value=""]')).forEach(o => o.remove());
+        select.classList.add('cc-multi-native');
+        select.setAttribute('tabindex', '-1');
+        select.setAttribute('aria-hidden', 'true');
+
+        const wrap = document.createElement('div');
+        wrap.className = 'cc-multi';
+        const panelId = select.id + '-panel';
+        wrap.innerHTML = `<button type="button" class="cc-select cc-multi-toggle" aria-expanded="false" aria-controls="${panelId}">`
+            + '<span class="cc-multi-summary"></span></button>'
+            + `<div class="cc-multi-panel" id="${panelId}" role="group" hidden></div>`;
+        select.parentNode.insertBefore(wrap, select.nextSibling);
+        const toggle = wrap.querySelector('.cc-multi-toggle');
+        const panel = wrap.querySelector('.cc-multi-panel');
+        const summary = wrap.querySelector('.cc-multi-summary');
+        // The visible control takes over the select's accessible name.
+        const label = select.closest('.cc-form-group')?.querySelector('.cc-form-label');
+        if (label) {
+            if (!label.id) { label.id = select.id + '-label'; }
+            toggle.setAttribute('aria-labelledby', label.id + ' ' + select.id + '-summary');
+            summary.id = select.id + '-summary';
+            panel.setAttribute('aria-labelledby', label.id);
+        }
+
+        const renderSummary = () => {
+            const vals = ccMultiValues(select.id);
+            const empty = !select.options.length;
+            summary.textContent = vals.length ? vals.join(', ')
+                : (empty ? s('msgselectindustryfirst') : placeholder);
+            toggle.classList.toggle('cc-multi-has-value', vals.length > 0);
+            toggle.disabled = empty;
+        };
+
+        const rebuild = () => {
+            const rows = [];
+            const addRow = (o) => {
+                const cbId = select.id + '-opt-' + rows.length;
+                rows.push(`<label class="cc-multi-option" for="${cbId}"><input type="checkbox" id="${cbId}"`
+                    + ` value="${escapeHtml(o.value)}"${o.selected ? ' checked' : ''}> <span>${escapeHtml(o.textContent)}</span></label>`);
+            };
+            Array.from(select.children).forEach(child => {
+                if (child.tagName === 'OPTGROUP') {
+                    rows.push(`<div class="cc-multi-group">${escapeHtml(child.label)}</div>`);
+                    Array.from(child.children).forEach(o => { if (o.value) { addRow(o); } });
+                } else if (child.tagName === 'OPTION' && child.value) {
+                    addRow(child);
+                }
+            });
+            panel.innerHTML = rows.join('');
+            renderSummary();
+        };
+
+        panel.addEventListener('change', (e) => {
+            const cb = e.target;
+            if (!cb || cb.type !== 'checkbox') { return; }
+            // Several optgroups can hold the same value ("General"); keep them in step.
+            Array.from(select.options).forEach(o => { if (o.value === cb.value) { o.selected = cb.checked; } });
+            panel.querySelectorAll('input[type="checkbox"]').forEach(other => {
+                if (other !== cb && other.value === cb.value) { other.checked = cb.checked; }
+            });
+            renderSummary();
+            select.dispatchEvent(new Event('change', {bubbles: true}));
+        });
+        // A test or script that sets the native select directly is reflected too.
+        select.addEventListener('change', () => {
+            panel.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                const o = Array.from(select.options).find(x => x.value === cb.value);
+                cb.checked = !!(o && o.selected);
+            });
+            renderSummary();
+        });
+
+        const setOpen = (open) => {
+            // One panel open at a time: on a narrow screen the two pickers stack, and an
+            // open industry panel would otherwise sit over the sub-industry control.
+            if (open) {
+                document.querySelectorAll('.cc-multi.cc-multi-open').forEach(other => {
+                    if (other !== wrap && other._ccClose) { other._ccClose(); }
+                });
+            }
+            panel.hidden = !open;
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            wrap.classList.toggle('cc-multi-open', open);
+        };
+        wrap._ccClose = () => setOpen(false);
+        toggle.addEventListener('click', () => setOpen(panel.hidden));
+        wrap.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !panel.hidden) { setOpen(false); toggle.focus(); }
+        });
+        // Tabbing out of the control closes it, so an open panel never sits over the
+        // next field for a keyboard user.
+        wrap.addEventListener('focusout', (e) => {
+            if (e.relatedTarget && !wrap.contains(e.relatedTarget)) { setOpen(false); }
+        });
+        // One document listener for every picker, installed once. Adding one per picker
+        // per render left the listeners of every replaced step behind.
+        if (!document._ccMultiOutsideBound) {
+            document._ccMultiOutsideBound = true;
+            document.addEventListener('click', (e) => {
+                document.querySelectorAll('.cc-multi.cc-multi-open').forEach(w => {
+                    if (!w.contains(e.target) && w._ccClose) { w._ccClose(); }
+                });
+            });
+        }
+
+        if (typeof MutationObserver !== 'undefined') {
+            new MutationObserver(rebuild).observe(select, {childList: true, subtree: true});
+        }
+        rebuild();
+    };
+
+    /**
+     * Enhance whichever industry pickers the current step has rendered.
+     *
+     * @return {void}
+     */
+    const ccEnhanceIndustryPickers = () => {
+        ccEnhanceMultiSelect(document.getElementById('cc-industry'), s('msgselectindustries'));
+        ccEnhanceMultiSelect(document.getElementById('cc-industry-sector'), s('msgselectsectors'));
+        ccEnhanceMultiSelect(document.getElementById('cc-wp-industry'), s('msgselectindustries'));
+        ccEnhanceMultiSelect(document.getElementById('cc-wp-industry-sector'), s('msgselectsectors'));
+    };
+
     const bindCountryStateHandlers = () => {
+        ccEnhanceIndustryPickers();
         // VET mode - Country/State
         const vetCountry = document.getElementById('cc-country');
         if (vetCountry) {
@@ -1626,26 +1902,27 @@ define([
         const vetIndustry = document.getElementById('cc-industry');
         if (vetIndustry) {
             vetIndustry.onchange = (e) => {
-                const industry = e.target.value;
-                // Populate Industry Sector
+                // v15.7.2: several industries may be selected. The first still drives the
+                // per-industry lookups below that read `.value`.
+                const industries = ccMultiValues('cc-industry');
+                // Populate Industry Sector - every selected industry's sub-industries,
+                // keeping the ones already ticked.
                 const sectorSelect = document.getElementById('cc-industry-sector');
                 if (sectorSelect) {
-                    const sectors = getSubcategoriesForIndustry(industry);
-                    sectorSelect.innerHTML = '<option value="">' + s('msgselectsector') + '</option>' +
-                        sectors.map(s => `<option value="${s}">${s}</option>`).join('');
+                    sectorSelect.innerHTML = ccSectorOptionsHtml(industries, ccMultiValues('cc-industry-sector'));
                 }
                 // Populate Job Titles based on industry
                 // v13.84: fill the restored Job Title field's suggestion list for this industry.
                 const vetJobTitleList = document.getElementById('cc-vet-job-title-options');
                 if (vetJobTitleList) {
-                    vetJobTitleList.innerHTML = getJobTitlesForIndustry(industry)
+                    vetJobTitleList.innerHTML = ccJobTitlesForIndustries(industries)
                         .map(j => `<option value="${escapeHtml(j)}"></option>`).join('');
                 }
 
                 const jobTitleSelect = document.getElementById('cc-job-title');
                 const jobTitleCustom = document.getElementById('cc-job-title-custom');
                 if (jobTitleSelect) {
-                    const jobTitles = getJobTitlesForIndustry(industry);
+                    const jobTitles = ccJobTitlesForIndustries(industries);
                     jobTitleSelect.innerHTML = '<option value="">' + s('msgselectjobtitle') + '</option>' +
                         jobTitles.map(j => `<option value="${j}">${j}</option>`).join('') +
                         '<option value="_other">' + s('msgothercustom') + '</option>';
@@ -2559,8 +2836,8 @@ define([
             const docSections = documentData?.sections || workplaceData?.suggestedTopics || [];
             
             // Get user-selected context
-            const industry = document.getElementById('cc-wp-industry')?.value || '';
-            const industrySector = document.getElementById('cc-wp-industry-sector')?.value || '';
+            const industry = ccMultiValue('cc-wp-industry'); // v15.7.2: all selected
+            const industrySector = ccMultiValue('cc-wp-industry-sector');
             const trainingType = document.getElementById('cc-training-type')?.value || 'induction';
             
             if (!docContent || docContent.length < 100) {
@@ -2820,19 +3097,18 @@ define([
         const wpIndustry = document.getElementById('cc-wp-industry');
         if (wpIndustry) {
             wpIndustry.onchange = (e) => {
-                const industry = e.target.value;
+                // v15.7.2: several industries may be selected - see the VET handler.
+                const industries = ccMultiValues('cc-wp-industry');
                 // Populate Industry Sector
                 const sectorSelect = document.getElementById('cc-wp-industry-sector');
                 if (sectorSelect) {
-                    const sectors = getSubcategoriesForIndustry(industry);
-                    sectorSelect.innerHTML = '<option value="">' + s('msgselectsector') + '</option>' +
-                        sectors.map(s => `<option value="${s}">${s}</option>`).join('');
+                    sectorSelect.innerHTML = ccSectorOptionsHtml(industries, ccMultiValues('cc-wp-industry-sector'));
                 }
                 // v6.6.40: Populate Job Titles based on industry
                 const jobTitleSelect = document.getElementById('cc-wp-job-title');
                 const jobTitleCustomContainer = document.getElementById('cc-wp-custom-job-container');
                 if (jobTitleSelect) {
-                    const jobTitles = getJobTitlesForIndustry(industry);
+                    const jobTitles = ccJobTitlesForIndustries(industries);
                     jobTitleSelect.innerHTML = '<option value="">' + s('msgselectjobtitle') + '</option>' +
                         jobTitles.map(j => `<option value="${j}">${j}</option>`).join('') +
                         '<option value="_other">' + s('msgothercustom') + '</option>';
@@ -5392,7 +5668,10 @@ define([
                 // Regenerating one failed slide on a Policy pack would have deleted the
                 // identity strip (which document, who owns it, when it was reviewed) from
                 // the whole module, permanently, and nothing would have said so.
-                policyMeta: existingManifest.policyMeta || null
+                policyMeta: existingManifest.policyMeta || null,
+                // v15.7.2: same reason as policyMeta - omitted, it would be NULLED, and the
+                // after-generation mapping download would lose its unit data.
+                mappingSource: existingManifest.mappingSource || null
             };
             
             const result = await ManifestBuilder.build(inputs, cmid, {
@@ -5882,7 +6161,7 @@ define([
             const text = line.trim();
             if (!text) { return '<div style="height:8px;"></div>'; }
             const isHeading = /^\d+\.\s+[A-Z]/.test(text)
-                || (/^[A-Z0-9 ,'()\/-]+$/.test(text) && text.length > 12);
+                || (/^[A-Z0-9 ,'()/-]+$/.test(text) && text.length > 12);
             if (isHeading) {
                 return '<div style="font-weight:700;color:#1e3a8a;margin:10px 0 4px;">'
                     + escapeHtml(text) + '</div>';
@@ -6178,17 +6457,15 @@ define([
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
                             <label class="cc-form-label">${s('msgindustryrequired')}</label>
-                            <select class="cc-select" id="cc-industry" data-testid="select-industry">
-                                <option value="">${s('msgselectindustry')}</option>
+                            <select class="cc-select" id="cc-industry" data-testid="select-industry" multiple>
                                 ${INDUSTRIES.map(i => `<option value="${i}">${i}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
                             <label class="cc-form-label">${s('msgindustrysector')}</label>
-                            <select class="cc-select" id="cc-industry-sector" data-testid="select-industry-sector">
-                                <option value="">${s('msgselectindustryfirst')}</option>
+                            <select class="cc-select" id="cc-industry-sector" data-testid="select-industry-sector" multiple>
                             </select>
-                            <small class="cc-form-hint">${s('msgsectorhint')}</small>
+                            <small class="cc-form-hint">${s('msgsectorhint')} ${s('msgmultiindustryhint')}</small>
                         </div>
                     </div>
 
@@ -6734,17 +7011,15 @@ define([
                     <div class="cc-form-grid cc-form-grid-2">
                         <div class="cc-form-group">
                             <label class="cc-form-label">${s('msgindustryrequired')}</label>
-                            <select class="cc-select" id="cc-wp-industry" data-testid="select-wp-industry">
-                                <option value="">${s('msgselectindustry')}</option>
+                            <select class="cc-select" id="cc-wp-industry" data-testid="select-wp-industry" multiple>
                                 ${INDUSTRIES.map(i => `<option value="${i}">${i}</option>`).join('')}
                             </select>
                         </div>
                         <div class="cc-form-group">
                             <label class="cc-form-label">${s('msgindustrysector')}</label>
-                            <select class="cc-select" id="cc-wp-industry-sector" data-testid="select-wp-industry-sector">
-                                <option value="">${s('msgselectindustryfirst')}</option>
+                            <select class="cc-select" id="cc-wp-industry-sector" data-testid="select-wp-industry-sector" multiple>
                             </select>
-                            <small class="cc-form-hint">${s('msgsectorhint')}</small>
+                            <small class="cc-form-hint">${s('msgsectorhint')} ${s('msgmultiindustryhint')}</small>
                         </div>
                     </div>
 
@@ -7672,8 +7947,8 @@ define([
                 context: (() => {
                     const countryCode = document.getElementById('cc-country')?.value || 'AU';
                     const state = document.getElementById('cc-state')?.value || '';
-                    const industry = document.getElementById('cc-industry')?.value || '';
-                    const industrySector = document.getElementById('cc-industry-sector')?.value || '';
+                    const industry = ccMultiValue('cc-industry'); // v15.7.2: all selected
+                    const industrySector = ccMultiValue('cc-industry-sector');
                     const jobLevel = CC_SELECTED_JOB_LEVELS.length > 0
                         ? CC_SELECTED_JOB_LEVELS.join(', ')
                         : 'worker';
@@ -8324,6 +8599,20 @@ define([
                             <span class="cc-toggle-label" id="cc-activities-status">${s('msgenabled')}</span>
                         </div>
                         <p class="cc-form-hint-sm">${s('msgnochallengehint')}</p>
+                    </div>
+
+                    <!-- v15.7.2: Require the correct answer to continue. Stored as
+                         activitySettings.requireCorrectAnswer; absent means ON. -->
+                    <div class="cc-form-group cc-require-correct-toggle-group">
+                        <label class="cc-form-label">${s('msgrequirecorrect')}</label>
+                        <div class="cc-toggle-row">
+                            <label class="cc-toggle" data-testid="toggle-require-correct">
+                                <input type="checkbox" id="cc-require-correct-enabled" checked>
+                                <span class="cc-toggle-slider"></span>
+                            </label>
+                            <span class="cc-toggle-label" id="cc-require-correct-status">${s('msgenabled')}</span>
+                        </div>
+                        <p class="cc-form-hint-sm">${s('msgrequirecorrecthint')}</p>
                     </div>
                 </div>
 
@@ -9113,7 +9402,25 @@ define([
                 if (activitiesStatus) {
                     activitiesStatus.textContent = isEnabled ? 'Enabled' : 'Disabled';
                 }
-                
+                // v15.7.2: "Require the correct answer" only means something when there are
+                // activities. Disabled, not hidden, so its saved value is not lost.
+                const rc = container.querySelector('#cc-require-correct-enabled');
+                if (rc) {
+                    rc.disabled = !isEnabled;
+                    rc.closest('.cc-require-correct-toggle-group')?.classList.toggle('cc-disabled', !isEnabled);
+                }
+            });
+        }
+
+        // v15.7.2: Require-correct-answer toggle. Status text follows the same pattern as
+        // the activities toggle above, but through s() so it is not English-only.
+        const requireCorrectToggle = container.querySelector('#cc-require-correct-enabled');
+        const requireCorrectStatus = container.querySelector('#cc-require-correct-status');
+        if (requireCorrectToggle) {
+            requireCorrectToggle.addEventListener('change', (e) => {
+                if (requireCorrectStatus) {
+                    requireCorrectStatus.textContent = e.target.checked ? s('msgenabled') : s('msgdisabled');
+                }
             });
         }
 
@@ -9360,7 +9667,7 @@ define([
                 wpIndustrySelect.addEventListener('change', function(e) {
                     const list = document.getElementById('cc-wp-job-title-options');
                     if (!list) { return; }
-                    list.innerHTML = getJobTitlesForIndustry(e.target.value)
+                    list.innerHTML = ccJobTitlesForIndustries(ccMultiValues('cc-wp-industry'))
                         .map(j => `<option value="${escapeHtml(j)}"></option>`).join('');
                 });
             }
@@ -9985,8 +10292,8 @@ define([
         if (mode === 'vet') {
             const country = document.getElementById('cc-country')?.selectedOptions?.[0]?.text || 'Australia';
             const state = document.getElementById('cc-state')?.value || '';
-            const industry = document.getElementById('cc-industry')?.value || '';
-            const industrySector = document.getElementById('cc-industry-sector')?.value || '';
+            const industry = ccMultiValue('cc-industry'); // v15.7.2: all selected
+            const industrySector = ccMultiValue('cc-industry-sector');
             const jobLevelsText = CC_SELECTED_JOB_LEVELS
                 .map(v => (JOB_LEVELS.find(j => j.value === v) ? s(JOB_LEVELS.find(j => j.value === v).key) : v))
                 .join(', ');
@@ -10054,8 +10361,8 @@ define([
             // The card CONTRACT is still resolved per-route by buildChatGptPromptFile.
             const country = document.getElementById('cc-wp-country')?.selectedOptions?.[0]?.text || 'Australia';
             const state = document.getElementById('cc-wp-state')?.value || '';
-            const industry = document.getElementById('cc-wp-industry')?.value || '';
-            const industrySector = document.getElementById('cc-wp-industry-sector')?.value || '';
+            const industry = ccMultiValue('cc-wp-industry'); // v15.7.2: all selected
+            const industrySector = ccMultiValue('cc-wp-industry-sector');
             const jobLevel = document.getElementById('cc-wp-job-level')?.selectedOptions?.[0]?.text || '';
             const trainingType = document.getElementById('cc-training-type')?.selectedOptions?.[0]?.text || '';
             const targetAudience = document.getElementById('cc-wp-audience')?.selectedOptions?.[0]?.text || '';
@@ -11288,8 +11595,8 @@ define([
             // ===========================================================================
             
             // v6.9.14: Get context from dropdowns - AI auto-generates scenarios based on these
-            const industry = document.getElementById('cc-industry')?.value || '';
-            const industrySector = document.getElementById('cc-industry-sector')?.value || '';
+            const industry = ccMultiValue('cc-industry'); // v15.7.2: all selected
+            const industrySector = ccMultiValue('cc-industry-sector');
             // v15.3.7: labels, not raw option values - the model was being told
             // "Job Level(s): entry, worker".
             const jobLevel = CC_SELECTED_JOB_LEVELS.length > 0
@@ -11343,7 +11650,9 @@ define([
             });
             
             const learnerRole = jobTitle ? `${jobTitle} (${jobLevel})` : jobLevel;
-            const industryContext = industrySector ? `${industry} - ${industrySector}` : industry;
+            // v15.7.2: one industry reads as before; several are listed with their own
+            // sub-industries and an instruction to spread scenarios across them.
+            const industryContext = ccIndustryContextText(ccMultiValues('cc-industry'), ccMultiValues('cc-industry-sector'));
             
             // Debug logging            
             // Build auto* arrays for prompts (all AI items, not just selected)
@@ -11370,6 +11679,11 @@ define([
                 state: state,
                 industry: industry,
                 industrySector: industrySector,
+                // v15.7.2: the individual selections, for the mapping export and anything
+                // else that needs them separately rather than joined.
+                industries: ccMultiValues('cc-industry'),
+                industrySectors: ccMultiValues('cc-industry-sector'),
+                industryMap: ccIndustryMap(ccMultiValues('cc-industry'), ccMultiValues('cc-industry-sector')),
                 industryContext: industryContext,
                 jobLevel: jobLevel,
                 jobTitle: jobTitle,
@@ -11423,11 +11737,12 @@ define([
             const targetAudienceLabel = ccSelectLabel('cc-wp-audience', 'New starters');
             const companyName = document.getElementById('cc-company-name')?.value || '';
             const department = document.getElementById('cc-wp-department')?.value || '';
-            const industry = document.getElementById('cc-wp-industry')?.value || '';
-            const industrySector = document.getElementById('cc-wp-industry-sector')?.value || '';
-            const industryContext = industrySector 
-                ? `${industry} - ${industrySector}` 
-                : (industry || 'Workplace training');
+            const industry = ccMultiValue('cc-wp-industry'); // v15.7.2: all selected
+            const industrySector = ccMultiValue('cc-wp-industry-sector');
+            // v15.7.2: see the VET branch - several industries are listed separately.
+            const industryContext = ccMultiValues('cc-wp-industry').length
+                ? ccIndustryContextText(ccMultiValues('cc-wp-industry'), ccMultiValues('cc-wp-industry-sector'))
+                : 'Workplace training';
             // v15.3.7: only the label is used now - nothing on this route branches on
             // the raw job-level slug, unlike targetAudience below, which still does.
             const jobLevelLabelWp = ccSelectLabel('cc-wp-job-level', 'Worker');
@@ -11493,6 +11808,9 @@ define([
                 trainingType: document.getElementById('cc-training-type')?.value || 'induction',
                 industry: industry,
                 industrySector: industrySector,
+                industries: ccMultiValues('cc-wp-industry'), // v15.7.2
+                industrySectors: ccMultiValues('cc-wp-industry-sector'),
+                industryMap: ccIndustryMap(ccMultiValues('cc-wp-industry'), ccMultiValues('cc-wp-industry-sector')),
                 industryContext: industryContext,
                 targetAudience: targetAudienceLabel,
                 jobLevel: jobLevelLabelWp,
@@ -11698,67 +12016,25 @@ define([
         }
 
         try {
-            // v6.5.19: Send both field name formats for KE/PE to ensure server receives data
-            const knowledgeEvidence = tgaData.requiredKnowledge || tgaData.knowledgeEvidence || [];
-            const performanceEvidence = tgaData.requiredSkills || tgaData.performanceEvidence || [];
-            
             // v6.6.34: Enhanced payload with quality/context information for audit documentation
             const context = storedContext || {};
             const jobLevelLabel = context.jobLevel
                 ? context.jobLevel.split(', ').map(v => (JOB_LEVELS.find(j => j.value === v) ? s(JOB_LEVELS.find(j => j.value === v).key) : v)).join(', ')
                 : '';
-            
-            const payload = {
+
+            // v15.7.2: assembled by CcState.buildMappingPayload, which the player also uses
+            // to offer this workbook after generation. Same fields as before, so the
+            // vendor contract is unchanged; one implementation so the two cannot drift.
+            const payload = CcState.buildMappingPayload({
                 unitCode: tgaData.code || tgaData.unitCode || 'Unknown',
                 unitTitle: tgaData.title || tgaData.unitTitle || 'Untitled Unit',
-                // v6.6.34: Quality metadata for audit documentation
-                generationContext: {
-                    generatedDate: new Date().toISOString(),
-                    mode: selectedMode || 'vet',
-                    // Industry/Job Context
-                    industry: context.industry || context.industrySector || '',
-                    industrySector: context.industrySector || '',
-                    jobTitle: context.jobTitle || '',
-                    jobLevel: jobLevelLabel,
-                    // v6.6.33: Multiple job tasks with equipment
-                    jobTasks: context.jobTasks || [],
-                    taskEquipment: context.taskEquipment || {},
-                    // Location for compliance context
-                    country: context.country || 'AU',
-                    state: context.state || ''
-                },
-                topics: topicPlan.topics.map(topic => ({
-                    title: topic.title,
-                    // v6.6.34: Include topic description/purpose for audit trail
-                    description: topic.description || '',
-                    subtopics: (topic.subtopics || []).map(sub => {
-                        // coversMappings must be an object, not an array
-                        let coversMappings = sub.coversMappings;
-                        if (!coversMappings || typeof coversMappings !== 'object' || Array.isArray(coversMappings)) {
-                            coversMappings = { pc: [], ke: [], pe: [], fs: [] };
-                        }
-                        return {
-                            title: sub.title,
-                            // v6.6.34: Include subtopic description for learning purpose clarity
-                            description: sub.description || '',
-                            keyPoints: sub.keyPoints || [],
-                            coversMappings: coversMappings,
-                            mappings: Array.isArray(sub.mappings) ? sub.mappings : []
-                        };
-                    })
-                })),
-                tgaData: {
-                    elements: tgaData.elements || [],
-                    // Send BOTH field name formats so server can use whichever it expects
-                    requiredKnowledge: knowledgeEvidence,
-                    requiredSkills: performanceEvidence,
-                    knowledgeEvidence: knowledgeEvidence,
-                    performanceEvidence: performanceEvidence,
-                    foundationSkills: tgaData.foundationSkills || []
-                },
+                context: Object.assign({}, context, {mode: selectedMode || 'vet'}),
+                jobLevel: jobLevelLabel,
+                topics: topicPlan.topics,
+                tgaData: tgaData,
                 // v6.8.9: AI-generated context for Practical Mapping sheet
                 aiContext: CC_AI_CONTEXT || null
-            };
+            });
 
             // v13.66: The workbook is streamed back through the proxy, which adds the
             // site credentials server side.
@@ -11871,6 +12147,9 @@ define([
             // v11.11: Gather activities settings
             const activitiesCheckbox = document.getElementById('cc-activities-enabled');
             const activitiesEnabled = activitiesCheckbox?.checked ?? true;
+            // v15.7.2: Require the correct answer to continue.
+            const requireCorrectCheckbox = document.getElementById('cc-require-correct-enabled');
+            const requireCorrectAnswer = requireCorrectCheckbox?.checked ?? true;
             
             // v7.5.13: ENHANCED DEBUGGING for AI Images setting
             
@@ -11909,8 +12188,13 @@ define([
                     enabled: imagesEnabled // v6.6.68: generate AI images for slides
                 },
                 activitySettings: {
-                    enabled: activitiesEnabled // v11.11: include decision challenge activities
+                    enabled: activitiesEnabled, // v11.11: include decision challenge activities
+                    requireCorrectAnswer: requireCorrectAnswer // v15.7.2
                 },
+                // v15.7.2: the unit data the Excel mapping needs, kept with the pack so the
+                // workbook can be downloaded after generation. VET only; null elsewhere.
+                mappingSource: (generationContext.mode === 'vet')
+                    ? CcState.mappingSourceFromTga(tgaData) : null,
                 appearanceSettings: {
                     headerColor: headerColor
                 }
@@ -11985,6 +12269,178 @@ define([
                     // v7.2.76: Pre-generate ALL voiceovers before saving
                     // Students should NEVER have to wait for voiceover generation
                     // v7.6.4: Updated to work with route-specific card architecture (cards array, not type='learning')
+                    // v15.7.2 FIX-CC-ML-QUIZ-FEEDBACK-SCOPE: declared HERE, outside the
+                    // primary-voiceover `if`, because the additional-language pass further
+                    // down calls it too (v15.6.6). Declared inside that block it was out of
+                    // scope there: every additional-language section threw a ReferenceError,
+                    // the catch retried it three times - re-narrating the section on each try -
+                    // and the language ended with no quiz feedback clips at all.
+                    // v13.93 FIX-CC-QUIZ-VOICE-ENGINE: pre-generate the quiz feedback
+                    // narration in the SAME Chirp 3 HD voice as the cards.
+                    //
+                    // The player used to speak this through the browser's Web Speech API,
+                    // which cannot know the author's chosen voice and falls back to
+                    // whatever the learner's operating system provides - so the activity
+                    // block was narrated by a different person than the cards, and by a
+                    // different person again on the next learner's device. One clip per
+                    // option, generated once here, billed once, identical for everyone.
+                    //
+                    // Failures are deliberately non-fatal: a missing clip makes that one
+                    // feedback silent, which is far better than failing the whole build,
+                    // and the player never substitutes another voice.
+                    const pregenQuizFeedback = async(section, langCode, keyPrefix) => {
+                        // v15.6.6: serves BOTH the primary pack and every additional
+                        // language. Until now it was called only from the primary path,
+                        // so a Japanese or German pack had section narration, card
+                        // narration, and total silence on every quiz answer - and
+                        // nothing said so. The player logs "no pre-generated feedback
+                        // clip - silent by design", which is true of the code and was
+                        // never true of the author's intent.
+                        //
+                        // langCode / keyPrefix are what differ. The clip key MUST carry
+                        // the language, exactly as the card path does
+                        // (langCode + '_' + section.id + '_cN'), because the translated
+                        // section keeps the SAME id as the primary one - without the
+                        // prefix the German clip would overwrite the English one in the
+                        // file store and both languages would play German.
+                        if (_voSkipRequested) return;
+                        var _qLang = langCode || voiceLanguage;
+                        var _qKey = (keyPrefix || '') + String(section.id) + '_dpfb';
+                        var dp = (section.cards || []).filter(function(c) {
+                            return c && c.cardType === 'decision-point';
+                        })[0];
+                        if (!dp) return;
+
+                        // v15.3.13: every option on every question, not just question one.
+                        //
+                        // A decision-point can carry three questions now.
+                        // normalizeCardSchema keeps dp.options pointing at question ONE
+                        // for backward compatibility, so a loop over dp.options narrates
+                        // four of twelve options and the other eight fall through to the
+                        // player's "no pre-generated feedback clip - silent by design"
+                        // path. Silent by design is right for a missing clip; it is not
+                        // right for two thirds of a quiz nobody tried to narrate.
+                        //
+                        // Flattened rather than nested so the clip index stays a single
+                        // running number: sectionid carries it, and restarting at 0 on
+                        // question two would have overwritten question one's clips.
+                        // v15.6.4: correctness travels with the option now.
+                        //
+                        // The clip has to OPEN with "Correct" or "Incorrect", the same
+                        // word the player puts on screen, so the flattening can no
+                        // longer throw away which option won its question. The three
+                        // answer-key shapes are read in the same order
+                        // player5.js:ccGradeLocally and \mod_contentcreator\evidence
+                        // read them, because a clip that disagrees with the verdict on
+                        // screen is worse than no clip at all.
+                        var _dpOpts = [];
+                        var _pushQuestion = function(q) {
+                            var opts = (q && q.options) || [];
+                            var right = -1;
+                            for (var ci = 0; ci < opts.length; ci++) {
+                                if (opts[ci] && (opts[ci].correct || opts[ci].isCorrect)) {
+                                    right = ci;
+                                    break;
+                                }
+                            }
+                            if (right === -1 && q && typeof q.correctIndex === 'number'
+                                && q.correctIndex >= 0 && q.correctIndex < opts.length) {
+                                right = q.correctIndex;
+                            }
+                            opts.forEach(function(o, ci) {
+                                _dpOpts.push({opt: o, correct: ci === right});
+                            });
+                        };
+                        if (Array.isArray(dp.questions) && dp.questions.length) {
+                            dp.questions.forEach(_pushQuestion);
+                        } else if (Array.isArray(dp.options)) {
+                            _pushQuestion(dp);
+                        }
+                        if (!_dpOpts.length) return;
+
+                        for (var oi = 0; oi < _dpOpts.length; oi++) {
+                            // v15.4.3: twelve options per section is the single biggest
+                            // consumer of the speech allowance in a build - three questions
+                            // times four options - so this is the loop most likely to meet
+                            // the ceiling, and the one where carrying on after a refusal
+                            // does the most damage.
+                            if (_voSkipRequested || _voRateLimited || _voFatal) return;
+                            var opt = _dpOpts[oi].opt;
+                            var fbRaw = (opt && opt.feedback ? String(opt.feedback) : '').trim();
+                            if (!fbRaw) { continue; }
+                            // An existing clip is kept UNLESS it predates the spoken
+                            // verdict. Regenerating every clip on every module would be
+                            // the largest unasked-for charge this builder could make -
+                            // twelve options per section is already its biggest single
+                            // consumer of the speech allowance - so the marker is what
+                            // decides, not the release number.
+                            if (opt.feedbackAudioUrl && opt.feedbackVerdictSpoken) { continue; }
+                            var fbText = CcState.withVerdict(
+                                CcState.verdictLabel(_dpOpts[oi].correct), fbRaw);
+                            try {
+                                var _qFd = new FormData();
+                                _qFd.append('sesskey', M.cfg.sesskey);
+                                _qFd.append('action', 'generate_voice');
+                                _qFd.append('cmid', cmid);
+                                _qFd.append('text', fbText);
+                                _qFd.append('sectionid', _qKey + oi);
+                                _qFd.append('subtopickey', section.billingKey || '');
+                                _qFd.append('language', _qLang);
+                                _qFd.append('voice', voiceName);
+                                var _qResp = await ccPost(_qFd, 'quiz feedback TTS');
+                                if (!_qResp.ok) { throw new Error('TTS returned ' + _qResp.status); }
+                                var _qData = await CcState.readJson(_qResp, 'quiz feedback TTS');
+                                var _qRl = ccRateLimitInfo(_qData);
+                                if (_qRl) {
+                                    if (!_voRateLimited) { _voRateLimited = _qRl; }
+                                    ccWarn('[QUIZ VOICE] rate limited on ' + _qLang + ' section '
+                                        + section.id + '  -  stopping quiz feedback rather than retrying.');
+                                    return;
+                                }
+                                if (!_qData.success || !_qData.audioContent) {
+                                    throw new Error(_qData.error || 'no audio returned');
+                                }
+                                // Persist to the file store, exactly as the section audio
+                                // does - a data: URL would be stripped by saveManifest.
+                                var _qpFd = new FormData();
+                                _qpFd.append('sesskey', M.cfg.sesskey);
+                                _qpFd.append('action', 'save_voiceover_file');
+                                _qpFd.append('cmid', cmid);
+                                _qpFd.append('sectionid', _qKey + oi);
+                                _qpFd.append('audiocontent', _qData.audioContent);
+                                _qpFd.append('audiotype', _qData.audioType || 'audio/ogg');
+                                var _qpResp = await ccPost(_qpFd, 'quiz feedback persist');
+                                if (_qpResp.ok) {
+                                    var _qpData = await CcState.readJson(_qpResp, 'quiz feedback persist');
+                                    if (_qpData.success && _qpData.url) {
+                                        opt.feedbackAudioUrl = _qpData.url;
+                                        // v15.6.4: this clip opens with the verdict.
+                                        // Without the marker the next build cannot tell
+                                        // it apart from a pre-v15.6.4 clip and would
+                                        // either re-bill it forever or never fix it.
+                                        opt.feedbackVerdictSpoken = true;
+                                        ccLog('%c[QUIZ VOICE] ' + _qLang + ' section ' + section.id
+                                            + ' option ' + oi + ' -> ' + _qpData.url, 'color:#10b981');
+                                    }
+                                }
+                            } catch (_qErr) {
+                                // v15.6.6: a transport refusal is not a per-option
+                                // failure. Left unhandled, twelve options would each
+                                // make their own refused request against a WAF or a
+                                // 413, which is the burst v15.6.2 exists to stop.
+                                if (_qErr && _qErr.ccFatal) {
+                                    if (!_voFatal) { _voFatal = _qErr; }
+                                    ccError('[QUIZ VOICE] transport refused ' + _qLang + ' section '
+                                        + section.id + '  -  stopping. ' + _qErr.message);
+                                    return;
+                                }
+                                ccWarn('[QUIZ VOICE] ' + _qLang + ' section ' + section.id
+                                    + ' option ' + oi + ' failed: ' + _qErr.message
+                                    + '  -  that feedback will be silent');
+                            }
+                        }
+                    };
+
                     if (voiceoverEnabled && generatedManifest.topics) {
                         var _builderVoStart = Date.now();
                         ccLog('%c[VOICEOVER BUILDER v8.4.11] PRE-GEN START | lang: ' + voiceLanguage + ' | voice: ' + voiceName, 'color: #8b5cf6; font-weight: bold');
@@ -12060,171 +12516,6 @@ define([
                         let completed = 0;
                         let index = 0;
                         
-                        // v13.93 FIX-CC-QUIZ-VOICE-ENGINE: pre-generate the quiz feedback
-                        // narration in the SAME Chirp 3 HD voice as the cards.
-                        //
-                        // The player used to speak this through the browser's Web Speech API,
-                        // which cannot know the author's chosen voice and falls back to
-                        // whatever the learner's operating system provides - so the activity
-                        // block was narrated by a different person than the cards, and by a
-                        // different person again on the next learner's device. One clip per
-                        // option, generated once here, billed once, identical for everyone.
-                        //
-                        // Failures are deliberately non-fatal: a missing clip makes that one
-                        // feedback silent, which is far better than failing the whole build,
-                        // and the player never substitutes another voice.
-                        const pregenQuizFeedback = async(section, langCode, keyPrefix) => {
-                            // v15.6.6: serves BOTH the primary pack and every additional
-                            // language. Until now it was called only from the primary path,
-                            // so a Japanese or German pack had section narration, card
-                            // narration, and total silence on every quiz answer - and
-                            // nothing said so. The player logs "no pre-generated feedback
-                            // clip - silent by design", which is true of the code and was
-                            // never true of the author's intent.
-                            //
-                            // langCode / keyPrefix are what differ. The clip key MUST carry
-                            // the language, exactly as the card path does
-                            // (langCode + '_' + section.id + '_cN'), because the translated
-                            // section keeps the SAME id as the primary one - without the
-                            // prefix the German clip would overwrite the English one in the
-                            // file store and both languages would play German.
-                            if (_voSkipRequested) return;
-                            var _qLang = langCode || voiceLanguage;
-                            var _qKey = (keyPrefix || '') + String(section.id) + '_dpfb';
-                            var dp = (section.cards || []).filter(function(c) {
-                                return c && c.cardType === 'decision-point';
-                            })[0];
-                            if (!dp) return;
-
-                            // v15.3.13: every option on every question, not just question one.
-                            //
-                            // A decision-point can carry three questions now.
-                            // normalizeCardSchema keeps dp.options pointing at question ONE
-                            // for backward compatibility, so a loop over dp.options narrates
-                            // four of twelve options and the other eight fall through to the
-                            // player's "no pre-generated feedback clip - silent by design"
-                            // path. Silent by design is right for a missing clip; it is not
-                            // right for two thirds of a quiz nobody tried to narrate.
-                            //
-                            // Flattened rather than nested so the clip index stays a single
-                            // running number: sectionid carries it, and restarting at 0 on
-                            // question two would have overwritten question one's clips.
-                            // v15.6.4: correctness travels with the option now.
-                            //
-                            // The clip has to OPEN with "Correct" or "Incorrect", the same
-                            // word the player puts on screen, so the flattening can no
-                            // longer throw away which option won its question. The three
-                            // answer-key shapes are read in the same order
-                            // player5.js:ccGradeLocally and \mod_contentcreator\evidence
-                            // read them, because a clip that disagrees with the verdict on
-                            // screen is worse than no clip at all.
-                            var _dpOpts = [];
-                            var _pushQuestion = function(q) {
-                                var opts = (q && q.options) || [];
-                                var right = -1;
-                                for (var ci = 0; ci < opts.length; ci++) {
-                                    if (opts[ci] && (opts[ci].correct || opts[ci].isCorrect)) {
-                                        right = ci;
-                                        break;
-                                    }
-                                }
-                                if (right === -1 && q && typeof q.correctIndex === 'number'
-                                    && q.correctIndex >= 0 && q.correctIndex < opts.length) {
-                                    right = q.correctIndex;
-                                }
-                                opts.forEach(function(o, ci) {
-                                    _dpOpts.push({opt: o, correct: ci === right});
-                                });
-                            };
-                            if (Array.isArray(dp.questions) && dp.questions.length) {
-                                dp.questions.forEach(_pushQuestion);
-                            } else if (Array.isArray(dp.options)) {
-                                _pushQuestion(dp);
-                            }
-                            if (!_dpOpts.length) return;
-
-                            for (var oi = 0; oi < _dpOpts.length; oi++) {
-                                // v15.4.3: twelve options per section is the single biggest
-                                // consumer of the speech allowance in a build - three questions
-                                // times four options - so this is the loop most likely to meet
-                                // the ceiling, and the one where carrying on after a refusal
-                                // does the most damage.
-                                if (_voSkipRequested || _voRateLimited || _voFatal) return;
-                                var opt = _dpOpts[oi].opt;
-                                var fbRaw = (opt && opt.feedback ? String(opt.feedback) : '').trim();
-                                if (!fbRaw) { continue; }
-                                // An existing clip is kept UNLESS it predates the spoken
-                                // verdict. Regenerating every clip on every module would be
-                                // the largest unasked-for charge this builder could make -
-                                // twelve options per section is already its biggest single
-                                // consumer of the speech allowance - so the marker is what
-                                // decides, not the release number.
-                                if (opt.feedbackAudioUrl && opt.feedbackVerdictSpoken) { continue; }
-                                var fbText = CcState.withVerdict(
-                                    CcState.verdictLabel(_dpOpts[oi].correct), fbRaw);
-                                try {
-                                    var _qFd = new FormData();
-                                    _qFd.append('sesskey', M.cfg.sesskey);
-                                    _qFd.append('action', 'generate_voice');
-                                    _qFd.append('cmid', cmid);
-                                    _qFd.append('text', fbText);
-                                    _qFd.append('sectionid', _qKey + oi);
-                                    _qFd.append('subtopickey', section.billingKey || '');
-                                    _qFd.append('language', _qLang);
-                                    _qFd.append('voice', voiceName);
-                                    var _qResp = await ccPost(_qFd, 'quiz feedback TTS');
-                                    if (!_qResp.ok) { throw new Error('TTS returned ' + _qResp.status); }
-                                    var _qData = await CcState.readJson(_qResp, 'quiz feedback TTS');
-                                    var _qRl = ccRateLimitInfo(_qData);
-                                    if (_qRl) {
-                                        if (!_voRateLimited) { _voRateLimited = _qRl; }
-                                        ccWarn('[QUIZ VOICE] rate limited on ' + _qLang + ' section '
-                                            + section.id + '  -  stopping quiz feedback rather than retrying.');
-                                        return;
-                                    }
-                                    if (!_qData.success || !_qData.audioContent) {
-                                        throw new Error(_qData.error || 'no audio returned');
-                                    }
-                                    // Persist to the file store, exactly as the section audio
-                                    // does - a data: URL would be stripped by saveManifest.
-                                    var _qpFd = new FormData();
-                                    _qpFd.append('sesskey', M.cfg.sesskey);
-                                    _qpFd.append('action', 'save_voiceover_file');
-                                    _qpFd.append('cmid', cmid);
-                                    _qpFd.append('sectionid', _qKey + oi);
-                                    _qpFd.append('audiocontent', _qData.audioContent);
-                                    _qpFd.append('audiotype', _qData.audioType || 'audio/ogg');
-                                    var _qpResp = await ccPost(_qpFd, 'quiz feedback persist');
-                                    if (_qpResp.ok) {
-                                        var _qpData = await CcState.readJson(_qpResp, 'quiz feedback persist');
-                                        if (_qpData.success && _qpData.url) {
-                                            opt.feedbackAudioUrl = _qpData.url;
-                                            // v15.6.4: this clip opens with the verdict.
-                                            // Without the marker the next build cannot tell
-                                            // it apart from a pre-v15.6.4 clip and would
-                                            // either re-bill it forever or never fix it.
-                                            opt.feedbackVerdictSpoken = true;
-                                            ccLog('%c[QUIZ VOICE] ' + _qLang + ' section ' + section.id
-                                                + ' option ' + oi + ' -> ' + _qpData.url, 'color:#10b981');
-                                        }
-                                    }
-                                } catch (_qErr) {
-                                    // v15.6.6: a transport refusal is not a per-option
-                                    // failure. Left unhandled, twelve options would each
-                                    // make their own refused request against a WAF or a
-                                    // 413, which is the burst v15.6.2 exists to stop.
-                                    if (_qErr && _qErr.ccFatal) {
-                                        if (!_voFatal) { _voFatal = _qErr; }
-                                        ccError('[QUIZ VOICE] transport refused ' + _qLang + ' section '
-                                            + section.id + '  -  stopping. ' + _qErr.message);
-                                        return;
-                                    }
-                                    ccWarn('[QUIZ VOICE] ' + _qLang + ' section ' + section.id
-                                        + ' option ' + oi + ' failed: ' + _qErr.message
-                                        + '  -  that feedback will be silent');
-                                }
-                            }
-                        };
 
                         /**
                          * v15.4.0: synthesise ONE script and persist it, returning its URL.

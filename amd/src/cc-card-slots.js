@@ -1556,6 +1556,17 @@ define([], function() {
                 // A question is now answered once. The learner always proceeds; the score
                 // records whether they were right. The gate moved to player5.js - see
                 // FIX-CC-QUIZ-GATE-INCONSISTENT.
+                //
+                // v15.7.2: still no Try Again BUTTON, but the gate is back: a wrong answer
+                // reopens the question and the learner must find the correct option to
+                // go on. The score stays first-attempt. See FIX-CC-QUIZ-MUST-ANSWER-
+                // CORRECTLY in player5.js.
+                //
+                // The prompt that says so. Rendered empty and present from the start,
+                // because a live region inserted at the moment it is filled is not
+                // announced by most screen readers. The stylesheet hides it while empty.
+                html += '<div class="cc5-quiz-retry-prompt" role="status" aria-live="polite"'
+                     +  ' aria-atomic="true"></div>';
             }
             // The between-questions button. Its own class, not .cc5-challenge-next-btn:
             // that class means "leave this activity", and this one means "stay here, next
@@ -1747,6 +1758,12 @@ define([], function() {
             html += ' <span>' + escapeHtml(negLabel) + '</span>';
             html += '</button>';
             html += '</div>';
+            // v15.7.2: announced when an item goes in the wrong column. The item stays
+            // up until it is filed correctly - see FIX-CC-SORT-MUST-ANSWER-CORRECTLY in
+            // player5.js. Present and empty from the start so the live region is
+            // registered before it is filled; hidden by the stylesheet while empty.
+            html += '<div class="cc5-sort-retry-prompt" role="status" aria-live="polite"'
+                 +  ' aria-atomic="true"></div>';
             html += '</div>';
 
             // Score + progress
