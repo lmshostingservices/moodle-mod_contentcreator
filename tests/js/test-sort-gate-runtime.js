@@ -218,7 +218,7 @@ fs.writeFileSync(tmp, page_html, 'utf8');
     check('the right column files it and moves to the next item', st.current === 1 && st.dropped === 1,
         JSON.stringify(st));
     check('the prompt is cleared', !st.promptVisible, JSON.stringify(st));
-    check('a retried item does NOT score (first attempt only)', st.score === 0 && st.scoreText === '0',
+    check('a retried item scores once filed correctly (final answers count, v15.7.4)', st.score === 1 && st.scoreText === '1',
         JSON.stringify(st));
     check('item text is dropped as TEXT, not HTML', st.droppedHtmlBold === 0, JSON.stringify(st));
     // The remaining three right first time.
@@ -227,9 +227,9 @@ fs.writeFileSync(tmp, page_html, 'utf8');
         await settle();
     }
     st = await page.evaluate(function() { return window.__state(); });
-    check('all four filed, three scored', st.dropped === 4 && st.score === 3, JSON.stringify(st));
+    check('all four filed, all four scored', st.dropped === 4 && st.score === 4, JSON.stringify(st));
     check('See Results unlocks at the end', st.finishDisabled === false, JSON.stringify(st));
-    check('sort-passed is false because one item needed a second go', st.sortPassed === false,
+    check('sort-passed is TRUE: the learner finished with every item right', st.sortPassed === true,
         JSON.stringify(st));
 
     console.log('\n2. Setting ON, all right first time');

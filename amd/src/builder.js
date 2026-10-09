@@ -535,7 +535,7 @@ define([
         msgselectindustries: 'Select one or more industries',
         msgselectsectors: 'Select one or more sub-industries',
         msgmultiindustryhint: 'You can select several - scenarios will be drawn from across them.',
-        msgrequirecorrecthint: 'Learners must choose the correct answer in the quiz and the correct column in Category Sort before moving on. A wrong answer shows its feedback and a prompt to try again. The score still counts first attempts only. Can be changed after generation in Behaviour settings.',
+        msgrequirecorrecthint: 'Learners must choose the correct answer in the quiz and the correct column in Category Sort before moving on. A wrong answer shows its feedback and a prompt to try again. The score counts their final answers, so a learner who finishes the activities scores 100%. Can be changed after generation in Behaviour settings.',
         msgprogressionmode: 'Slide Progression Mode',
         msgprogressionhint: 'Choose how learners progress through the slides',
         msgprogressfree: 'Learners can move freely between slides',

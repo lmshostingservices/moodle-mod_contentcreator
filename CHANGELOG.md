@@ -1,5 +1,38 @@
 # Changelog
 
+## 15.7.4 - 2026-10-09
+
+**With "Require the correct answer to continue" on, the score now counts final answers.**
+
+Requested: "can we change it to count the final answers instead?"
+
+15.7.2 and 15.7.3 scored the challenge on FIRST attempts. Combined with the gate, a learner who
+corrected one mistake finished with every answer right but was shown 67%. The section's
+`challengeComplete` is recorded only at 100%, so under the Moodle completion rule "complete
+all activities" they had to press Try Again and redo the whole challenge.
+
+Now, with the setting on:
+
+- **Quiz:** a question counts as correct once the learner chooses the right answer, however
+  many tries it took. Reaching the end of the quiz passes it.
+- **Category Sort:** every item filed in the right column scores, so finishing passes it.
+- **Flip & Learn:** unchanged (passes once every card is turned).
+- So a learner who finishes all three activities scores **100%**, the section is recorded as
+  complete, and "complete all activities" is satisfied without repeating anything.
+- A question with no correct option marked (an authoring defect) counts as passed; the
+  learner cannot do better, and must not be kept from completion by it.
+- The first attempt is still recorded on each question (`data-first-attempt`) but nothing
+  scores from it. The "3 in a row" streak still only counts right-first-time answers.
+
+With the setting **off** nothing changes: each question is answered once, so first and final
+answers are the same.
+
+The setting's description, in the builder and in Behaviour settings, now says "The score
+counts their final answers, so finishing the activities scores 100%" (all 53 languages).
+
+`CC_CHARS_PER_WORD_JA` is back to 2.33: the calibration test re-measures it from the
+translation table and the new Japanese description moved the measured value back.
+
 ## 15.7.3 - 2026-10-06
 
 **Self-audit of 15.7.2. Supersedes it - install 15.7.3, not 15.7.2.** Everything 15.7.2

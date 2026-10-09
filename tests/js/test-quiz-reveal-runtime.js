@@ -660,8 +660,12 @@ async function settle(page) {
     check('the correct answer closes the question', g.answered === 'true', JSON.stringify(g));
     check('...clears the prompt', !g.promptVisible, JSON.stringify(g));
     check('...and unlocks Next Activity', g.nextDisabled === false, JSON.stringify(g));
-    check('the SCORE is still first-attempt: not counted correct, quiz not passed',
-        g.correct === 'false' && g.quizDone === true && g.quizPassed === false, JSON.stringify(g));
+    // v15.7.4 FIX-CC-SCORE-FINAL-ANSWERS: the FINAL answer counts. A learner who had to
+    // retry still ends with every answer right, and passes.
+    check('the SCORE counts the final answer: counted correct, quiz passed',
+        g.correct === 'true' && g.quizDone === true && g.quizPassed === true, JSON.stringify(g));
+    check('...while the first attempt is still recorded as incorrect', g.firstAttempt === 'incorrect',
+        JSON.stringify(g));
 
     console.log('\n7b. Right first time with the gate on');
     await page.goto('file://' + tmp);
@@ -688,7 +692,8 @@ async function settle(page) {
     g = await gateState();
     check('an ungraded question closes on the first answer and the learner can move on',
         g.answered === 'true' && g.nextDisabled === false && !g.promptVisible, JSON.stringify(g));
-    check('...and it is not scored as passed', g.quizPassed === false, JSON.stringify(g));
+    check('...and it counts as passed: the learner could not do better, and must not be '
+        + 'kept from completion by an authoring defect', g.quizPassed === true, JSON.stringify(g));
 
     check('no JavaScript error was thrown anywhere in this file', pageErrors.length === 0,
         pageErrors.join('\n'));

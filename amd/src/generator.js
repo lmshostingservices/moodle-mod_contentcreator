@@ -3581,7 +3581,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
      * sentence written twice - so the characters-per-English-word ratio can be measured
      * rather than assumed. Over every pair of 4+ English words (n = 104-113 per language):
      *
-     *     Japanese   2.76 Han+kana characters per English word   (p25 2.29, p75 3.50)
+     *     Japanese   2.76 Han+kana characters per English word   (p25 2.33, p75 3.50)
      *     Chinese    1.75 Han characters per English word        (p25 1.50, p75 2.00)
      *     Thai       5.00 Thai characters per English word       (p25 4.17, p75 6.00)
      *     Korean     0.78 WHITESPACE WORDS per English word
@@ -3641,7 +3641,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
     const CC_THAI_ONE = new RegExp(CC_THAI.source);
     // p25 of each measured distribution, not the median - see "WHICH END" above.
     // (medians for reference: ja 2.76, zh 1.75, th 5.00.)
-    const CC_CHARS_PER_WORD_JA = 2.29; // v15.7.2: re-measured after the table grew (was 2.33)
+    const CC_CHARS_PER_WORD_JA = 2.33; // re-measured at v15.7.4 (2.29 in 15.7.2-15.7.3)
     const CC_CHARS_PER_WORD_ZH = 1.50;
     const CC_CHARS_PER_WORD_TH = 4.17;
     const ccWordCount = function(str) {

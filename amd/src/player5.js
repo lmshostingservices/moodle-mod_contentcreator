@@ -11815,11 +11815,11 @@ define([
          *
          * v15.7.2 FIX-CC-SORT-MUST-ANSWER-CORRECTLY: with "Require the correct answer to
          * continue" on (the default; activitySettings.requireCorrectAnswer), a wrong
-         * column no longer files the item. It shakes red, a "try again" prompt is announced, and the SAME item stays
-         * up until it goes in the right column - the same rule the quiz follows, so the
-         * activities share one idea of what finishing means. The score counts an item
-         * only when it was filed correctly at the FIRST attempt, so a learner who needed
-         * a second go finishes the activity without it being marked passed.
+         * column no longer files the item. It shakes red, a "try again" prompt is
+         * announced, and the SAME item stays up until it goes in the right column - the
+         * same rule the quiz follows, so the activities share one idea of what finishing
+         * means. v15.7.4: the score counts FINAL answers (every item filed correctly), so
+         * finishing the activity passes it. 15.7.2-15.7.3 scored first attempts only.
          *
          * Both the tap buttons and the drag/keyboard paths arrive here, so this is the
          * only place the rule lives.
@@ -11909,8 +11909,11 @@ define([
             }
 
             $prompt.text('');
+            // v15.7.4: every item filed correctly scores - the FINAL answer counts, as in
+            // the quiz (FIX-CC-SCORE-FINAL-ANSWERS). Only the streak, which celebrates
+            // runs of right-first-time, still resets on a retried item.
+            score++;
             if (!missedBefore) {
-                score++;
                 streak++;
             }
             $arena.data('score', score).data('streak', streak);
@@ -13121,11 +13124,17 @@ define([
                 // What v15.4.6 objected to is kept out:
                 // - the answer is not printed under the retry (no reveal, see above), so
                 //   getting through still means working out which option is right;
-                // - the SCORE is still first-attempt. `data-correct` on the question
-                //   records whether the FIRST answer was right and is never upgraded by a
-                //   later one, so `quiz-passed` - the thing the score ring counts - stays
-                //   meaningful. Without that, everyone who reached the end would score
-                //   100%, which is exactly the "meaningless score" v15.4.6 fixed.
+                // - v15.7.4 FIX-CC-SCORE-FINAL-ANSWERS: the SCORE counts FINAL answers
+                //   while the gate is on. 15.7.2/15.7.3 scored first attempts, which
+                //   combined with the gate meant a learner who corrected one mistake
+                //   finished every question right and was still shown 67%, never got
+                //   `challengeComplete` (it is written at 100% only), and under the Moodle
+                //   rule "complete all activities" had to redo the whole challenge.
+                //   Requested by the owner: "count the final answers instead". With the
+                //   gate on, reaching the end means every answer is right, so the
+                //   activity passes. `data-first-attempt` is still written for anyone who
+                //   wants it, but nothing scores from it. Gate off: one answer per
+                //   question, so first and final are the same and nothing changes.
                 // - Category Sort follows the same rule in _handleSortAnswer(), so the
                 //   activities no longer have different ideas of what finishing means.
                 //   Flip & Learn has no wrong answer and is unchanged.
@@ -13178,8 +13187,11 @@ define([
                 $qBlock.removeAttr('data-awaiting-retry');
                 $retryPrompt.text('');
                 $qBlock.attr('data-answered', 'true');
-                $qBlock.attr('data-correct',
-                    $qBlock.attr('data-first-attempt') === 'correct' ? 'true' : 'false');
+                // v15.7.4: final answer. With the gate on this point is only reached on a
+                // correct answer - or on a question with no correct option marked, which
+                // the learner cannot do better on and must not be blocked from completion
+                // by (the server accepts any answer to it too). Gate off: this answer.
+                $qBlock.attr('data-correct', (isCorrect || (_mustBeRight && !result.graded)) ? 'true' : 'false');
                 if ($qBlock.attr('data-correct') === 'true') { $qBlock.attr('data-passed', 'true'); }
                 var _qTotal = parseInt($qSet.attr('data-total'), 10) || 1;
                 var _qAnswered = $qSet.find('.cc5-quiz-question[data-answered="true"]').length;
