@@ -191,6 +191,12 @@ function xmldb_contentcreator_upgrade($oldversion) {
             ]
         );
 
+        if (!empty($manageroles) && !get_capability_info('mod/contentcreator:manage', false)) {
+            // This migration needs the new definition before Moodle's normal
+            // post-upgrade capability registration, including for custom roles.
+            update_capabilities('mod_contentcreator');
+        }
+
         foreach ($manageroles as $roleid) {
             // V13.90.1: This lookup must be context-scoped too. Without the contextid
             // condition, a single course-level override of :manage anywhere on the site
@@ -350,9 +356,21 @@ function xmldb_contentcreator_upgrade($oldversion) {
         // administrator deliberately granted this to is left alone - it will simply find
         // the capability has no effect unless that role is also staff.
         $studentroles = $DB->get_records('role', ['archetype' => 'student'], '', 'id, shortname');
+        // Moodle registers new capability definitions after the module upgrade.
+        // Older sites may not have this capability in the database yet.
+        $capabilityexists = get_capability_info('mod/contentcreator:generateondemand', false);
         $revoked = [];
         foreach ($studentroles as $role) {
-            unassign_capability('mod/contentcreator:generateondemand', $role->id);
+            if ($capabilityexists) {
+                unassign_capability('mod/contentcreator:generateondemand', $role->id);
+            } else {
+                // Also remove orphaned grants, without requiring a capability definition.
+                $DB->delete_records('role_capabilities', [
+                    'capability' => 'mod/contentcreator:generateondemand',
+                    'roleid' => $role->id,
+                ]);
+                accesslib_clear_role_cache($role->id);
+            }
             $revoked[] = $role->shortname;
         }
         if (!empty($revoked)) {
@@ -371,6 +389,10 @@ function xmldb_contentcreator_upgrade($oldversion) {
         unset_config('learnerondemand', 'mod_contentcreator');
 
         upgrade_mod_savepoint(true, 2026091900, 'contentcreator');
+    }
+
+    if ($oldversion < 2026102200) {
+        upgrade_mod_savepoint(true, 2026102200, 'contentcreator');
     }
 
     return true;

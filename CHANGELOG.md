@@ -1,5 +1,24 @@
 # Changelog
 
+## 15.7.5 - 2026-10-22
+
+### Fixed
+
+- Allow older sites to upgrade when `mod/contentcreator:generateondemand` has
+  not yet been registered by Moodle. The student-permission cleanup no longer
+  calls an API that requires the missing definition.
+- Remove any orphaned grants for student-archetype roles and clear their
+  permission caches. Preserve grants for custom and teacher roles.
+- Keep the cleanup safe to rerun after an interrupted upgrade.
+- Register a missing authoring capability before the older authoring-permission
+  migration uses it, preserving explicit prohibitions and custom-role access.
+- No changes to image generation, prompts, credit prices or saved activities.
+
+### Tests
+
+- Upgrade regression coverage for present and missing capability definitions,
+  orphaned grants, custom-role preservation and repeated upgrades.
+
 ## 15.7.4 - 2026-10-09
 
 **With "Require the correct answer to continue" on, the score now counts final answers.**
