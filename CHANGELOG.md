@@ -1,5 +1,41 @@
 # Changelog
 
+## 15.7.6 - 2026-10-26
+
+**Units whose performance criteria don't all come through from training.gov.au.**
+
+Built on the released 15.7.5 (22 Oct, upgrade/capability fixes), which it includes unchanged.
+A build of these same fixes was also made on 26 Oct numbered 15.7.5 (sha 48529ac2...,
+2026102600); it collided with the released 15.7.5 and was never released. This is that work,
+rebased onto the released 15.7.5.
+
+Reported: SITHFAB021 fetched as 4 elements and **1** PC. It has 20 (5 + 6 + 3 + 6).
+
+**The cause is on the LMS Labs server, and is handed over separately.** training.gov.au numbers
+this unit inconsistently - "1.1 Identify..." then "1.2. Where appropriate...", "2.1. Use
+knowledge..." - and the server's unit reader (`/api/tga/unit/{code}`) kept only the one PC
+written without a trailing full stop. The plugin uses what the server returns, so "Refresh
+from TGA" gives the same result until the server is fixed.
+
+The plugin's own half had three faults on the same unit, all fixed here:
+
+- **Nothing said the unit was incomplete.** The unit card now warns when any element came
+  back with no performance criteria, names the elements, and has a button that opens the
+  paste box. The element list shows "No PCs found" on those elements. Every element of a
+  unit of competency has at least one PC, so this never fires on a correctly read unit.
+- **"Merge (add missing only)" added nothing.** It only added missing ELEMENTS; here all four
+  elements were present, just without their PCs. Merge now also fills in missing PCs, matched
+  by number - nothing already there is duplicated or changed, and PCs stay in number order.
+- **Pasting the TGA table lost the first PC of every element.** Copying the table puts each
+  element and its first PC on one line separated by a tab, and the first PC was swallowed into
+  the element's name - SITHFAB021 pasted as a table gave 16 of its 20 PCs. Tabs are now treated
+  as line breaks. Pasting line by line, which is what worked before, is unchanged.
+
+The paste box hint now says the whole table can be copied, and what Merge and Replace each do.
+
+New: `tests/js/test-tga-pcs.js` (27 checks) on SITHFAB021's real text, as lines and as a table
+(`tests/fixtures/`). Each of the three fixes was mutation-checked: removing it fails the suite.
+
 ## 15.7.5 - 2026-10-22
 
 ### Fixed

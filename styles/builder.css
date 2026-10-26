@@ -7032,3 +7032,29 @@ body.dark .cc-mode-need-label, [data-theme="dark"] .cc-mode-need-label,
 .cc-require-correct-toggle-group.cc-disabled {
     opacity: 0.55;
 }
+
+/* v15.7.5: a fetched unit with elements that have no performance criteria. */
+.cc-unit-gap-warning {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--cc-warning);
+    border-radius: 8px;
+    background: var(--cc-warning-muted);
+    /* Text uses the body colour, not the amber: amber on its own tint is below 4.5:1. */
+    color: var(--cc-text);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+.cc-unit-gap-text {
+    flex: 1 1 280px;
+}
+.cc-element-pc-count.cc-element-pc-count-missing {
+    border: 1px solid var(--cc-warning);
+    background: var(--cc-warning-muted);
+    color: var(--cc-text);
+    font-weight: 600;
+}

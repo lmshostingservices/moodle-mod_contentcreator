@@ -281,7 +281,7 @@ define([
         'msgtime7minutes', 'msgtime10minutes', 'msgsequentiallockstep', 'msgtogeneratecontent',
         'msgcredits', 'msgpreparing', 'msgzerocredits', 'msgcontinue', 'msguploadpdf',
         'msgpastetext', 'msgprocesstext', 'msgselectelement', 'msgrefreshfromtga',
-        'msgmergeaddmissing', 'msgsuggestsubtopics', 'msgdownloadchatgptcontext', 'msgback',
+        'msgmergeaddmissing', 'msgunitmissingpcs', 'msgunitmissingpcsbtn', 'msgnopcsfound', 'msgsuggestsubtopics', 'msgdownloadchatgptcontext', 'msgback',
         'msgtrainingdocument', 'msgdownloadchatgpt', 'msgsuggestsubtopicsai',
         'msgcompliancemap', 'msgplanninglayer', 'msgselectall', 'msgdeselectall',
         'msgskipvoiceover', 'msgvoiceoverslater', 'msgexportexcel', 'msgresetstartover',
@@ -805,7 +805,7 @@ define([
         msgdownloadunitpdf: 'Download the unit PDF from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> and upload it here.',
         msgopenuniton: 'Open the unit on <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a>, select all text (Ctrl+A / Cmd+A) and paste here.',
         msgchooseoneelement: 'Choose <strong>one element</strong> to generate learning content for. Generate each element separately so you can place <strong>AI Learning Activities</strong>, <strong>AI Video Activity</strong>, <strong>AI Knowledge Check</strong>, or <strong>AI Essay Maker</strong> between them for revision and deeper learning.',
-        msgpasteelementshint: 'If auto-fetch missed an element, paste the <strong>Elements and Performance Criteria</strong> section from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> below.<br>Format: <code>1. Element name</code> on its own line, then <code>1.1 PC text</code> etc.',
+        msgpasteelementshint: 'If auto-fetch missed an element or its PCs, paste the <strong>Elements and Performance Criteria</strong> section from <a href="https://training.gov.au" target="_blank" rel="noopener">training.gov.au</a> below. You can copy the whole table, or type <code>1. Element name</code> on its own line, then <code>1.1 PC text</code> etc. <strong>Merge</strong> fills in only what is missing; <strong>Apply &amp; replace</strong> replaces everything.',
         msgworkplacecontext: 'Workplace Context',
         msgselectindustry: 'Select industry...',
         msgindustrysector: 'Industry Sector',
@@ -948,6 +948,9 @@ define([
         msgselectelement: 'Select Element to Generate',
         msgrefreshfromtga: 'Refresh from TGA',
         msgmergeaddmissing: 'Merge (add missing only)',
+        msgunitmissingpcs: '<strong>This unit looks incomplete.</strong> No performance criteria were found for element(s) {$a}. Copy the Elements and Performance Criteria from training.gov.au and paste them in before generating.',
+        msgunitmissingpcsbtn: 'Paste elements and PCs',
+        msgnopcsfound: 'No PCs found',
         msgsuggestsubtopics: 'Suggest Subtopics',
         msgdownloadchatgptcontext: 'Download ChatGPT Prompt File (includes your topics + context)',
         msgback: 'Back',
@@ -7782,7 +7785,7 @@ define([
                             <span class="cc-element-number-badge">${elementId}</span>
                             <span class="cc-element-radio-title">${escapeHtml(displayName)}</span>
                         </div>
-                        <span class="cc-element-pc-count">${pcCount} PC${pcCount !== 1 ? 's' : ''}</span>
+                        <span class="cc-element-pc-count${pcCount ? '' : ' cc-element-pc-count-missing'}">${pcCount ? (pcCount + ' PC' + (pcCount !== 1 ? 's' : '')) : s('msgnopcsfound')}</span>
                     </div>
                     ${pcList.length > 0 ? `
                     <div class="cc-element-pc-list">
@@ -7829,6 +7832,22 @@ define([
                     </div>
                 </div>
                 
+                ${(function() {
+                    // v15.7.5 FIX-CC-UNIT-MISSING-PCS-WARNING: say so when an element came
+                    // back with no PCs. SITHFAB021 fetched as 4 elements and 1 PC, and
+                    // nothing on screen said anything was wrong - a teacher could generate
+                    // content for an element with no PCs at all.
+                    const gaps = ccElementsMissingPcs(data);
+                    if (!gaps.length) { return ''; }
+                    return '<div class="cc-unit-gap-warning" role="alert" data-testid="unit-missing-pcs">'
+                        + '<div class="cc-unit-gap-text">'
+                        + s('msgunitmissingpcs').split('{$a}').join(escapeHtml(gaps.join(', ')))
+                        + '</div>'
+                        + '<button type="button" class="cc-btn cc-btn-secondary cc-btn-sm cc-unit-gap-paste"'
+                        + ' data-testid="button-unit-gap-paste">' + s('msgunitmissingpcsbtn') + '</button>'
+                        + '</div>';
+                })()}
+
                 <!-- v6.9.38: Element selector REMOVED - Topics ARE elements, no double handling needed -->
                 <!-- User selects which elements to include via the Topic selector after clicking Suggest Topics -->
                 
@@ -9053,6 +9072,21 @@ define([
         // v10.25: Element correction bar events
         container.querySelector('#cc-refresh-elements')?.addEventListener('click', handleRefreshElements);
         container.querySelector('#cc-toggle-paste-elements')?.addEventListener('click', togglePasteElements);
+        // v15.7.5: the "missing PCs" warning's button opens the paste panel. Delegated and
+        // installed once, because the unit card is re-rendered by fetch, refresh, PDF
+        // upload and paste alike.
+        if (!document._ccUnitGapBound) {
+            document._ccUnitGapBound = true;
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest || !e.target.closest('.cc-unit-gap-paste')) { return; }
+                const panel = document.getElementById('cc-paste-elements-panel');
+                if (!panel) { return; }
+                panel.classList.remove('cc-hidden');
+                panel.scrollIntoView({behavior: 'smooth', block: 'center'});
+                const ta = document.getElementById('cc-paste-elements-text');
+                if (ta) { try { ta.focus({preventScroll: true}); } catch (err) { ta.focus(); } }
+            });
+        }
         container.querySelector('#cc-apply-paste-elements')?.addEventListener('click', () => applyPasteElements(false));
         container.querySelector('#cc-merge-paste-elements')?.addEventListener('click', () => applyPasteElements(true));
         // Fallback tab switcher
@@ -10619,8 +10653,109 @@ define([
     };
 
     // v10.25: Parse pasted plain-text TGA elements (element + performance criteria)
+    /**
+     * v15.7.5: an element's number as a plain string - "1", whether it arrived as 1, "1"
+     * or "1.".
+     *
+     * @param {Object} el Element.
+     * @return {String}
+     */
+    const ccElementCode = (el) => String((el && (el.code !== undefined && el.code !== null ? el.code : el.number)) || '')
+        .trim().replace(/\.+$/, '');
+
+    /**
+     * v15.7.5: a PC's number - "1.2" - whether the PC is a string ("1.2 text", "1.2. text")
+     * or an object ({code: "1.2."}). Empty when it carries no number.
+     *
+     * @param {String|Object} pc Performance criterion.
+     * @return {String}
+     */
+    const ccPcCode = (pc) => {
+        if (pc && typeof pc === 'object') {
+            const c = pc.code !== undefined && pc.code !== null ? pc.code : pc.number;
+            if (c !== undefined && c !== null && String(c).trim()) {
+                return String(c).trim().replace(/\.+$/, '');
+            }
+            pc = pc.text || pc.title || '';
+        }
+        const m = String(pc || '').trim().match(/^(\d+\.\d+(?:\.\d+)?)\.?(?:\s|$)/);
+        return m ? m[1] : '';
+    };
+
+    /**
+     * v15.7.5: merge pasted elements into the fetched ones - missing elements AND
+     * missing PCs.
+     *
+     * Pure, so tests/js/test-tga-pcs.js can run it on SITHFAB021's real text.
+     *
+     * @param {Array} existing Elements already loaded.
+     * @param {Array} pasted Elements parsed from the paste box.
+     * @return {Object} {elements, addedElements, addedPcs}
+     */
+    const ccMergeElements = (existing, pasted) => {
+        const out = existing.map(e => Object.assign({}, e, {
+            performanceCriteria: (e.performanceCriteria || []).slice()
+        }));
+        let addedElements = 0;
+        let addedPcs = 0;
+        pasted.forEach(p => {
+            const code = ccElementCode(p);
+            const target = out.find(e => ccElementCode(e) === code);
+            if (!target) {
+                out.push(Object.assign({}, p, {performanceCriteria: (p.performanceCriteria || []).slice()}));
+                addedElements++;
+                addedPcs += (p.performanceCriteria || []).length;
+                return;
+            }
+            const have = new Set(target.performanceCriteria.map(ccPcCode).filter(Boolean));
+            (p.performanceCriteria || []).forEach(pc => {
+                const c = ccPcCode(pc);
+                if (c && !have.has(c)) {
+                    target.performanceCriteria.push(pc);
+                    have.add(c);
+                    addedPcs++;
+                }
+            });
+            // Keep the PCs in number order once some were filled in around fetched ones.
+            target.performanceCriteria.sort((a, b) => {
+                const pa = ccPcCode(a).split('.').map(Number);
+                const pb = ccPcCode(b).split('.').map(Number);
+                for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+                    const d = (pa[i] || 0) - (pb[i] || 0);
+                    if (d) { return d; }
+                }
+                return 0;
+            });
+        });
+        out.sort((a, b) => parseInt(ccElementCode(a), 10) - parseInt(ccElementCode(b), 10));
+        return {elements: out, addedElements: addedElements, addedPcs: addedPcs};
+    };
+
+    /**
+     * v15.7.5: the elements of a loaded unit that have NO performance criteria.
+     *
+     * Every element of a unit of competency has at least one PC, so an element with none
+     * is always a reading fault, never the unit. Returned as 1-based positions, which is
+     * what the element list shows.
+     *
+     * @param {Object} data tgaData.
+     * @return {Array<Number>}
+     */
+    const ccElementsMissingPcs = (data) => ((data && data.elements) || [])
+        .map((el, i) => ((el.performanceCriteria || []).length ? 0 : i + 1))
+        .filter(Boolean);
+
     const parseElementsText = (text) => {
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        // v15.7.5 FIX-CC-PASTE-TABLE-FIRST-PC: split on TABS as well as line breaks.
+        //
+        // Copying the Elements and Performance Criteria TABLE from training.gov.au puts
+        // each element and its first PC on one line, separated by a tab:
+        // "1. Follow the principles...\t1.1 Identify the provisions...". That line matched
+        // the element pattern, so the first PC of every element was swallowed into the
+        // element's NAME - SITHFAB021 pasted as a table gave 16 of its 20 PCs, losing 1.1,
+        // 2.1, 3.1 and 4.1. A tab never belongs inside an element name or a PC sentence,
+        // so treating it as a break is safe for text pasted line by line too.
+        const lines = String(text || '').split(/\r?\n|\t/).map(l => l.trim()).filter(l => l.length > 0);
         const elements = [];
         let current = null;
         let pendingCode = null;
@@ -10697,12 +10832,21 @@ define([
         }
 
         if (mergeMode) {
-            // Merge: add elements whose code is not already present
-            const existingCodes = new Set((tgaData.elements || []).map(e => String(e.code)));
-            const newEls = parsed.filter(e => !existingCodes.has(String(e.code)));
-            tgaData.elements = [...(tgaData.elements || []), ...newEls]
-                .sort((a, b) => parseInt(a.code, 10) - parseInt(b.code, 10));
-            if (statusEl) statusEl.textContent = `Merged ${newEls.length} new element(s). Total: ${tgaData.elements.length}`;
+            // v15.7.5 FIX-CC-MERGE-FILLS-MISSING-PCS: merge adds missing PCs to elements
+            // that ARE already there, not only missing elements.
+            //
+            // It used to add only elements whose number was absent. When training.gov.au's
+            // data comes back with an element present but its PCs missing - SITHFAB021:
+            // elements 2-4 with no PCs, element 1 with 1.1 only - Merge added nothing at
+            // all, and the label ("add missing only") promised exactly what was needed.
+            // PCs are matched by their number, so nothing already there is duplicated or
+            // changed; a PC the fetch did get keeps its fetched text.
+            const result = ccMergeElements(tgaData.elements || [], parsed);
+            tgaData.elements = result.elements;
+            if (statusEl) {
+                statusEl.textContent = `Merged ${result.addedElements} new element(s) and `
+                    + `${result.addedPcs} missing PC(s). Total: ${tgaData.elements.length} element(s).`;
+            }
         } else {
             // Replace
             tgaData.elements = parsed;
