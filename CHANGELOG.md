@@ -1,5 +1,14 @@
 # Changelog
 
+## 15.7.7 - 2026-11-10
+
+### Added
+- AI Course Builder adapter, through the existing LMS Labs route and manifest storage.
+
+### Fixed
+- Course Builder content uses every source the teacher supplied (curriculum and sample content, up to 20,000 characters), the course language and spelling (en-AU, en-GB or en-US), and an audience built from the sector, level and learner profile. Before this the sample text was never sent, and every course was written in Australian English for "General secondary learners".
+- A server error such as "all providers exhausted" can be retried. A retry uses a new request key, so the service does not replay the failed job.
+
 ## 15.7.6 - 2026-10-26
 
 **Units whose performance criteria don't all come through from training.gov.au.**
