@@ -1,16 +1,41 @@
 <?php
-namespace mod_contentcreator\aicoursebuilder;
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-defined('MOODLE_INTERNAL') || die();
+namespace mod_contentcreator\aicoursebuilder;
 
 /**
  * Generate one course lesson through Content Creator's native async route and manifest store.
+ *
+ * @package    mod_contentcreator
+ * @copyright  2026 LMS Hosting Services
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class native_adapter {
+    /** Price check route. */
     private const ESTIMATE_ROUTE = '/api/moodle/content-creator/estimate';
+    /** Start route. */
     private const START_ROUTE = '/api/moodle/content-creator/prompt/start';
+    /** Job status route. */
     private const JOB_ROUTE = '/api/jobs/';
 
+    /**
+     * Credits for one lesson.
+     *
+     * @return int
+     */
     public static function estimate(): int {
         $quote = \local_aicoursebuilder\local\api_client::request_json(
             'POST',
@@ -24,6 +49,13 @@ class native_adapter {
         return max(0, (int)$quote['credits']);
     }
 
+    /**
+     * Start generating one lesson.
+     *
+     * @param int $cmid
+     * @param array $brief
+     * @return string job id
+     */
     public static function generate(int $cmid, array $brief): string {
         global $DB;
         $cm = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);
@@ -98,6 +130,13 @@ class native_adapter {
         return $jobid;
     }
 
+    /**
+     * Poll a job.
+     *
+     * @param int $cmid
+     * @param string $jobid
+     * @return array
+     */
     public static function status(int $cmid, string $jobid): array {
         if (!preg_match('/^[A-Za-z0-9-]{1,100}$/', $jobid)) {
             return ['status' => 'failed', 'retryable' => false, 'error' => 'The Content Creator job reference is invalid.'];
@@ -141,10 +180,17 @@ class native_adapter {
                 return ['status' => 'failed', 'retryable' => false, 'error' => 'Content Creator returned a card with an invalid type.'];
             }
         }
-        $manifest = self::manifest_for($cmid, $cards);
+        $manifest = self::manifest_for($cmid, self::complete_cards($cards));
         return ['status' => 'complete', 'result' => ['manifest' => $manifest]];
     }
 
+    /**
+     * Save a finished lesson.
+     *
+     * @param int $cmid
+     * @param array $result
+     * @return bool
+     */
     public static function save_result(int $cmid, array $result): bool {
         if (!is_array($result['manifest'] ?? null)) {
             return false;
@@ -157,6 +203,50 @@ class native_adapter {
         return !empty($saved['success']);
     }
 
+    /**
+     * Put each card's content where the player reads it.
+     *
+     * The service now returns scene parts and concept insights as keyPoints. The editor moves them
+     * into sceneParts and conceptInsights when it generates; a Course Builder card must get the same,
+     * or the player shows an empty "Scene setting".
+     *
+     * @param array $cards
+     * @return array
+     */
+    public static function complete_cards(array $cards): array {
+        foreach ($cards as &$card) {
+            if (!is_array($card)) {
+                continue;
+            }
+            $type = (string)($card['cardType'] ?? '');
+            $points = is_array($card['keyPoints'] ?? null) ? array_values($card['keyPoints']) : [];
+            $field = in_array($type, ['hook-scenario', 'applied-scenario'], true) ? 'sceneParts'
+                : ($type === 'concept-explainer' ? 'conceptInsights' : '');
+            if ($field === '' || !empty($card[$field]) || !$points) {
+                continue;
+            }
+            $card[$field] = array_values(array_filter(array_map(static function ($point) {
+                if (!is_array($point)) {
+                    return ['title' => '', 'icon' => '', 'text' => (string)$point];
+                }
+                return [
+                    'title' => (string)($point['title'] ?? $point['label'] ?? ''),
+                    'icon' => (string)($point['icon'] ?? ''),
+                    'text' => (string)($point['text'] ?? $point['content'] ?? $point['description'] ?? ''),
+                ];
+            }, $points), static fn($part) => trim($part['text']) !== '' || trim($part['title']) !== ''));
+        }
+        unset($card);
+        return $cards;
+    }
+
+    /**
+     * The manifest for a Course Builder lesson.
+     *
+     * @param int $cmid
+     * @param array $cards
+     * @return array
+     */
     private static function manifest_for(int $cmid, array $cards): array {
         $now = gmdate('c');
         $cm = get_coursemodule_from_id('contentcreator', $cmid, 0, false, MUST_EXIST);

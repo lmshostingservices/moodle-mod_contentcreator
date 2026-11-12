@@ -1,5 +1,8 @@
 # Changelog
 
+## [15.7.8] - 2026-11-12
+- Fix: lessons made by AI Course Builder showed empty cards ("Scene setting" with no text). The service now sends scene and concept content as key points; Course Builder cards are moved to where the player reads them, including lessons already built.
+
 ## 15.7.7 - 2026-11-10
 
 ### Added

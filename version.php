@@ -26,8 +26,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2026111000;
+$plugin->version   = 2026111200;
 $plugin->requires  = 2023042400;
 $plugin->component = 'mod_contentcreator';
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '15.7.7';
+$plugin->release   = '15.7.8';

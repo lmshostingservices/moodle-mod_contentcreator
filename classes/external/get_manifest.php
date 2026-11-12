@@ -72,6 +72,21 @@ class get_manifest extends external_api {
 
         // Version 11.48 FIX BUG-CC-DBWRITE: decompress manifest if stored compressed (gz: prefix).
         $rawmanifest = \mod_contentcreator\manifest_storage::decompress($contentcreator->manifestjson ?? '');
+        // Lessons made by AI Course Builder before 15.7.8 kept their scene and concept content in
+        // keyPoints only, so the player showed empty cards. Move it where the player reads it.
+        $decoded = json_decode((string)$rawmanifest, true);
+        if (is_array($decoded) && !empty($decoded['context']['courseBuilder']) && is_array($decoded['topics'] ?? null)) {
+            foreach ($decoded['topics'] as &$topic) {
+                foreach (($topic['sections'] ?? []) as $index => $section) {
+                    if (is_array($section['cards'] ?? null)) {
+                        $topic['sections'][$index]['cards'] =
+                            \mod_contentcreator\aicoursebuilder\native_adapter::complete_cards($section['cards']);
+                    }
+                }
+            }
+            unset($topic);
+            $rawmanifest = json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
 
         // V15.6.1 REVERT-CC-ANSWER-IN-DOM. V15.5.0 stripped the answer key from this payload
         // for non-staff, which forced every challenge answer through a web service call to
