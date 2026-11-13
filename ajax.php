@@ -93,6 +93,34 @@ function mod_contentcreator_fail($key, $a = null, array $extra = []) {
  * @param stdClass $cm Course module record, whose course field gives the course context.
  * @return void
  */
+/**
+ * Tell Client Portal (when installed) what an LMS Labs call cost, so a site owner can bill the client.
+ *
+ * The service prices some work once per subtopic, so the reply's own figure is used when it gives one;
+ * $fallback is only for calls with a fixed price.
+ *
+ * @param context $context
+ * @param mixed $reply the decoded reply
+ * @param float $fallback credits when the reply does not say
+ * @param string $description
+ * @param string $ref job id, so a polled job is counted once
+ * @return void
+ */
+function mod_contentcreator_report_usage($context, $reply, $fallback, $description, $ref = '') {
+    global $USER;
+    if (method_exists('\\local_clientportal\\api', 'record_lmslabs_call')) {
+        \local_clientportal\api::record_lmslabs_call(
+            (int)$USER->id,
+            (int)$context->id,
+            'mod_contentcreator',
+            $reply,
+            (float)$fallback,
+            $description,
+            (string)$ref
+        );
+    }
+}
+
 function mod_contentcreator_require_manage($context, $cm) {
     // V13.86: This used to accept moodle/course:manageactivities in the COURSE context
     // as an alternative. That made the plugin's own capability advisory: prohibiting
@@ -880,6 +908,10 @@ try {
             mod_contentcreator_fail('vendorerrorgeneric');
         }
 
+        if ($endpoint['method'] === 'POST' && $endpointkey !== 'gallerycontribute') {
+            // Only calls that do work; a balance read reports totals, not a charge.
+            mod_contentcreator_report_usage($context, $result, 0, 'Content Creator');
+        }
         mod_contentcreator_response(['success' => true, 'data' => $result]);
     }
 
@@ -982,6 +1014,7 @@ try {
             );
         }
 
+        mod_contentcreator_report_usage($context, $result, $creditsforaction > 1 ? $creditsforaction : 0, 'Content');
         mod_contentcreator_response(
             [
                 'success' => true,
@@ -1076,6 +1109,10 @@ try {
         // V13.94.3: Bind the job id to this user and this course module before handing it
         // to the browser, so poll_job can tell an author's own job from somebody else's.
         mod_contentcreator_remember_job_owner($result['jobId'], $cmid);
+        if ($creditsforasync > 1) {
+            // Translation passes have a fixed price; the rest is reported when the job finishes.
+            mod_contentcreator_report_usage($context, $result, $creditsforasync, 'Translation', $result['jobId']);
+        }
 
         // Pass the vendor's idempotency acknowledgement through to the browser.  (v15.3.13)
         //
@@ -1138,6 +1175,9 @@ try {
             );
         }
 
+        if (in_array($result['status'] ?? '', ['done', 'complete', 'completed'], true)) {
+            mod_contentcreator_report_usage($context, $result, 0, 'Content', $jobid);
+        }
         mod_contentcreator_response($result);
     }
 
@@ -1325,6 +1365,8 @@ try {
                 ]
             );
         }
+
+        mod_contentcreator_report_usage($context, $result, $subtopickey === '' ? 5 : 0, 'Voiceover');
 
         // Store the freshly generated audio so future requests for the same text, voice and
         // language are served from the cache at no credit cost.
@@ -1636,6 +1678,7 @@ try {
         );
 
         if (!empty($result['success'])) {
+            mod_contentcreator_report_usage($context, $result, 0, 'Document examples');
             mod_contentcreator_response(
                 [
                     'success' => true,
@@ -1843,6 +1886,7 @@ try {
             );
         }
 
+        mod_contentcreator_report_usage($context, $result, $imgsubtopickey === '' ? 5 : 0, 'Image');
         mod_contentcreator_response(
             [
                 'success' => true,

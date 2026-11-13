@@ -302,6 +302,19 @@ class generate_document_example extends external_api {
             ];
         }
 
+        if (method_exists('\\local_clientportal\\api', 'record_lmslabs_call')) {
+            // Client Portal bills the client for this call; the reply says what it cost when it can.
+            global $USER;
+            \local_clientportal\api::record_lmslabs_call(
+                (int)$USER->id,
+                (int)$context->id,
+                'mod_contentcreator',
+                $data,
+                0,
+                'Document example'
+            );
+        }
+
         // FIX-CC-DOCEXAMPLE-NEVER-CACHED (v13.95.1): store the generated result site-wide so
         // the next learner to open this document is served from cache instead of triggering a
         // second generation. Written before the return so a later reader gets the identical

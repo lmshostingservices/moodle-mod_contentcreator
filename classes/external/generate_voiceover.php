@@ -363,6 +363,19 @@ class generate_voiceover extends external_api {
             ];
         }
 
+        if (method_exists('\\local_clientportal\\api', 'record_lmslabs_call')) {
+            // Client Portal bills the client for this call; the reply says what it cost when it can.
+            global $USER;
+            \local_clientportal\api::record_lmslabs_call(
+                (int)$USER->id,
+                (int)$context->id,
+                'mod_contentcreator',
+                $data,
+                $params['subtopicKey'] === '' ? 5 : 0,
+                'Voiceover'
+            );
+        }
+
         // FIX-CC-EXTVO-CACHE (v12.84): Save newly generated audio to the file store
         // so subsequent calls with the same text+voice+language are served from cache.
         // FIX-CC-EXTVO-CACHE-RACE (v12.86): Delete any pre-existing file under this key

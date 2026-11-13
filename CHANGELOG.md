@@ -1,5 +1,10 @@
 # Changelog
 
+## [15.7.9] - 2026-11-13
+
+### Added
+- Works with Client Portal 2.0.1 and later: each LMS Labs AI call made in a client's course, or by a client's people, is reported to the portal with the credits it used, so the site owner can see and invoice each client's usage. The service's own figure is used when its reply gives one; otherwise the plugin's published price. Calls that fail and polled jobs are never counted twice. Nothing changes on sites without Client Portal.
+
 ## [15.7.8] - 2026-11-12
 - Fix: lessons made by AI Course Builder showed empty cards ("Scene setting" with no text). The service now sends scene and concept content as key points; Course Builder cards are moved to where the player reads them, including lessons already built.
 
