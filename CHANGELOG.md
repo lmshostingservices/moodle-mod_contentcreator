@@ -1,5 +1,10 @@
 # Changelog
 
+## [15.7.10] - 2026-11-19
+
+### Fixed
+- Continue (on a completed Decision Challenge) and the Next arrow now always go to the next slide. Only the last slide in a topic returns to the topics page. Before this, once every slide in a topic had been viewed, Continue on any slide went straight back to the topics page, so a learner who had viewed all slides but not passed every challenge could not reach the remaining challenges and the "score 100% on every Decision Challenge" completion rule could never be met.
+
 ## [15.7.9] - 2026-11-13
 
 ### Added

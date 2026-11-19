@@ -12420,14 +12420,20 @@ define([
                 }
                 
                 if (self.currentSlideIndex < sections.length - 1) {
+                    // v15.7.10 FIX-CC-NEXT-SKIPS-TO-TOPICS: Next (and the challenge's
+                    // Continue, which triggers it) always goes to the NEXT slide. Only the
+                    // last slide returns to the topics page - the else branch below.
+                    //
+                    // This used to advance and then, if every slide was already marked
+                    // viewed, immediately render the topics page instead. "Viewed" says
+                    // nothing about the Decision Challenge, so a learner who had opened
+                    // all four slides but passed only slide 1's challenge pressed Continue
+                    // on slide 1 and was sent back to the topics page every time. Review
+                    // Content reopens slide 1, so slides 2-4 (and their challenges) were
+                    // unreachable except through the slide number buttons, and the
+                    // "score 100% on every Decision Challenge" rule could never be met.
+                    // Reported by GIE (elearn.gie.edu.au), HLTAID009 Learning 1.
                     self.navigateToSlide(self.currentSlideIndex + 1);
-                    // After advancing, if all slides are now complete go back to topics
-                    if (self.areAllExpandedSlidesComplete(self.getCurrentSections())) {
-                        self.currentView = 'topics';
-                        self.currentTopicId = null;
-                        self.saveSessionState();
-                        self.render();
-                    }
                 } else {
                     // v9.65: On the last slide the "Finish" chevron must navigate back to topics.
                     // Previously the outer condition was false, so only markSectionComplete ran
