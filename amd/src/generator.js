@@ -6161,6 +6161,12 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         let attemptCount = 0;
         let lastScore = null; // holds { cards } for repair prompt
         let lastIssues = []; // structural issues fed to repair prompt
+        // v15.7.11 FIX-CC-BLANK-FAIL-REASON: why the last attempt produced no cards at all
+        // (the AI call threw, or its reply could not be parsed). Kept apart from lastIssues,
+        // which is fed to the repair prompt and must only hold card faults. Without this the
+        // report read "Structural validation failed after 2 attempt(s): " with nothing after
+        // the colon, and blamed the card's shape for what was a failed or unreadable reply.
+        let lastFailure = '';
         // v13.98: the best structurally-valid version seen across attempts, so a quality
         // repair that comes back worse or shorter can be thrown away rather than shipped.
         let bestCandidate = null;
@@ -6387,6 +6393,15 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                 
                 if (!parsed || !Array.isArray(parsed)) {
                     ccLog('%c[PARSE] x FAILED - Invalid JSON response', 'color: #ef4444; font-weight: bold;');
+                    (function() {
+                        var raw = String(rawResponse || '');
+                        var preview = raw.replace(/\s+/g, ' ').trim().substring(0, 160);
+                        lastFailure = raw.length
+                            ? 'The AI reply could not be read as card data (' + raw.length
+                                + ' characters returned). Start of reply: "' + preview
+                                + (raw.length > 160 ? '...' : '') + '"'
+                            : 'The AI service returned an empty reply.';
+                    })();
                     // v7.9.65: Capture failed parse for debugging
                     pushDebugLogEntry({
                         type: 'PARSE_FAIL',
@@ -6694,6 +6709,7 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
 
                 // Structural issues  -  store for repair on attempt 2
                 lastIssues = validation.issues.slice(0, 5);
+                lastFailure = ''; // this attempt reached the validator; its issues are the latest news
                 lastScore = { cards: fixedCards };
                 ccLog('%c[VALIDITY GATE] Structural issues (top ' + lastIssues.length + '):', 'color: #ef4444;');
                 lastIssues.forEach(function(issue, i) { ccLog('%c  ' + (i + 1) + '. ' + issue, 'color: #ef4444;'); });
@@ -6704,6 +6720,9 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
                 
             } catch (error) {
                 ccError('generateFiveCardSequence() EXCEPTION on ' + attemptLabel(attemptCount) + ': ' + error.message);
+                // Verbatim, so ccClassifyFailure() in builder.js can recognise a timeout,
+                // rate limit or HTTP error and show the matching cause and advice.
+                lastFailure = 'The AI request failed: ' + ((error && error.message) ? error.message : String(error));
                 ccError('generateFiveCardSequence() Stack:', error.stack);
                 ccLog('%c[ERROR] ============================================', 'color: #ef4444; font-weight: bold;');
                 ccLog('%c[ERROR] Exception on ' + attemptLabel(attemptCount) + ':', 'color: #ef4444; font-weight: bold;');
@@ -6733,7 +6752,15 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
         // v11.73: All attempts exhausted  -  validity gate never passed.
         // The last generated cards (lastScore.cards) are structurally broken.
         // Return a failed sequence so the "Regenerate Failed" auto-redo loop retries.
-        const failReason = 'Structural validation failed after ' + MAX_ATTEMPTS + ' attempt(s): ' + lastIssues.join('; ');
+        // v15.7.11: name what actually went wrong. Structural issues when the validator
+        // found some; otherwise the transport or parse failure that stopped the cards
+        // reaching the validator at all.
+        // The LAST attempt's failure wins: lastFailure is cleared whenever an attempt
+        // reaches the validator, so it is only set here if the final attempt never did.
+        const failReason = lastFailure
+            || (lastIssues.length
+                ? 'Structural validation failed after ' + MAX_ATTEMPTS + ' attempt(s): ' + lastIssues.join('; ')
+                : 'Generation did not complete after ' + MAX_ATTEMPTS + ' attempt(s) and gave no reason.');
 
         // v13.98: a QUALITY repair can come back structurally broken, and when it does the
         // loop falls through to here carrying the broken attempt in lastScore. But attempt

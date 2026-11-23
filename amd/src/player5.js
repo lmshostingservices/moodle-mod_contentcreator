@@ -13737,7 +13737,14 @@ define([
                 e.preventDefault();
                 e.stopPropagation();
                 var $modal = $(this).closest('.cc5-image-modal');
-                $modal.find('.cc5-image-file-input').data('section-id', $(this).attr('data-section-id')).click();
+                // v15.7.12 FIX-CC-IMAGE-UPLOAD-NEVER-STARTS: write the section id as an
+                // ATTRIBUTE. This used jQuery .data(), which stores the value in jQuery's
+                // own cache and never touches the DOM, while the change handler below reads
+                // .attr('data-section-id'). That read was always undefined, the handler's
+                // "if (file && sectionId)" was always false, and the chosen file was dropped
+                // with no upload, no error and no message - for every file type. Reported by
+                // a client as "it will not let me upload a PNG image to the cards".
+                $modal.find('.cc5-image-file-input').attr('data-section-id', $(this).attr('data-section-id')).click();
             });
             
             // v7.2.0: Gallery option click - show gallery modal
@@ -13763,6 +13770,14 @@ define([
                 var file = this.files[0];
                 var sectionId = $(this).attr('data-section-id');
                 var $input = $(this);
+                if (file && !sectionId) {
+                    // Never drop a chosen file silently: say so, so the author is not left
+                    // clicking a button that appears to do nothing.
+                    $input.val('');
+                    showErrorToast('The image could not be attached to this slide. Please close this window and try again.',
+                        'imageUploadNoSection');
+                    return;
+                }
                 if (file && sectionId) {
                     validateImageAspectRatio(file, function(validFile) {
                         $('.cc5-image-modal-overlay').remove();

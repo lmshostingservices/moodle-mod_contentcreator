@@ -179,6 +179,7 @@ $string['msgfailcausetransport'] = 'The request was refused before it reached Mo
 $string['msgfailcauselimit'] = 'The speech or content limit for this site was reached.';
 $string['msgfailcausetimeout'] = 'The request took too long and was abandoned.';
 $string['msgfailcausestructure'] = 'The generated card was incomplete or the wrong shape.';
+$string['msgfailcausereply'] = 'The AI service sent back a reply that could not be used.';
 $string['msgfailcauseunknown'] = 'Generation did not complete.';
 $string['msgfailadvice413'] = 'This is a web-server limit, not a fault in this module. Ask your administrator to raise the request body limit (nginx client_max_body_size, or LimitRequestBody on Apache) to at least 24m. Then use Regenerate Failed.';
 $string['msgfailadvicetransport'] = 'This is usually bot protection, a firewall, or a proxy in front of Moodle. Send the message above to whoever administers the server, then use Regenerate Failed.';

@@ -116,7 +116,7 @@ define([
         // v15.6.3: the failure report. The badge alone said nothing an author could act on.
         'msgfailreporttitle', 'msgfailreportintro', 'msgfailcopy', 'msgfailclose',
         'msgfailcausetransport', 'msgfailcauselimit', 'msgfailcausetimeout',
-        'msgfailcausestructure', 'msgfailcauseunknown',
+        'msgfailcausestructure', 'msgfailcausereply', 'msgfailcauseunknown',
         'msgfailadvice413', 'msgfailadvicetransport', 'msgfailadvicelimit', 'msgfailadviceretry',
         'errneedcoursetitle', 'errneedtrainingtopic', 'errneedunitcodefirst',
         'errneedunitcode', 'errneedunittext', 'errselectpdf', 'errselectmode',
@@ -351,6 +351,7 @@ define([
         msgfailcauselimit: 'The speech or content limit for this site was reached.',
         msgfailcausetimeout: 'The request took too long and was abandoned.',
         msgfailcausestructure: 'The generated card was incomplete or the wrong shape.',
+        msgfailcausereply: 'The AI service sent back a reply that could not be used.',
         msgfailcauseunknown: 'Generation did not complete.',
         msgfailadvice413: 'This is a web-server limit, not a fault in this module. Ask your administrator to raise the request body limit (nginx client_max_body_size, or LimitRequestBody on Apache) to at least 24m. Then use Regenerate Failed.',
         msgfailadvicetransport: 'This is usually bot protection, a firewall, or a proxy in front of Moodle. Send the message above to whoever administers the server, then use Regenerate Failed.',
@@ -13966,6 +13967,11 @@ define([
         }
         if (/timed out|timeout|aborted/i.test(r)) {
             return {key: 'msgfailcausetimeout', advice: 'msgfailadviceretry'};
+        }
+        // v15.7.11: a reply that never reached the validator - unreadable or empty.
+        // Checked before the structure test, whose loose "empty" would otherwise claim it.
+        if (/could not be read as card data|returned an empty reply/i.test(r)) {
+            return {key: 'msgfailcausereply', advice: 'msgfailadviceretry'};
         }
         if (/Structural validation failed|card count|missing|empty|options/i.test(r)) {
             return {key: 'msgfailcausestructure', advice: 'msgfailadviceretry'};

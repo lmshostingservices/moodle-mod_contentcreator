@@ -1,5 +1,16 @@
 # Changelog
 
+## [15.7.12] - 2026-11-23
+
+### Fixed
+- "Upload from device" in the slide image window did nothing. Choosing a file closed the file picker and nothing was uploaded, with no error, for every file type (reported as "it will not let me upload a PNG image"). The upload button passed the slide to the file picker in a way the picker's handler could not read, so the handler discarded the file. Uploads now work, and if the slide ever cannot be identified the author sees a message instead of nothing.
+
+## [15.7.11] - 2026-11-20
+
+### Fixed
+- The generation problems report no longer says "Structural validation failed after 2 attempt(s):" with nothing after it. That message appeared when both attempts at a section failed before the cards could be checked: the AI request itself failed, or its reply could not be read as cards. The report now gives the real reason (the request error, or the start of the unreadable reply) and a matching cause ("The AI service sent back a reply that could not be used", or the timeout, limit or connection cause), instead of blaming the card's shape.
+- CC_VERSION in cc-state.js had fallen behind again (15.7.6). It now matches the release.
+
 ## [15.7.10] - 2026-11-19
 
 ### Fixed

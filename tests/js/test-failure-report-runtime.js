@@ -232,6 +232,22 @@ const failedTopic = {
     check('the underlying message is quoted verbatim for a support ticket',
         /HTTP 413/.test(text) && /card count 5, expected 7/.test(text));
 
+    // v15.7.11: a reply that never reached the validator is named as such, not blamed on
+    // the card's shape. The empty-reply wording contains "empty", which the structure test
+    // also matches, so the order of the tests is what this guards.
+    const unreadable = await page.evaluate(() => window.ccClassifyFailure(
+        'The AI reply could not be read as card data (812 characters returned). Start of reply: "I cannot"'));
+    check('an unreadable AI reply is classified as an unusable reply',
+        unreadable.key === 'msgfailcausereply', JSON.stringify(unreadable));
+    const emptyReply = await page.evaluate(() => window.ccClassifyFailure(
+        'The AI service returned an empty reply.'));
+    check('an empty AI reply is classified as an unusable reply, not a wrong-shaped card',
+        emptyReply.key === 'msgfailcausereply', JSON.stringify(emptyReply));
+    const failedRequest = await page.evaluate(() => window.ccClassifyFailure(
+        'The AI request failed: Request timed out after 180s'));
+    check('a failed AI request keeps its own cause (timeout)',
+        failedRequest.key === 'msgfailcausetimeout', JSON.stringify(failedRequest));
+
     console.log('');
     console.log('3. It behaves like a dialog');
     const copyText = await page.evaluate(async () => {
