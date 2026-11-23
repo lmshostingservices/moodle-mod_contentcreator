@@ -1,5 +1,10 @@
 # Changelog
 
+## [15.7.13] - 2026-11-23
+
+### Fixed
+- Regenerate Failed regenerated far more than it said. The banner counted only sections with failed (placeholder) cards, but the generator also regenerated every section marked "needs review", whose content is complete. On a module with one failed section it regenerated all of them, overwrote the author's existing (possibly edited) cards, charged for each one again, and re-bought their voiceover audio at 5 credits a card. It now regenerates only the sections it counted.
+
 ## [15.7.12] - 2026-11-23
 
 ### Fixed

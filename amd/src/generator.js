@@ -7518,11 +7518,21 @@ define(['mod_contentcreator/prompts', 'mod_contentcreator/cc-state', 'mod_conten
             reportStage(section, jobIdx, 'start', 'running');
 
             const expectedCardCount = getExpectedCardOrder(plannedManifest.context?.mode || 'vet', activitiesEnabled).length;
-            // v13.90.1: needsReview counts alongside failed, so a section whose content was
-            // salvaged after exhausting its attempts is actually re-generated when the
-            // author clicks Regenerate Failed. Without this the builder counted it and the
-            // generator skipped it, so the banner promised more slides than it redid.
-            const needsCards = !(regenerateFailedOnly && existingSection?.cards && existingSection.cards.length >= expectedCardCount && !existingSection.cards.some(c => c.failed || c.needsReview));
+            // v15.7.13 FIX-CC-REGEN-FAILED-REDOES-GOOD-SECTIONS: only a section with a
+            // FAILED (placeholder) card, or too few cards, is regenerated. needsReview is not
+            // a reason to regenerate.
+            //
+            // v13.90.1 added needsReview here so the generator matched the builder's count.
+            // v15.6.3 then removed needsReview from that count in builder.js
+            // (triggerFailedRegeneration) - a needsReview section is salvaged, complete,
+            // renderable content - but left it here. So the banner said "Only regenerating 1
+            // slides" while every needsReview section in the module was regenerated too: the
+            // author's complete (and possibly hand-edited) cards were overwritten, each paid
+            // for again, and needsCards=true clears the section's voiceover below, so all of
+            // its audio was re-bought at 5 credits a card. Seen live on a 7-section module
+            // with one failed section: the run started regenerating all of them.
+            // The two lists must stay identical; tests/js/test-regen-failed-scope.js checks it.
+            const needsCards = !(regenerateFailedOnly && existingSection?.cards && existingSection.cards.length >= expectedCardCount && !existingSection.cards.some(c => c.failed));
             const needsImage = imageGenEnabled && !(regenerateFailedOnly && existingSection?.image?.url);
 
             // -----------------------------------------------------------------
