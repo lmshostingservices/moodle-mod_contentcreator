@@ -1,5 +1,9 @@
 # Changelog
 
+## [15.7.14] - 2026-11-24
+
+- Added a test data generator, so the activity can be created by Moodle's automated tests and by demo and course-building tools. Tests cover creating, listing, deleting, backing up and restoring the activity.
+
 ## [15.7.13] - 2026-11-23
 
 ### Fixed
