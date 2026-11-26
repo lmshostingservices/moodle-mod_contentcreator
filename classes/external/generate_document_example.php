@@ -219,7 +219,9 @@ class generate_document_example extends external_api {
             $apikey = trim(get_config('mod_contentcreator', 'apikey') ?? '');
         }
 
-        if (empty($siteid) || empty($apikey)) {
+        // Bring your own AI: the example is written on the site's own AI, so no LMS Labs credentials are needed.
+        $byoktext = \mod_contentcreator\byok::uses('text');
+        if ((empty($siteid) || empty($apikey)) && !$byoktext) {
             return [
                 'success' => false,
                 'content' => '',
@@ -233,26 +235,6 @@ class generate_document_example extends external_api {
 
         // Release session lock before long-running API call to prevent blocking other requests.
         \core\session\manager::write_close();
-
-        // Call EssayGraderAI API for document generation.
-        $curl = new \curl();
-        $curl->setopt(
-            [
-                // FIX-CC-DOCEXAMPLE-TIMEOUT (v13.95.1): 60s was below the real generation
-                // time for a full workplace document, so the vendor completed and charged
-                // while this call reported failure and cached nothing - and the client's
-                // silent fallback made it look free. Matched to the AJAX paths.
-                'CURLOPT_TIMEOUT' => 180,
-                'CURLOPT_RETURNTRANSFER' => true,
-                'CURLOPT_SSL_VERIFYPEER' => true,
-            ]
-        );
-        $curl->setHeader(
-            [
-                'Content-Type: application/json',
-                'Accept: application/json',
-            ]
-        );
 
         $payload = [
             'siteId' => $siteid,
@@ -271,22 +253,46 @@ class generate_document_example extends external_api {
             'unitTitle' => $params['unitTitle'],
         ];
 
-        $url = 'https://lms-labs.com/api/moodle/content-creator/generate-document-example';
-        $response = $curl->post($url, json_encode($payload));
-        $info = $curl->get_info();
-        $httpcode = isset($info['http_code']) ? $info['http_code'] : 0;
+        if ($byoktext) {
+            $response = json_encode(\mod_contentcreator\byok::example($payload));
+        } else {
+            // Call EssayGraderAI API for document generation.
+            $curl = new \curl();
+            $curl->setopt(
+                [
+                    // FIX-CC-DOCEXAMPLE-TIMEOUT (v13.95.1): 60s was below the real generation
+                    // time for a full workplace document, so the vendor completed and charged
+                    // while this call reported failure and cached nothing - and the client's
+                    // silent fallback made it look free. Matched to the AJAX paths.
+                    'CURLOPT_TIMEOUT' => 180,
+                    'CURLOPT_RETURNTRANSFER' => true,
+                    'CURLOPT_SSL_VERIFYPEER' => true,
+                ]
+            );
+            $curl->setHeader(
+                [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                ]
+            );
 
-        if ($httpcode < 200 || $httpcode >= 300) {
-            debugging('Content Creator document API returned HTTP ' . $httpcode, DEBUG_DEVELOPER);
-            return [
-                'success' => false,
-                'content' => '',
-                'docId' => $params['docId'],
-                'docName' => $params['docName'],
-                'domain' => '',
-                'renderProfile' => '',
-                'error' => get_string('errordocgenfailed', 'mod_contentcreator'),
-            ];
+            $url = 'https://lms-labs.com/api/moodle/content-creator/generate-document-example';
+            $response = $curl->post($url, json_encode($payload));
+            $info = $curl->get_info();
+            $httpcode = isset($info['http_code']) ? $info['http_code'] : 0;
+
+            if ($httpcode < 200 || $httpcode >= 300) {
+                debugging('Content Creator document API returned HTTP ' . $httpcode, DEBUG_DEVELOPER);
+                return [
+                    'success' => false,
+                    'content' => '',
+                    'docId' => $params['docId'],
+                    'docName' => $params['docName'],
+                    'domain' => '',
+                    'renderProfile' => '',
+                    'error' => get_string('errordocgenfailed', 'mod_contentcreator'),
+                ];
+            }
         }
 
         $data = json_decode($response, true);
@@ -302,7 +308,7 @@ class generate_document_example extends external_api {
             ];
         }
 
-        if (method_exists('\\local_clientportal\\api', 'record_lmslabs_call')) {
+        if (!$byoktext && method_exists('\\local_clientportal\\api', 'record_lmslabs_call')) {
             // Client Portal bills the client for this call; the reply says what it cost when it can.
             global $USER;
             \local_clientportal\api::record_lmslabs_call(

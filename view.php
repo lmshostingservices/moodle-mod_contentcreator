@@ -148,6 +148,8 @@ if ($canmanage && (!$islocked || $editmode)) {
             'enableVoice' => (bool)$enablevoice,
             'voiceLanguage' => $voicelanguage,
             'pronunciations' => $pronunciations,
+            // Bring your own AI: which work runs on the site's own AI, so the builder shows no credit prices for it.
+            'ownAi' => \mod_contentcreator\byok::state(),
         ]]
     );
 } else {
@@ -175,6 +177,7 @@ if ($canmanage && (!$islocked || $editmode)) {
             // V15.1.8: The pronunciation list applies only to this language's narration.
             'voiceLanguage' => get_config('mod_contentcreator', 'voicelanguage') ?: 'en-AU',
             'courseUrl' => (new moodle_url('/course/view.php', ['id' => $cm->course]))->out(false),
+            'ownAi' => \mod_contentcreator\byok::state(),
         ]]
     );
 }

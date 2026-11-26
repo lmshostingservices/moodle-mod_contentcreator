@@ -774,7 +774,12 @@ try {
             mod_contentcreator_fail('vendorerrorwrongaction');
         }
 
-        if (empty($siteid) || empty($apikey)) {
+        // Bring your own AI: slide pictures are drawn on the site's own AI and kept in the activity's own files.
+        // The free helpers that need no credentials still work on a site that has none.
+        $byokpicture = in_array($endpointkey, ['generateslideimage', 'uploadslideimage'], true)
+            && \mod_contentcreator\byok::uses('image');
+        $byokfree = $endpoint['credentials'] === 'none' && \mod_contentcreator\byok::any();
+        if ((empty($siteid) || empty($apikey)) && !$byokpicture && !$byokfree) {
             mod_contentcreator_fail('errornotconfigured');
         }
 
@@ -862,7 +867,8 @@ try {
             );
 
             $callopts['multipart'] = $fields;
-            $result = mod_contentcreator_api_call($vendorurl, null, 'POST', $callopts);
+            $result = $byokpicture ? \mod_contentcreator\byok::upload($upload['tmp_name'], $filename, $context)
+                : mod_contentcreator_api_call($vendorurl, null, 'POST', $callopts);
         } else if ($action === 'vendor_download') {
             $callopts['raw'] = true;
             $result = mod_contentcreator_api_call($vendorurl, $body, $endpoint['method'], $callopts);
@@ -887,7 +893,8 @@ try {
             );
             exit;
         } else {
-            $result = mod_contentcreator_api_call($vendorurl, $body, $endpoint['method'], $callopts);
+            $result = $byokpicture ? \mod_contentcreator\byok::slide_image($body, $context)
+                : mod_contentcreator_api_call($vendorurl, $body, $endpoint['method'], $callopts);
         }
 
         // Most vendor routes report failure as success:false, but the legacy
@@ -908,7 +915,7 @@ try {
             mod_contentcreator_fail('vendorerrorgeneric');
         }
 
-        if ($endpoint['method'] === 'POST' && $endpointkey !== 'gallerycontribute') {
+        if ($endpoint['method'] === 'POST' && $endpointkey !== 'gallerycontribute' && !$byokpicture) {
             // Only calls that do work; a balance read reports totals, not a charge.
             mod_contentcreator_report_usage($context, $result, 0, 'Content Creator');
         }
@@ -979,7 +986,9 @@ try {
         mod_contentcreator_require_manage($context, $cm);
         mod_contentcreator_check_ratelimit('generate', 600, HOURSECS);
 
-        if (empty($siteid) || empty($apikey)) {
+        // Bring your own AI: the cards are written on the site's own AI, so no LMS Labs credentials are needed.
+        $byoktext = \mod_contentcreator\byok::uses('text');
+        if ((empty($siteid) || empty($apikey)) && !$byoktext) {
             mod_contentcreator_fail('errornotconfigured');
         }
 
@@ -990,20 +999,19 @@ try {
         // Translation passes cost 50 credits per section, primary generation costs 1.
         $creditsforaction = (strpos($slidetype, 'ml_translate_') === 0) ? 50 : 1;
 
-        $result = mod_contentcreator_api_call(
-            $apibaseurl . '/api/moodle/content-creator/prompt',
-            [
-                'siteId' => $siteid,
-                'apiKey' => $apikey,
-                'systemPrompt' => $systemprompt,
-                'userPrompt' => $userprompt,
-                'contentType' => $slidetype,
-                'route' => $route,
-                'language' => $genlanguagesync,
-                'creditsToUse' => $creditsforaction,
-                'subtopicKey' => $subtopickey,
-            ]
-        );
+        $payload = [
+            'siteId' => $siteid,
+            'apiKey' => $apikey,
+            'systemPrompt' => $systemprompt,
+            'userPrompt' => $userprompt,
+            'contentType' => $slidetype,
+            'route' => $route,
+            'language' => $genlanguagesync,
+            'creditsToUse' => $creditsforaction,
+            'subtopicKey' => $subtopickey,
+        ];
+        $result = $byoktext ? \mod_contentcreator\byok::prompt($payload)
+            : mod_contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/prompt', $payload);
 
         if (!isset($result['success']) || !$result['success']) {
             mod_contentcreator_response(
@@ -1014,7 +1022,9 @@ try {
             );
         }
 
-        mod_contentcreator_report_usage($context, $result, $creditsforaction > 1 ? $creditsforaction : 0, 'Content');
+        if (!$byoktext) {
+            mod_contentcreator_report_usage($context, $result, $creditsforaction > 1 ? $creditsforaction : 0, 'Content');
+        }
         mod_contentcreator_response(
             [
                 'success' => true,
@@ -1065,7 +1075,8 @@ try {
         mod_contentcreator_require_manage($context, $cm);
         mod_contentcreator_check_ratelimit('generate', 600, HOURSECS);
 
-        if (empty($siteid) || empty($apikey)) {
+        $byoktext = \mod_contentcreator\byok::uses('text');
+        if ((empty($siteid) || empty($apikey)) && !$byoktext) {
             mod_contentcreator_fail('errornotconfigured');
         }
 
@@ -1074,19 +1085,37 @@ try {
         // Translation passes cost 50 credits per section.
         $creditsforasync = (strpos($slidetype, 'ml_translate_') === 0) ? 50 : 1;
 
+        $payload = [
+            'siteId' => $siteid,
+            'apiKey' => $apikey,
+            'systemPrompt' => $systemprompt,
+            'userPrompt' => $userprompt,
+            'contentType' => $slidetype,
+            'route' => $route,
+            'language' => $genlanguage,
+            'creditsToUse' => $creditsforasync,
+            'subtopicKey' => $subtopickey,
+        ];
+
+        // Bring your own AI: the job runs here on the site's own AI and is polled like a service job.
+        if ($byoktext) {
+            $started = \mod_contentcreator\byok::start($payload, $context, $idempotencykey);
+            if (empty($started['ok'])) {
+                mod_contentcreator_response(['success' => false, 'error' => $started['error']]);
+            }
+            mod_contentcreator_remember_job_owner($started['jobId'], $cmid);
+            $response = ['success' => true, 'jobId' => $started['jobId'], 'async' => true,
+                'idempotency' => $started['idempotency']];
+            if (!$started['new']) {
+                mod_contentcreator_response($response);
+            }
+            \mod_contentcreator\byok::answer_then_run($response, $started['jobId'], $payload, $context);
+            exit;
+        }
+
         $result = mod_contentcreator_api_call(
             $apibaseurl . '/api/moodle/content-creator/prompt/start',
-            [
-                'siteId' => $siteid,
-                'apiKey' => $apikey,
-                'systemPrompt' => $systemprompt,
-                'userPrompt' => $userprompt,
-                'contentType' => $slidetype,
-                'route' => $route,
-                'language' => $genlanguage,
-                'creditsToUse' => $creditsforasync,
-                'subtopicKey' => $subtopickey,
-            ],
+            $payload,
             'POST',
             // Only send the header when there is actually a key. An empty Idempotency-Key
             // would be worse than none: it is one key shared by every submit on the site,
@@ -1156,6 +1185,12 @@ try {
 
         // Do not hold the session lock open across the upstream status call.
         \core\session\manager::write_close();
+
+        // Bring your own AI: jobs running on the site's own AI are answered here.
+        $byokpoll = \mod_contentcreator\byok::poll($jobid, $context);
+        if ($byokpoll !== null) {
+            mod_contentcreator_response($byokpoll);
+        }
 
         $curl = new \curl();
         // A busy job status endpoint can be slow; a generous window avoids false failures.
@@ -1279,7 +1314,9 @@ try {
         }
         mod_contentcreator_check_ratelimit('voice', 2500, HOURSECS);
 
-        if (empty($siteid) || empty($apikey)) {
+        // Bring your own AI: narration on the site's own voice needs no LMS Labs credentials.
+        $byokvoice = \mod_contentcreator\byok::uses('voice');
+        if ((empty($siteid) || empty($apikey)) && !$byokvoice) {
             mod_contentcreator_fail('errornotconfigured');
         }
 
@@ -1330,20 +1367,21 @@ try {
             }
         );
 
-        $result = mod_contentcreator_api_call(
+        $payload = [
+            'siteId' => $siteid,
+            'apiKey' => $apikey,
+            'text' => $text,
+            'languageCode' => $effectivelanguage,
+            'voiceId' => $voiceid,
+            // Send the actual voice name rather than the legacy gender.
+            'voiceGender' => $voicename,
+            'creditsToUse' => 5,
+            'subtopicKey' => $subtopickey,
+            'sectionId' => $sectionid,
+        ];
+        $result = $byokvoice ? \mod_contentcreator\byok::tts($payload) : mod_contentcreator_api_call(
             $apibaseurl . '/api/moodle/content-creator/tts',
-            [
-                'siteId' => $siteid,
-                'apiKey' => $apikey,
-                'text' => $text,
-                'languageCode' => $effectivelanguage,
-                'voiceId' => $voiceid,
-                // Send the actual voice name rather than the legacy gender.
-                'voiceGender' => $voicename,
-                'creditsToUse' => 5,
-                'subtopicKey' => $subtopickey,
-                'sectionId' => $sectionid,
-            ],
+            $payload,
             'POST',
             // FIX-CC-TTS-TIMEOUT-BILLS-WITHOUT-DELIVERY (v13.95.1): this call used to fall
             // through to mod_contentcreator_api_call()'s 180s default. Measured synthesis for a
@@ -1366,7 +1404,9 @@ try {
             );
         }
 
-        mod_contentcreator_report_usage($context, $result, $subtopickey === '' ? 5 : 0, 'Voiceover');
+        if (!$byokvoice) {
+            mod_contentcreator_report_usage($context, $result, $subtopickey === '' ? 5 : 0, 'Voiceover');
+        }
 
         // Store the freshly generated audio so future requests for the same text, voice and
         // language are served from the cache at no credit cost.
@@ -1644,7 +1684,9 @@ try {
         mod_contentcreator_require_manage($context, $cm);
         mod_contentcreator_check_ratelimit('generate', 600, HOURSECS);
 
-        if (empty($siteid) || empty($apikey)) {
+        // Bring your own AI: the examples are written on the site's own AI.
+        $byoktext = \mod_contentcreator\byok::uses('text');
+        if ((empty($siteid) || empty($apikey)) && !$byoktext) {
             mod_contentcreator_fail('errornotconfigured');
         }
 
@@ -1667,18 +1709,19 @@ try {
 
         mod_contentcreator_prepare_long_request();
 
-        $result = mod_contentcreator_api_call(
-            $apibaseurl . '/api/moodle/content-creator/batch-generate-documents',
-            [
-                'siteId' => $siteid,
-                'apiKey' => $apikey,
-                'documents' => $docsarray,
-                'context' => $contextdata,
-            ]
-        );
+        $payload = [
+            'siteId' => $siteid,
+            'apiKey' => $apikey,
+            'documents' => $docsarray,
+            'context' => $contextdata,
+        ];
+        $result = $byoktext ? \mod_contentcreator\byok::batch($payload)
+            : mod_contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/batch-generate-documents', $payload);
 
         if (!empty($result['success'])) {
-            mod_contentcreator_report_usage($context, $result, 0, 'Document examples');
+            if (!$byoktext) {
+                mod_contentcreator_report_usage($context, $result, 0, 'Document examples');
+            }
             mod_contentcreator_response(
                 [
                     'success' => true,
@@ -1800,7 +1843,9 @@ try {
         mod_contentcreator_require_manage($context, $cm);
         mod_contentcreator_check_ratelimit('generate', 600, HOURSECS);
 
-        if (empty($siteid) || empty($apikey)) {
+        // Bring your own AI: the picture is drawn on the site's own AI and kept in the activity's own files.
+        $byokimage = \mod_contentcreator\byok::uses('image');
+        if ((empty($siteid) || empty($apikey)) && !$byokimage) {
             mod_contentcreator_fail('errornotconfigured');
         }
 
@@ -1849,33 +1894,32 @@ try {
         // raise the execution limits before starting.
         mod_contentcreator_prepare_long_request();
 
-        $result = mod_contentcreator_api_call(
-            $apibaseurl . '/api/moodle/content-creator/generate-image',
-            [
-                'siteId' => $siteid,
-                'apiKey' => $apikey,
-                'slideTitle' => $slidetitle,
-                'slideDescription' => $slidedescription,
-                'topicTitle' => $topictitle,
-                'unitCode' => $unitcode,
-                'unitTitle' => $unittitle,
-                'industry' => $industry,
-                'subIndustry' => $subindustry,
-                'workplace' => $workplace,
-                'jobRole' => $jobrole,
-                'country' => $imagecountry,
-                'state' => $state,
-                'requirements' => $requirements,
-                'route' => $route,
-                'scenarioContext' => $scenariocontext,
-                // Forwarded so the bulk route composes for the shape the player  (v13.98.2)
-                // actually displays. The single-slide route has always sent this; the bulk
-                // route - which produces almost every image in a pack - never did.
-                'aspectRatio' => $aspectratio,
-                'subtopicKey' => $imgsubtopickey,
-                'sectionId' => $imgsectionid,
-            ]
-        );
+        $payload = [
+            'siteId' => $siteid,
+            'apiKey' => $apikey,
+            'slideTitle' => $slidetitle,
+            'slideDescription' => $slidedescription,
+            'topicTitle' => $topictitle,
+            'unitCode' => $unitcode,
+            'unitTitle' => $unittitle,
+            'industry' => $industry,
+            'subIndustry' => $subindustry,
+            'workplace' => $workplace,
+            'jobRole' => $jobrole,
+            'country' => $imagecountry,
+            'state' => $state,
+            'requirements' => $requirements,
+            'route' => $route,
+            'scenarioContext' => $scenariocontext,
+            // Forwarded so the bulk route composes for the shape the player  (v13.98.2)
+            // actually displays. The single-slide route has always sent this; the bulk
+            // route - which produces almost every image in a pack - never did.
+            'aspectRatio' => $aspectratio,
+            'subtopicKey' => $imgsubtopickey,
+            'sectionId' => $imgsectionid,
+        ];
+        $result = $byokimage ? \mod_contentcreator\byok::image($payload, $context)
+            : mod_contentcreator_api_call($apibaseurl . '/api/moodle/content-creator/generate-image', $payload);
 
         if (!isset($result['success']) || !$result['success']) {
             mod_contentcreator_response(
@@ -1886,7 +1930,9 @@ try {
             );
         }
 
-        mod_contentcreator_report_usage($context, $result, $imgsubtopickey === '' ? 5 : 0, 'Image');
+        if (!$byokimage) {
+            mod_contentcreator_report_usage($context, $result, $imgsubtopickey === '' ? 5 : 0, 'Image');
+        }
         mod_contentcreator_response(
             [
                 'success' => true,

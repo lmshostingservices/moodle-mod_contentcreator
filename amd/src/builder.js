@@ -260,6 +260,7 @@ define([
         'msgvoiceexcitablebold', 'msgvoicefirmdirect', 'msgvoiceoverlanguage', 'msgcreditnote',
         'msgimagecredits', 'msgchallengehint', 'msgfreenavigation', 'msgtimedreading',
         'msgmustlisten', 'msgbalprevious', 'msgbalthisrun', 'msgbalafter', 'msggeneratingcontent', 'msgestimatedcost',
+        'byokpaneltitle', 'byokpaneltext', 'byokwriting', 'byokpictures', 'byoknarration', 'byokownai', 'byokcredits',
         'msgstructurevalidated', 'msgoverlaproles', 'errgennotstarted', 'errgentoolong',
         'errgentimeoutload', 'errgentimeout', 'errgenfailedretry',
         'msgcontexttopicstitle', 'msgcontextpdtitle',
@@ -878,6 +879,13 @@ define([
         msgbalprevious: 'Previous balance',
         msgbalthisrun: 'This generation',
         msgbalafter: 'Balance after',
+        byokpaneltitle: 'Runs on your own AI',
+        byokpaneltext: 'Your site\'s own AI writes this content, so it uses no LMS Labs credits.',
+        byokwriting: 'Writing',
+        byokpictures: 'Pictures',
+        byoknarration: 'Narration',
+        byokownai: 'Your own AI',
+        byokcredits: 'LMS Labs credits',
         msggeneratingcontent: 'Generating Content',
         msgestimatedcost: 'Estimated Credit Cost:',
         msgstructurevalidated: 'Structure validated  -  card count, fields, and voiceover length checked.',
@@ -1219,6 +1227,8 @@ define([
     };
 
     let cmid = 0;
+    // Bring your own AI: which kinds of work run on the site's own AI (text, image, voice).
+    let ownAi = {};
     let container = null;
     let manifest = null;
     let currentStep = 1;
@@ -5102,6 +5112,7 @@ define([
 
     const init = (config) => {
         cmid = config.cmid;
+        ownAi = config.ownAi || {};
         container = document.getElementById('contentcreator-app');
         if (!container) return;
 
@@ -5135,6 +5146,10 @@ define([
     // Fetch current AI credits balance from the server
     // v6.5.18: Fixed endpoint URL and credential format
     const fetchCreditsBalance = async() => {
+        if (ownAi.text) {
+            // Bring your own AI: the content is written on the site's own AI, so there is no balance to show.
+            return;
+        }
         try {
             // v13.66: The site id and API key are held server side; the proxy injects them.
             const data = await CcState.vendorFetch(cmid, 'credits');
@@ -5157,6 +5172,27 @@ define([
         }
     };
     
+    /**
+     * Bring your own AI: the panel shown instead of the credit estimate when the site's own AI writes the content.
+     *
+     * Says where each kind of work runs, because pictures and narration can still be on LMS Labs credits.
+     *
+     * @return {String} HTML.
+     */
+    const ownAiPanelHtml = () => {
+        const chip = (label, own) => '<span class="cc-ownai-chip' + (own ? ' cc-ownai-chip-own' : '') + '">'
+            + '<i class="fa ' + (own ? 'fa-microchip' : 'fa-coins') + '" aria-hidden="true"></i> '
+            + escapeHtml(label) + ': ' + escapeHtml(own ? s('byokownai') : s('byokcredits')) + '</span>';
+        return '<div class="cc-ownai" data-testid="cc-ownai">'
+            + '<span class="cc-ownai-icon"><i class="fa fa-microchip" aria-hidden="true"></i></span>'
+            + '<div class="cc-ownai-body">'
+            + '<div class="cc-ownai-title">' + escapeHtml(s('byokpaneltitle')) + '</div>'
+            + '<div class="cc-ownai-text">' + escapeHtml(s('byokpaneltext')) + '</div>'
+            + '<div class="cc-ownai-chips">' + chip(s('byokwriting'), true) + chip(s('byokpictures'), !!ownAi.image)
+            + chip(s('byoknarration'), !!ownAi.voice) + '</div>'
+            + '</div></div>';
+    };
+
     // v6.9.22: Count total subtopics across all topics for dynamic credit estimation
     const countTotalSubtopics = () => {
         if (!topicPlan?.topics) return 0;
@@ -8729,7 +8765,8 @@ define([
 
                 <div class="cc-generate-section">
                     <div class="cc-generate-info">
-                        <div class="cc-credit-info-row">
+                        ${ownAi.text ? ownAiPanelHtml() : ''}
+                        <div class="cc-credit-info-row${ownAi.text ? ' cc-hidden' : ''}">
                             <div class="cc-credit-cost">
                                 <span class="cc-credit-icon">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

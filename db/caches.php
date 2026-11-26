@@ -51,4 +51,12 @@ $definitions = [
         'simpledata' => true,
         'ttl' => 7200,
     ],
+
+    // Card writing running on the site's own AI (Bring your own AI): progress and result, polled by the page.
+    'byokjobs' => [
+        'mode' => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => false,
+        'ttl' => DAYSECS,
+    ],
 ];
