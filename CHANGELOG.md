@@ -1,5 +1,16 @@
 # Changelog
 
+## [15.8.0] - 2026-11-26
+
+### Added
+- Bring your own AI: with an LMS Labs Bring your own AI licence, cards, picture briefs, example documents, slide pictures and narration can run on the site's own AI (Moodle AI or the site's own provider keys, set up in AI Grader Central Config) instead of LMS Labs credits. The service's prompts, schema checks, quality passes and image shaping are ported into the plugin and were checked against the service source on tens of thousands of randomised cases with identical results.
+- Long card generation on the site's own AI runs as a job the page polls exactly as it polls an LMS Labs job, with the same idempotency protection against a repeated submit.
+- Pictures made or uploaded on the site's own AI are kept in the activity's files, so backup and restore carry them.
+- The Generate step shows a "Runs on your own AI" panel instead of the credit estimate, saying which work runs where.
+
+### Fixed
+- CC_VERSION now mirrors the release again (the stale-build check and prompt cache key off it).
+
 ## [15.7.14] - 2026-11-24
 
 - Added a test data generator, so the activity can be created by Moodle's automated tests and by demo and course-building tools. Tests cover creating, listing, deleting, backing up and restoring the activity.

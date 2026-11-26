@@ -39,6 +39,25 @@ provider traffic is proxied through your Moodle server using Moodle's HTTP
 client, so your site's proxy settings and blocked-host rules apply. See the
 plugin's privacy provider for the formal declaration.
 
+### Bring your own AI
+
+With an LMS Labs Bring your own AI licence (a yearly subscription) and AI Grader
+Central Config (`local_aiconfig`) 1.1.0 or later, the work can run on your site's own
+AI instead of LMS Labs credits. Choose it per kind of work under *Site
+administration → Plugins → Local plugins → Bring your own AI*:
+
+| Work | Runs on your own AI when | Notes |
+|---|---|---|
+| Writing cards, picture briefs and example documents | Text is set to Moodle AI or your own key | Long sections run in the background and are polled like LMS Labs jobs |
+| Slide pictures (one, or three to choose from) | Images is set to Moodle AI or your own key | Pictures are kept in the activity's own files, so backup and restore carry them |
+| Narration | Voice is set to your own Google, OpenAI or ElevenLabs key | Google keeps the same Chirp 3 HD voice; OpenAI uses the closest voice |
+
+The prompts and checks are the LMS Labs service's own, ported into the plugin, so
+the content matches what LMS Labs returns for the same AI answer. On your own AI
+the content goes straight from your Moodle site to your provider; nothing is sent
+to LMS Labs and no credits are used. Free helpers (gallery, unit lookups, PDF
+extraction) still use LMS Labs.
+
 ## Requirements
 
 * Moodle 4.2 (2023042400) or later

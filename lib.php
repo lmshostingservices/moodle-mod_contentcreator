@@ -257,8 +257,14 @@ function mod_contentcreator_pluginfile($course, $cm, $context, $filearea, $args,
         return false;
     }
 
-    require_login($course, true, $cm);
-    require_capability('mod/contentcreator:view', $context);
+    // Slide pictures drawn on the site's own AI (Bring your own AI) are shown to anyone signed in, like the pictures
+    // LMS Labs hosts: the image gallery reuses them in other activities and courses. Their names are random.
+    if (\mod_contentcreator\byok::is_picture((string)end($args))) {
+        require_login(null, false);
+    } else {
+        require_login($course, true, $cm);
+        require_capability('mod/contentcreator:view', $context);
+    }
 
     $itemid = (int)array_shift($args);
 

@@ -199,7 +199,9 @@ class generate_voiceover extends external_api {
             $apikey = trim(get_config('mod_contentcreator', 'apikey') ?? '');
         }
 
-        if (empty($siteid) || empty($apikey)) {
+        // Bring your own AI: narration on the site's own voice needs no LMS Labs credentials.
+        $byokvoice = \mod_contentcreator\byok::uses('voice');
+        if ((empty($siteid) || empty($apikey)) && !$byokvoice) {
             return [
                 'success'      => false,
                 'audioContent' => '',
@@ -310,22 +312,6 @@ class generate_voiceover extends external_api {
         // Release session lock before long-running API call to prevent blocking other requests.
         \core\session\manager::write_close();
 
-        // Call EssayGraderAI API for TTS.
-        $curl = new \curl();
-        $curl->setopt(
-            [
-                'CURLOPT_TIMEOUT'       => 300,
-                'CURLOPT_RETURNTRANSFER' => true,
-                'CURLOPT_SSL_VERIFYPEER' => true,
-            ]
-        );
-        $curl->setHeader(
-            [
-                'Content-Type: application/json',
-                'Accept: application/json',
-            ]
-        );
-
         $payload = [
             'siteId'       => $siteid,
             'apiKey'       => $apikey,
@@ -338,19 +324,39 @@ class generate_voiceover extends external_api {
             'sectionId'    => $params['sectionId'],
         ];
 
-        $url      = 'https://lms-labs.com/api/moodle/content-creator/tts';
-        $response = $curl->post($url, json_encode($payload));
-        $info     = $curl->get_info();
-        $httpcode = isset($info['http_code']) ? $info['http_code'] : 0;
+        if ($byokvoice) {
+            $response = json_encode(\mod_contentcreator\byok::tts($payload));
+        } else {
+            // Call EssayGraderAI API for TTS.
+            $curl = new \curl();
+            $curl->setopt(
+                [
+                    'CURLOPT_TIMEOUT'       => 300,
+                    'CURLOPT_RETURNTRANSFER' => true,
+                    'CURLOPT_SSL_VERIFYPEER' => true,
+                ]
+            );
+            $curl->setHeader(
+                [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                ]
+            );
 
-        if ($httpcode < 200 || $httpcode >= 300) {
-            debugging('Content Creator TTS API returned HTTP ' . $httpcode, DEBUG_DEVELOPER);
-            return [
-                'success'      => false,
-                'audioContent' => '',
-                'audioType'    => '',
-                'error'        => get_string('errorttsfailed', 'mod_contentcreator'),
-            ];
+            $url      = 'https://lms-labs.com/api/moodle/content-creator/tts';
+            $response = $curl->post($url, json_encode($payload));
+            $info     = $curl->get_info();
+            $httpcode = isset($info['http_code']) ? $info['http_code'] : 0;
+
+            if ($httpcode < 200 || $httpcode >= 300) {
+                debugging('Content Creator TTS API returned HTTP ' . $httpcode, DEBUG_DEVELOPER);
+                return [
+                    'success'      => false,
+                    'audioContent' => '',
+                    'audioType'    => '',
+                    'error'        => get_string('errorttsfailed', 'mod_contentcreator'),
+                ];
+            }
         }
 
         $data = json_decode($response, true);
@@ -359,11 +365,13 @@ class generate_voiceover extends external_api {
                 'success'      => false,
                 'audioContent' => '',
                 'audioType'    => '',
-                'error'        => get_string('errorttsfailed', 'mod_contentcreator'),
+                // On the site's own voice, say what went wrong: it is the site's own set-up to fix.
+                'error'        => $byokvoice && !empty($data['error']) ? (string)$data['error']
+                    : get_string('errorttsfailed', 'mod_contentcreator'),
             ];
         }
 
-        if (method_exists('\\local_clientportal\\api', 'record_lmslabs_call')) {
+        if (!$byokvoice && method_exists('\\local_clientportal\\api', 'record_lmslabs_call')) {
             // Client Portal bills the client for this call; the reply says what it cost when it can.
             global $USER;
             \local_clientportal\api::record_lmslabs_call(

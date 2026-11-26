@@ -1714,6 +1714,8 @@ define([
         // canEdit requires capability + edit mode ON (controls edit UI).
         // isTeacher requires capability only (controls voiceover playback/generation).
         this.isTeacher = config.isTeacher || false;
+        // Bring your own AI: which work runs on the site's own AI, so its buttons show no credit price.
+        this.ownAi = config.ownAi || {};
         
         this.progress = this.loadProgress();
         // v15.3.0: publish the live instance on its own container.
@@ -9250,7 +9252,9 @@ define([
                 html += '<p class="cc5-settings-desc">' + getLabel('applyAIToAllSlidesDesc') + '</p>';
                 html += '<button type="button" class="cc5-bulk-generate-images-btn">';
                 html += getIcon('sparkles') + ' ' + getLabel('applyAIToAllSlides');
-                html += '<span class="cc5-credit-badge">' + (slidesWithoutImages * 5) + ' credits</span>';
+                if (!self.ownAi.image) {
+                    html += '<span class="cc5-credit-badge">' + (slidesWithoutImages * 5) + ' credits</span>';
+                }
                 html += '</button>';
                 html += '<p class="cc5-bulk-image-count">' + getLabel('slidesWithoutImages').replace('{count}', slidesWithoutImages) + '</p>';
                 html += '</div>';
@@ -9264,7 +9268,9 @@ define([
                 html += '<p class="cc5-settings-desc">' + getLabel('applyVoiceoverToAllSlidesDesc') + '</p>';
                 html += '<button type="button" class="cc5-bulk-generate-voiceover-btn">';
                 html += getIcon('volume2') + ' ' + getLabel('applyVoiceoverToAllSlides'); // v9.80 FIX (A-02b): hyphenated key 'volume-2' returned undefined; icon registry uses 'volume2'
-                html += '<span class="cc5-credit-badge">' + (slidesWithoutVoiceover * 5) + ' credits</span>';
+                if (!self.ownAi.voice) {
+                    html += '<span class="cc5-credit-badge">' + (slidesWithoutVoiceover * 5) + ' credits</span>';
+                }
                 html += '</button>';
                 html += '<p class="cc5-bulk-voiceover-count">' + getLabel('slidesWithoutVoiceover').replace('{count}', slidesWithoutVoiceover) + '</p>';
                 html += '</div>';
@@ -10790,7 +10796,8 @@ define([
                         }
 
                         Notification.addNotification({
-                            message: getLabel('imageGenerateSuccess') + ' (' + (response.creditsUsed || '') + ' credits)',
+                            message: self.ownAi.image ? getLabel('imageGenerateSuccess')
+                                : getLabel('imageGenerateSuccess') + ' (' + (response.creditsUsed || '') + ' credits)',
                             type: 'success'
                         });
                         return;
@@ -20583,7 +20590,8 @@ define([
                             // edit mode OFF. All 8 guards using !this.isTeacher were dead code.
                             isTeacher: config.isTeacher || false,
                             requireFocus: config.requireFocus || false,
-                            requireFullScore: config.requireFullScore || false
+                            requireFullScore: config.requireFullScore || false,
+                            ownAi: config.ownAi || {}
                         });
                     } else {
                         // v9.72 FIX: manifest.topics.length crashed with TypeError when manifest.topics

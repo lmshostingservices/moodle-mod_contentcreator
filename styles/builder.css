@@ -2122,6 +2122,126 @@ body.dark .cc-instruction-card-text strong,
     flex-wrap: wrap;
 }
 
+/* Bring your own AI: shown instead of the credit estimate when the site's own AI writes the content. */
+.cc-ownai {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 16px 20px;
+    border: 1px solid rgba(53, 122, 50, 0.28);
+    border-radius: 12px;
+    background: rgba(53, 122, 50, 0.06);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+    text-align: left;
+}
+
+.cc-ownai-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #357a32;
+    color: #fff;
+    font-size: 18px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.cc-ownai-body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.cc-ownai-title {
+    color: #1d2125;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+}
+
+.cc-ownai-text {
+    margin-top: 2px;
+    color: #495057;
+    font-size: 16px;
+    line-height: 24px;
+}
+
+.cc-ownai-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.cc-ownai-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 999px;
+    background: #fff;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+}
+
+.cc-ownai-chip-own {
+    border-color: rgba(53, 122, 50, 0.28);
+    background: rgba(53, 122, 50, 0.08);
+    color: #2b632a;
+}
+
+.dark .cc-ownai,
+.theme-dark .cc-ownai,
+body.dark .cc-ownai,
+[data-theme="dark"] .cc-ownai,
+[data-bs-theme="dark"] .cc-ownai {
+    border-color: rgba(93, 149, 91, 0.4);
+    background: rgba(93, 149, 91, 0.1);
+}
+
+.dark .cc-ownai-title,
+.theme-dark .cc-ownai-title,
+body.dark .cc-ownai-title,
+[data-theme="dark"] .cc-ownai-title,
+[data-bs-theme="dark"] .cc-ownai-title {
+    color: #e8eaed;
+}
+
+.dark .cc-ownai-text,
+.theme-dark .cc-ownai-text,
+body.dark .cc-ownai-text,
+[data-theme="dark"] .cc-ownai-text,
+[data-bs-theme="dark"] .cc-ownai-text {
+    color: #c4c9cf;
+}
+
+.dark .cc-ownai-chip,
+.theme-dark .cc-ownai-chip,
+body.dark .cc-ownai-chip,
+[data-theme="dark"] .cc-ownai-chip,
+[data-bs-theme="dark"] .cc-ownai-chip {
+    border-color: #3a424a;
+    background: #1c2127;
+    color: #c4c9cf;
+}
+
+.dark .cc-ownai-chip-own,
+.theme-dark .cc-ownai-chip-own,
+body.dark .cc-ownai-chip-own,
+[data-theme="dark"] .cc-ownai-chip-own,
+[data-bs-theme="dark"] .cc-ownai-chip-own {
+    border-color: rgba(93, 149, 91, 0.4);
+    background: rgba(93, 149, 91, 0.14);
+    color: #aecaad;
+}
+
 /* Credit Balance Display */
 .cc-credit-balance {
     display: flex;
